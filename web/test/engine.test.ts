@@ -379,6 +379,35 @@ describe('TableEngine (qualquer participante move cartas da fila; só o dono tir
     engine.destroy();
   });
 
+  it('carta virando na revelação nunca afunda no feltro, nem quando a mola do flip passa do ponto', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const { room, d, engine } = rowOfTwo();
+      engine.update(viewOf(act(room, 'p0', { type: 'forceReveal' }), 'p0'));
+      const cards = [...d.row.querySelectorAll<HTMLElement>('.rcard')];
+      let worst = Infinity;
+      let maxAngle = 0;
+      for (let i = 0; i < 160; i++) {
+        vi.advanceTimersByTime(16);
+        frame();
+        for (const el of cards) {
+          const t = el.style.transform;
+          const z = Number(/translate3d\([^,]+,[^,]+,([-\d.]+)px\)/.exec(t)![1]);
+          const s = Number(/scale\(([-\d.]+)\)/.exec(t)![1]);
+          const angle = Number(/rotateY\(([-\d.]+)deg\)/.exec((el.firstElementChild as HTMLElement).style.transform)?.[1] ?? 0);
+          maxAngle = Math.max(maxAngle, angle);
+          const dip = ((88 * s) / 2) * Math.abs(Math.sin((angle * Math.PI) / 180));
+          worst = Math.min(worst, z - dip);
+        }
+      }
+      expect(maxAngle).toBeGreaterThan(180); // a mola ultrapassa: é exatamente o caso que cortava
+      expect(worst).toBeGreaterThanOrEqual(0);
+      engine.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('não-dono solta fora da fila: sem return, a carta volta pro lugar e aparece a dica', () => {
     const { d, h, engine } = rowOfTwo();
     dragTo(d, false, 450, 40);

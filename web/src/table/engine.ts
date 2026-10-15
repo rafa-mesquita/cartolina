@@ -1311,12 +1311,13 @@ export class TableEngine {
     const sp = rc.sp;
     const f = clamp(sp.flip.v, 0, 1.2);
     // Em pé, a carta gira em torno do centro: a metade de baixo afundaria no feltro (cortada pelo preserve-3d).
-    const standRad = (this.tilt.v * Math.max(0, sp.stand.v) * Math.PI) / 180;
+    // molas passam do ponto: usa o ângulo real (com ultrapassagem), senão a borda afunda no feltro no fim do movimento
+    const standRad = (this.tilt.v * Math.abs(sp.stand.v) * Math.PI) / 180;
     const halfH = (CH * ROW_S * Math.max(0, sp.rs.v)) / 2;
-    const lift = halfH * Math.sin(standRad) + 0.5;
+    const lift = halfH * Math.abs(Math.sin(standRad)) + 0.5;
     // no flip a carta gira no próprio eixo: metade da largura afundaria no feltro inclinado, então sobe pelo menos isso
-    const flipSin = Math.abs(Math.sin(Math.PI * clamp(f, 0, 1)));
-    const flipLift = Math.max(34, (CW * ROW_S * Math.max(1, sp.rs.v)) / 2 + 6) * flipSin;
+    const flipSin = Math.abs(Math.sin(Math.PI * sp.flip.v));
+    const flipLift = Math.max(34, (CW * ROW_S * Math.max(1, sp.rs.v)) / 2 + 8) * flipSin;
     const z = Math.max(lift, Math.max(0.5, sp.z.v)) + flipLift;
     rc.el.style.transform =
       `translate3d(${(sp.x.v + sp.shake.v).toFixed(2)}px,${(ROW_Y + sp.y.v).toFixed(2)}px,${z.toFixed(2)}px) ` +
