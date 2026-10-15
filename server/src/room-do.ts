@@ -8,6 +8,7 @@ import {
   nextAlarmAt,
   parseClientMessage,
   roomAction,
+  roomSummary,
   roomView,
   tick,
   type Room,
@@ -60,7 +61,8 @@ export class RoomDO extends DurableObject<Env> {
     }
 
     if (url.pathname === '/exists') {
-      return Response.json({ exists: this.room !== null }, { status: this.room ? 200 : 404 });
+      if (!this.room) return Response.json({ exists: false }, { status: 404 });
+      return Response.json({ exists: true, ...roomSummary(this.room) });
     }
 
     if (url.pathname.endsWith('/ws')) {

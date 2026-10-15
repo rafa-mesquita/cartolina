@@ -4,6 +4,17 @@ import { describe, expect, it } from 'vitest';
 import { COLORS, barrier, connect, joined, newRoomCode } from './helpers';
 
 describe('RoomDO: entrada', () => {
+  it('GET /rooms/:code lista quem já está na sala', async () => {
+    const code = await newRoomCode();
+    await joined(code, 2);
+    const res = await SELF.fetch(`https://x/rooms/${code}`);
+    const body = (await res.json()) as { exists: boolean; phase: string; seats: { name: string; color: string }[] };
+    expect(body.exists).toBe(true);
+    expect(body.phase).toBe('lobby');
+    expect(body.seats.map((s) => s.name)).toEqual(['P0', 'P1']);
+    expect(body.seats.map((s) => s.color)).toEqual([COLORS[0], COLORS[1]]);
+  });
+
   it('join devolve welcome e estado com o assento', async () => {
     const code = await newRoomCode();
     const a = await connect(code);

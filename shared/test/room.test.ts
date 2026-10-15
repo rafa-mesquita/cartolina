@@ -11,6 +11,7 @@ import {
   joinRoom,
   nextAlarmAt,
   roomAction,
+  roomSummary,
   roomView,
   tick,
   type Room,
@@ -225,5 +226,19 @@ describe('alarmes', () => {
     const room = roomWith(1);
     expect(isExpired(room, T0 + ROOM_TTL_MS - 1)).toBe(false);
     expect(isExpired(room, T0 + ROOM_TTL_MS)).toBe(true);
+  });
+});
+
+describe('roomSummary', () => {
+  it('expõe fase e assentos públicos, sem tokens', () => {
+    const summary = roomSummary(roomWith(2));
+    expect(summary).toEqual({
+      phase: 'lobby',
+      seats: [
+        { id: 'id-tok0', name: 'P0', color: PLAYER_COLORS[0], connected: true },
+        { id: 'id-tok1', name: 'P1', color: PLAYER_COLORS[1], connected: true },
+      ],
+    });
+    expect(JSON.stringify(summary)).not.toContain('"tok0"');
   });
 });
