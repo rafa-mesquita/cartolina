@@ -27,6 +27,9 @@ cursores e as cartas sendo arrastadas pelos outros, com animações fluidas.
 - Os jogadores colocam suas cartas numa **fila compartilhada** (ordem crescente
   da esquerda pra direita) e podem reposicioná-las livremente. **Cada um só move
   as próprias cartas.**
+- Qualquer mudança na fila (colocar, mover ou tirar carta) **desmarca o "pronto"
+  de todos**, porque "pronto" significa "aprovo esta ordem". Editar a dica só
+  desmarca quem editou.
 - Cada jogador marca **"tô pronto"**. Quando todos com cartas estiverem prontos
   e todas as cartas estiverem na fila, a revelação começa. O host pode **forçar a
   revelação** (só se todas as cartas estiverem na fila).
@@ -117,6 +120,7 @@ Cliente → servidor:
 | `player.ready` | `ready: boolean` | todos |
 | `round.forceReveal` | — | host |
 | `round.next` | — (próxima rodada/nível ou nova partida) | host |
+| `lobby` | — (voltar ao lobby a partir do tema ou da revelação) | host |
 | `fx.cursor` | `zone, x, y, drag?: { cardId }` (≤30/s) | todos |
 | `fx.activity` | `"thinking" \| "writing" \| "dragging"` | todos |
 | `fx.ping` | `x, y` (coordenadas da mesa) | todos |
@@ -134,13 +138,18 @@ Mensagens `fx.*` nunca passam pelo módulo de regras.
 
 ### 3.4 Fases do ITO
 
-`lobby → theme → sorting → revealing → result → (theme | lobby)`
+`lobby → theme → sorting → reveal → (theme | lobby)`
 
 - `theme`: tema visível, host sorteia/edita e confirma.
 - `sorting`: cartas distribuídas, dicas, fila, "tô pronto".
-- `revealing`: servidor calcula de uma vez `reveal: { cardId, value, owner, error }[]`
-  na ordem da fila e já aplica vidas; clientes animam carta a carta.
-- `result`: vitória/derrota da rodada (livre) ou do nível/partida (campanha).
+- `reveal`: servidor calcula de uma vez `reveal: { cardId, value, owner, error }[]`
+  na ordem da fila, aplica vidas e define `outcome` (`round_won`, `round_lost`,
+  `level_cleared`, `won`, `lost`). Os clientes animam carta a carta e depois
+  mostram a tela de resultado (vitória/derrota da rodada, do nível ou da partida).
+
+> Implementação: as ações do jogo trafegam como `{ t: 'action', action }`, com
+> nomes que mapeiam 1:1 a tabela de §3.3 (`lobby.setMode` → `setMode`,
+> `card.place` → `place`, …), e `fx.cursor.drag` inclui `index` de destino.
 
 ## 4. Interface (`web/`)
 

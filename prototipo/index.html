@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cartolina~ · protótipo ITO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{
+  --kraft:#EADBC0; --paper:#F6EEDD; --ink:#3B2F2F; --pink:#FF8FAB; --pink2:#E0567A;
+  --edge:#D3BF99;
+  --r:14px 10px 13px 9px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{
+  background-color:var(--kraft);
+  background-image:
+    radial-gradient(rgba(59,47,47,.06) 1px, transparent 1.3px),
+    radial-gradient(rgba(255,255,255,.28) 1px, transparent 1.3px);
+  background-size:7px 7px, 11px 11px;
+  background-position:0 0, 3px 5px;
+  color:var(--ink);
+  font-family:'Fredoka',system-ui,sans-serif;font-weight:500;
+  -webkit-user-select:none;user-select:none;
+}
+body.grabbing, body.grabbing *{cursor:grabbing !important}
+
+/* ---------- top bar ---------- */
+.logo{position:absolute;left:24px;top:16px;font:700 30px/1 'Fredoka';letter-spacing:-.5px;z-index:5}
+.logo span{color:var(--pink2)}
+.pills{position:absolute;right:22px;top:18px;display:flex;gap:10px;z-index:5}
+.pill{font:500 15px/1 'Fredoka';padding:8px 14px 7px;border:2px solid var(--ink);border-radius:999px 990px 999px 980px;background:var(--paper);white-space:nowrap}
+.pill.lives{color:var(--pink2);font-weight:700;letter-spacing:2px;display:flex;gap:6px;align-items:center}
+.pill.lives i{font-style:normal;display:inline-block}
+.pill.lives i.lost{color:transparent;-webkit-text-stroke:1.5px var(--ink);opacity:.55}
+
+/* ---------- seats ---------- */
+.seat{position:absolute;display:flex;align-items:center;gap:10px;z-index:4}
+.seat.top{top:12px;transform:translateX(-50%)}
+.seat.left{left:20px;top:44%;transform:translateY(-50%);flex-direction:column}
+.seat.right{right:20px;top:44%;transform:translateY(-50%);flex-direction:column}
+.avatar{width:52px;height:52px;border-radius:50% 46% 52% 47%;background:var(--c);border:2px solid var(--ink);display:grid;place-items:center;font:700 22px/1 'Fredoka';box-shadow:2px 3px 0 var(--ink);flex:none}
+.meta{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.seat.left .meta,.seat.right .meta{align-items:center}
+.name{font:700 16px/1 'Fredoka'}
+.tag{display:inline-block;font:500 13px/1 'Fredoka';padding:4px 10px 3px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);white-space:nowrap;transform-origin:20% 50%}
+.tag[data-s="escrevendo"]{background:#FFE7B3}
+.tag[data-s="arrastando"]{background:var(--pink)}
+.tag[data-s="pronto"]{background:#7EDDB5}
+.backs{display:flex;gap:6px}
+.mback{width:30px;height:41px;border:2px solid var(--ink);border-radius:7px 5px 6px 4px;background:var(--pink);position:relative;overflow:hidden}
+.mback::after{content:'~';position:absolute;inset:0;display:grid;place-items:center;font:700 20px/1 'Fredoka';color:var(--ink)}
+.mback.empty{background:transparent;border-style:dashed;border-color:rgba(59,47,47,.45)}
+.mback.empty::after{content:''}
+
+/* ---------- stage / felt ---------- */
+#stageWrap{position:absolute;left:50%;bottom:210px;width:900px;height:480px;transform-origin:50% 100%;z-index:1}
+#stage{position:absolute;inset:0;perspective:900px;perspective-origin:50% 50%}
+#felt{position:absolute;left:0;top:0;width:900px;height:480px;transform-origin:50% 100%;transform-style:preserve-3d;
+  border:2px solid var(--ink);border-radius:34px 26px 30px 24px;
+  background-color:var(--paper);
+  background-image:radial-gradient(rgba(59,47,47,.07) 1.1px, transparent 1.4px);
+  background-size:16px 16px;
+  box-shadow:0 9px 0 0 var(--edge), 0 9px 0 2px var(--ink);
+}
+#felt::before{content:'';position:absolute;inset:12px;border:2px dashed rgba(59,47,47,.18);border-radius:26px 20px 24px 18px;pointer-events:none}
+.theme{position:absolute;left:50%;top:30px;width:460px;margin-left:-230px;padding:12px 20px 14px;background:var(--kraft);border:2px solid var(--ink);border-radius:18px 12px 16px 11px;text-align:center;transform:rotate(-1.2deg);pointer-events:none}
+.tpill{position:absolute;left:-12px;top:-14px;background:var(--pink);border:2px solid var(--ink);border-radius:999px;font:700 13px/1 'Fredoka';padding:5px 10px 4px;transform:rotate(-6deg)}
+.ttitle{font:26px/1.05 'Patrick Hand';margin-bottom:4px}
+.tscale{font:19px/1.1 'Patrick Hand';opacity:.85}
+.tscale b{font:700 15px/1 'Fredoka';background:var(--paper);border:2px solid var(--ink);border-radius:8px 6px 7px 5px;padding:1px 6px;margin:0 2px}
+.track{position:absolute;left:78px;right:78px;top:248px;height:140px;border:2px dashed rgba(59,47,47,.16);border-radius:22px 16px 20px 15px;pointer-events:none}
+.endmark{position:absolute;top:296px;width:46px;height:46px;border-radius:50% 46% 52% 47%;border:2px solid var(--ink);background:var(--kraft);display:grid;place-items:center;font:700 17px/1 'Fredoka';pointer-events:none}
+#m1{left:26px} #m100{right:26px;font-size:14px}
+#row{position:absolute;left:-2px;top:-2px;width:900px;height:480px;transform-style:preserve-3d;pointer-events:none}
+.hm{position:absolute;width:0;height:0}
+
+/* ---------- cards ---------- */
+.card{position:absolute;left:0;top:0;width:88px;height:120px;margin:-60px 0 0 -44px;transform-style:preserve-3d;will-change:transform}
+.flip{position:absolute;inset:0;transform-style:preserve-3d}
+.face{position:absolute;inset:0;border:2px solid var(--ink);border-radius:var(--r);background:var(--c);
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;box-shadow:2px 3px 0 var(--ink)}
+.face.b{transform:rotateY(180deg)}
+.badge{position:absolute;left:5px;top:5px;width:22px;height:22px;border-radius:50% 46% 52% 47%;background:var(--paper);border:2px solid var(--ink);font:700 11px/18px 'Fredoka';text-align:center}
+.mynum{position:absolute;right:5px;top:4px;font:700 18px/1 'Fredoka';background:var(--paper);border:2px solid var(--ink);border-radius:8px 6px 7px 5px;padding:3px 5px 2px;min-width:30px;text-align:center}
+.clue{position:absolute;left:5px;right:5px;top:30px;bottom:6px;display:flex;align-items:center;justify-content:center;text-align:center;font:18px/0.98 'Patrick Hand';overflow-wrap:anywhere}
+.noclue{opacity:.45;font-size:22px}
+.face.num{background:var(--paper)}
+.face.num .band{position:absolute;left:0;right:0;top:0;height:26px;background:var(--c);border-bottom:2px solid var(--ink)}
+.bignum{position:absolute;left:0;right:0;top:26px;bottom:24px;display:grid;place-items:center;font:700 40px/1 'Fredoka'}
+.clue.mini{top:auto;bottom:4px;height:22px;font-size:13px;line-height:1;opacity:.85;overflow:hidden}
+.face.back{background:var(--pink)}
+.face.back::before{content:'';position:absolute;inset:6px;border:2px dashed rgba(59,47,47,.45);border-radius:10px 7px 9px 6px}
+.tilde{position:absolute;inset:0;display:grid;place-items:center;font:700 54px/1 'Fredoka'}
+.rcard{pointer-events:auto;cursor:not-allowed;touch-action:none}
+.rcard.mine{cursor:grab}
+body.revealing .rcard{cursor:default}
+.rcard.err .face{border-color:var(--pink2)}
+.xstamp{position:absolute;right:-12px;top:-12px;width:38px;height:38px;border-radius:50% 46% 52% 47%;background:var(--pink2);border:2px solid var(--ink);color:var(--paper);font:700 22px/34px 'Fredoka';text-align:center;opacity:0;pointer-events:none}
+.ocard .face{box-shadow:2px 3px 0 var(--ink), 9px 13px 0 rgba(59,47,47,.13)}
+.gap{position:absolute;left:0;top:0;width:88px;height:120px;margin:-60px 0 0 -44px;border:3px dashed var(--pink2);border-radius:var(--r);
+  background:rgba(255,143,171,.16);display:none}
+.gap b{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--c);border:2px solid var(--ink);font:700 12px/22px 'Fredoka';text-align:center}
+
+/* pings */
+.ping{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
+.ping i,.ping b{position:absolute;left:-60px;top:-60px;width:120px;height:120px;border-radius:50%;border:4px solid var(--c);box-shadow:0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink)}
+.ping b{left:-9px;top:-9px;width:18px;height:18px;background:var(--c);border:2px solid var(--ink);box-shadow:none}
+
+/* ---------- me ---------- */
+#me{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:28px;z-index:4}
+.me-id{display:flex;flex-direction:column;align-items:center;gap:6px;padding-bottom:10px;width:110px}
+.hand{display:flex;gap:20px}
+.hslot{position:relative;width:106px;height:144px;border-radius:var(--r);border:2px dashed transparent}
+.hslot.dragging,.hslot.away{border-color:rgba(59,47,47,.4)}
+.hslot.dragging .hcard{visibility:hidden}
+.hcard{left:50%;top:50%;cursor:grab;touch-action:none}
+.hslot.away .hcard{opacity:.5;cursor:default}
+.hslot.away .hcard .face{background:transparent;border-style:dashed;box-shadow:none}
+.slot-note{position:absolute;left:0;right:0;bottom:-22px;text-align:center;font:16px/1 'Patrick Hand';opacity:0}
+.hslot.away .slot-note{opacity:.8}
+.clue-in{position:absolute;left:5px;right:5px;top:31px;bottom:6px;resize:none;border:none;outline:none;background:rgba(246,238,221,.55);
+  border-radius:8px 6px 7px 5px;font:17px/0.98 'Patrick Hand';color:var(--ink);text-align:center;padding:4px 3px;overflow:hidden;
+  -webkit-user-select:text;user-select:text;cursor:text}
+.clue-in:focus{background:var(--paper);box-shadow:inset 0 0 0 2px var(--ink)}
+.clue-in::placeholder{color:rgba(59,47,47,.5)}
+.btn{font:700 19px/1 'Fredoka';padding:14px 22px 13px;background:var(--pink);border:2px solid var(--ink);border-radius:16px 12px 15px 11px;
+  box-shadow:3px 4px 0 var(--ink);color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn:active{box-shadow:1px 1px 0 var(--ink);transform:translate(2px,3px)}
+.btn[disabled]{background:#E3D2B3;color:rgba(59,47,47,.6);cursor:not-allowed;box-shadow:3px 4px 0 rgba(59,47,47,.4);border-color:rgba(59,47,47,.6)}
+.btn[disabled]:active{transform:none}
+.btn.ready{background:#7EDDB5}
+.ready-col{display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:16px;width:200px}
+.ready-hint{font:17px/1.05 'Patrick Hand';opacity:.75;text-align:center;min-height:18px}
+
+/* ---------- controls ---------- */
+#controls{position:absolute;right:20px;bottom:18px;display:flex;flex-direction:column;align-items:flex-end;gap:9px;z-index:4}
+.toggle-row{display:flex;align-items:center;gap:8px;font:500 15px/1 'Fredoka';cursor:pointer}
+.toggle{width:46px;height:26px;border:2px solid var(--ink);border-radius:999px;background:#E3D2B3;position:relative;padding:0;cursor:pointer}
+.toggle.on{background:var(--pink)}
+.knob{position:absolute;left:2px;top:2px;width:18px;height:18px;border-radius:50%;background:var(--paper);border:2px solid var(--ink)}
+.sbtn{font:500 14px/1 'Fredoka';padding:8px 12px 7px;background:var(--paper);border:2px dashed var(--ink);border-radius:12px 9px 11px 8px;cursor:pointer;color:var(--ink)}
+.sbtn.solid{border-style:solid;box-shadow:2px 3px 0 var(--ink)}
+.hint{position:absolute;left:22px;bottom:18px;font:18px/1.15 'Patrick Hand';opacity:.72;max-width:230px;z-index:4}
+
+/* ---------- overlay / cursors / banner ---------- */
+#overlay{position:fixed;inset:0;pointer-events:none;z-index:40}
+#cursors{position:fixed;inset:0;pointer-events:none;z-index:45}
+.cursor{position:absolute;left:0;top:0;will-change:transform}
+.cursor svg{position:absolute;left:-3px;top:-3px;overflow:visible}
+.cursor span{position:absolute;left:15px;top:21px;background:var(--c);border:2px solid var(--ink);border-radius:999px;font:700 12px/1 'Fredoka';padding:3px 8px 2px;white-space:nowrap}
+#tip{position:fixed;left:0;top:0;z-index:48;pointer-events:none;background:var(--paper);border:2px solid var(--ink);border-radius:12px 9px 11px 8px;
+  font:18px/1 'Patrick Hand';padding:6px 10px 5px;opacity:0;white-space:nowrap}
+#veil{position:fixed;inset:0;background:rgba(234,219,192,.35);z-index:50;display:none}
+#banner{position:fixed;left:50%;top:27%;z-index:52;display:none;background:var(--paper);border:2px solid var(--ink);border-radius:28px 20px 26px 18px;
+  padding:26px 40px 26px;text-align:center;box-shadow:5px 7px 0 var(--ink);min-width:360px}
+#banner.win{background:#FFF3D6}
+.b-title{font:700 52px/1 'Fredoka';margin-bottom:8px}
+.b-title span{color:var(--pink2)}
+.b-sub{font:23px/1.15 'Patrick Hand';margin-bottom:18px;opacity:.85}
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+</style>
+</head>
+<body>
+
+<div class="logo">cartolina<span>~</span></div>
+<div class="pills">
+  <span class="pill">modo livre</span>
+  <span class="pill lives" id="lives"><i>♥</i><i>♥</i><i>♥</i></span>
+</div>
+
+<div id="seats"></div>
+
+<div id="stageWrap"><div id="stage"><div id="felt">
+  <div class="theme" id="theme"></div>
+  <div class="track"></div>
+  <div class="endmark" id="m1">1</div>
+  <div class="endmark" id="m100">100</div>
+  <div id="row">
+    <div class="hm" style="left:0;top:0"></div>
+    <div class="hm" style="left:900px;top:0"></div>
+    <div class="hm" style="left:0;top:480px"></div>
+    <div class="hm" style="left:900px;top:480px"></div>
+  </div>
+</div></div></div>
+
+<div id="me">
+  <div class="me-id">
+    <div class="avatar" style="--c:#FFD07A">V</div>
+    <div class="name">você</div>
+    <div class="tag" id="meTag" data-s="pensando">pensando</div>
+  </div>
+  <div class="hand" id="hand"></div>
+  <div class="ready-col">
+    <button class="btn" id="readyBtn" disabled>tô pronto</button>
+    <div class="ready-hint" id="readyHint">bota suas cartas na fila</div>
+  </div>
+</div>
+
+<div id="controls">
+  <div class="toggle-row" id="tglRow"><span>mesa 3D</span><button class="toggle on" id="tgl" aria-label="mesa 3D"><span class="knob"></span></button></div>
+  <button class="sbtn" id="revealBtn">revelar agora</button>
+  <button class="sbtn solid" id="newBtn">nova rodada</button>
+</div>
+<div class="hint">arrasta suas cartas pra fila ↑<br>duplo clique na mesa = ping</div>
+
+<div id="overlay"></div>
+<div id="cursors"></div>
+<div id="tip"></div>
+<div id="veil"></div>
+<div id="banner"><div class="b-title" id="bTitle"></div><div class="b-sub" id="bSub"></div><button class="btn" id="againBtn">nova rodada</button></div>
+<canvas id="confetti"></canvas>
+
+<script>
+'use strict';
+/* =========================================================
+   cartolina~ — protótipo de interação da mesa de ITO
+   tudo com molas (Spring) + um único loop rAF, só transforms.
+   ========================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const lerp = (a, b, t) => a + (b - a) * t;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const esc = s => s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const minJerk = p => p * p * p * (10 - 15 * p + 6 * p * p);
+const ABORT = Symbol('abort');
+
+/* ---------- mola (semi-implicit euler, substeps fixos) ---------- */
+class Spring {
+  constructor(v = 0, k = 300, zeta = 0.8) { this.v = v; this.t = v; this.vel = 0; this.set(k, zeta); }
+  set(k, zeta) { this.k = k; this.c = 2 * zeta * Math.sqrt(k); return this; }
+  snap(v) { this.v = this.t = v; this.vel = 0; return this; }
+  step(dt) {
+    if (this.vel === 0 && this.v === this.t) return this.v;
+    const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
+    for (let i = 0; i < n; i++) {
+      const a = -this.k * (this.v - this.t) - this.c * this.vel;
+      this.vel += a * h; this.v += this.vel * h;
+    }
+    if (Math.abs(this.v - this.t) < 1e-4 && Math.abs(this.vel) < 1e-3) { this.v = this.t; this.vel = 0; }
+    return this.v;
+  }
+}
+
+/* ---------- constantes ---------- */
+const FW = 900, FH = 480, ROW_Y = 318, CW = 88, CH = 120;
+const ROW_S = 0.85, HAND_S = 1.2, TILT = 38, PERSP = 900;
+const ROW_X0 = 96, ROW_X1 = FW - 96, NAT_STEP = CW * ROW_S + 10;
+const PAL = ['#8EC5FF', '#FF8FAB', '#7EDDB5', '#C7B3FF', '#FFD07A', '#FFB38A', '#9EE6F0'];
+
+const ME = { id: 'me', name: 'você', init: 'V', color: '#FFD07A', g: 'o' };
+const BOT_DEFS = [
+  { id: 'bia', name: 'Bia', init: 'B', color: '#8EC5FF', pos: 'top-l', g: 'a', noise: 6 },
+  { id: 'caio', name: 'Caio', init: 'C', color: '#FF8FAB', pos: 'top-r', g: 'o', noise: 9 },
+  { id: 'duda', name: 'Duda', init: 'D', color: '#7EDDB5', pos: 'left', g: 'a', noise: 5 },
+  { id: 'enzo', name: 'Enzo', init: 'E', color: '#C7B3FF', pos: 'right', g: 'o', noise: 11 },
+];
+const PLAYERS = [ME, ...BOT_DEFS];
+
+const THEMES = [
+  { title: 'Lugares que você quer visitar', lo: 'nunca iria', hi: 'sonho de vida', clues: [
+    ['fila do INSS', 'dentista às 7h', 'rodoviária 3h da manhã', 'reunião de condomínio', 'DETRAN'],
+    ['shopping no sábado', 'praia lotada no feriado', 'casa da tia chata', 'zoológico na chuva', 'escala de 9h'],
+    ['Curitiba no inverno', 'museu de cera', 'parque aquático', 'Beto Carrero', 'sítio do vô'],
+    ['Chapada Diamantina', 'Buenos Aires', 'Lençóis Maranhenses', 'Lisboa', 'show grandão'],
+    ['Japão na primavera', 'aurora na Islândia', 'Fernando de Noronha', 'Patagônia', 'a lua'] ] },
+  { title: 'Comidas', lo: 'nem morto', hi: 'comeria todo dia', clues: [
+    ['jiló cru', 'fígado', 'sushi de posto', 'uva-passa no arroz', 'sardinha quente'],
+    ['chuchu', 'sopa de hospital', 'beterraba', 'quiabo', 'salada de maionese'],
+    ['miojo', 'arroz e feijão', 'coxinha de padaria', 'pastel de feira', 'pão de queijo'],
+    ['lasanha da vó', 'açaí', 'churrasco de domingo', 'pizza de calabresa', 'brigadeiro de colher'],
+    ['strogonoff da mãe', 'picanha', 'petit gâteau', 'temaki fresquinho', 'pão quente com manteiga'] ] },
+  { title: 'Superpoderes', lo: 'inútil', hi: 'o mais incrível', clues: [
+    ['falar com pombos', 'acender lâmpada', 'espirrar glitter', 'saber a hora', 'esquecer nomes'],
+    ['achar o controle', 'dormir em 1 min', 'nunca suar', 'wi-fi infinito', 'nunca pegar trânsito'],
+    ['respirar na água', 'super força', 'falar todas as línguas', 'invisibilidade', 'visão de raio-x'],
+    ['teletransporte', 'voar', 'ler mentes', 'curar pessoas', 'parar o tempo'],
+    ['viajar no tempo', 'imortalidade', 'controlar o clima', 'estar em todo lugar', 'refazer o universo'] ] },
+];
+
+/* ---------- DOM ---------- */
+const wrapEl = $('#stageWrap'), feltEl = $('#felt'), rowEl = $('#row'), overlayEl = $('#overlay'), cursorsEl = $('#cursors');
+const markers = [...rowEl.querySelectorAll('.hm')];
+const handEl = $('#hand'), meTagEl = $('#meTag'), readyBtn = $('#readyBtn'), readyHint = $('#readyHint');
+const tipEl = $('#tip'), bannerEl = $('#banner'), veilEl = $('#veil');
+
+/* ---------- estado ---------- */
+const S = {
+  round: 0, brain: 0, cards: new Map(), row: [], gaps: new Map(), overlays: new Set(),
+  anims: new Map(), pings: [], dying: [], layoutX: {},
+  lives: 3, revealing: false, meReady: false, themeIdx: -1, theme: null, usedClues: new Set(),
+  tiltOn: true, tilt: new Spring(TILT, 110, 0.68), k: new Spring(1, 110, 0.8), knob: new Spring(1, 420, 0.55),
+  H: null, Hi: null, Hdirty: true, revealTimer: 0,
+};
+const ptr = { x: innerWidth / 2, y: innerHeight / 2, px: innerWidth / 2, py: innerHeight / 2, vx: 0, vy: 0 };
+const drag = { pending: null, active: null };
+let myTemp = null, myTempTimer = 0, cardSeq = 0;
+let bots = [];
+
+/* =========================================================
+   homografia: coordenadas locais do feltro  <->  tela
+   (lida de 4 marcadores; vale pra qualquer tilt/escala)
+   ========================================================= */
+function solveH(src, dst) {
+  const A = [], b = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = src[i], [u, v] = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -x * u, -y * u]); b.push(u);
+    A.push([0, 0, 0, x, y, 1, -x * v, -y * v]); b.push(v);
+  }
+  for (let c = 0; c < 8; c++) {
+    let p = c;
+    for (let r = c + 1; r < 8; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    [A[c], A[p]] = [A[p], A[c]]; [b[c], b[p]] = [b[p], b[c]];
+    for (let r = 0; r < 8; r++) {
+      if (r === c) continue;
+      const f = A[r][c] / A[c][c]; if (!f) continue;
+      for (let k = c; k < 8; k++) A[r][k] -= f * A[c][k];
+      b[r] -= f * b[c];
+    }
+  }
+  const h = b.map((v, i) => v / A[i][i]);
+  return [h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7], 1];
+}
+function inv3(m) {
+  const [a, b, c, d, e, f, g, h, i] = m;
+  const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g, det = a * A + b * B + c * C;
+  return [A / det, -(b * i - c * h) / det, (b * f - c * e) / det,
+          B / det, (a * i - c * g) / det, -(a * f - c * d) / det,
+          C / det, -(a * h - b * g) / det, (a * e - b * d) / det];
+}
+function applyH(m, x, y) {
+  const w = m[6] * x + m[7] * y + m[8];
+  return [(m[0] * x + m[1] * y + m[2]) / w, (m[3] * x + m[4] * y + m[5]) / w];
+}
+function readH() {
+  const pts = markers.map(el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  S.H = solveH([[0, 0], [FW, 0], [0, FH], [FW, FH]], pts);
+  S.Hi = inv3(S.H);
+}
+const toScreen = (lx, ly) => applyH(S.H, lx, ly);
+const toLocal = (sx, sy) => applyH(S.Hi, sx, sy);
+function hScale(lx, ly) { const a = toScreen(lx, ly), b = toScreen(lx + 10, ly); return Math.hypot(b[0] - a[0], b[1] - a[1]) / 10; }
+const inRowZone = (lx, ly) => lx > -40 && lx < FW + 40 && ly > ROW_Y - 150 && ly < FH + 50;
+
+function fitStage(snap) {
+  const visH = (S.tiltOn ? 0.74 : 1) * FH;
+  const availW = innerWidth - 2 * 175, availH = innerHeight - 210 - 100;
+  const k = clamp(Math.min(availW / FW, availH / visH), 0.4, 1.12);
+  if (snap) S.k.snap(k); else S.k.t = k;
+  S.Hdirty = true;
+}
+
+/* =========================================================
+   fila (row) + buracos (gaps)
+   ========================================================= */
+function rowEntries(extra) {
+  const n = S.row.length, out = [], gl = [];
+  for (const [o, g] of S.gaps) {
+    if (extra && o === extra.owner) { gl.push({ owner: o, idx: Math.min(extra.idx, n) }); continue; }
+    if (g.active) gl.push({ owner: o, idx: Math.min(g.idx, n) });
+  }
+  if (extra && !S.gaps.has(extra.owner)) gl.push({ owner: extra.owner, idx: Math.min(extra.idx, n) });
+  for (let i = 0; i <= n; i++) {
+    for (const g of gl) if (g.idx === i) out.push({ gap: g.owner });
+    if (i < n) out.push({ card: S.row[i] });
+  }
+  const m = out.length, w = CW * ROW_S;
+  const step = m > 1 ? Math.min(NAT_STEP, (ROW_X1 - ROW_X0 - w) / (m - 1)) : 0;
+  const x0 = FW / 2 - (w + step * (m - 1)) / 2 + w / 2;
+  out.forEach((e, j) => { e.x = x0 + j * step; e.j = j; });
+  return out;
+}
+function layoutRow() {
+  S.layoutX = {};
+  for (const e of rowEntries(null)) {
+    if (e.card) {
+      const c = S.cards.get(e.card);
+      c.sp.x.t = e.x; c.sp.z.t = 1 + e.j * 0.7; S.layoutX[e.card] = e.x;
+    } else {
+      const g = S.gaps.get(e.gap);
+      if (g.fresh) { g.x.snap(e.x); g.fresh = false; } else g.x.t = e.x;
+      g.j = e.j;
+    }
+  }
+}
+function insertIndex(lx) { let n = 0; for (const id of S.row) if (S.layoutX[id] < lx) n++; return n; }
+function hypoX(owner, idx) { const e = rowEntries({ owner, idx }).find(e => e.gap === owner); return e ? e.x : FW / 2; }
+
+function setGap(owner, idx) {
+  const g = S.gaps.get(owner);
+  if (!g.active) { g.active = true; g.fresh = true; g.s.snap(0.55); g.s.t = 1; g.el.style.display = 'block'; }
+  g.idx = idx;
+}
+function clearGap(owner) { const g = S.gaps.get(owner); if (g.active) { g.active = false; g.s.t = 0; } }
+function rowRemove(id) {
+  const idx = S.row.indexOf(id); if (idx < 0) return -1;
+  S.row.splice(idx, 1);
+  for (const g of S.gaps.values()) if (g.active && g.idx > idx) g.idx--;
+  return idx;
+}
+function rowInsert(idx, id, owner) {
+  const order = [...S.gaps.keys()], mine = order.indexOf(owner);
+  idx = clamp(idx, 0, S.row.length);
+  S.row.splice(idx, 0, id);
+  for (const [o2, g2] of S.gaps) {
+    if (o2 === owner || !g2.active) continue;
+    if (g2.idx > idx || (g2.idx === idx && order.indexOf(o2) > mine)) g2.idx++;
+  }
+  const g = S.gaps.get(owner);
+  g.active = false; g.s.snap(0); g.el.style.display = 'none';
+}
+
+/* =========================================================
+   cartas
+   ========================================================= */
+const clueHTML = c => c.clue ? esc(c.clue) : '<span class="noclue">…</span>';
+const frontHTML = c => `<div class="badge">${c.owner.init}</div>${c.owner === ME ? `<div class="mynum">${c.value}</div>` : ''}<div class="clue" data-clue="${c.id}">${clueHTML(c)}</div>`;
+const numHTML = c => `<div class="band"></div><div class="badge">${c.owner.init}</div><div class="bignum">${c.value}</div><div class="clue mini" data-clue="${c.id}">${clueHTML(c)}</div>`;
+function refreshClue(c) { document.querySelectorAll(`[data-clue="${c.id}"]`).forEach(el => { el.innerHTML = clueHTML(c); }); }
+function clueFor(v) {
+  const bucket = S.theme.clues[clamp(Math.floor((v - 1) / 20), 0, 4)];
+  const free = bucket.filter(s => !S.usedClues.has(s));
+  const s = free.length ? pick(free) : pick(bucket);
+  S.usedClues.add(s); return s;
+}
+
+function makeCard(owner, value) {
+  const id = 'c' + (++cardSeq);
+  const c = {
+    id, owner, value, clue: '', where: 'hand', tilt: rand(-3, 3), error: false, landing: false,
+    sp: {
+      x: new Spring(FW / 2, 230, 0.72), y: new Spring(0, 300, 0.75), z: new Spring(1, 320, 0.72),
+      stand: new Spring(0, 230, 0.86), rs: new Spring(1, 420, 0.42), wob: new Spring(0, 520, 0.2),
+      flip: new Spring(0, 150, 0.6), shake: new Spring(0, 1100, 0.1), stamp: new Spring(0, 520, 0.42),
+    },
+  };
+  const el = document.createElement('div');
+  el.className = 'card rcard' + (owner === ME ? ' mine' : '');
+  el.style.setProperty('--c', owner.color);
+  el.style.display = 'none';
+  el.innerHTML = `<div class="flip"><div class="face a">${frontHTML(c)}</div><div class="face b num">${numHTML(c)}</div></div><div class="xstamp">✕</div>`;
+  c.el = el; c.flipEl = el.firstChild; c.stampEl = el.lastChild;
+  el.addEventListener('pointerdown', e => onRowCardDown(e, c));
+  rowEl.appendChild(el);
+  S.cards.set(id, c);
+  return c;
+}
+function writeRowCard(c) {
+  const sp = c.sp, f = clamp(sp.flip.v, 0, 1.2);
+  const z = Math.max(0.5, sp.z.v) + Math.sin(Math.PI * clamp(f, 0, 1)) * 34;
+  c.el.style.transform =
+    `translate3d(${(sp.x.v + sp.shake.v).toFixed(2)}px,${(ROW_Y + sp.y.v).toFixed(2)}px,${z.toFixed(2)}px) ` +
+    `rotateX(${(-S.tilt.v * sp.stand.v).toFixed(2)}deg) rotateZ(${(c.tilt + sp.wob.v + sp.shake.v * 0.25).toFixed(2)}deg) scale(${Math.max(0.001, ROW_S * sp.rs.v).toFixed(4)})`;
+  c.flipEl.style.transform = `rotateY(${(sp.flip.v * 180).toFixed(2)}deg)`;
+  const st = sp.stamp.v;
+  c.stampEl.style.opacity = st > 0.02 ? 1 : 0;
+  c.stampEl.style.transform = `translateZ(6px) rotate(-10deg) scale(${Math.max(0, st).toFixed(3)})`;
+}
+
+/* ---------- overlay (carta "na mão", plana, de frente pra câmera) ---------- */
+function makeOverlay(c, x, y, s, { rx = 0, fl = 0, k = 1400, zeta = 0.92 } = {}) {
+  const el = document.createElement('div');
+  el.className = 'card ocard';
+  el.style.setProperty('--c', c.owner.color);
+  el.innerHTML = `<div class="flip"><div class="face a">${frontHTML(c)}</div><div class="face b back"><div class="tilde">~</div></div></div>`;
+  overlayEl.appendChild(el);
+  const o = {
+    c, el, flipEl: el.firstChild, home: null, onHome: null, homeT: 0,
+    x: new Spring(x, k, zeta), y: new Spring(y, k, zeta), s: new Spring(s, 380, 0.62),
+    rot: new Spring(0, 300, 0.45), rx: new Spring(rx, 260, 0.7), fl: new Spring(fl, 190, 0.72),
+  };
+  o.rx.t = 0;
+  S.overlays.add(o);
+  writeOverlay(o);
+  return o;
+}
+function writeOverlay(o) {
+  o.el.style.transform =
+    `translate(${o.x.v.toFixed(2)}px,${o.y.v.toFixed(2)}px) perspective(700px) rotateX(${o.rx.v.toFixed(2)}deg) ` +
+    `rotate(${(o.rot.v + o.c.tilt).toFixed(2)}deg) scale(${Math.max(0.01, o.s.v).toFixed(4)})`;
+  o.flipEl.style.transform = `rotateY(${(o.fl.v * 180).toFixed(2)}deg)`;
+}
+function removeOverlay(o) { o.el.remove(); S.overlays.delete(o); }
+
+/* overlay -> fila: a carta "cai" no plano 3D do feltro e assenta com mola */
+function landCard(c, o, owner) {
+  const g = S.gaps.get(owner);
+  const idx = g.active ? g.idx : S.row.length;
+  rowInsert(idx, c.id, owner);
+  c.where = 'row';
+  const th = S.tilt.v * Math.PI / 180;
+  const Z0 = 18 + 40 * Math.sin(th);
+  let [lx, ly] = toLocal(o.x.v, o.y.v);
+  const hs = hScale(lx, ly);
+  [lx, ly] = toLocal(o.x.v, o.y.v + Z0 * Math.sin(th) * hs);   // compensa o "levantado"
+  const sp = c.sp;
+  sp.x.snap(lx); sp.x.vel = o.x.vel / hs * 0.5;
+  sp.y.snap(ly - ROW_Y); sp.y.vel = o.y.vel / hs * 0.5; sp.y.t = 0;
+  sp.z.snap(Z0);
+  sp.stand.snap(1); sp.stand.t = 0;
+  sp.rs.snap(o.s.v / (ROW_S * hs) / (1 + Z0 * Math.cos(th) / PERSP)); sp.rs.t = 1;
+  sp.wob.snap(o.rot.v); sp.wob.t = 0;
+  c.landing = true;
+  layoutRow();
+  c.el.style.display = '';
+  writeRowCard(c);
+  removeOverlay(o);
+  if (owner === 'me') { updateMeUI(); }
+}
+
+/* overlay -> volta pra mão / assento */
+function sendHome(c, o) {
+  o.x.set(240, 0.74); o.y.set(240, 0.74); o.homeT = performance.now();
+  if (c.owner === ME) {
+    o.home = () => { const r = c.hslot.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, HAND_S, 0]; };
+    o.onHome = () => { c.where = 'hand'; c.hsp.s.snap(1.07); c.hsp.s.t = 1; c.hsp.y.snap(0); updateMeUI(); };
+  } else {
+    o.home = () => { const r = c.backEl.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.width / CW, 1]; };
+    o.onHome = () => { c.where = 'hand'; c.backEl.classList.remove('empty'); pop(c.backEl, 1.25); };
+  }
+}
+
+/* =========================================================
+   animações genéricas (pop com mola), tags, tooltip
+   ========================================================= */
+function pop(el, from = 0.6, base = '', k = 420, zeta = 0.42) {
+  const sp = new Spring(from, k, zeta); sp.t = 1;
+  S.anims.set(el, { sp, f: v => { el.style.transform = `${base} scale(${v.toFixed(4)})`; } });
+}
+function setTag(el, text) {
+  if (el.textContent === text) return;
+  el.textContent = text;
+  el.dataset.s = text.replace(/[^a-z]/g, '');
+  pop(el, 0.78);
+}
+let tipTimer = 0;
+const tipSp = { s: new Spring(0, 500, 0.5), x: 0, y: 0 };
+function showTip(text, x, y) {
+  tipEl.textContent = text; tipSp.x = x + 14; tipSp.y = y - 42;
+  tipSp.s.snap(0.5); tipSp.s.t = 1;
+  clearTimeout(tipTimer); tipTimer = setTimeout(() => { tipSp.s.t = 0; }, 1000);
+}
+
+/* =========================================================
+   meu lado: mão, dicas, pronto
+   ========================================================= */
+const meCards = () => [...S.cards.values()].filter(c => c.owner === ME);
+function buildHand(cards) {
+  handEl.innerHTML = '';
+  cards.forEach((c, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'hslot';
+    slot.innerHTML = `<div class="card hcard" style="--c:${ME.color}"><div class="face a"><div class="badge">V</div><div class="mynum">${c.value}</div>` +
+      `<textarea class="clue-in" maxlength="28" rows="3" placeholder="escreve uma dica…" spellcheck="false"></textarea></div></div><div class="slot-note">tá na mesa ↑</div>`;
+    handEl.appendChild(slot);
+    c.hslot = slot; c.hcard = slot.firstChild; c.ta = slot.querySelector('textarea');
+    c.hsp = { y: new Spring(0, 420, 0.55), s: new Spring(0, 380, 0.5) };
+    setTimeout(() => { c.hsp.s.t = 1; }, 250 + i * 120);
+    c.hcard.addEventListener('pointerdown', e => {
+      if (e.target.closest('textarea') || e.button !== 0 || c.where !== 'hand' || S.revealing || !S.H) return;
+      e.preventDefault();
+      drag.pending = { c, from: 'hand', sx: e.clientX, sy: e.clientY };
+    });
+    c.hcard.addEventListener('pointerenter', () => { if (c.where === 'hand' && !drag.active) { c.hsp.y.t = -10; c.hsp.s.t = 1.04; } });
+    c.hcard.addEventListener('pointerleave', () => { c.hsp.y.t = 0; c.hsp.s.t = 1; });
+    c.ta.addEventListener('input', () => {
+      c.clue = c.ta.value.replace(/\s+/g, ' ').trim();
+      refreshClue(c);
+      if (c.where === 'row') c.sp.rs.vel += 0.6;
+      myTemp = 'escrevendo…'; clearTimeout(myTempTimer);
+      myTempTimer = setTimeout(() => { if (myTemp === 'escrevendo…') myTemp = null; updateMeUI(); }, 1300);
+      updateMeUI();
+    });
+    c.ta.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); c.ta.blur(); } });
+  });
+}
+function updateMeUI() {
+  const mine = meCards();
+  for (const c of mine) {
+    c.hslot.classList.toggle('dragging', c.where === 'drag');
+    c.hslot.classList.toggle('away', c.where === 'row');
+  }
+  const allPlaced = mine.length > 0 && mine.every(c => c.where === 'row');
+  if (!allPlaced && S.meReady) S.meReady = false;
+  const readyBots = bots.filter(b => b.ready).length;
+  if (S.revealing) {
+    readyBtn.disabled = true; readyBtn.textContent = 'revelando…'; readyHint.textContent = 'segura a respiração';
+  } else if (!allPlaced) {
+    readyBtn.disabled = true; readyBtn.textContent = 'tô pronto'; readyBtn.classList.remove('ready');
+    readyHint.textContent = 'bota suas cartas na fila';
+  } else if (!S.meReady) {
+    readyBtn.disabled = false; readyBtn.textContent = 'tô pronto'; readyBtn.classList.remove('ready');
+    readyHint.textContent = `${readyBots}/4 prontos`;
+  } else {
+    readyBtn.disabled = false; readyBtn.textContent = 'pronto ✓'; readyBtn.classList.add('ready');
+    readyHint.textContent = readyBots === 4 ? 'bora revelar!' : `esperando a galera (${readyBots}/4)… clica pra desfazer`;
+  }
+  setTag(meTagEl, myTemp || (S.meReady ? 'pronto ✓' : 'pensando'));
+}
+readyBtn.addEventListener('click', () => {
+  if (S.revealing) return;
+  S.meReady = !S.meReady;
+  pop(readyBtn, 0.86);
+  updateMeUI(); checkAllReady();
+});
+
+/* ---------- arrasto local ---------- */
+function onRowCardDown(e, c) {
+  if (e.button !== 0 || !S.H) return;
+  if (S.revealing) return;
+  if (c.owner === ME && c.where === 'row') {
+    e.preventDefault();
+    drag.pending = { c, from: 'row', sx: e.clientX, sy: e.clientY };
+  } else if (c.owner !== ME) {
+    c.sp.wob.vel += (Math.random() < 0.5 ? -1 : 1) * 480;
+    c.sp.rs.vel += 0.5;
+    showTip(`ei, essa é d${c.owner.g} ${c.owner.name}!`, e.clientX, e.clientY);
+  }
+}
+function startMyDrag() {
+  const { c, from } = drag.pending; drag.pending = null;
+  let x, y, s, rx = 0;
+  if (from === 'hand') {
+    const r = c.hslot.getBoundingClientRect();
+    x = r.left + r.width / 2; y = r.top + r.height / 2 + c.hsp.y.v; s = HAND_S * c.hsp.s.v;
+  } else {
+    if (c.where !== 'row') return;
+    const lx = c.sp.x.v, ly = ROW_Y + c.sp.y.v;
+    [x, y] = toScreen(lx, ly); s = ROW_S * c.sp.rs.v * hScale(lx, ly); rx = S.tilt.v;
+    const idx = rowRemove(c.id);
+    setGap('me', idx); S.gaps.get('me').s.snap(1);
+    c.el.style.display = 'none';
+  }
+  c.where = 'drag';
+  const o = makeOverlay(c, x, y, s, { rx });
+  o.s.t = HAND_S * 1.07;
+  drag.active = { c, o, offX: (ptr.x - x) / s, offY: (ptr.y - y) / s };
+  S.meReady = false;
+  myTemp = 'arrastando…';
+  document.body.classList.add('grabbing');
+  updateMeUI();
+}
+function updateMyDrag() {
+  const d = drag.active; if (!d) return;
+  const o = d.o;
+  o.x.t = ptr.x - d.offX * o.s.v;
+  o.y.t = ptr.y - d.offY * o.s.v;
+  const [lx, ly] = toLocal(ptr.x, ptr.y);
+  if (inRowZone(lx, ly)) {
+    setGap('me', insertIndex(lx));
+    o.s.t = ROW_S * hScale(clamp(lx, 0, FW), ROW_Y) * 1.06;
+  } else {
+    clearGap('me');
+    o.s.t = HAND_S * 1.07;
+  }
+  o.rot.t = clamp(ptr.vx * 0.014, -14, 14);
+  o.rx.t = clamp(-ptr.vy * 0.006, -10, 10);
+}
+function endMyDrag(forceHome) {
+  const d = drag.active; if (!d) return;
+  drag.active = null;
+  document.body.classList.remove('grabbing');
+  if (!forceHome) { drag.active = d; updateMyDrag(); drag.active = null; }   // hit-test final (soltou antes de rodar um frame)
+  const g = S.gaps.get('me');
+  if (!forceHome && g.active) landCard(d.c, d.o, 'me');
+  else { clearGap('me'); sendHome(d.c, d.o); }
+  if (myTemp === 'arrastando…') myTemp = null;
+  updateMeUI();
+}
+addEventListener('pointermove', e => {
+  ptr.x = e.clientX; ptr.y = e.clientY;
+  if (drag.pending && !drag.active && Math.hypot(e.clientX - drag.pending.sx, e.clientY - drag.pending.sy) > 4) startMyDrag();
+});
+addEventListener('pointerup', () => { drag.pending = null; if (drag.active) endMyDrag(false); });
+addEventListener('pointercancel', () => { drag.pending = null; if (drag.active) endMyDrag(true); });
+addEventListener('blur', () => { drag.pending = null; if (drag.active) endMyDrag(true); });
+
+/* ---------- ping (duplo clique no feltro) ---------- */
+let lastDown = { t: 0, x: 0, y: 0 };
+feltEl.addEventListener('pointerdown', e => {
+  const now = performance.now();
+  if (now - lastDown.t < 340 && Math.hypot(e.clientX - lastDown.x, e.clientY - lastDown.y) < 14 && S.Hi) {
+    const [lx, ly] = toLocal(e.clientX, e.clientY);
+    ping(lx, ly, ME.color);
+    lastDown.t = 0;
+  } else lastDown = { t: now, x: e.clientX, y: e.clientY };
+});
+function ping(lx, ly, color) {
+  const el = document.createElement('div');
+  el.className = 'ping'; el.style.setProperty('--c', color);
+  el.innerHTML = '<i></i><i></i><b></b>';
+  rowEl.appendChild(el);
+  el.style.transform = `translate3d(${lx}px,${ly}px,3px)`;
+  const r1 = new Spring(0, 70, 0.95), r2 = new Spring(0, 55, 0.95), dot = new Spring(0, 600, 0.35);
+  r1.t = 1; dot.t = 1;
+  S.pings.push({ el, r1, r2, dot, born: performance.now(), rings: el.querySelectorAll('i'), dotEl: el.querySelector('b') });
+}
+
+/* =========================================================
+   bots
+   ========================================================= */
+function buildSeats() {
+  const seatsEl = $('#seats');
+  bots = BOT_DEFS.map(p => {
+    const el = document.createElement('div');
+    const side = p.pos.startsWith('top') ? 'top' : p.pos;
+    el.className = 'seat ' + side;
+    if (p.pos === 'top-l') el.style.left = '30%';
+    if (p.pos === 'top-r') el.style.left = '70%';
+    el.style.setProperty('--c', p.color);
+    el.innerHTML = `<div class="avatar">${p.init}</div><div class="meta"><div class="name">${p.name}</div><div class="tag" data-s="pensando">pensando</div></div><div class="backs"></div>`;
+    seatsEl.appendChild(el);
+    const cur = document.createElement('div');
+    cur.className = 'cursor'; cur.style.setProperty('--c', p.color);
+    cur.innerHTML = `<svg width="22" height="27" viewBox="0 0 22 27"><path d="M3 3 L3 22 L8 17.4 L11.4 25 L15 23.4 L11.7 16 L18.6 15.6 Z" style="fill:var(--c)" stroke="#3B2F2F" stroke-width="2" stroke-linejoin="round"/></svg><span>${p.name}</span>`;
+    cursorsEl.appendChild(cur);
+    const b = {
+      p, seatEl: el, tagEl: el.querySelector('.tag'), backsEl: el.querySelector('.backs'), avEl: el.querySelector('.avatar'), curEl: cur,
+      cards: [], ready: false, busy: false, dragging: false, drag: null, path: null, repositions: 0, est: new Map(),
+      sim: { x: 0, y: 0 }, cur: { x: new Spring(0, 380, 0.92), y: new Spring(0, 380, 0.92) }, nextNet: 0, nextWander: 0,
+    };
+    return b;
+  });
+  for (const b of bots) {
+    const r = b.avEl.getBoundingClientRect();
+    b.sim.x = r.left + r.width / 2 + 10; b.sim.y = r.top + r.height / 2 + 10;
+    b.cur.x.snap(b.sim.x); b.cur.y.snap(b.sim.y);
+  }
+}
+const botDragCount = () => bots.filter(b => b.dragging).length;
+
+function botMove(b, getE, opts = {}) {
+  return new Promise(res => {
+    const S0 = [b.sim.x, b.sim.y], E0 = getE();
+    const d = Math.hypot(E0[0] - S0[0], E0[1] - S0[1]);
+    b.path = {
+      S: S0, getE, t0: performance.now(), dur: clamp(360 + d * 1.05, 360, 1700) * (opts.slow || 1),
+      off: d > 50 ? rand(-0.24, 0.24) : 0, onP: opts.onP || null, onDone: opts.onDone || null, res,
+    };
+  });
+}
+function estimate(b, c) {
+  if (c.owner === b.p) return c.value;
+  if (!b.est.has(c.id)) b.est.set(c.id, c.value + gauss() * b.p.noise);
+  return b.est.get(c.id);
+}
+function botTargetIndex(b, c, prefer = -1) {
+  const ids = S.row.filter(id => id !== c.id);
+  const est = ids.map(id => estimate(b, S.cards.get(id)));
+  let best = 0, bestCost = Infinity;
+  for (let i = 0; i <= ids.length; i++) {
+    let cost = i === prefer ? -0.5 : Math.random() * 0.3;
+    for (let j = 0; j < ids.length; j++) {
+      if (j < i && est[j] > c.value) cost++;
+      if (j >= i && est[j] < c.value) cost++;
+    }
+    if (cost < bestCost) { bestCost = cost; best = i; }
+  }
+  return best;
+}
+function botSlotCursor(b) {
+  const d = b.drag, g = S.gaps.get(b.p.id);
+  const lx = g.active ? g.x.v : hypoX(b.p.id, d.planIdx);
+  const [sx, sy] = toScreen(lx, ROW_Y);
+  const s = ROW_S * hScale(lx, ROW_Y) * 1.04;
+  return [sx + d.off[0] * s, sy + d.off[1] * s];
+}
+function cardScreenPoint(c, ox = -8, oy = -22) {
+  const lx = c.sp.x.v, ly = ROW_Y + c.sp.y.v;
+  const [x, y] = toScreen(lx, ly), s = ROW_S * hScale(lx, ly);
+  return [x + ox * s, y + oy * s];
+}
+
+async function botPlace(b, c, alive) {
+  const back = c.backEl;
+  const backPt = () => { const r = back.getBoundingClientRect(); return [r.left + r.width / 2 - 4, r.top + r.height / 2 - 8]; };
+  await botMove(b, backPt);
+  if (!alive()) throw ABORT;
+  await sleep(rand(110, 200)); if (!alive()) throw ABORT;
+  const r = back.getBoundingClientRect();
+  c.where = 'drag';
+  back.classList.add('empty'); pop(back, 0.7);
+  const o = makeOverlay(c, r.left + r.width / 2, r.top + r.height / 2, r.width / CW, { fl: 1, k: 520, zeta: 0.8 });
+  o.fl.t = 0; o.s.t = 1;
+  const d = b.drag = { card: c, o, off: [-8, -22], planIdx: botTargetIndex(b, c), gapOpen: false };
+  await botMove(b, () => botSlotCursor(b), {
+    onP: p => { if (p > 0.45 && !d.gapOpen) { d.gapOpen = true; d.planIdx = botTargetIndex(b, c); setGap(b.p.id, d.planIdx); } },
+  });
+  if (!alive()) throw ABORT;
+  await sleep(rand(80, 170)); if (!alive()) throw ABORT;
+  if (!d.gapOpen) setGap(b.p.id, botTargetIndex(b, c));
+  b.drag = null;
+  landCard(c, o, b.p.id);
+}
+async function botMoveRow(b, c, alive) {
+  await botMove(b, () => cardScreenPoint(c));
+  if (!alive()) throw ABORT;
+  await sleep(rand(110, 190)); if (!alive()) throw ABORT;
+  if (c.where !== 'row') return;
+  const lx = c.sp.x.v, ly = ROW_Y + c.sp.y.v;
+  const [x, y] = toScreen(lx, ly), s = ROW_S * c.sp.rs.v * hScale(lx, ly);
+  const from = S.row.indexOf(c.id);
+  const want = botTargetIndex(b, c, from);
+  rowRemove(c.id);
+  c.el.style.display = 'none'; c.where = 'drag';
+  setGap(b.p.id, from); S.gaps.get(b.p.id).s.snap(1);
+  const o = makeOverlay(c, x, y, s, { rx: S.tilt.v, k: 520, zeta: 0.8 });
+  o.s.t = 1;
+  const d = b.drag = { card: c, o, off: [-8, -22], planIdx: from, gapOpen: true, moved: false };
+  await botMove(b, () => botSlotCursor(b), {
+    onP: p => { if (p > 0.25 && !d.moved) { d.moved = true; d.planIdx = want; setGap(b.p.id, want); } },
+  });
+  if (!alive()) throw ABORT;
+  await sleep(rand(80, 160)); if (!alive()) throw ABORT;
+  b.drag = null;
+  landCard(c, o, b.p.id);
+}
+
+async function brain(b) {
+  const tok = S.brain;
+  const alive = () => tok === S.brain;
+  const W = async ms => { await sleep(ms); if (!alive()) throw ABORT; };
+  const wander = async ms => { b.busy = false; await W(ms); b.busy = true; };
+  try {
+    b.busy = false;
+    await W(rand(1500, 4500));
+    for (;;) {
+      const inHand = b.cards.filter(c => c.where === 'hand');
+      if (inHand.length) {
+        const c = pick(inHand);
+        setTag(b.tagEl, 'pensando'); await wander(rand(2200, 5200));
+        if (!c.clue && Math.random() < 0.7) {
+          setTag(b.tagEl, 'escrevendo…'); b.busy = true; await W(rand(2000, 3800));
+          c.clue = clueFor(c.value); refreshClue(c);
+        }
+        setTag(b.tagEl, 'pensando'); await wander(rand(800, 2000));
+        while (botDragCount() >= 2) await wander(400);
+        setTag(b.tagEl, 'arrastando…'); b.busy = true; b.dragging = true;
+        await botPlace(b, c, alive);
+        b.dragging = false; b.busy = false;
+        setTag(b.tagEl, 'pensando');
+        continue;
+      }
+      const noClue = b.cards.find(c => !c.clue);
+      if (noClue) {
+        b.busy = true;
+        if (noClue.where === 'row') await botMove(b, () => cardScreenPoint(noClue, 4, -8));
+        if (!alive()) throw ABORT;
+        setTag(b.tagEl, 'escrevendo…'); await W(rand(2000, 3800));
+        noClue.clue = clueFor(noClue.value); refreshClue(noClue);
+        noClue.sp.rs.vel += 2.2;
+        setTag(b.tagEl, 'pensando'); await wander(rand(500, 1400));
+        continue;
+      }
+      if (b.repositions < 2 && Math.random() < 0.55) {
+        b.repositions++;
+        for (const [id, v] of b.est) { const cc = S.cards.get(id); if (cc) b.est.set(id, lerp(v, cc.value, 0.45)); }
+        const c = pick(b.cards.filter(c => c.where === 'row'));
+        if (c && botTargetIndex(b, c, S.row.indexOf(c.id)) !== S.row.indexOf(c.id)) {
+          setTag(b.tagEl, 'pensando'); await wander(rand(1600, 3400));
+          while (botDragCount() >= 2) await wander(400);
+          setTag(b.tagEl, 'arrastando…'); b.busy = true; b.dragging = true;
+          await botMoveRow(b, c, alive);
+          b.dragging = false; b.busy = false;
+          setTag(b.tagEl, 'pensando');
+        }
+        continue;
+      }
+      await wander(rand(1500, 3500));
+      setTag(b.tagEl, 'pronto ✓'); b.ready = true; b.busy = false;
+      updateMeUI(); checkAllReady();
+      return;
+    }
+  } catch (e) {
+    if (e !== ABORT) console.error(e);
+    b.dragging = false;
+  }
+}
+
+function updateBot(b, dt, now) {
+  // 1) posição "autoritativa" do bot (o que o servidor teria)
+  const P = b.path;
+  if (P) {
+    const p = clamp((now - P.t0) / P.dur, 0, 1), s = minJerk(p), E = P.getE();
+    const [sx, sy] = P.S, dx = E[0] - sx, dy = E[1] - sy;
+    const cx = sx + dx / 2 - dy * P.off, cy = sy + dy / 2 + dx * P.off, u = 1 - s;
+    b.sim.x = u * u * sx + 2 * u * s * cx + s * s * E[0];
+    b.sim.y = u * u * sy + 2 * u * s * cy + s * s * E[1];
+    if (P.onP) P.onP(p);
+    if (p >= 1) {
+      const dd = Math.hypot(b.cur.x.v - E[0], b.cur.y.v - E[1]);
+      if (dd < 4 || now - P.t0 > P.dur + 500) { b.path = null; if (P.onDone) P.onDone(); P.res(); }
+    }
+  } else if (!b.busy && !b.drag && now > b.nextWander && S.H) {
+    b.nextWander = now + (b.ready ? rand(1800, 4500) : rand(900, 2600));
+    let T; const r = Math.random();
+    if (r < 0.15) { const a = b.avEl.getBoundingClientRect(); T = [a.left + a.width / 2 + rand(-20, 40), a.top + a.height / 2 + rand(-10, 40)]; }
+    else if (r < 0.6 && S.row.length) { const c = S.cards.get(pick(S.row)); T = cardScreenPoint(c, rand(-25, 25), rand(-40, 30)); }
+    else T = toScreen(rand(70, FW - 70), rand(70, FH - 40));
+    const doPing = !S.revealing && Math.random() < 0.08;
+    botMove(b, () => T, { slow: 1.25, onDone: doPing ? () => { const [lx, ly] = toLocal(T[0], T[1]); ping(lx, ly, b.p.color); } : null });
+  }
+  // 2) "rede": snapshot a ~30Hz com jitter; render interpola com mola a 60fps
+  if (now >= b.nextNet) {
+    b.nextNet = now + 33 + rand(-5, 9);
+    b.cur.x.t = b.sim.x; b.cur.y.t = b.sim.y;
+  }
+  b.cur.x.step(dt); b.cur.y.step(dt);
+  b.curEl.style.transform = `translate(${b.cur.x.v.toFixed(1)}px,${b.cur.y.v.toFixed(1)}px)`;
+  // 3) carta segurada segue o cursor
+  if (b.drag) {
+    const o = b.drag.o, off = b.drag.off;
+    o.x.t = b.cur.x.v - off[0] * o.s.v;
+    o.y.t = b.cur.y.v - off[1] * o.s.v;
+    const [lx, ly] = toLocal(o.x.v, o.y.v);
+    o.s.t = inRowZone(lx, ly) ? ROW_S * hScale(clamp(lx, 0, FW), ROW_Y) * 1.04 : 1;
+    o.rot.t = clamp(b.cur.x.vel * 0.014, -14, 14);
+    o.rx.t = clamp(-b.cur.y.vel * 0.006, -10, 10);
+  }
+}
+
+/* =========================================================
+   revelar
+   ========================================================= */
+function checkAllReady() {
+  if (S.revealing) return;
+  const ok = () => !S.revealing && S.meReady && bots.every(b => b.ready) && meCards().every(c => c.where === 'row');
+  if (ok()) { clearTimeout(S.revealTimer); S.revealTimer = setTimeout(() => { if (ok()) startReveal(); }, 700); }
+}
+function renderLives() {
+  [...$('#lives').children].forEach((h, i) => h.classList.toggle('lost', i >= S.lives));
+}
+function loseLife() {
+  S.lives = Math.max(0, S.lives - 1);
+  renderLives();
+  const h = $('#lives').children[S.lives]; if (h) pop(h, 1.9, '', 500, 0.35);
+}
+function markError(c) {
+  c.error = true; c.el.classList.add('err');
+  c.sp.stamp.snap(2.3); c.sp.stamp.t = 1;
+  c.sp.shake.vel = 950;
+}
+async function startReveal() {
+  if (S.revealing) return;
+  const round = S.round;
+  S.revealing = true; S.brain++;
+  document.body.classList.add('revealing');
+  drag.pending = null;
+  if (drag.active) endMyDrag(true);
+  for (const b of bots) {
+    b.busy = false; b.dragging = false; b.path = null;
+    if (b.drag) {
+      const { card, o } = b.drag; b.drag = null;
+      if (S.gaps.get(b.p.id).active) landCard(card, o, b.p.id);
+      else { clearGap(b.p.id); sendHome(card, o); }
+    }
+    if (!b.ready) setTag(b.tagEl, 'olhando…');
+  }
+  myTemp = null; updateMeUI();
+  await sleep(750); if (S.round !== round) return;
+  const ids = [...S.row];
+  let max = -Infinity, errs = 0;
+  for (const id of ids) {
+    const c = S.cards.get(id);
+    for (const b of bots) if (Math.random() < 0.45) { const T = cardScreenPoint(c, rand(-30, 30), rand(-60, -30)); botMove(b, () => T, { slow: 0.9 }); b.nextWander = performance.now() + 2500; }
+    c.sp.flip.t = 1;
+    await sleep(330); if (S.round !== round) return;
+    if (c.value < max) { errs++; markError(c); loseLife(); }
+    else c.sp.rs.vel += 1.4;
+    max = Math.max(max, c.value);
+    await sleep(290); if (S.round !== round) return;
+  }
+  await sleep(500); if (S.round !== round) return;
+  showResult(errs, ids.length);
+}
+function showResult(errs, n) {
+  const win = errs === 0 && n > 0;
+  bannerEl.classList.toggle('win', win);
+  $('#bTitle').innerHTML = win ? 'vitória<span>~</span>' : (n === 0 ? 'mesa vazia' : 'xi, errou essa');
+  $('#bSub').textContent = win ? 'a fila tá perfeitinha, que sintonia!'
+    : n === 0 ? 'ninguém colocou carta nenhuma…'
+    : `${errs} carta${errs > 1 ? 's' : ''} fora de ordem · ` + (S.lives > 0 ? `${S.lives} ♥ sobrando` : 'acabaram as vidas');
+  veilEl.style.display = 'block'; bannerEl.style.display = 'block';
+  pop(bannerEl, 0.55, 'translate(-50%,-50%) rotate(-1.5deg)', 300, 0.48);
+  if (win) burst();
+}
+function hideBanner() { veilEl.style.display = 'none'; bannerEl.style.display = 'none'; S.anims.delete(bannerEl); }
+
+/* ---------- confete (física simples, canvas) ---------- */
+const cv = $('#confetti'), cx = cv.getContext('2d');
+let confetti = [], confettiOn = false;
+function resizeCanvas() { const d = devicePixelRatio || 1; cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+function burst() {
+  for (let i = 0; i < 170; i++) {
+    const left = i % 2 === 0;
+    confetti.push({
+      x: left ? rand(-10, 60) : innerWidth - rand(-10, 60), y: innerHeight - rand(0, 40),
+      vx: (left ? 1 : -1) * rand(180, 620), vy: -rand(700, 1250),
+      r: rand(0, 6.28), vr: rand(-9, 9), w: rand(9, 15), h: rand(6, 10), c: pick(PAL), sw: rand(0, 6.28),
+    });
+  }
+  confettiOn = true;
+}
+function stepConfetti(dt) {
+  if (!confettiOn) return;
+  cx.clearRect(0, 0, innerWidth, innerHeight);
+  cx.lineWidth = 1.6; cx.strokeStyle = '#3B2F2F';
+  confetti = confetti.filter(p => p.y < innerHeight + 40);
+  for (const p of confetti) {
+    p.vy += 1100 * dt; p.vx *= 1 - 1.1 * dt; p.vy *= 1 - 0.9 * dt;
+    p.sw += dt * 5; p.x += (p.vx + Math.sin(p.sw) * 40) * dt; p.y += p.vy * dt; p.r += p.vr * dt;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.scale(1, Math.abs(Math.cos(p.sw)) * 0.8 + 0.2);
+    cx.fillStyle = p.c; cx.beginPath(); cx.rect(-p.w / 2, -p.h / 2, p.w, p.h); cx.fill(); cx.stroke(); cx.restore();
+  }
+  if (!confetti.length) { confettiOn = false; cx.clearRect(0, 0, innerWidth, innerHeight); }
+}
+
+/* =========================================================
+   rodada
+   ========================================================= */
+function renderTheme() {
+  const t = S.theme, el = $('#theme');
+  el.innerHTML = `<span class="tpill">tema</span><div class="ttitle">${esc(t.title)}</div><div class="tscale"><b>1</b> ${esc(t.lo)} · <b>100</b> ${esc(t.hi)}</div>`;
+  pop(el, 0.7, 'rotate(-1.2deg)', 300, 0.45);
+}
+function newRound() {
+  S.round++; S.brain++;
+  S.revealing = false; S.meReady = false; myTemp = null;
+  clearTimeout(S.revealTimer);
+  document.body.classList.remove('revealing', 'grabbing');
+  hideBanner();
+  for (const o of [...S.overlays]) removeOverlay(o);
+  drag.active = null; drag.pending = null;
+  for (const g of S.gaps.values()) { g.active = false; g.s.snap(0); g.el.style.display = 'none'; }
+  // cartas antigas da fila somem com mola
+  for (const c of S.cards.values()) {
+    if (c.where === 'row') { c.sp.rs.set(260, 1); c.sp.rs.t = 0; c.sp.z.t = 40; S.dying.push(c); }
+    else c.el.remove();
+  }
+  S.cards = new Map(); S.row = [];
+  if (S.lives <= 0) S.lives = 3;
+  renderLives();
+  S.themeIdx = (S.themeIdx + 1) % THEMES.length; S.theme = THEMES[S.themeIdx]; S.usedClues = new Set();
+  renderTheme();
+  // dá as cartas: 10 números distintos 1..100
+  const pool = Array.from({ length: 100 }, (_, i) => i + 1);
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  let n = 0;
+  const myCards = [makeCard(ME, pool[n++]), makeCard(ME, pool[n++])];
+  buildHand(myCards);
+  for (const b of bots) {
+    b.cards = [makeCard(b.p, pool[n++]), makeCard(b.p, pool[n++])];
+    b.ready = false; b.busy = false; b.dragging = false; b.drag = null; b.path = null; b.repositions = 0; b.est = new Map();
+    b.backsEl.innerHTML = '';
+    b.cards.forEach((c, i) => {
+      const bk = document.createElement('div'); bk.className = 'mback';
+      b.backsEl.appendChild(bk); c.backEl = bk;
+      bk.style.transform = 'scale(0)';
+      setTimeout(() => pop(bk, 0.01, '', 380, 0.5), 200 + i * 110 + Math.random() * 200);
+    });
+    setTag(b.tagEl, 'pensando');
+    brain(b);
+  }
+  updateMeUI();
+}
+
+/* =========================================================
+   controles
+   ========================================================= */
+function toggleTilt() {
+  S.tiltOn = !S.tiltOn;
+  S.tilt.t = S.tiltOn ? TILT : 0;
+  S.knob.t = S.tiltOn ? 1 : 0;
+  $('#tgl').classList.toggle('on', S.tiltOn);
+  fitStage(false);
+}
+$('#tglRow').addEventListener('click', e => { e.preventDefault(); toggleTilt(); });
+$('#revealBtn').addEventListener('click', () => startReveal());
+$('#newBtn').addEventListener('click', () => newRound());
+$('#againBtn').addEventListener('click', () => newRound());
+addEventListener('resize', () => { fitStage(false); resizeCanvas(); });
+
+/* =========================================================
+   loop principal
+   ========================================================= */
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.033, Math.max(0.001, (now - last) / 1000)); last = now;
+
+  // mesa: tilt + escala (molas) -> homografia
+  S.tilt.step(dt); S.k.step(dt); S.knob.step(dt);
+  const moving = S.tilt.vel !== 0 || S.tilt.v !== S.tilt.t || S.k.vel !== 0 || S.k.v !== S.k.t;
+  if (moving || S.Hdirty || !S.H) {
+    feltEl.style.transform = `rotateX(${S.tilt.v.toFixed(3)}deg)`;
+    wrapEl.style.transform = `translateX(-50%) scale(${S.k.v.toFixed(4)})`;
+    readH(); S.Hdirty = false;
+  }
+  $('#tgl').firstChild.style.transform = `translateX(${(S.knob.v * 20).toFixed(2)}px)`;
+
+  // velocidade do ponteiro (suavizada)
+  ptr.vx = lerp(ptr.vx, (ptr.x - ptr.px) / dt, 0.3); ptr.vy = lerp(ptr.vy, (ptr.y - ptr.py) / dt, 0.3);
+  ptr.px = ptr.x; ptr.py = ptr.y;
+
+  updateMyDrag();
+  for (const b of bots) updateBot(b, dt, now);
+  layoutRow();
+
+  // cartas na fila
+  for (const id of S.row) {
+    const c = S.cards.get(id), sp = c.sp;
+    for (const k in sp) sp[k].step(dt);
+    if (c.landing && sp.z.v < sp.z.t + 6) { c.landing = false; sp.rs.vel -= 1.5; sp.y.vel *= 0.4; }
+    writeRowCard(c);
+  }
+  // cartas saindo (nova rodada)
+  if (S.dying.length) {
+    S.dying = S.dying.filter(c => {
+      c.sp.rs.step(dt); c.sp.z.step(dt); writeRowCard(c);
+      if (c.sp.rs.v < 0.03) { c.el.remove(); return false; }
+      return true;
+    });
+  }
+  // mão
+  for (const c of S.cards.values()) {
+    if (c.owner !== ME || !c.hsp) continue;
+    c.hsp.y.step(dt); c.hsp.s.step(dt);
+    c.hcard.style.transform = `translateY(${c.hsp.y.v.toFixed(2)}px) rotate(${c.tilt.toFixed(2)}deg) scale(${(HAND_S * c.hsp.s.v).toFixed(4)})`;
+  }
+  // buracos
+  for (const g of S.gaps.values()) {
+    if (g.el.style.display === 'none') continue;
+    g.x.step(dt); g.s.step(dt);
+    if (!g.active && g.s.v < 0.05) { g.el.style.display = 'none'; continue; }
+    const s = Math.max(0, g.s.v);
+    g.el.style.opacity = clamp(s * 1.3, 0, 1).toFixed(3);
+    g.el.style.transform = `translate3d(${g.x.v.toFixed(2)}px,${ROW_Y}px,${(0.5 + (g.j || 0) * 0.7).toFixed(2)}px) scale(${(ROW_S * s).toFixed(4)})`;
+  }
+  // overlays
+  for (const o of [...S.overlays]) {
+    if (o.home) {
+      const [hx, hy, hs, hf] = o.home();
+      o.x.t = hx; o.y.t = hy; o.s.t = hs; o.fl.t = hf; o.rot.t = 0; o.rx.t = 0;
+    }
+    o.x.step(dt); o.y.step(dt); o.s.step(dt); o.rot.step(dt); o.rx.step(dt); o.fl.step(dt);
+    writeOverlay(o);
+    if (o.home) {
+      const settled = Math.hypot(o.x.v - o.x.t, o.y.v - o.y.t) < 1.2 && Math.hypot(o.x.vel, o.y.vel) < 40 && Math.abs(o.s.v - o.s.t) < 0.01 && Math.abs(o.fl.v - o.fl.t) < 0.02;
+      if (settled || now - o.homeT > 1800) { o.onHome && o.onHome(); removeOverlay(o); }
+    }
+  }
+  // pops
+  for (const [el, a] of S.anims) {
+    a.sp.step(dt); a.f(a.sp.v);
+    if (a.sp.v === a.sp.t) { S.anims.delete(el); }
+  }
+  // tooltip
+  tipSp.s.step(dt);
+  tipEl.style.opacity = clamp(tipSp.s.v * 1.5, 0, 1).toFixed(3);
+  tipEl.style.transform = `translate(${tipSp.x}px,${tipSp.y}px) rotate(-2deg) scale(${Math.max(0, tipSp.s.v).toFixed(3)})`;
+  // pings
+  if (S.pings.length) {
+    S.pings = S.pings.filter(pg => {
+      const age = now - pg.born;
+      if (age > 140) pg.r2.t = 1;
+      if (age > 650) pg.dot.t = 0;
+      pg.r1.step(dt); pg.r2.step(dt); pg.dot.step(dt);
+      pg.rings[0].style.transform = `scale(${pg.r1.v.toFixed(4)})`;
+      pg.rings[0].style.opacity = clamp(1 - Math.pow(pg.r1.v, 3), 0, 1).toFixed(3);
+      pg.rings[1].style.transform = `scale(${(pg.r2.v * 0.7).toFixed(4)})`;
+      pg.rings[1].style.opacity = clamp(1 - Math.pow(pg.r2.v, 3), 0, 1).toFixed(3);
+      pg.dotEl.style.transform = `scale(${Math.max(0, pg.dot.v).toFixed(4)})`;
+      if (age > 1700) { pg.el.remove(); return false; }
+      return true;
+    });
+  }
+  stepConfetti(dt);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- init ---------- */
+for (const p of PLAYERS) {
+  const el = document.createElement('div');
+  el.className = 'gap'; el.style.setProperty('--c', p.color);
+  el.innerHTML = `<b>${p.init}</b>`;
+  rowEl.insertBefore(el, rowEl.firstChild);
+  S.gaps.set(p.id, { owner: p, el, idx: 0, j: 0, active: false, fresh: false, x: new Spring(FW / 2, 230, 0.72), s: new Spring(0, 380, 0.6) });
+}
+fitStage(true);
+resizeCanvas();
+feltEl.style.transform = `rotateX(${TILT}deg)`;
+wrapEl.style.transform = `translateX(-50%) scale(${S.k.v})`;
+readH();
+buildSeats();
+newRound();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { S.Hdirty = true; });
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
