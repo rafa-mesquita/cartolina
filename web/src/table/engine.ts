@@ -40,6 +40,11 @@ export interface EngineSnapshot {
   row: readonly string[];
   /** Cartas fora da fila e fora da mão: sendo carregadas ou voando. */
   inFlight: ReadonlySet<string>;
+  /**
+   * Carta que EU estou arrastando, ou uma carta minha voando de volta pra minha mão.
+   * Carta minha carregada por outra pessoa fica só em `inFlight` (pra mão ela continua "na mesa").
+   */
+  dragging: string | null;
   revealing: boolean;
 }
 
@@ -78,6 +83,8 @@ interface Overlay {
   fl: Spring;
   home: (() => [number, number, number, number] | null) | null;
   homeT: number;
+  /** Quem está carregando (dono do buraco na fila): eu ou um remoto. Pode não ser o dono da carta. */
+  carrier: string | null;
 }
 
 interface Gap {
@@ -165,7 +172,7 @@ export class TableEngine {
   private last = 0;
   private first = true;
   private listeners = new Set<() => void>();
-  private snap: EngineSnapshot = { row: [], inFlight: new Set(), revealing: false };
+  private snap: EngineSnapshot = { row: [], inFlight: new Set(), dragging: null, revealing: false };
   private cleanup: Array<() => void> = [];
 
   constructor(
@@ -444,6 +451,8 @@ export class TableEngine {
       rc.faceB.innerHTML = b;
       rc.paintedB = b;
     }
+    // Participante pode mover qualquer carta da fila (o CSS de `.rcard` ainda assume "só a minha").
+    rc.el.style.cursor = this.isPlayer() && this.view?.game.phase === 'sorting' ? 'grab' : '';
   }
 
   private clueHTML(card: ItoCardView): string {
@@ -542,6 +551,7 @@ export class TableEngine {
       fl: new Spring(fl, 190, 0.72),
       home: null,
       homeT: 0,
+      carrier: null,
     };
     o.rx.t = 0;
     o.fl.t = 0;
@@ -566,7 +576,7 @@ export class TableEngine {
   private land(o: Overlay): void {
     const rc = this.cards.get(o.cardId) ?? this.createCard(o.cardId);
     this.inFlight.delete(o.cardId);
-    this.hideGap(o.owner);
+    this.hideGap(o.carrier ?? o.owner);
     if (rc && this.H) {
       const th = (this.tilt.v * Math.PI) / 180;
       const Z0 = 18 + 40 * Math.sin(th);
@@ -633,15 +643,21 @@ export class TableEngine {
   private onRowCardDown(e: PointerEvent, rc: RowCard): void {
     const view = this.view;
     if (e.button !== 0 || !this.H || this.revealing || !view || view.game.phase !== 'sorting') return;
-    if (rc.owner === view.you) {
+    // Qualquer participante da rodada move qualquer carta da fila; espectador só olha.
+    if (this.isPlayer()) {
       e.preventDefault();
       e.stopPropagation();
       this.pendingDrag = { cardId: rc.id, from: 'row', sx: e.clientX, sy: e.clientY };
     } else {
       rc.sp.wob.vel += (Math.random() < 0.5 ? -1 : 1) * 480;
       rc.sp.rs.vel += 0.5;
-      this.showTip(`ei, essa carta é de ${this.nameOf(rc.owner)}!`, e.clientX, e.clientY);
+      this.showTip('você tá assistindo essa rodada', e.clientX, e.clientY);
     }
+  }
+
+  private isPlayer(): boolean {
+    const view = this.view;
+    return !!view?.you && view.game.players.includes(view.you);
   }
 
   private onPointerMove(e: PointerEvent): void {
@@ -692,6 +708,7 @@ export class TableEngine {
     }
     const o = this.makeOverlay(p.cardId, x, y, s, rx, 0);
     if (!o) return;
+    o.carrier = me;
     o.s.t = HAND_S * 1.07;
     this.inFlight.set(p.cardId, o);
     if (this.pending?.cardId === p.cardId) this.pending = null;
@@ -725,31 +742,42 @@ export class TableEngine {
     const d = this.drag;
     const me = this.view?.you;
     if (!d || !me) return;
-    if (!forceHome) this.updateDrag();
-    this.drag = null;
-    document.body.classList.remove('grabbing');
-    const g = this.gaps.get(me);
-    const now = performance.now();
-    if (!forceHome && g?.active) {
-      const index = toServerIndex(this.visible, this.serverRow, d.cardId, g.index);
-      this.pending = { kind: 'place', cardId: d.cardId, index, at: now };
-      this.handlers.place(d.cardId, index);
-      this.land(d.o);
+    if (forceHome) {
+      // pointercancel / blur: nunca é um "tirar da mesa" de propósito.
+      this.abortDrag();
     } else {
-      this.clearGap(me);
-      if (d.from === 'row') {
-        this.pending = { kind: 'return', cardId: d.cardId, at: now };
-        this.handlers.ret(d.cardId);
+      this.updateDrag();
+      this.drag = null;
+      document.body.classList.remove('grabbing');
+      const g = this.gaps.get(me);
+      const now = performance.now();
+      const owner = this.view?.game.cards[d.cardId]?.owner ?? d.o.owner;
+      if (g?.active) {
+        const index = toServerIndex(this.visible, this.serverRow, d.cardId, g.index);
+        this.pending = { kind: 'place', cardId: d.cardId, index, at: now };
+        this.handlers.place(d.cardId, index);
+        this.land(d.o);
+      } else if (d.from === 'row' && owner !== me) {
+        // Só o dono tira a carta da mesa: ela volta pro lugar que o servidor conhece.
+        this.hideGap(me);
+        this.putBack(d.o);
+        this.showTip(`só ${this.nameOf(owner)} pode tirar essa carta da mesa`, this.ptr.x, this.ptr.y);
+      } else {
+        this.clearGap(me);
+        if (d.from === 'row') {
+          this.pending = { kind: 'return', cardId: d.cardId, at: now };
+          this.handlers.ret(d.cardId);
+        }
+        this.sendHome(d.o);
       }
-      this.sendHome(d.o);
+      this.handlers.activity('thinking');
     }
-    this.handlers.activity('thinking');
     this.emitCursor();
     this.emit();
   }
 
   /**
-   * Encerra meu arrasto sem mandar `place`/`return` (a revelação começou e o servidor recusaria):
+   * Encerra meu arrasto sem mandar `place`/`return` (revelação, pointercancel, blur):
    * a carta volta pro lugar que o servidor conhece.
    */
   private abortDrag(): void {
@@ -758,9 +786,14 @@ export class TableEngine {
     this.drag = null;
     document.body.classList.remove('grabbing');
     if (this.view?.you) this.hideGap(this.view.you);
-    if (this.serverRow.includes(d.cardId)) this.land(d.o);
-    else this.sendHome(d.o);
+    this.putBack(d.o);
     this.handlers.activity('thinking');
+  }
+
+  /** Overlay volta pra onde o servidor diz: pousa na fila se ela está lá, senão voa pra casa do dono. */
+  private putBack(o: Overlay): void {
+    if (this.serverRow.includes(o.cardId)) this.land(o);
+    else this.sendHome(o);
   }
 
   // ---------- remotos ----------
@@ -793,8 +826,12 @@ export class TableEngine {
   }
 
   private remotePickup(r: Remote, cardId: string): void {
-    const card = this.view?.game.cards[cardId];
-    if (!card || card.owner !== r.id) return;
+    const view = this.view;
+    const card = view?.game.cards[cardId];
+    if (!view || !card || !view.game.players.includes(r.id)) return;
+    // Carta da fila: qualquer participante move. Fora da fila: só o dono (da mão pra mesa).
+    const onTable = this.serverRow.includes(cardId) || this.visible.includes(cardId);
+    if (card.owner !== r.id && !onTable) return;
     let o: Overlay | null = null;
     const waiting = this.waiting.get(cardId);
     const flying = this.inFlight.get(cardId);
@@ -821,6 +858,7 @@ export class TableEngine {
     }
     if (!o) return;
     o.home = null;
+    o.carrier = r.id;
     this.inFlight.set(cardId, o);
     r.drag = { cardId, o };
     this.reconcile(false);
@@ -997,10 +1035,26 @@ export class TableEngine {
 
   private emit(): void {
     const inFlight = new Set(this.inFlight.keys());
+    const dragging = this.draggingId();
     const s = this.snap;
-    if (s.revealing === this.revealing && sameList(s.row, this.visible) && sameSet(s.inFlight, inFlight)) return;
-    this.snap = { row: [...this.visible], inFlight, revealing: this.revealing };
+    if (
+      s.revealing === this.revealing &&
+      s.dragging === dragging &&
+      sameList(s.row, this.visible) &&
+      sameSet(s.inFlight, inFlight)
+    )
+      return;
+    this.snap = { row: [...this.visible], inFlight, dragging, revealing: this.revealing };
     this.listeners.forEach((fn) => fn());
+  }
+
+  /** Carta que eu arrasto, ou carta minha voando de volta pra minha mão. */
+  private draggingId(): string | null {
+    if (this.drag) return this.drag.cardId;
+    const me = this.view?.you;
+    if (!me) return null;
+    for (const o of this.overlays) if (o.home && o.owner === me) return o.cardId;
+    return null;
   }
 
   // ---------- loop ----------
@@ -1064,8 +1118,9 @@ export class TableEngine {
       this.waiting.delete(id);
       if (this.serverRow.includes(id)) this.land(w.o);
       else {
-        this.clearGap(w.o.owner);
+        this.clearGap(w.o.carrier ?? w.o.owner);
         this.sendHome(w.o);
+        this.emit(); // carta minha voltando pra mão muda `dragging`
       }
     }
   }

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TableEngine, type EngineDom } from '../src/table/engine';
+import { PLAYER_COLORS, joinRoom, type Room } from '@cartolina/shared';
 import { act, sortingRoom, viewOf } from './fixtures';
 
 function dom(): EngineDom {
@@ -201,7 +202,7 @@ describe('TableEngine (arrasto e remotos)', () => {
   });
 
   it('remoto que sai da sala no meio do arrasto não deixa carta presa em voo', () => {
-    let room = sortingRoom(2);
+    const room = sortingRoom(2);
     const d = domWithH();
     const engine = new TableEngine(d, handlers());
     engine.update(viewOf(room, 'p0'));
@@ -214,7 +215,172 @@ describe('TableEngine (arrasto e remotos)', () => {
     frame();
     expect(engine.getSnapshot().inFlight.size).toBe(0);
     expect(d.overlay.children).toHaveLength(0);
+    engine.destroy();
+  });
+});
+
+describe('TableEngine (qualquer participante move cartas da fila; só o dono tira da mesa)', () => {
+  let frameCb: FrameRequestCallback | null = null;
+  let clock = 0;
+  const frame = (advanceMs = 16) => {
+    clock += advanceMs;
+    frameCb?.(clock);
+  };
+  const rect = (x: number, y: number) => () => ({ left: x, top: y, width: 0, height: 0, right: x, bottom: y, x, y, toJSON: () => ({}) });
+  const pointer = (type: string, x: number, y: number) => new MouseEvent(type, { clientX: x, clientY: y, button: 0, bubbles: true, cancelable: true });
+  const gapsShown = (d: EngineDom) => [...d.row.querySelectorAll<HTMLElement>('.gap')].filter((g) => g.style.display !== 'none').length;
+
+  /** Fila do servidor [p0:0, p1:0]; homografia identidade (tela = feltro). */
+  function rowOfTwo(me = 'p0', tweak: (room: Room) => Room = (r) => r) {
+    let room = sortingRoom(2);
     room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
+    room = tweak(room);
+    const d = dom();
+    const corners = [
+      [0, 0],
+      [900, 0],
+      [0, 480],
+      [900, 480],
+    ] as const;
+    d.markers.forEach((el, i) => {
+      el.getBoundingClientRect = rect(corners[i]![0], corners[i]![1]);
+    });
+    const h = handlers();
+    const engine = new TableEngine(d, h);
+    engine.update(viewOf(room, me));
+    frame();
+    return { room, d, h, engine };
+  }
+
+  /** Agarra a carta da fila (minha: `.mine`; alheia: a outra) e arrasta até (x, y). */
+  function dragTo(d: EngineDom, mine: boolean, x: number, y: number) {
+    const el = d.row.querySelector<HTMLElement>(mine ? '.rcard.mine' : '.rcard:not(.mine)')!;
+    el.dispatchEvent(pointer('pointerdown', 450, 318));
+    window.dispatchEvent(pointer('pointermove', 455, 325));
+    frame();
+    window.dispatchEvent(pointer('pointermove', x, y));
+    frame();
+  }
+
+  beforeEach(() => {
+    clock = performance.now();
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      frameCb = cb;
+      return 1;
+    });
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    frameCb = null;
+    document.body.innerHTML = '';
+    document.body.className = '';
+  });
+
+  it('participante arrasta carta alheia e solta em outro lugar da fila → place com o índice do servidor', () => {
+    const { room, d, h, engine } = rowOfTwo();
+    dragTo(d, false, 455, 325);
+    expect(engine.getSnapshot().dragging).toBe('p1:0');
+    expect(engine.getSnapshot().row).toEqual(['p0:0']);
+    window.dispatchEvent(pointer('pointermove', 100, 330));
+    frame();
+    window.dispatchEvent(pointer('pointerup', 100, 330));
+    expect(h.place).toHaveBeenCalledWith('p1:0', 0);
+    expect(h.ret).not.toHaveBeenCalled();
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p0:0']);
+    expect(engine.getSnapshot().dragging).toBeNull();
+    engine.update(viewOf(act(room, 'p0', { type: 'place', cardId: 'p1:0', index: 0 }), 'p0'));
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p0:0']);
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    engine.destroy();
+  });
+
+  it('não-dono solta fora da fila: sem return, a carta volta pro lugar e aparece a dica', () => {
+    const { d, h, engine } = rowOfTwo();
+    dragTo(d, false, 450, 40);
+    window.dispatchEvent(pointer('pointerup', 450, 40));
+    expect(h.ret).not.toHaveBeenCalled();
+    expect(h.place).not.toHaveBeenCalled();
+    expect(engine.getSnapshot().row).toEqual(['p0:0', 'p1:0']);
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    expect(d.overlay.children).toHaveLength(0);
+    expect(gapsShown(d)).toBe(0);
+    expect(d.tip.textContent).toBe('só P1 pode tirar essa carta da mesa');
+    expect(document.body.classList.contains('grabbing')).toBe(false);
+    engine.destroy();
+  });
+
+  it('blur ou pointercancel no meio do arrasto da fila nunca manda return (minha ou alheia)', () => {
+    const { d, h, engine } = rowOfTwo();
+    dragTo(d, true, 450, 40);
+    expect(engine.getSnapshot().inFlight.has('p0:0')).toBe(true);
+    window.dispatchEvent(new Event('blur'));
+    expect(engine.getSnapshot().row).toEqual(['p0:0', 'p1:0']);
+    dragTo(d, false, 450, 40);
+    expect(engine.getSnapshot().inFlight.has('p1:0')).toBe(true);
+    window.dispatchEvent(pointer('pointercancel', 450, 40));
+    expect(h.ret).not.toHaveBeenCalled();
+    expect(h.place).not.toHaveBeenCalled();
+    expect(engine.getSnapshot().row).toEqual(['p0:0', 'p1:0']);
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    expect(engine.getSnapshot().dragging).toBeNull();
+    engine.destroy();
+  });
+
+  it('dono solta fora da fila → return, e a carta conta como "minha em arrasto" até pousar na mão', () => {
+    const { d, h, engine } = rowOfTwo();
+    const slot = document.createElement('div');
+    slot.dataset.handSlot = 'p0:0';
+    slot.getBoundingClientRect = rect(450, 620);
+    document.body.appendChild(slot);
+    dragTo(d, true, 450, 40);
+    window.dispatchEvent(pointer('pointerup', 450, 40));
+    expect(h.ret).toHaveBeenCalledWith('p0:0');
+    expect(engine.getSnapshot().row).toEqual(['p1:0']);
+    expect(engine.getSnapshot().dragging).toBe('p0:0');
+    frame(2000);
+    expect(engine.getSnapshot().dragging).toBeNull();
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    engine.destroy();
+  });
+
+  it('espectador não arrasta nada da fila', () => {
+    const { d, engine } = rowOfTwo('p9', (room) => {
+      const res = joinRoom(room, { token: 't9', name: 'P9', color: PLAYER_COLORS[5]! }, 'p9', 0);
+      if (!res.ok) throw new Error(res.error);
+      return res.room;
+    });
+    dragTo(d, false, 450, 40);
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    expect(engine.getSnapshot().dragging).toBeNull();
+    expect(d.tip.textContent).toBe('você tá assistindo essa rodada');
+    engine.destroy();
+  });
+
+  it('remoto carrega uma carta minha que está na fila: overlay + buraco, e pousa quando o servidor já a tem', () => {
+    const { room, d, engine } = rowOfTwo();
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.6, y: 0.66, drag: { cardId: 'p0:0', index: 1 } });
+    frame();
+    expect(d.overlay.children).toHaveLength(1);
+    expect(gapsShown(d)).toBe(1);
+    expect(engine.getSnapshot().inFlight.has('p0:0')).toBe(true);
+    expect(engine.getSnapshot().row).toEqual(['p1:0']);
+    expect(engine.getSnapshot().dragging).toBeNull();
+    engine.update(viewOf(act(room, 'p1', { type: 'place', cardId: 'p0:0', index: 1 }), 'p0'));
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.6, y: 0.66, drag: null });
+    expect(d.overlay.children).toHaveLength(0);
+    expect(gapsShown(d)).toBe(0);
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p0:0']);
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    engine.destroy();
+  });
+
+  it('remoto não pega carta alheia que não está na fila', () => {
+    const { d, engine } = rowOfTwo('p0', (room) => act(room, 'p0', { type: 'return', cardId: 'p0:0' }));
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.5, y: 0.3, drag: { cardId: 'p0:0', index: null } });
+    expect(d.overlay.children).toHaveLength(0);
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
     engine.destroy();
   });
 });
