@@ -175,13 +175,27 @@ export const CRITTERS: Record<PlayerColor, Critter> = {
   },
 };
 
-const FALLBACK: Critter = { name: 'jogador', draw: (c) => `${base(c)}${eyes(31)}${smile()}` };
+/** Genérico pra cor fora da paleta. A cor vai crua pro SVG (innerHTML), então só aceita `#RRGGBB`. */
+const FALLBACK: Critter = {
+  name: 'jogador',
+  draw: (c) => {
+    const safe = /^#[0-9A-F]{6}$/i.test(c) ? c : '#D9C2A0';
+    return `${base(safe)}${eyes(31)}${smile()}`;
+  },
+};
 
 export function critterOf(color: string): Critter {
   return (CRITTERS as Record<string, Critter>)[color] ?? FALLBACK;
 }
 
+const svgCache = new Map<string, string>();
+
 /** SVG completo (string) do personagem da cor; `overflow: visible` porque orelhas e antenas saem do círculo. */
 export function critterSvg(color: string): string {
-  return `<svg viewBox="0 0 64 64" overflow="visible" aria-hidden="true" focusable="false">${critterOf(color).draw(color)}</svg>`;
+  let svg = svgCache.get(color);
+  if (svg === undefined) {
+    svg = `<svg viewBox="0 0 64 64" overflow="visible" aria-hidden="true" focusable="false">${critterOf(color).draw(color)}</svg>`;
+    svgCache.set(color, svg);
+  }
+  return svg;
 }

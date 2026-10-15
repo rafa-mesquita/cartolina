@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { RoomView } from '@cartolina/shared';
 import type { GameConn } from '../src/net/connection';
 import { confetti } from '../src/table/confetti';
@@ -62,6 +62,38 @@ describe('ResultBanner', () => {
     expect(next().disabled).toBe(false);
   });
 
+  it('erro do servidor depois do clique destrava os botões', () => {
+    let onErr: ((code: string, message: string) => void) | null = null;
+    const c = conn();
+    c.onError = vi.fn((fn: (code: string, message: string) => void) => {
+      onErr = fn;
+      return () => {
+        onErr = null;
+      };
+    });
+    render(<ResultBanner view={viewOf(revealed(), 'p0')} conn={c} />);
+    const next = () => screen.getByRole('button', { name: 'nova rodada' }) as HTMLButtonElement;
+    fireEvent.click(next());
+    expect(next().disabled).toBe(true);
+    rtlAct(() => onErr!('not_enough_players', 'x'));
+    expect(next().disabled).toBe(false);
+  });
+
+  it('sem resposta, os botões destravam depois de 4 s', () => {
+    vi.useFakeTimers();
+    try {
+      render(<ResultBanner view={viewOf(revealed(), 'p0')} conn={conn()} />);
+      const next = () => screen.getByRole('button', { name: 'nova rodada' }) as HTMLButtonElement;
+      fireEvent.click(next());
+      rtlAct(() => vi.advanceTimersByTime(3900));
+      expect(next().disabled).toBe(true);
+      rtlAct(() => vi.advanceTimersByTime(200));
+      expect(next().disabled).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('quem não é host espera', () => {
     render(<ResultBanner view={viewOf(revealed(), 'p1')} conn={conn()} />);
     expect(screen.getByText('esperando o host…')).toBeTruthy();
@@ -91,6 +123,7 @@ describe('ResultBanner (confete)', () => {
   };
   const won = () => withOutcome('round_won');
   const mocked = vi.mocked(confetti);
+  beforeEach(() => mocked.mockClear());
   afterEach(() => {
     mocked.mockClear();
     vi.unstubAllGlobals();

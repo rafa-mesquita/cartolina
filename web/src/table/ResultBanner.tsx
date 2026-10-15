@@ -29,6 +29,7 @@ function EyeIcon() {
   );
 }
 
+const UNLOCK_MS = 4000;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 export function ResultBanner({ view, conn }: { view: RoomView; conn: GameConn }) {
@@ -44,6 +45,17 @@ export function ResultBanner({ view, conn }: { view: RoomView; conn: GameConn })
   const copy = resultCopy(outcome, view.game.level, errors);
   const finished = outcome === 'won' || outcome === 'lost';
   const busy = sentFor === view;
+
+  // Destrava se o servidor recusar (ex.: gente de menos) ou, por garantia, se nada chegar em alguns segundos.
+  useEffect(() => {
+    if (!busy) return;
+    const t = window.setTimeout(() => setSentFor(null), UNLOCK_MS);
+    const off = conn.onError(() => setSentFor(null));
+    return () => {
+      clearTimeout(t);
+      off();
+    };
+  }, [busy, conn]);
 
   useEffect(() => {
     if (!copy.win || peek || played.current || reducedMotion()) return;

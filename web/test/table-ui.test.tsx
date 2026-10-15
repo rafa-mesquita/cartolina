@@ -261,6 +261,26 @@ describe('Table', () => {
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'forceReveal' });
   });
 
+  it('host pode pular a rodada (com confirmação); quem não é host não vê o botão', () => {
+    const c = conn();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    try {
+      const { unmount } = render(<Table view={viewOf(sortingRoom(2), 'p0')} conn={c} />);
+      fireEvent.click(screen.getByRole('button', { name: 'pular rodada' }));
+      expect(confirm).toHaveBeenCalledWith('Pular esta rodada? As cartas voltam e um tema novo é sorteado.');
+      expect(c.sendAction).toHaveBeenCalledWith({ type: 'next' });
+      confirm.mockReturnValue(false);
+      c.sendAction.mockClear();
+      fireEvent.click(screen.getByRole('button', { name: 'pular rodada' }));
+      expect(c.sendAction).not.toHaveBeenCalled();
+      unmount();
+      render(<Table view={viewOf(sortingRoom(2), 'p1')} conn={conn()} />);
+      expect(screen.queryByRole('button', { name: 'pular rodada' })).toBeNull();
+    } finally {
+      confirm.mockRestore();
+    }
+  });
+
   it('meu assento mostra meu status', () => {
     render(<Table view={viewOf(sortingRoom(2), 'p0')} conn={conn()} />);
     expect(screen.getByText('você')).toBeTruthy();

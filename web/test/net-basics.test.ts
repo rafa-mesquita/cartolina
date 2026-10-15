@@ -8,6 +8,7 @@ import {
   loadSoundPref,
   loadTiltPref,
   markJoined,
+  pickStore,
   saveProfile,
   saveSoundPref,
   saveTiltPref,
@@ -115,6 +116,37 @@ describe('identity', () => {
     expect(wasJoined('ABCD')).toBe(false);
     sessionStorage.setItem('cartolina.joined.ABCD', JSON.stringify({ name: 'X', color: '#000000' }));
     expect(joinedProfile('ABCD')).toBeNull();
+  });
+
+  describe('onde fica a identidade', () => {
+    afterEach(() => vi.unstubAllEnvs());
+
+    it('pickStore: sessionStorage em dev (cada aba um jogador), localStorage em produção', () => {
+      expect(pickStore(true)()).toBe(sessionStorage);
+      expect(pickStore(false)()).toBe(localStorage);
+    });
+
+    it('em dev, token e perfil da sala ficam no sessionStorage', () => {
+      const t = getToken();
+      markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
+      expect(sessionStorage.getItem('cartolina.token')).toBe(t);
+      expect(sessionStorage.getItem('cartolina.joined.ABCD')).not.toBeNull();
+      expect(localStorage.getItem('cartolina.token')).toBeNull();
+      expect(localStorage.getItem('cartolina.joined.ABCD')).toBeNull();
+    });
+
+    it('em produção, token e perfil da sala ficam no localStorage (fechar a aba não perde o assento)', () => {
+      vi.stubEnv('DEV', false);
+      const t = getToken();
+      markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
+      expect(localStorage.getItem('cartolina.token')).toBe(t);
+      expect(sessionStorage.getItem('cartolina.token')).toBeNull();
+      expect(sessionStorage.getItem('cartolina.joined.ABCD')).toBeNull();
+      // "reabriu o link": só o localStorage sobrou
+      sessionStorage.clear();
+      expect(joinedProfile('ABCD')).toEqual({ name: 'Ana', color: '#8EC5FF' });
+      expect(getToken()).toBe(t);
+    });
   });
 
   describe('armazenamento bloqueado (getters lançam)', () => {

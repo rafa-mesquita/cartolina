@@ -25,6 +25,17 @@ type StoreGetter = () => Storage;
 const session: StoreGetter = () => sessionStorage;
 const local: StoreGetter = () => localStorage;
 
+/**
+ * Onde ficam o token e o perfil de cada sala. Em dev, `sessionStorage`: cada aba é um jogador (testar sozinho).
+ * Em produção, `localStorage`: quem fecha a aba e reabre o link volta pro mesmo assento.
+ */
+export function pickStore(dev: boolean): StoreGetter {
+  return dev ? session : local;
+}
+
+/** Lido a cada chamada (não no carregamento do módulo), pra os testes poderem trocar o modo. */
+const tokenStore: StoreGetter = () => pickStore(import.meta.env.DEV)();
+
 /** Lê sem quebrar quando o armazenamento está bloqueado (o próprio acesso a `sessionStorage` pode lançar). */
 export function safeGet(getStore: StoreGetter, key: string): string | null {
   try {
@@ -55,14 +66,13 @@ function parseProfile(raw: string | null): Profile | null {
 
 let memoryToken: string | null = null;
 
-/** Um token por aba: duas abas são dois jogadores; recarregar a aba mantém o assento. Sem armazenamento, vale na memória. */
+/** Token do jogador (por aba em dev, por navegador em produção). Sem armazenamento, vale na memória. */
 export function getToken(): string {
-  const stored = safeGet(session, TOKEN_KEY);
+  const stored = safeGet(tokenStore, TOKEN_KEY);
   if (stored) return stored;
-  if (memoryToken) return memoryToken;
-  const token = uuidV4();
+  const token = memoryToken ?? uuidV4();
   memoryToken = token;
-  safeSet(session, TOKEN_KEY, token);
+  safeSet(tokenStore, TOKEN_KEY, token);
   return token;
 }
 
@@ -74,9 +84,9 @@ export function saveProfile(profile: Profile): void {
   safeSet(local, PROFILE_KEY, JSON.stringify(profile));
 }
 
-/** Perfil com que ESTA aba entrou na sala (sessionStorage: abas diferentes não se misturam). */
+/** Perfil com que este jogador entrou na sala (mesmo armazenamento do token). */
 export function joinedProfile(code: string): Profile | null {
-  return parseProfile(safeGet(session, joinedKey(code)));
+  return parseProfile(safeGet(tokenStore, joinedKey(code)));
 }
 
 export function wasJoined(code: string): boolean {
@@ -84,7 +94,7 @@ export function wasJoined(code: string): boolean {
 }
 
 export function markJoined(code: string, profile: Profile): void {
-  safeSet(session, joinedKey(code), JSON.stringify(profile));
+  safeSet(tokenStore, joinedKey(code), JSON.stringify(profile));
 }
 
 export function loadTiltPref(): boolean {

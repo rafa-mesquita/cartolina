@@ -189,6 +189,18 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
             revelar agora
           </button>
         )}
+        {isHost(view) && view.game.phase === 'sorting' && (
+          <button
+            className="sbtn"
+            type="button"
+            onClick={() => {
+              // Saída se a rodada travar (alguém sumiu com carta na mão): mesmo nível, sem perder vida.
+              if (window.confirm('Pular esta rodada? As cartas voltam e um tema novo é sorteado.')) conn.sendAction({ type: 'next' });
+            }}
+          >
+            pular rodada
+          </button>
+        )}
       </div>
 
       {view.game.phase === 'reveal' && revealKey !== '' && revealDone === revealKey && <ResultBanner view={view} conn={conn} />}

@@ -49,6 +49,7 @@ describe('parseClientMessage', () => {
   it('tem mensagem em português para todos os códigos de erro', () => {
     for (const code of ERROR_CODES) expect(errorMessage(code)).not.toBe('Algo deu errado.');
     expect(errorMessage('codigo_inventado')).toBe('Algo deu errado.');
+    expect(errorMessage('bad_color')).toBe('Personagem inválido.');
   });
 
   it('expõe os códigos de fechamento do WebSocket', () => {

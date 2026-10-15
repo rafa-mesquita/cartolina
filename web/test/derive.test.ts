@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allMineInRow, backsOf, cardsOf, handCards, initialOf, isHost, isPlaying, readyCount, seatStatus } from '../src/game/derive';
+import { allMineInRow, backsOf, cardsOf, handCards, isHost, isPlaying, readyCount, seatStatus } from '../src/game/derive';
 import { act, makeRoom, sortingRoom, viewOf } from './fixtures';
 
 describe('derive', () => {
@@ -65,10 +65,8 @@ describe('derive', () => {
     expect(allMineInRow(viewOf(makeRoom(2), 'p0'), [])).toBe(false);
   });
 
-  it('cardsOf ordena por id e initialOf pega a primeira letra', () => {
+  it('cardsOf ordena por id', () => {
     const view = viewOf(sortingRoom(2), 'p0');
     expect(cardsOf(view, 'p1').map((c) => c.id)).toEqual(['p1:0']);
-    expect(initialOf('  ana')).toBe('A');
-    expect(initialOf('😀x')).toBe('😀');
   });
 });

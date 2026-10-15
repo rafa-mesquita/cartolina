@@ -106,7 +106,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   bad_action: 'Ação desconhecida.',
   room_full: 'A sala está cheia (máx. 10).',
   bad_name: 'Escolha um nome de 1 a 16 letras.',
-  bad_color: 'Cor inválida.',
+  bad_color: 'Personagem inválido.',
   color_taken: 'Esse personagem já foi escolhido.',
   not_member: 'Você não está nesta sala.',
   bad_message: 'Mensagem inválida.',
