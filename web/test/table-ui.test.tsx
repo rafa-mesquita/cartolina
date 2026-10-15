@@ -298,3 +298,20 @@ describe('Table', () => {
     expect(localStorage.getItem('cartolina.sound')).toBe('on');
   });
 });
+
+describe('painel do tema embaixo (não cobre o tema no feltro)', () => {
+  const inTheme = () => act(makeRoom(2), 'p0', { type: 'start' });
+
+  it('host escolhe o tema na coluna de baixo', () => {
+    const c = conn();
+    render(<ReadyColumn view={viewOf(inTheme(), 'p0')} snap={snap([])} conn={c} />);
+    fireEvent.click(screen.getByRole('button', { name: 'dar as cartas' }));
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'beginRound' });
+  });
+
+  it('quem não é host só espera', () => {
+    render(<ReadyColumn view={viewOf(inTheme(), 'p1')} snap={snap([])} conn={conn()} />);
+    expect(screen.getByText('o host tá escolhendo o tema…')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'dar as cartas' })).toBeNull();
+  });
+});

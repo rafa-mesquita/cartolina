@@ -2,13 +2,16 @@ import type { RoomView } from '@cartolina/shared';
 import { allMineInRow, isHost, isPlaying, readyCount } from '../game/derive';
 import type { GameConn } from '../net/connection';
 import type { EngineSnapshot } from './engine';
+import { ThemePanel } from './ThemePanel';
 
 export function ReadyColumn({ view, snap, conn }: { view: RoomView; snap: EngineSnapshot; conn: GameConn }) {
   const { phase } = view.game;
   if (phase === 'theme') {
+    // o host escolhe o tema aqui embaixo (a mão ainda está vazia), sem cobrir o tema no feltro
+    if (isHost(view)) return <ThemePanel view={view} conn={conn} />;
     return (
       <div className="ready-col">
-        <p className="ready-hint">{isHost(view) ? 'escolhe o tema e dá as cartas' : 'o host tá escolhendo o tema…'}</p>
+        <p className="ready-hint">o host tá escolhendo o tema…</p>
       </div>
     );
   }

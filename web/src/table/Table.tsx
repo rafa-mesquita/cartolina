@@ -13,7 +13,6 @@ import { ResultBanner } from './ResultBanner';
 import { Seat } from './Seat';
 import { arrangeSeats } from './seatLayout';
 import { ThemeCard } from './ThemeCard';
-import { ThemePanel } from './ThemePanel';
 import { TopBar } from './TopBar';
 import './table.css';
 
@@ -148,8 +147,6 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
           </div>
         </div>
       </div>
-
-      {view.game.phase === 'theme' && <ThemePanel view={view} conn={conn} />}
 
       <div className="me-area">
         {me && myStatus && (
