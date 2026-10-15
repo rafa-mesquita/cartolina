@@ -1,6 +1,6 @@
 import { cleanGroupName, summarizeHistory, type GroupResponse, type RoomGroup } from '@cartolina/shared';
 import { CODE_RE, SLUG_RE, randomCode } from './codes';
-import { allRounds, createGroup, findGroup, listRounds } from './history-db';
+import { allRounds, createGroup, findGroup, listRounds, type GroupRow } from './history-db';
 import { RoomDO } from './room-do';
 
 export { RoomDO };
@@ -26,53 +26,75 @@ async function createRoomFor(env: Env, group: RoomGroup | null): Promise<Respons
   return json({ error: 'no_code' }, 503);
 }
 
+/** Lê o cursor `before`: ausente → null (primeira página); inválido → undefined. */
+function parseBefore(raw: string | null): number | null | undefined {
+  if (raw === null) return null;
+  if (!/^\d+$/.test(raw)) return undefined;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) ? n : undefined;
+}
+
+async function getGroupPage(env: Env, group: GroupRow, before: number | null): Promise<GroupResponse> {
+  // Uma a mais que a página só para saber se existe próxima.
+  const fetched = await listRounds(env.DB, group.id, before, PAGE_SIZE + 1);
+  const rounds = fetched.slice(0, PAGE_SIZE);
+  return {
+    group: { slug: group.slug, name: group.name, createdAt: group.created_at },
+    rounds,
+    // Estatísticas só na primeira página: leem até STATS_ROUNDS_CAP rodadas, caro demais para repetir a cada "ver mais".
+    stats: before === null ? summarizeHistory(await allRounds(env.DB, group.id)) : null,
+    nextBefore: fetched.length > PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
+  };
+}
+
+async function handle(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+
+  if (request.method === 'POST' && url.pathname === '/rooms') return createRoomFor(env, null);
+
+  if (request.method === 'POST' && url.pathname === '/groups') {
+    const body = (await request.json().catch(() => null)) as { name?: unknown } | null;
+    const name = typeof body?.name === 'string' ? cleanGroupName(body.name) : null;
+    if (!name) return json({ error: 'bad_group_name' }, 400);
+    const group = await createGroup(env.DB, name, Date.now());
+    return json({ slug: group.slug, name: group.name }, 201);
+  }
+
+  const groupMatch = url.pathname.match(/^\/groups\/([^/]+)(\/rooms)?$/);
+  if (groupMatch) {
+    const slug = groupMatch[1]!;
+    const wantsRoom = Boolean(groupMatch[2]);
+    if (request.method !== (wantsRoom ? 'POST' : 'GET')) return json({ error: 'not_found' }, 404);
+    if (!SLUG_RE.test(slug)) return json({ error: 'not_found' }, 404);
+    const before = wantsRoom ? null : parseBefore(url.searchParams.get('before'));
+    if (before === undefined) return json({ error: 'bad_before' }, 400);
+    const group = await findGroup(env.DB, slug);
+    if (!group) return json({ error: 'not_found' }, 404);
+    if (wantsRoom) return createRoomFor(env, { id: group.id, slug: group.slug, name: group.name });
+    return json(await getGroupPage(env, group, before));
+  }
+
+  const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)(\/ws)?$/);
+  if (roomMatch) {
+    const code = roomMatch[1]!.toUpperCase();
+    if (!CODE_RE.test(code)) return json({ error: 'not_found' }, 404);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    if (roomMatch[2]) return stub.fetch(request);
+    const res = await stub.fetch('https://room/exists');
+    return json(await res.json(), res.status);
+  }
+
+  return json({ error: 'not_found' }, 404);
+}
+
 export default {
   async fetch(request, env): Promise<Response> {
-    const url = new URL(request.url);
-    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-
-    if (request.method === 'POST' && url.pathname === '/rooms') return createRoomFor(env, null);
-
-    if (request.method === 'POST' && url.pathname === '/groups') {
-      const body = (await request.json().catch(() => null)) as { name?: unknown } | null;
-      const name = typeof body?.name === 'string' ? cleanGroupName(body.name) : null;
-      if (!name) return json({ error: 'bad_group_name' }, 400);
-      const group = await createGroup(env.DB, name, Date.now());
-      return json({ slug: group.slug, name: group.name }, 201);
+    try {
+      return await handle(request, env);
+    } catch (err) {
+      console.error('erro no Worker', err);
+      return json({ error: 'internal' }, 500);
     }
-
-    const groupMatch = url.pathname.match(/^\/groups\/([^/]+)(\/rooms)?$/);
-    if (groupMatch) {
-      const slug = groupMatch[1]!;
-      if (!SLUG_RE.test(slug)) return json({ error: 'not_found' }, 404);
-      const group = await findGroup(env.DB, slug);
-      if (!group) return json({ error: 'not_found' }, 404);
-      if (groupMatch[2]) {
-        if (request.method !== 'POST') return json({ error: 'not_found' }, 404);
-        return createRoomFor(env, { id: group.id, slug: group.slug, name: group.name });
-      }
-      const beforeParam = url.searchParams.get('before');
-      const before = beforeParam && /^\d+$/.test(beforeParam) ? Number(beforeParam) : null;
-      const rounds = await listRounds(env.DB, group.id, before, PAGE_SIZE);
-      const body: GroupResponse = {
-        group: { slug: group.slug, name: group.name, createdAt: group.created_at },
-        rounds,
-        stats: summarizeHistory(await allRounds(env.DB, group.id)),
-        nextBefore: rounds.length === PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
-      };
-      return json(body);
-    }
-
-    const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)(\/ws)?$/);
-    if (roomMatch) {
-      const code = roomMatch[1]!.toUpperCase();
-      if (!CODE_RE.test(code)) return json({ error: 'not_found' }, 404);
-      const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-      if (roomMatch[2]) return stub.fetch(request);
-      const res = await stub.fetch('https://room/exists');
-      return json(await res.json(), res.status);
-    }
-
-    return json({ error: 'not_found' }, 404);
   },
 } satisfies ExportedHandler<Env>;

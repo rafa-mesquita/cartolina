@@ -51,7 +51,10 @@ export async function findGroup(db: D1Database, slug: string): Promise<GroupRow 
 /** Idempotente por (grupo, sala, chave da revelação): gravar a mesma revelação de novo não duplica. */
 export async function insertRound(db: D1Database, groupId: string, r: RoundRecord, revealKey: string): Promise<void> {
   await db
-    .prepare(`INSERT OR IGNORE INTO rounds (${ROUND_COLS}, reveal_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .prepare(
+      `INSERT INTO rounds (${ROUND_COLS}, reveal_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (group_id, room_code, reveal_key) DO NOTHING`,
+    )
     .bind(
       r.id,
       groupId,
@@ -86,7 +89,11 @@ function fromRow(row: RoundRow): RoundRecord {
   };
 }
 
-/** Mais recentes primeiro; `before` pagina por `played_at` (exclusivo). */
+/**
+ * Mais recentes primeiro; `before` pagina por `played_at` (exclusivo). Limitação conhecida: duas rodadas
+ * do mesmo grupo com o mesmo `played_at` (mesmo milissegundo) que caiam na divisa de uma página fazem a
+ * segunda ser pulada — improvável, já que cada sala grava no máximo uma rodada por revelação.
+ */
 export async function listRounds(db: D1Database, groupId: string, before: number | null, limit: number): Promise<RoundRecord[]> {
   const stmt =
     before === null
@@ -98,11 +105,11 @@ export async function listRounds(db: D1Database, groupId: string, before: number
   return results.map(fromRow);
 }
 
-/** Em ordem cronológica, para estatísticas. */
-export async function allRounds(db: D1Database, groupId: string): Promise<RoundRecord[]> {
+/** As `cap` rodadas mais recentes, em ordem cronológica, para estatísticas. */
+export async function allRounds(db: D1Database, groupId: string, cap = STATS_ROUNDS_CAP): Promise<RoundRecord[]> {
   const { results } = await db
-    .prepare(`SELECT ${ROUND_COLS} FROM rounds WHERE group_id = ? ORDER BY played_at ASC, id ASC LIMIT ?`)
-    .bind(groupId, STATS_ROUNDS_CAP)
+    .prepare(`SELECT ${ROUND_COLS} FROM rounds WHERE group_id = ? ORDER BY played_at DESC, id DESC LIMIT ?`)
+    .bind(groupId, cap)
     .all<RoundRow>();
-  return results.map(fromRow);
+  return results.map(fromRow).reverse();
 }

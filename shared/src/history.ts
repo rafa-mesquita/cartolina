@@ -71,7 +71,8 @@ export interface GroupInfo {
 export interface GroupResponse {
   group: GroupInfo;
   rounds: RoundRecord[];
-  stats: HistoryStats;
+  /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
+  stats: HistoryStats | null;
   nextBefore: number | null;
 }
 

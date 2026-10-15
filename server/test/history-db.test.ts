@@ -47,6 +47,12 @@ describe('history-db', () => {
     expect(await listRounds(env.DB, b.id, null, 20)).toEqual([]);
   });
 
+  it('estatísticas leem as rodadas MAIS RECENTES até o limite, em ordem cronológica', async () => {
+    const g = await createGroup(env.DB, 'Galera', 1000);
+    for (const t of [10, 40, 20, 30]) await insertRound(env.DB, g.id, rec(t), `k${t}`);
+    expect((await allRounds(env.DB, g.id, 2)).map((r) => r.playedAt)).toEqual([30, 40]);
+  });
+
   it('gravar a mesma revelação duas vezes deixa uma linha só', async () => {
     const g = await createGroup(env.DB, 'Galera', 1000);
     const r = rec(7);
