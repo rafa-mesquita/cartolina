@@ -117,3 +117,88 @@ describe('distribuição', () => {
     expect(new Set(values).size).toBe(30);
   });
 });
+
+describe('fila e dicas', () => {
+  const c = ctx(['a', 'b', 'c']);
+
+  it('dono coloca carta na fila na posição pedida', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'b', { type: 'place', cardId: 'b:0', index: 0 }, c);
+    s = act(s, 'c', { type: 'place', cardId: 'c:0', index: 1 }, c);
+    expect(s.row).toEqual(['b:0', 'c:0', 'a:0']);
+  });
+
+  it('reposicionar move a carta sem duplicar', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'b', { type: 'place', cardId: 'b:0', index: 1 }, c);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 5 }, c);
+    expect(s.row).toEqual(['b:0', 'a:0']);
+  });
+
+  it('índice é limitado ao tamanho da fila', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 99 }, c);
+    expect(s.row).toEqual(['a:0']);
+  });
+
+  it('não move carta alheia nem carta inexistente', () => {
+    const s = toSorting(['a', 'b', 'c']);
+    expect(errorOf(s, 'b', { type: 'place', cardId: 'a:0', index: 0 }, c)).toBe('not_owner');
+    expect(errorOf(s, 'b', { type: 'place', cardId: 'zz:0', index: 0 }, c)).toBe('unknown_card');
+  });
+
+  it('return tira a carta da fila', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'a', { type: 'return', cardId: 'a:0' }, c);
+    expect(s.row).toEqual([]);
+  });
+
+  it('dono escreve dica limpa', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'clue', cardId: 'a:0', text: '  Paris   Texas' }, c);
+    expect(s.cards['a:0']?.clue).toBe('Paris Texas');
+    expect(errorOf(s, 'b', { type: 'clue', cardId: 'a:0', text: 'x' }, c)).toBe('not_owner');
+  });
+
+  it('ações de carta fora da ordenação são recusadas', () => {
+    const s = act(initialItoState(), 'a', { type: 'start' }, c);
+    expect(errorOf(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c)).toBe('bad_phase');
+  });
+});
+
+describe('prontos', () => {
+  const c = ctx(['a', 'b']);
+
+  it('não fica pronto com carta fora da fila', () => {
+    const s = toSorting(['a', 'b']);
+    expect(errorOf(s, 'a', { type: 'ready', ready: true }, c)).toBe('cards_missing');
+  });
+
+  it('espectador não pode ficar pronto', () => {
+    const s = toSorting(['a', 'b']);
+    expect(errorOf(s, 'z', { type: 'ready', ready: true }, ctx(['a', 'b', 'z']))).toBe('not_player');
+  });
+
+  it('mexer na carta ou na dica tira o pronto', () => {
+    let s = toSorting(['a', 'b']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    expect(s.ready).toEqual(['a']);
+    s = act(s, 'a', { type: 'clue', cardId: 'a:0', text: 'oi' }, c);
+    expect(s.ready).toEqual([]);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    expect(s.ready).toEqual([]);
+  });
+
+  it('desmarcar pronto', () => {
+    let s = toSorting(['a', 'b']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    s = act(s, 'a', { type: 'ready', ready: false }, c);
+    expect(s.ready).toEqual([]);
+  });
+});
