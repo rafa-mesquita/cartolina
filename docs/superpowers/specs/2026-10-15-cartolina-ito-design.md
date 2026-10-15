@@ -25,8 +25,11 @@ cursores e as cartas sendo arrastadas pelos outros, com animações fluidas.
 - Cada jogador vê **apenas os próprios números**. Escreve uma **dica curta**
   (máx. 40 caracteres) em cada carta sua, visível a todos.
 - Os jogadores colocam suas cartas numa **fila compartilhada** (ordem crescente
-  da esquerda pra direita) e podem reposicioná-las livremente. **Cada um só move
-  as próprias cartas.**
+  da esquerda pra direita) e podem reposicioná-las livremente. **Qualquer
+  jogador da rodada move qualquer carta que já está na fila; só o dono coloca a
+  carta da mão na fila, tira a carta da fila (volta pra mão) ou edita a dica.**
+  Se alguém solta a carta de outro fora da fila, ela volta pro lugar dela na
+  fila. (Decisão do usuário em 2026-10-15, durante o Plano 2.)
 - Qualquer mudança na fila (colocar, mover ou tirar carta) **desmarca o "pronto"
   de todos**, porque "pronto" significa "aprovo esta ordem". Editar a dica só
   desmarca quem editou.
