@@ -34,6 +34,8 @@ export interface EngineHandlers {
   activity(activity: Activity): void;
   ping(x: number, y: number): void;
   revealDone(): void;
+  /** Efeito sonoro: carta pousando na fila; começo de uma revelação animada. */
+  sound?(name: 'card' | 'reveal'): void;
 }
 
 export interface EngineSnapshot {
@@ -680,6 +682,7 @@ export class TableEngine {
       rc.el.style.display = '';
     }
     this.removeOverlay(o);
+    if (rc) this.handlers.sound?.('card');
     this.reconcile(false);
     this.emit();
   }
@@ -1052,6 +1055,7 @@ export class TableEngine {
       this.handlers.revealDone();
       return;
     }
+    this.handlers.sound?.('reveal');
     let t = 750;
     for (const e of g.reveal) {
       this.later(t, () => this.flipCard(e, false));

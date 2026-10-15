@@ -1,7 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRoom, getRoomInfo } from '../src/net/api';
 import { wsUrl } from '../src/net/config';
-import { getToken, joinedProfile, loadProfile, loadTiltPref, markJoined, saveProfile, saveTiltPref, wasJoined } from '../src/net/identity';
+import {
+  getToken,
+  joinedProfile,
+  loadProfile,
+  loadSoundPref,
+  loadTiltPref,
+  markJoined,
+  saveProfile,
+  saveSoundPref,
+  saveTiltPref,
+  wasJoined,
+} from '../src/net/identity';
 
 function fakeFetch(status: number, body: unknown) {
   return vi.fn(async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
@@ -144,5 +155,14 @@ describe('identity', () => {
     expect(loadTiltPref()).toBe(true);
     saveTiltPref(false);
     expect(loadTiltPref()).toBe(false);
+  });
+
+  it('preferência de som começa ligada e fica em cartolina.sound', () => {
+    expect(loadSoundPref()).toBe(true);
+    saveSoundPref(false);
+    expect(loadSoundPref()).toBe(false);
+    expect(localStorage.getItem('cartolina.sound')).toBe('off');
+    saveSoundPref(true);
+    expect(loadSoundPref()).toBe(true);
   });
 });

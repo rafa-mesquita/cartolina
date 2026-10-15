@@ -3,6 +3,7 @@ import { isPlayerColor, type PlayerColor } from '@cartolina/shared';
 const TOKEN_KEY = 'cartolina.token';
 const PROFILE_KEY = 'cartolina.profile';
 const TILT_KEY = 'cartolina.tilt';
+const SOUND_KEY = 'cartolina.sound';
 const joinedKey = (code: string) => `cartolina.joined.${code}`;
 
 export interface Profile {
@@ -92,4 +93,13 @@ export function loadTiltPref(): boolean {
 
 export function saveTiltPref(on: boolean): void {
   safeSet(local, TILT_KEY, on ? 'on' : 'off');
+}
+
+/** Sons da mesa (cartas pousando, revelação). Começa ligado. */
+export function loadSoundPref(): boolean {
+  return safeGet(local, SOUND_KEY) !== 'off';
+}
+
+export function saveSoundPref(on: boolean): void {
+  safeSet(local, SOUND_KEY, on ? 'on' : 'off');
 }

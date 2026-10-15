@@ -2,7 +2,8 @@ import type { Activity, RoomView } from '@cartolina/shared';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { isHost, seatStatus } from '../game/derive';
 import type { GameConn } from '../net/connection';
-import { loadTiltPref, saveTiltPref } from '../net/identity';
+import { playSound } from '../brand/sounds';
+import { loadSoundPref, loadTiltPref, saveSoundPref, saveTiltPref } from '../net/identity';
 import { Avatar } from '../screens/Avatar';
 import { FH, FW } from './constants';
 import { TableEngine, type EngineSnapshot } from './engine';
@@ -32,6 +33,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
   const tip = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<TableEngine | null>(null);
   const [tiltOn, setTiltOn] = useState(loadTiltPref);
+  const [soundOn, setSoundOn] = useState(loadSoundPref);
   const [activities, setActivities] = useState<Record<string, { a: Activity; until: number }>>({});
   // Chave da revelação cuja animação terminou: o banner só aparece pra revelação atual.
   const [revealDone, setRevealDone] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
         activity: (a) => conn.sendActivity(a),
         ping: (x, y) => conn.sendPing(x, y),
         revealDone: () => setRevealDone(revealKeyRef.current),
+        sound: (name) => playSound(name),
       },
     );
     e.setTilt(loadTiltPref(), true);
@@ -112,6 +115,11 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
     saveTiltPref(next);
     engine?.setTilt(next);
   };
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    saveSoundPref(next);
+  };
 
   return (
     <div className="table-screen">
@@ -161,6 +169,12 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
         <button className="toggle-row" type="button" onClick={toggleTilt} aria-pressed={tiltOn}>
           <span>mesa 3D</span>
           <span className={`toggle ${tiltOn ? 'on' : ''}`}>
+            <span className="knob" />
+          </span>
+        </button>
+        <button className="toggle-row" type="button" onClick={toggleSound} aria-pressed={soundOn}>
+          <span>som</span>
+          <span className={`toggle ${soundOn ? 'on' : ''}`}>
             <span className="knob" />
           </span>
         </button>

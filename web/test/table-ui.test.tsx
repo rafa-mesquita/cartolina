@@ -265,4 +265,16 @@ describe('Table', () => {
     render(<Table view={viewOf(sortingRoom(2), 'p0')} conn={conn()} />);
     expect(screen.getByText('você')).toBeTruthy();
   });
+
+  it('chave de som liga/desliga e lembra a escolha', () => {
+    render(<Table view={viewOf(sortingRoom(2), 'p0')} conn={conn()} />);
+    const btn = screen.getByRole('button', { name: /som/ });
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    expect(localStorage.getItem('cartolina.sound')).toBe('off');
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    expect(localStorage.getItem('cartolina.sound')).toBe('on');
+  });
 });

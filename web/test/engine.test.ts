@@ -12,7 +12,15 @@ function dom(): EngineDom {
   return { wrap: make(), felt: make(), row: make(), overlay: make(), cursors: make(), tip: make(), markers: [make(), make(), make(), make()] };
 }
 
-const handlers = () => ({ place: vi.fn(), ret: vi.fn(), cursor: vi.fn(), activity: vi.fn(), ping: vi.fn(), revealDone: vi.fn() });
+const handlers = () => ({
+  place: vi.fn(),
+  ret: vi.fn(),
+  cursor: vi.fn(),
+  activity: vi.fn(),
+  ping: vi.fn(),
+  revealDone: vi.fn(),
+  sound: vi.fn<(name: 'card' | 'reveal') => void>(),
+});
 
 describe('TableEngine (fumaça)', () => {
   beforeEach(() => {
@@ -695,6 +703,49 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
     engine.update({ ...view, seats: view.seats.filter((s) => s.id !== 'p1') });
     expect(d.row.querySelectorAll('.gap')).toHaveLength(0);
     engine.destroy();
+  });
+
+  it('som de carta quando ela pousa na fila (meu drop, pouso remoto); nada no carregamento nem em pop do servidor', () => {
+    let room = act(sortingRoom(3), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    const { d, h, engine } = table(room);
+    expect(h.sound).not.toHaveBeenCalled();
+    drop(d, 'p0:0', 880, 330);
+    expect(h.sound).toHaveBeenCalledTimes(1);
+    expect(h.sound).toHaveBeenLastCalledWith('card');
+    // p1 carrega a própria carta e solta na fila: pousa com som
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.6, y: 0.66, drag: { cardId: 'p1:0', index: 1 } });
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
+    engine.update(viewOf(room, 'p0'));
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.6, y: 0.66, drag: null });
+    expect(h.sound).toHaveBeenCalledTimes(2);
+    // p2 aparece na fila só pelo estado (sem arrasto visível): entra sem som
+    room = act(room, 'p2', { type: 'place', cardId: 'p2:0', index: 0 });
+    engine.update(viewOf(room, 'p0'));
+    expect(h.sound).toHaveBeenCalledTimes(2);
+    engine.destroy();
+  });
+
+  it('carta alheia devolvida ao lugar (não-dono soltou fora) também faz som ao pousar', () => {
+    const { d, h, engine } = table(fullRow(2));
+    drop(d, 'p1:0', 450, 40);
+    expect(h.ret).not.toHaveBeenCalled();
+    expect(h.sound).toHaveBeenCalledWith('card');
+    engine.destroy();
+  });
+
+  it('som da revelação uma vez por revelação animada; quem entra com ela já feita não ouve', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let room = fullRow(2);
+    const { h, engine } = table(room);
+    room = act(room, 'p0', { type: 'forceReveal' });
+    engine.update(viewOf(room, 'p0'));
+    engine.update(viewOf(room, 'p0'));
+    vi.advanceTimersByTime(10_000);
+    expect(h.sound.mock.calls.filter(([n]) => n === 'reveal')).toHaveLength(1);
+    engine.destroy();
+    const late = table(room);
+    expect(late.h.sound).not.toHaveBeenCalledWith('reveal');
+    late.engine.destroy();
   });
 
   it('destroy no meio do arrasto avisa os outros; chamadas depois do destroy não fazem nada', () => {
