@@ -60,7 +60,7 @@ cola tokens.
    `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`.
 5. **(usuário)** Em Settings → Pages, escolher "GitHub Actions" como fonte.
 6. Depois do primeiro deploy do servidor, o endereço do Worker é conhecido
-   (`https://cartolina.<subdominio>.workers.dev`). Ele vira a variável de
+   (`https://cartolina-server.<subdominio>.workers.dev`). Ele vira a variável de
    repositório `SERVER_URL` (pode ser cadastrada pelo Claude com `gh variable
    set`, já que não é segredo), e o workflow roda de novo.
 
