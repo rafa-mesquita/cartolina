@@ -16,9 +16,11 @@ import {
 
 interface Attachment {
   playerId: string | null;
+  /** Socket substituído por uma reconexão: ignora tudo que ele ainda enviar. */
+  replaced?: boolean;
 }
 
-const CURSOR_MIN_INTERVAL_MS = 25;
+const CURSOR_MIN_INTERVAL_MS = 33;
 
 export class RoomDO extends DurableObject<Env> {
   private room: Room | null = null;
@@ -35,11 +37,15 @@ export class RoomDO extends DurableObject<Env> {
       let changed = false;
       for (const seat of this.room.seats) {
         if (seat.connected && !live.has(seat.id)) {
-          this.room = disconnect(this.room, seat.id, now);
+          // disconnect() atualiza lastActivity; a reconciliação não é atividade, então preserva o valor guardado.
+          this.room = { ...disconnect(this.room, seat.id, now), lastActivity: this.room.lastActivity };
           changed = true;
         }
       }
-      if (changed) await ctx.storage.put('room', this.room);
+      if (changed) {
+        await ctx.storage.put('room', this.room);
+        await ctx.storage.setAlarm(nextAlarmAt(this.room, now));
+      }
     });
   }
 
@@ -71,8 +77,9 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
+    if (this.attachment(ws).replaced) return;
     if (!this.room) {
-      ws.close(4004, 'not_found');
+      this.safeClose(ws, 4004, 'not_found');
       return;
     }
     const msg = parseClientMessage(typeof raw === 'string' ? raw : new TextDecoder().decode(raw));
@@ -85,8 +92,8 @@ export class RoomDO extends DurableObject<Env> {
       if (!res.ok) return this.sendError(ws, res.error);
       for (const other of this.socketsOf(res.playerId)) {
         if (other === ws) continue;
-        other.serializeAttachment({ playerId: null } satisfies Attachment);
-        other.close(4000, 'replaced');
+        other.serializeAttachment({ playerId: null, replaced: true } satisfies Attachment);
+        this.safeClose(other, 4000, 'replaced');
       }
       ws.serializeAttachment({ playerId: res.playerId } satisfies Attachment);
       this.room = tick(res.room, now, Math.random);
@@ -123,15 +130,12 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
-    try {
-      ws.close(code === 1005 || code === 1006 ? 1000 : code, reason);
-    } catch {
-      // já fechado
-    }
+    this.safeClose(ws, code === 1005 || code === 1006 ? 1000 : code, reason);
     await this.handleGone(ws);
   }
 
   async webSocketError(ws: WebSocket): Promise<void> {
+    this.safeClose(ws, 1011, 'error');
     await this.handleGone(ws);
   }
 
@@ -139,9 +143,10 @@ export class RoomDO extends DurableObject<Env> {
     if (!this.room) return;
     const now = Date.now();
     if (isExpired(this.room, now)) {
-      for (const ws of this.ctx.getWebSockets()) ws.close(4004, 'expired');
+      for (const ws of this.ctx.getWebSockets()) this.safeClose(ws, 4004, 'expired');
       this.room = null;
       await this.ctx.storage.deleteAll();
+      await this.ctx.storage.deleteAlarm();
       return;
     }
     this.room = tick(this.room, now, Math.random);
@@ -155,6 +160,15 @@ export class RoomDO extends DurableObject<Env> {
     if (this.socketsOf(playerId).length > 0) return;
     this.room = disconnect(this.room, playerId, Date.now());
     await this.commit();
+  }
+
+  /** Fechar um socket já em CLOSING/CLOSED lança; isso não pode abortar o fluxo do chamador. */
+  private safeClose(ws: WebSocket, code: number, reason: string): void {
+    try {
+      ws.close(code, reason);
+    } catch {
+      // já fechado
+    }
   }
 
   private attachment(ws: WebSocket): Attachment {

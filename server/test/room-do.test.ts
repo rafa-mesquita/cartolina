@@ -1,7 +1,7 @@
-import { env, runInDurableObject } from 'cloudflare:test';
+import { SELF, env, runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import type { Room } from '@cartolina/shared';
 import { describe, expect, it } from 'vitest';
-import { COLORS, connect, joined, newRoomCode } from './helpers';
+import { COLORS, barrier, connect, joined, newRoomCode } from './helpers';
 
 describe('RoomDO: entrada', () => {
   it('join devolve welcome e estado com o assento', async () => {
@@ -43,12 +43,15 @@ describe('RoomDO: entrada', () => {
   it('segundo join no mesmo socket dá already_joined', async () => {
     const code = await newRoomCode();
     const [a] = await joined(code, 1);
+    await barrier(a!.client); // drena states do join antes de limpar
+    a!.client.inbox.length = 0;
     a!.client.send({ t: 'join', token: crypto.randomUUID(), name: 'Outro', color: COLORS[1] });
     const err = await a!.client.next('error');
     expect(err.code).toBe('already_joined');
     expect(err.message).toBe('Você já entrou nesta sala.');
-    const room = await a!.client.state((r) => r.seats.length === 1);
-    expect(room.seats[0]?.name).toBe('P0');
+    await barrier(a!.client);
+    // a sala não mudou: nenhum state foi transmitido depois do segundo join
+    expect(a!.client.inbox.some((m) => m.t === 'state')).toBe(false);
   });
 
   it('mensagem inválida ou ação antes do join dá erro', async () => {
@@ -126,7 +129,7 @@ describe('RoomDO: fx', () => {
     a!.client.send({ t: 'fx.cursor', zone: 'table', x: 0.25, y: 0.5, drag: { cardId: 'x:0', index: 1 } });
     const got = await b!.client.next('fx.cursor');
     expect(got).toEqual({ t: 'fx.cursor', from: a!.id, zone: 'table', x: 0.25, y: 0.5, drag: { cardId: 'x:0', index: 1 } });
-    await new Promise((r) => setTimeout(r, 100));
+    await barrier(a!.client);
     expect(a!.client.inbox.some((m) => m.t === 'fx.cursor')).toBe(false);
   });
 
@@ -158,13 +161,34 @@ describe('RoomDO: desconexão', () => {
   it('socket substituído por reconexão não derruba o jogador', async () => {
     const code = await newRoomCode();
     const [a, b] = await joined(code, 2);
+    await barrier(a!.client); // drena states do join antes de limpar
+    a!.client.inbox.length = 0;
     const again = await connect(code);
     again.send({ t: 'join', token: b!.token, name: 'P1', color: COLORS[1] });
     await again.next('welcome');
-    await new Promise((r) => setTimeout(r, 150));
-    const states = a!.client.inbox.filter((m) => m.t === 'state');
-    const latest = states[states.length - 1];
-    expect(latest?.t).toBe('state');
-    if (latest?.t === 'state') expect(latest.room.seats.every((s) => s.connected)).toBe(true);
+    expect((await b!.client.closed).code).toBe(4000);
+    await barrier(a!.client);
+    const states = a!.client.inbox.flatMap((m) => (m.t === 'state' ? [m.room] : []));
+    expect(states.length).toBeGreaterThan(0);
+    for (const room of states) expect(room.seats.every((s) => s.connected)).toBe(true);
+  });
+});
+
+describe('RoomDO: expiração', () => {
+  it('o alarme apaga a sala inativa, fecha os sockets e limpa o storage', async () => {
+    const code = await newRoomCode();
+    const [a] = await joined(code, 1);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (instance) => {
+      const self = instance as unknown as { room: Room };
+      self.room = { ...self.room, lastActivity: 0 };
+    });
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    expect((await a!.client.closed).code).toBe(4004);
+    await runInDurableObject(stub, async (_instance, state) => {
+      expect(await state.storage.get('room')).toBeUndefined();
+      expect(await state.storage.getAlarm()).toBeNull();
+    });
+    expect((await SELF.fetch(`https://x/rooms/${code}`)).status).toBe(404);
   });
 });

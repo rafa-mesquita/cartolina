@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
+import { newRoomCode } from './helpers';
 import { ROOM_ALPHABET } from '../src/index';
 
 describe('HTTP', () => {
@@ -29,5 +30,15 @@ describe('HTTP', () => {
     const res = await SELF.fetch('https://x/rooms', { method: 'OPTIONS' });
     expect(res.status).toBe(204);
     expect(res.headers.get('Access-Control-Allow-Methods')).toContain('POST');
+  });
+
+  it('GET /rooms/:code/ws sem Upgrade dá 426', async () => {
+    const code = await newRoomCode();
+    expect((await SELF.fetch(`https://x/rooms/${code}/ws`)).status).toBe(426);
+  });
+
+  it('upgrade de WebSocket para sala inexistente dá 404', async () => {
+    const res = await SELF.fetch('https://x/rooms/ZZZZ/ws', { headers: { Upgrade: 'websocket' } });
+    expect(res.status).toBe(404);
   });
 });

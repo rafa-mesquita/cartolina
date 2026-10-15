@@ -13,6 +13,17 @@ export interface TestClient {
   next<T extends ServerMessage['t']>(t: T): Promise<Extract<ServerMessage, { t: T }>>;
   state(pred: (room: RoomView) => boolean): Promise<RoomView>;
   inbox: ServerMessage[];
+  /** Resolve quando o servidor (ou nós) fecha o socket. */
+  closed: Promise<{ code: number; reason: string }>;
+}
+
+/**
+ * Barreira de ordenação: o DO processa as mensagens de um socket em ordem, então quando o
+ * próprio fx.ping volta, tudo que foi enviado antes já foi processado e transmitido.
+ */
+export async function barrier(client: TestClient): Promise<void> {
+  client.send({ t: 'fx.ping', x: 0, y: 0 });
+  await client.next('fx.ping');
 }
 
 export async function connect(code: string): Promise<TestClient> {
@@ -21,6 +32,9 @@ export async function connect(code: string): Promise<TestClient> {
   const ws = res.webSocket;
   ws.accept();
   const inbox: ServerMessage[] = [];
+  const closed = new Promise<{ code: number; reason: string }>((resolve) => {
+    ws.addEventListener('close', (event) => resolve({ code: event.code, reason: event.reason }));
+  });
   let wake: (() => void) | null = null;
   ws.addEventListener('message', (event) => {
     inbox.push(JSON.parse(event.data as string) as ServerMessage);
@@ -43,6 +57,7 @@ export async function connect(code: string): Promise<TestClient> {
   return {
     ws,
     inbox,
+    closed,
     send: (msg) => ws.send(JSON.stringify(msg)),
     next: (t) => waitFor((m): m is Extract<ServerMessage, { t: typeof t }> => m.t === t, t),
     async state(pred) {

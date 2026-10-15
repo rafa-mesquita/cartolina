@@ -1,8 +1,7 @@
 import { cloudflareTest } from '@cloudflare/vitest-plugin';
 import { defineConfig } from 'vitest/config';
 
-// O plugin atual (sucessor do pool-workers) roda tudo num único worker e não isola o
-// storage por teste, que é o que queremos para WebSockets abertos em Durable Objects.
+// Os testes usam códigos de sala aleatórios e únicos, então não dependem de isolamento de storage entre testes.
 export default defineConfig({
   plugins: [cloudflareTest({ wrangler: { configPath: './wrangler.jsonc' } })],
 });
