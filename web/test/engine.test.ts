@@ -49,6 +49,39 @@ describe('TableEngine (fumaça)', () => {
     engine.destroy();
   });
 
+  it('participante vê qualquer carta da fila como movível; quem assiste não', () => {
+    let room = sortingRoom(2);
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
+    const d = dom();
+    const engine = new TableEngine(d, handlers());
+    engine.update(viewOf(room, 'p0'));
+    expect(d.row.querySelector('.rcard')!.classList.contains('movable')).toBe(true);
+    engine.update(viewOf(room, null));
+    expect(d.row.querySelector('.rcard')!.classList.contains('movable')).toBe(false);
+    engine.destroy();
+  });
+
+  it('marcadores degenerados (colineares) não viram homografia: arrasto não começa', () => {
+    let frameCb: FrameRequestCallback | null = null;
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      frameCb = cb;
+      return 1;
+    });
+    const d = dom();
+    d.markers.forEach((el, i) => {
+      const x = i * 100;
+      el.getBoundingClientRect = () => ({ left: x, top: 0, width: 0, height: 0, right: x, bottom: 0, x, y: 0, toJSON: () => ({}) });
+    });
+    const h = handlers();
+    const engine = new TableEngine(d, h);
+    engine.update(viewOf(sortingRoom(2), 'p0'));
+    (frameCb as FrameRequestCallback | null)?.(performance.now() + 16);
+    const down = new MouseEvent('pointerdown', { clientX: 450, clientY: 700, button: 0, cancelable: true });
+    engine.beginHandDrag('p0:0', down as unknown as PointerEvent);
+    expect(down.defaultPrevented).toBe(false);
+    engine.destroy();
+  });
+
   it('rollback volta para a fila do servidor', () => {
     const engine = new TableEngine(dom(), handlers());
     engine.update(viewOf(sortingRoom(2), 'p0'));
@@ -293,6 +326,25 @@ describe('TableEngine (qualquer participante move cartas da fila; só o dono tir
     engine.update(viewOf(act(room, 'p0', { type: 'place', cardId: 'p1:0', index: 0 }), 'p0'));
     expect(engine.getSnapshot().row).toEqual(['p1:0', 'p0:0']);
     expect(engine.getSnapshot().inFlight.size).toBe(0);
+    engine.destroy();
+  });
+
+  it('carta assentando em pé nunca afunda no feltro (metade de baixo não é cortada)', () => {
+    const { d, engine } = rowOfTwo();
+    dragTo(d, false, 100, 330);
+    window.dispatchEvent(pointer('pointerup', 100, 330));
+    const el = d.row.querySelector<HTMLElement>('.rcard:not(.mine)')!;
+    let worst = Infinity;
+    for (let i = 0; i < 90; i++) {
+      frame();
+      const t = el.style.transform;
+      const z = Number(/translate3d\([^,]+,[^,]+,([-\d.]+)px\)/.exec(t)![1]);
+      const rx = Number(/rotateX\(([-\d.]+)deg\)/.exec(t)![1]);
+      const s = Number(/scale\(([-\d.]+)\)/.exec(t)![1]);
+      const dip = ((120 * s) / 2) * Math.sin((Math.abs(rx) * Math.PI) / 180);
+      worst = Math.min(worst, z - dip);
+    }
+    expect(worst).toBeGreaterThanOrEqual(0);
     engine.destroy();
   });
 

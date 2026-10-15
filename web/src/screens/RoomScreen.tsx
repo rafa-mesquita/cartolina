@@ -115,7 +115,8 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
   };
   const mine = joinedProfile(code);
   const initial = mine ?? loadProfile();
-  const takenColors = info.seats.map((s) => s.color).filter((c) => c !== mine?.color);
+  // Só libera a cor desta aba se o assento com ela for o nosso (mesma cor E mesmo nome).
+  const takenColors = info.seats.filter((s) => !(mine && s.color === mine.color && s.name === mine.name)).map((s) => s.color);
   return (
     <main className="screen">
       <h1 className="logo">

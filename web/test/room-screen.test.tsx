@@ -106,7 +106,7 @@ describe('RoomScreen', () => {
     await waitFor(() => expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(true));
     expect(mocked).toHaveBeenCalledTimes(2);
     // a cor selecionada (azul, a primeira) foi trocada pela primeira livre
-    expect(screen.getByRole('button', { name: 'cor rosa' }).getAttribute('aria-pressed')).toBe('true');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'cor rosa' }).getAttribute('aria-pressed')).toBe('true'));
   });
 
   it('fechamento 4000 mostra o aviso de outra aba', async () => {
@@ -131,6 +131,30 @@ describe('RoomScreen', () => {
     expect(last().joins()).toEqual([expect.objectContaining({ t: 'join', name: 'Ana', color: '#8EC5FF' })]);
     welcomeAndState();
     expect(await screen.findByText('sala ABCD')).toBeTruthy();
+  });
+
+  it('minha cor só fica livre se o assento com ela for meu (mesmo nome)', async () => {
+    markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
+    mocked.mockResolvedValue(info([{ id: 'p9', name: 'Zé', color: '#8EC5FF', connected: true }]));
+    renderRoom();
+    await waitFor(() => expect(FakeSocket.all.length).toBe(1));
+    act(() => last().open());
+    act(() => last().receive({ t: 'error', code: 'color_taken', message: 'x' }));
+    await screen.findByRole('alert');
+    await waitFor(() => expect(mocked).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(true));
+  });
+
+  it('o assento com minha cor e meu nome não bloqueia minha cor', async () => {
+    markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
+    mocked.mockResolvedValue(info([{ id: 'p0', name: 'Ana', color: '#8EC5FF', connected: false }]));
+    renderRoom();
+    await waitFor(() => expect(FakeSocket.all.length).toBe(1));
+    act(() => last().open());
+    act(() => last().receive({ t: 'error', code: 'room_full', message: 'x' }));
+    await screen.findByRole('alert');
+    await waitFor(() => expect(mocked).toHaveBeenCalledTimes(2));
+    expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('sem perfil desta aba não entra sozinho, mesmo com perfil salvo em outra aba', async () => {

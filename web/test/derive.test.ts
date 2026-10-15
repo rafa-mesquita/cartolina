@@ -15,10 +15,13 @@ describe('derive', () => {
     let room = sortingRoom(2);
     room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
     const view = viewOf(room, 'p0');
-    expect(handCards(view, view.game.row, new Set()).map((h) => h.place)).toEqual(['row']);
-    expect(handCards(view, [], new Set()).map((h) => h.place)).toEqual(['hand']);
-    expect(handCards(view, [], new Set(['p0:0'])).map((h) => h.place)).toEqual(['drag']);
-    expect(handCards(view, [], new Set())[0]?.card.value).not.toBeNull();
+    expect(handCards(view, view.game.row, new Set(), null).map((h) => h.place)).toEqual(['row']);
+    expect(handCards(view, [], new Set(), null).map((h) => h.place)).toEqual(['hand']);
+    // eu arrastando (ou a carta voltando pra minha mão)
+    expect(handCards(view, [], new Set(['p0:0']), 'p0:0').map((h) => h.place)).toEqual(['drag']);
+    // outra pessoa carregando minha carta da fila: pra mão ela continua na mesa
+    expect(handCards(view, [], new Set(['p0:0']), null).map((h) => h.place)).toEqual(['row']);
+    expect(handCards(view, [], new Set(), null)[0]?.card.value).not.toBeNull();
   });
 
   it('costas no assento somem quando a carta está na fila ou sendo carregada', () => {

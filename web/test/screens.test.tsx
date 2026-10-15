@@ -102,6 +102,21 @@ describe('Lobby', () => {
     expect(screen.getByLabelText('link da sala')).toBeTruthy();
   });
 
+  it('campo do link seleciona o texto uma vez ao aparecer, não a cada render', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    const select = vi.spyOn(HTMLInputElement.prototype, 'select');
+    const { rerender } = render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={fakeConn()} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'copiar link da sala' }));
+    });
+    expect(select).toHaveBeenCalledTimes(1);
+    rerender(<Lobby view={viewOf(makeRoom(3), 'p0')} conn={fakeConn()} />);
+    expect(select).toHaveBeenCalledTimes(1);
+    fireEvent.focus(screen.getByLabelText('link da sala'));
+    expect(select).toHaveBeenCalledTimes(2);
+    select.mockRestore();
+  });
+
   it('host escolhe o modo e começa', () => {
     const conn = fakeConn();
     render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={conn} />);

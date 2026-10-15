@@ -15,6 +15,11 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
   const [copied, setCopied] = useState(false);
   const [showLink, setShowLink] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkInput = useRef<HTMLInputElement>(null);
+  // seleciona o link uma vez quando o campo aparece (e de novo no foco), não a cada render
+  useEffect(() => {
+    if (showLink) linkInput.current?.select();
+  }, [showLink]);
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
@@ -64,7 +69,7 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
             value={link}
             aria-label="link da sala"
             onFocus={(e) => e.currentTarget.select()}
-            ref={(el) => el?.select()}
+            ref={linkInput}
           />
         )}
       </section>

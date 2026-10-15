@@ -23,11 +23,15 @@ export function cardsOf(view: RoomView, owner: string): ItoCardView[] {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export function handCards(view: RoomView, row: readonly string[], inFlight: ReadonlySet<string>): HandCard[] {
+/**
+ * Lugar de cada carta minha. `dragging` = carta que EU arrasto (ou voltando pra minha mão).
+ * Carta minha carregada por outra pessoa (em `inFlight`, mas não `dragging`) continua "na mesa".
+ */
+export function handCards(view: RoomView, row: readonly string[], inFlight: ReadonlySet<string>, dragging: string | null): HandCard[] {
   if (!view.you) return [];
   return cardsOf(view, view.you).map((card) => ({
     card,
-    place: inFlight.has(card.id) ? 'drag' : row.includes(card.id) ? 'row' : 'hand',
+    place: dragging === card.id ? 'drag' : row.includes(card.id) || inFlight.has(card.id) ? 'row' : 'hand',
   }));
 }
 

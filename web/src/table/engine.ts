@@ -1,6 +1,6 @@
 import type { Activity, CursorFx, ItoCardView, RevealEntry, RoomView } from '@cartolina/shared';
-import { CW, FH, FW, HAND_S, PERSP, ROW_S, ROW_Y, TILT } from './constants';
-import { applyH, inv3, solveH, type Mat3 } from './homography';
+import { CH, CW, FH, FW, HAND_S, PERSP, ROW_S, ROW_Y, TILT } from './constants';
+import { applyH, inv3Safe, solveHSafe, type Mat3 } from './homography';
 import {
   cursorFromLocal,
   effectiveRow,
@@ -451,8 +451,8 @@ export class TableEngine {
       rc.faceB.innerHTML = b;
       rc.paintedB = b;
     }
-    // Participante pode mover qualquer carta da fila (o CSS de `.rcard` ainda assume "só a minha").
-    rc.el.style.cursor = this.isPlayer() && this.view?.game.phase === 'sorting' ? 'grab' : '';
+    // Participante pode mover qualquer carta da fila.
+    rc.el.classList.toggle('movable', this.isPlayer() && this.view?.game.phase === 'sorting');
   }
 
   private clueHTML(card: ItoCardView): string {
@@ -1005,7 +1005,7 @@ export class TableEngine {
     });
     const [a, b, c] = pts;
     if (!a || !b || !c || (a[0] === b[0] && a[1] === b[1]) || (a[0] === c[0] && a[1] === c[1])) return;
-    this.H = solveH(
+    const H = solveHSafe(
       [
         [0, 0],
         [FW, 0],
@@ -1014,7 +1014,10 @@ export class TableEngine {
       ],
       pts,
     );
-    this.Hi = inv3(this.H);
+    const Hi = H && inv3Safe(H);
+    if (!H || !Hi) return;
+    this.H = H;
+    this.Hi = Hi;
   }
 
   private toScreen(lx: number, ly: number): [number, number] {
@@ -1128,7 +1131,11 @@ export class TableEngine {
   private writeCard(rc: RowCard): void {
     const sp = rc.sp;
     const f = clamp(sp.flip.v, 0, 1.2);
-    const z = Math.max(0.5, sp.z.v) + Math.sin(Math.PI * clamp(f, 0, 1)) * 34;
+    // Em pé, a carta gira em torno do centro: a metade de baixo afundaria no feltro (cortada pelo preserve-3d).
+    const standRad = (this.tilt.v * Math.max(0, sp.stand.v) * Math.PI) / 180;
+    const halfH = (CH * ROW_S * Math.max(0, sp.rs.v)) / 2;
+    const lift = halfH * Math.sin(standRad) + 0.5;
+    const z = Math.max(lift, Math.max(0.5, sp.z.v)) + Math.sin(Math.PI * clamp(f, 0, 1)) * 34;
     rc.el.style.transform =
       `translate3d(${(sp.x.v + sp.shake.v).toFixed(2)}px,${(ROW_Y + sp.y.v).toFixed(2)}px,${z.toFixed(2)}px) ` +
       `rotateX(${(-this.tilt.v * sp.stand.v).toFixed(2)}deg) rotateZ(${(rc.tilt + sp.wob.v + sp.shake.v * 0.25).toFixed(2)}deg) ` +

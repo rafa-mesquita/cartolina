@@ -78,6 +78,7 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
 .tilde { position: absolute; inset: 0; display: grid; place-items: center; font: 700 54px/1 var(--font-ui); }
 .rcard { pointer-events: auto; cursor: not-allowed; touch-action: none; }
 .rcard.mine { cursor: grab; }
+.rcard.movable { cursor: grab; }
 .rcard.err .face { border-color: var(--pink2); }
 .xstamp {
   position: absolute; right: -12px; top: -12px; width: 38px; height: 38px; border-radius: 50% 46% 52% 47%; background: var(--pink2);
