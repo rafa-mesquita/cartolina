@@ -1519,6 +1519,7 @@ const OUTCOME: Record<ItoOutcome, { label: string; good: boolean }> = {
   round_won: { label: 'vitória', good: true },
   round_lost: { label: 'errou', good: false },
   level_cleared: { label: 'nível ✓', good: true },
+  level_failed: { label: 'repetiu o nível', good: false },
   won: { label: 'zerou a campanha', good: true },
   lost: { label: 'acabaram as vidas', good: false },
 };
