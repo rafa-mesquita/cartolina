@@ -179,9 +179,10 @@ describe('RoomDO: expiração', () => {
     const code = await newRoomCode();
     const [a] = await joined(code, 1);
     const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-    await runInDurableObject(stub, async (instance) => {
+    await runInDurableObject(stub, async (instance, state) => {
       const self = instance as unknown as { room: Room };
       self.room = { ...self.room, lastActivity: 0 };
+      await state.storage.put('room', self.room);
     });
     expect(await runDurableObjectAlarm(stub)).toBe(true);
     expect((await a!.client.closed).code).toBe(4004);

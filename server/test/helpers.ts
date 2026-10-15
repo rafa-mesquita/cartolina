@@ -33,7 +33,15 @@ export async function connect(code: string): Promise<TestClient> {
   ws.accept();
   const inbox: ServerMessage[] = [];
   const closed = new Promise<{ code: number; reason: string }>((resolve) => {
-    ws.addEventListener('close', (event) => resolve({ code: event.code, reason: event.reason }));
+    ws.addEventListener('close', (event) => {
+      resolve({ code: event.code, reason: event.reason });
+      // Responde o close como um navegador faria, para o DO ver o handshake completo (webSocketClose/handleGone).
+      try {
+        ws.close();
+      } catch {
+        // já fechado
+      }
+    });
   });
   let wake: (() => void) | null = null;
   ws.addEventListener('message', (event) => {
