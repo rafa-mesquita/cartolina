@@ -1,9 +1,12 @@
 import { MIN_PLAYERS, type ItoMode, type RoomView } from '@cartolina/shared';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { isHost } from '../game/derive';
 import { roomLink } from '../lib/router';
 import type { GameConn } from '../net/connection';
 import { Avatar } from './Avatar';
+
+/** Bots para testar sozinho: só existe em dev; em produção o import some e o código não vai pro bundle. */
+const BotControls = import.meta.env.DEV ? lazy(() => import('../dev/BotControls')) : null;
 
 const MODES: { mode: ItoMode; title: string; text: string }[] = [
   { mode: 'livre', title: 'livre', text: '1 carta por pessoa. Acertou a ordem, ganhou. Joga quantas rodadas quiser.' },
@@ -99,6 +102,11 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
           <p className="hint">esperando o host começar…</p>
         )}
       </section>
+      {BotControls && (
+        <Suspense fallback={null}>
+          <BotControls code={view.code} seats={view.seats.length} />
+        </Suspense>
+      )}
     </main>
   );
 }
