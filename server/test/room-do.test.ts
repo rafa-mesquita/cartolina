@@ -81,3 +81,90 @@ describe('RoomDO: entrada', () => {
     });
   });
 });
+
+describe('RoomDO: jogo', () => {
+  it('joga uma rodada livre completa', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    a!.client.send({ t: 'action', action: { type: 'start' } });
+    await a!.client.state((r) => r.game.phase === 'theme');
+    a!.client.send({ t: 'action', action: { type: 'beginRound' } });
+    const roomA = await a!.client.state((r) => r.game.phase === 'sorting');
+    const roomB = await b!.client.state((r) => r.game.phase === 'sorting');
+
+    const cardA = Object.values(roomA.game.cards).find((c) => c.owner === a!.id)!;
+    const cardB = Object.values(roomB.game.cards).find((c) => c.owner === b!.id)!;
+    expect(cardA.value).not.toBeNull();
+    expect(roomA.game.cards[cardB.id]?.value).toBeNull();
+
+    a!.client.send({ t: 'action', action: { type: 'clue', cardId: cardA.id, text: 'Paris' } });
+    a!.client.send({ t: 'action', action: { type: 'place', cardId: cardA.id, index: 0 } });
+    await b!.client.state((r) => r.game.row.length === 1 && r.game.cards[cardA.id]?.clue === 'Paris');
+    b!.client.send({ t: 'action', action: { type: 'place', cardId: cardB.id, index: 1 } });
+    a!.client.send({ t: 'action', action: { type: 'ready', ready: true } });
+    b!.client.send({ t: 'action', action: { type: 'ready', ready: true } });
+
+    const done = await a!.client.state((r) => r.game.phase === 'reveal');
+    const values = done.game.reveal!.map((e) => e.value);
+    expect(values).toHaveLength(2);
+    expect(done.game.outcome).toBe(values[0]! < values[1]! ? 'round_won' : 'round_lost');
+    expect(done.game.cards[cardB.id]?.value).toBe(values[1]);
+  });
+
+  it('erros de regra voltam só para quem errou', async () => {
+    const code = await newRoomCode();
+    const [, b] = await joined(code, 2);
+    b!.client.send({ t: 'action', action: { type: 'start' } });
+    expect((await b!.client.next('error')).code).toBe('not_host');
+  });
+});
+
+describe('RoomDO: fx', () => {
+  it('cursor vai para os outros e não volta para quem enviou', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    a!.client.send({ t: 'fx.cursor', zone: 'table', x: 0.25, y: 0.5, drag: { cardId: 'x:0', index: 1 } });
+    const got = await b!.client.next('fx.cursor');
+    expect(got).toEqual({ t: 'fx.cursor', from: a!.id, zone: 'table', x: 0.25, y: 0.5, drag: { cardId: 'x:0', index: 1 } });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(a!.client.inbox.some((m) => m.t === 'fx.cursor')).toBe(false);
+  });
+
+  it('ping vai para todos, inclusive quem enviou', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    a!.client.send({ t: 'fx.ping', x: 0.5, y: 0.5 });
+    expect((await a!.client.next('fx.ping')).from).toBe(a!.id);
+    expect((await b!.client.next('fx.ping')).from).toBe(a!.id);
+  });
+
+  it('atividade é repassada', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    a!.client.send({ t: 'fx.activity', activity: 'writing' });
+    expect(await b!.client.next('fx.activity')).toEqual({ t: 'fx.activity', from: a!.id, activity: 'writing' });
+  });
+});
+
+describe('RoomDO: desconexão', () => {
+  it('fechar o socket marca o jogador como desconectado para os outros', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    b!.client.ws.close(1000, 'tchau');
+    const room = await a!.client.state((r) => r.seats.find((s) => s.id === b!.id)?.connected === false);
+    expect(room.seats).toHaveLength(2);
+  });
+
+  it('socket substituído por reconexão não derruba o jogador', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    const again = await connect(code);
+    again.send({ t: 'join', token: b!.token, name: 'P1', color: COLORS[1] });
+    await again.next('welcome');
+    await new Promise((r) => setTimeout(r, 150));
+    const states = a!.client.inbox.filter((m) => m.t === 'state');
+    const latest = states[states.length - 1];
+    expect(latest?.t).toBe('state');
+    if (latest?.t === 'state') expect(latest.room.seats.every((s) => s.connected)).toBe(true);
+  });
+});
