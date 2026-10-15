@@ -12,14 +12,17 @@ import {
   joinRoom,
   nextAlarmAt,
   parseClientMessage,
+  pendingRecord,
   reconcilePresence,
   roomAction,
   roomSummary,
   roomView,
   tick,
   type Room,
+  type RoomGroup,
   type ServerMessage,
 } from '@cartolina/shared';
+import { insertRound } from './history-db';
 import { isStale, nextWakeAt } from './liveness';
 
 interface Attachment {
@@ -61,7 +64,8 @@ export class RoomDO extends DurableObject<Env> {
 
     if (url.pathname === '/init') {
       if (this.room) return new Response('taken', { status: 409 });
-      this.room = createRoom(url.searchParams.get('code') ?? '', Date.now());
+      const body = (await request.json().catch(() => ({}))) as { group?: RoomGroup | null };
+      this.room = createRoom(url.searchParams.get('code') ?? '', Date.now(), body.group ?? null);
       await this.commit();
       return new Response('ok', { status: 201 });
     }
@@ -222,6 +226,16 @@ export class RoomDO extends DurableObject<Env> {
     if (!this.room) return;
     // Aplica transições pendentes (host, fase) antes de gravar, agendar e transmitir, para o alarme não correr com o estado.
     this.room = tick(this.room, Date.now(), Math.random);
+    // Sala de grupo entrou numa revelação nova: grava no histórico (falha no D1 não trava o jogo; tenta de novo no próximo commit).
+    const pending = pendingRecord(this.room, Date.now(), crypto.randomUUID());
+    if (pending && this.room.group) {
+      try {
+        await insertRound(this.env.DB, this.room.group.id, pending.record);
+        this.room = { ...this.room, recordedRevealKey: pending.key };
+      } catch (err) {
+        console.error('falha ao gravar rodada no histórico', err);
+      }
+    }
     await this.ctx.storage.put('room', this.room);
     await this.scheduleAlarm();
     for (const ws of this.ctx.getWebSockets()) {

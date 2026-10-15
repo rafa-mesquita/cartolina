@@ -100,3 +100,40 @@ export async function joined(code: string, n: number): Promise<{ client: TestCli
   }
   return out;
 }
+
+export async function newGroup(name = 'Galera'): Promise<string> {
+  const res = await SELF.fetch('https://x/groups', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (res.status !== 201) throw new Error(`criar grupo falhou: ${res.status}`);
+  return ((await res.json()) as { slug: string }).slug;
+}
+
+export async function newGroupRoom(name = 'Galera'): Promise<{ slug: string; code: string }> {
+  const slug = await newGroup(name);
+  const res = await SELF.fetch(`https://x/groups/${slug}/rooms`, { method: 'POST' });
+  if (res.status !== 201) throw new Error(`criar sala do grupo falhou: ${res.status}`);
+  return { slug, code: ((await res.json()) as { code: string }).code };
+}
+
+/** Dois jogadores jogam uma rodada livre até a revelação (host força a revelação). */
+export async function playRound(code: string): Promise<{ client: TestClient; id: string; token: string }[]> {
+  const players = await joined(code, 2);
+  const [a, b] = players;
+  a!.client.send({ t: 'action', action: { type: 'start' } });
+  await a!.client.state((r) => r.game.phase === 'theme');
+  a!.client.send({ t: 'action', action: { type: 'beginRound' } });
+  const ra = await a!.client.state((r) => r.game.phase === 'sorting');
+  const cardA = Object.values(ra.game.cards).find((c) => c.owner === a!.id)!;
+  const cardB = Object.values(ra.game.cards).find((c) => c.owner === b!.id)!;
+  a!.client.send({ t: 'action', action: { type: 'clue', cardId: cardA.id, text: 'Paris' } });
+  a!.client.send({ t: 'action', action: { type: 'place', cardId: cardA.id, index: 0 } });
+  await b!.client.state((r) => r.game.row.length === 1);
+  b!.client.send({ t: 'action', action: { type: 'place', cardId: cardB.id, index: 1 } });
+  await a!.client.state((r) => r.game.row.length === 2);
+  a!.client.send({ t: 'action', action: { type: 'forceReveal' } });
+  await a!.client.state((r) => r.game.phase === 'reveal');
+  return players;
+}
