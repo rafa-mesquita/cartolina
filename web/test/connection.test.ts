@@ -212,6 +212,111 @@ describe('RoomConnection', () => {
     expect(last().sent.filter((s) => s === 'ping')).toHaveLength(1);
   });
 
+  it('ping da volta à aba sem nenhuma resposta em 5 s: trata como socket morto e reconecta', () => {
+    const conn = make();
+    last().open();
+    const dead = last();
+    becomeVisible();
+    expect(dead.sent.filter((s) => s === 'ping')).toHaveLength(1);
+    vi.advanceTimersByTime(4_999);
+    expect(conn.getSnapshot().status).toBe('joining');
+    vi.advanceTimersByTime(1);
+    expect(conn.getSnapshot().status).toBe('reconnecting');
+    expect(dead.closedWith).not.toBeNull();
+    expect(FakeSocket.all).toHaveLength(1);
+    vi.advanceTimersByTime(1_000);
+    expect(FakeSocket.all).toHaveLength(2);
+    // o socket descartado não pode mais mexer no estado
+    dead.drop(1006);
+    expect(FakeSocket.all).toHaveLength(2);
+  });
+
+  it('qualquer mensagem (pong) dentro de 5 s cancela o prazo', () => {
+    const conn = make();
+    last().open();
+    becomeVisible();
+    vi.advanceTimersByTime(2_000);
+    last().receive('pong');
+    vi.advanceTimersByTime(10_000);
+    expect(conn.getSnapshot().status).toBe('joining');
+    expect(FakeSocket.all).toHaveLength(1);
+  });
+
+  it('retryJoin com o socket caído e retry pendente abre só um socket novo', () => {
+    const conn = make();
+    last().open();
+    last().drop(1006);
+    expect(conn.getSnapshot().status).toBe('reconnecting');
+    conn.retryJoin('Bia', '#FF8FAB');
+    expect(FakeSocket.all).toHaveLength(2);
+    vi.advanceTimersByTime(20_000);
+    expect(FakeSocket.all).toHaveLength(2);
+  });
+
+  it('retryJoin com socket ainda conectando descarta o antigo (sem socket órfão)', () => {
+    const conn = make();
+    const first = last();
+    conn.retryJoin('Bia', '#FF8FAB');
+    expect(first.closedWith).toBe(1000);
+    expect(FakeSocket.all).toHaveLength(2);
+    first.open(); // o descartado não pode mandar join nem mexer no estado
+    expect(first.sent).toEqual([]);
+  });
+
+  it('start duas vezes não abre dois sockets; depois de stop pode recomeçar do zero', () => {
+    const conn = make();
+    conn.start();
+    expect(FakeSocket.all).toHaveLength(1);
+    last().open();
+    last().drop(1006);
+    conn.stop();
+    conn.start();
+    expect(FakeSocket.all).toHaveLength(2);
+    expect(conn.getSnapshot()).toMatchObject({ status: 'connecting', joinError: null });
+  });
+
+  it('start zera o backoff', () => {
+    const conn = make();
+    last().open();
+    last().drop(1006);
+    vi.advanceTimersByTime(1_000);
+    last().drop(1006); // attempt = 2 -> próximo atraso seria 4 s
+    conn.stop();
+    conn.start();
+    last().drop(1006);
+    vi.advanceTimersByTime(1_000);
+    expect(FakeSocket.all).toHaveLength(4);
+  });
+
+  it('ignora JSON que não é objeto e mensagens desconhecidas (só fx.* chega nos ouvintes de fx)', () => {
+    const conn = make();
+    const onFx = vi.fn();
+    const onError = vi.fn();
+    conn.onFx(onFx);
+    conn.onError(onError);
+    last().open();
+    last().receive('null');
+    last().receive('42');
+    last().receive('"oi"');
+    last().receive({ t: 'algo.estranho' });
+    last().receive({});
+    expect(onFx).not.toHaveBeenCalled();
+    expect(conn.getSnapshot().status).toBe('joining');
+    last().receive({ t: 'fx.activity', from: 'p2', activity: 'typing' });
+    expect(onFx).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('erro de entrada vira join_failed sem repassar para onError', () => {
+    const conn = make();
+    const onError = vi.fn();
+    conn.onError(onError);
+    last().open();
+    last().receive({ t: 'error', code: 'room_full', message: 'Sala cheia.' });
+    expect(conn.getSnapshot().status).toBe('join_failed');
+    expect(onError).not.toHaveBeenCalled();
+  });
+
   it('depois de stop, voltar para a aba não faz nada', () => {
     const conn = make();
     last().open();

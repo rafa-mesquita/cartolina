@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRoom, getRoomInfo } from '../src/net/api';
 import { wsUrl } from '../src/net/config';
 import { getToken, loadProfile, loadTiltPref, markJoined, saveProfile, saveTiltPref, wasJoined } from '../src/net/identity';
@@ -8,6 +8,20 @@ function fakeFetch(status: number, body: unknown) {
 }
 
 describe('config', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('SERVER_URL ignora barras finais e usa o padrão quando a variável é vazia', async () => {
+    vi.stubEnv('VITE_SERVER_URL', 'https://x.workers.dev//');
+    vi.resetModules();
+    expect((await import('../src/net/config')).SERVER_URL).toBe('https://x.workers.dev');
+    vi.stubEnv('VITE_SERVER_URL', '');
+    vi.resetModules();
+    expect((await import('../src/net/config')).SERVER_URL).toBe('http://127.0.0.1:8787');
+  });
+
   it('troca http por ws e https por wss', () => {
     expect(wsUrl('ABCD', 'http://127.0.0.1:8787')).toBe('ws://127.0.0.1:8787/rooms/ABCD/ws');
     expect(wsUrl('ABCD', 'https://x.workers.dev')).toBe('wss://x.workers.dev/rooms/ABCD/ws');
@@ -37,6 +51,32 @@ describe('identity', () => {
     const t = getToken();
     expect(t).toMatch(/^[0-9a-f-]{36}$/);
     expect(getToken()).toBe(t);
+  });
+
+  it('token é gerado mesmo sem crypto.randomUUID (contexto não seguro)', () => {
+    const original = crypto.randomUUID;
+    Object.defineProperty(crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      const t = getToken();
+      expect(t).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+      expect(getToken()).toBe(t);
+    } finally {
+      Object.defineProperty(crypto, 'randomUUID', { value: original, configurable: true, writable: true });
+    }
+  });
+
+  it('não quebra quando o armazenamento recusa gravação', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    try {
+      expect(() => saveProfile({ name: 'Ana', color: '#8EC5FF' })).not.toThrow();
+      expect(() => markJoined('ABCD')).not.toThrow();
+      expect(() => saveTiltPref(false)).not.toThrow();
+      expect(getToken()).toMatch(/^[0-9a-f-]{36}$/);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('perfil válido é salvo e lido; inválido vira null', () => {

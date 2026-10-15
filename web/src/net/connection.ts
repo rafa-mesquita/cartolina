@@ -45,6 +45,8 @@ export const JOIN_ERRORS: ReadonlySet<string> = new Set(['room_full', 'bad_name'
 export const CURSOR_INTERVAL_MS = 34;
 const OPEN = 1;
 const MAX_BACKOFF_MS = 10_000;
+/** Tempo que o servidor tem para responder ao ping de verificação feito ao voltar para a aba. */
+const PONG_DEADLINE_MS = 5_000;
 
 /** O que a mesa precisa da conexão (facilita testar componentes com um objeto falso). */
 export type GameConn = Pick<RoomConnection, 'sendAction' | 'sendActivity' | 'sendCursor' | 'sendPing' | 'onFx' | 'onError'>;
@@ -61,6 +63,8 @@ export class RoomConnection {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeat: ReturnType<typeof setInterval> | null = null;
   private stopped = false;
+  private started = false;
+  private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private lastCursorAt = -Infinity;
   private pendingCursor: CursorFx | null = null;
   private cursorTimer: ReturnType<typeof setTimeout> | null = null;
@@ -68,13 +72,18 @@ export class RoomConnection {
   constructor(private opts: ConnOptions) {}
 
   start(): void {
+    if (this.started && !this.stopped) return;
+    this.started = true;
     this.stopped = false;
+    this.attempt = 0;
+    this.setSnap({ status: 'connecting', joinError: null });
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this.onVisible);
     this.open();
   }
 
   stop(): void {
     this.stopped = true;
+    this.started = false;
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.onVisible);
     this.clearTimers();
     const ws = this.ws;
@@ -142,8 +151,13 @@ export class RoomConnection {
   retryJoin(name: string, color: string): void {
     this.opts = { ...this.opts, name, color };
     this.setSnap({ status: 'joining', joinError: null });
-    if (this.ws && this.ws.readyState === OPEN) this.sendJoin();
-    else this.open();
+    if (this.ws && this.ws.readyState === OPEN) {
+      this.sendJoin();
+      return;
+    }
+    if (this.retryTimer) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    this.open();
   }
 
   /**
@@ -154,6 +168,7 @@ export class RoomConnection {
     if (document.visibilityState !== 'visible' || this.stopped) return;
     if (this.ws && this.ws.readyState === OPEN) {
       this.ws.send(HEARTBEAT_PING);
+      this.armPongDeadline();
       return;
     }
     if (this.retryTimer) {
@@ -164,8 +179,30 @@ export class RoomConnection {
     }
   };
 
+  /** Sem nenhuma mensagem (nem pong) no prazo, o socket é meio-aberto: larga e reconecta. */
+  private armPongDeadline(): void {
+    if (this.pongTimer) return;
+    this.pongTimer = setTimeout(() => {
+      this.pongTimer = null;
+      if (this.stopped) return;
+      const ws = this.ws;
+      this.ws = null;
+      ws?.close();
+      this.handleClose(1006);
+    }, PONG_DEADLINE_MS);
+  }
+
+  private clearPongDeadline(): void {
+    if (this.pongTimer) clearTimeout(this.pongTimer);
+    this.pongTimer = null;
+  }
+
   private open(): void {
     if (this.stopped) return;
+    this.clearPongDeadline();
+    const old = this.ws;
+    this.ws = null;
+    old?.close(1000);
     const ws = (this.opts.createSocket ?? defaultSocket)(this.opts.url);
     this.ws = ws;
     ws.onopen = () => {
@@ -188,13 +225,16 @@ export class RoomConnection {
   }
 
   private handle(data: unknown): void {
-    if (typeof data !== 'string' || data === HEARTBEAT_PONG) return;
+    if (typeof data !== 'string') return;
+    this.clearPongDeadline();
+    if (data === HEARTBEAT_PONG) return;
     let msg: ServerMessage;
     try {
       msg = JSON.parse(data) as ServerMessage;
     } catch {
       return;
     }
+    if (!msg || typeof msg !== 'object') return;
     switch (msg.t) {
       case 'welcome':
         this.setSnap({ status: 'joined', playerId: msg.playerId, joinError: null });
@@ -205,16 +245,18 @@ export class RoomConnection {
       case 'error':
         if (this.snap.status === 'joining' && JOIN_ERRORS.has(msg.code)) {
           this.setSnap({ status: 'join_failed', joinError: msg.code });
+          return;
         }
         this.errorListeners.forEach((fn) => fn(msg.code, msg.message));
         return;
       default:
-        this.fxListeners.forEach((fn) => fn(msg));
+        if (typeof msg.t === 'string' && msg.t.startsWith('fx.')) this.fxListeners.forEach((fn) => fn(msg));
     }
   }
 
   private handleClose(code: number): void {
     this.stopHeartbeat();
+    this.clearPongDeadline();
     this.ws = null;
     if (this.stopped) return;
     if (code === CLOSE_REPLACED) return this.setSnap({ status: 'replaced' });
@@ -242,6 +284,7 @@ export class RoomConnection {
 
   private clearTimers(): void {
     this.stopHeartbeat();
+    this.clearPongDeadline();
     if (this.retryTimer) clearTimeout(this.retryTimer);
     if (this.cursorTimer) clearTimeout(this.cursorTimer);
     this.retryTimer = null;
