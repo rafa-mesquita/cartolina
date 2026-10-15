@@ -252,9 +252,12 @@ describe('sala de grupo', () => {
     expect(screen.getByRole('link', { name: '📜 histórico de Galera' }).getAttribute('href')).toBe('#/g/abcdefghjk');
   });
 
-  it('mesa mostra o nome do grupo no topo', () => {
-    render(<TopBar view={groupView()} />);
-    expect(screen.getByRole('link', { name: 'Galera' }).getAttribute('href')).toBe('#/g/abcdefghjk');
+  it('mesa mostra o nome do grupo embaixo do logo (fora das pílulas, que encostam nos assentos de cima)', () => {
+    const { container } = render(<TopBar view={groupView()} />);
+    const link = screen.getByRole('link', { name: '📜 Galera' });
+    expect(link.getAttribute('href')).toBe('#/g/abcdefghjk');
+    expect(link.closest('.pills')).toBeNull();
+    expect(container.querySelector('.brandcol')?.contains(link)).toBe(true);
   });
 
   it('sala avulsa não mostra nada de grupo', () => {
