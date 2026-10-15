@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ERROR_MESSAGES, parseClientMessage } from '../src/protocol';
+import { CLOSE_GONE, CLOSE_REPLACED, CLOSE_TIMEOUT, ERROR_CODES, errorMessage, parseClientMessage } from '../src/protocol';
 
 const parse = (v: unknown) => parseClientMessage(JSON.stringify(v));
 
@@ -46,13 +46,12 @@ describe('parseClientMessage', () => {
     expect(parse({ t: 'fx.ping', x: 50, y: 0 })).toBeNull();
   });
 
-  it('tem mensagem em português para todos os códigos de erro conhecidos', () => {
-    for (const code of [
-      'not_host', 'bad_phase', 'not_owner', 'unknown_card', 'not_enough_players', 'cards_missing',
-      'bad_theme', 'not_player', 'bad_action', 'room_full', 'bad_name', 'bad_color', 'color_taken',
-      'not_member', 'bad_message', 'not_joined', 'already_joined',
-    ]) {
-      expect(ERROR_MESSAGES[code]).toBeTruthy();
-    }
+  it('tem mensagem em português para todos os códigos de erro', () => {
+    for (const code of ERROR_CODES) expect(errorMessage(code)).not.toBe('Algo deu errado.');
+    expect(errorMessage('codigo_inventado')).toBe('Algo deu errado.');
+  });
+
+  it('expõe os códigos de fechamento do WebSocket', () => {
+    expect([CLOSE_REPLACED, CLOSE_TIMEOUT, CLOSE_GONE]).toEqual([4000, 4002, 4004]);
   });
 });

@@ -10,6 +10,7 @@ import {
   isExpired,
   joinRoom,
   nextAlarmAt,
+  reconcilePresence,
   roomAction,
   roomSummary,
   roomView,
@@ -240,5 +241,20 @@ describe('roomSummary', () => {
       ],
     });
     expect(JSON.stringify(summary)).not.toContain('"tok0"');
+  });
+});
+
+describe('reconcilePresence', () => {
+  it('não muda nada quando todos os conectados têm socket', () => {
+    const room = roomWith(2);
+    expect(reconcilePresence(room, new Set(['id-tok0', 'id-tok1']), T0 + 5)).toBe(room);
+  });
+
+  it('marca como desconectado quem não tem socket vivo, sem contar como atividade', () => {
+    const room = roomWith(2);
+    const next = reconcilePresence(room, new Set(['id-tok0']), T0 + 5);
+    expect(next.seats[1]).toMatchObject({ id: 'id-tok1', connected: false, disconnectedAt: T0 + 5 });
+    expect(next.seats[0]?.connected).toBe(true);
+    expect(next.lastActivity).toBe(room.lastActivity);
   });
 });

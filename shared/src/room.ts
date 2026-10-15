@@ -161,3 +161,16 @@ export function nextAlarmAt(room: Room, now: number): number {
     .filter((at) => at > now);
   return Math.min(room.lastActivity + ROOM_TTL_MS, ...pending);
 }
+
+/**
+ * Após um reinício do servidor, quem consta como conectado mas não tem socket vivo
+ * passa a desconectado. Não é atividade: `lastActivity` não muda.
+ */
+export function reconcilePresence(room: Room, liveIds: ReadonlySet<string>, now: number): Room {
+  const stale = room.seats.filter((s) => s.connected && !liveIds.has(s.id));
+  if (stale.length === 0) return room;
+  return {
+    ...room,
+    seats: room.seats.map((s) => (stale.includes(s) ? { ...s, connected: false, disconnectedAt: now } : s)),
+  };
+}

@@ -72,7 +72,29 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
   }
 }
 
-export const ERROR_MESSAGES: Record<string, string> = {
+export const ERROR_CODES = [
+  'not_host',
+  'bad_phase',
+  'not_owner',
+  'unknown_card',
+  'not_enough_players',
+  'cards_missing',
+  'bad_theme',
+  'not_player',
+  'bad_action',
+  'room_full',
+  'bad_name',
+  'bad_color',
+  'color_taken',
+  'not_member',
+  'bad_message',
+  'not_joined',
+  'already_joined',
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_host: 'Só o host pode fazer isso.',
   bad_phase: 'Agora não dá pra fazer isso.',
   not_owner: 'Essa carta não é sua.',
@@ -91,3 +113,17 @@ export const ERROR_MESSAGES: Record<string, string> = {
   not_joined: 'Entre na sala primeiro.',
   already_joined: 'Você já entrou nesta sala.',
 };
+
+export function errorMessage(code: string): string {
+  return (ERROR_CODES as readonly string[]).includes(code) ? ERROR_MESSAGES[code as ErrorCode] : 'Algo deu errado.';
+}
+
+/** Códigos de fechamento do WebSocket enviados pelo servidor. */
+export const CLOSE_REPLACED = 4000;
+export const CLOSE_TIMEOUT = 4002;
+export const CLOSE_GONE = 4004;
+
+/** Heartbeat: o cliente manda "ping" de tempos em tempos; o servidor responde "pong" sozinho. */
+export const HEARTBEAT_PING = 'ping';
+export const HEARTBEAT_PONG = 'pong';
+export const HEARTBEAT_INTERVAL_MS = 15_000;

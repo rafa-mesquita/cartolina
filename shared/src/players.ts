@@ -24,7 +24,8 @@ export function isPlayerColor(value: unknown): value is PlayerColor {
 
 export function cleanName(raw: string): string | null {
   const name = raw.trim().replace(/\s+/g, ' ');
-  return name.length >= 1 && name.length <= NAME_MAX ? name : null;
+  const length = Array.from(name).length;
+  return length >= 1 && length <= NAME_MAX ? name : null;
 }
 
 /** Mantém espaço no fim para não atrapalhar quem está digitando. */

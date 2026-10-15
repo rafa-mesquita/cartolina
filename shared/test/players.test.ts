@@ -26,4 +26,9 @@ describe('players', () => {
     expect(cleanClue('Paris ')).toBe('Paris ');
     expect(cleanClue('x'.repeat(39) + '😀😀')).toBe('x'.repeat(39) + '😀');
   });
+
+  it('cleanName conta emoji como um caractere', () => {
+    expect(cleanName('😀'.repeat(16))).toBe('😀'.repeat(16));
+    expect(cleanName('😀'.repeat(17))).toBeNull();
+  });
 });

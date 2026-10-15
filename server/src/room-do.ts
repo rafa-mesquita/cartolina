@@ -1,12 +1,15 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
-  ERROR_MESSAGES,
+  CLOSE_GONE,
+  CLOSE_REPLACED,
   createRoom,
   disconnect,
+  errorMessage,
   isExpired,
   joinRoom,
   nextAlarmAt,
   parseClientMessage,
+  reconcilePresence,
   roomAction,
   roomSummary,
   roomView,
@@ -32,18 +35,14 @@ export class RoomDO extends DurableObject<Env> {
     ctx.blockConcurrencyWhile(async () => {
       this.room = (await ctx.storage.get<Room>('room')) ?? null;
       if (!this.room) return;
-      // Após um restart do DO, `connected` pode estar obsoleto: quem não tem socket vivo está desconectado.
-      const live = new Set(ctx.getWebSockets().map((s) => this.attachment(s).playerId));
+      // Após um restart, `connected` pode estar obsoleto: quem não tem socket vivo está desconectado.
+      const live = new Set(
+        ctx.getWebSockets().map((s) => this.attachment(s).playerId).filter((id): id is string => id !== null),
+      );
       const now = Date.now();
-      let changed = false;
-      for (const seat of this.room.seats) {
-        if (seat.connected && !live.has(seat.id)) {
-          // disconnect() atualiza lastActivity; a reconciliação não é atividade, então preserva o valor guardado.
-          this.room = { ...disconnect(this.room, seat.id, now), lastActivity: this.room.lastActivity };
-          changed = true;
-        }
-      }
-      if (changed) {
+      const reconciled = reconcilePresence(this.room, live, now);
+      if (reconciled !== this.room) {
+        this.room = reconciled;
         await ctx.storage.put('room', this.room);
         await ctx.storage.setAlarm(nextAlarmAt(this.room, now));
       }
@@ -81,7 +80,7 @@ export class RoomDO extends DurableObject<Env> {
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
     if (this.attachment(ws).replaced) return;
     if (!this.room) {
-      this.safeClose(ws, 4004, 'not_found');
+      this.safeClose(ws, CLOSE_GONE, 'not_found');
       return;
     }
     const msg = parseClientMessage(typeof raw === 'string' ? raw : new TextDecoder().decode(raw));
@@ -95,7 +94,7 @@ export class RoomDO extends DurableObject<Env> {
       for (const other of this.socketsOf(res.playerId)) {
         if (other === ws) continue;
         other.serializeAttachment({ playerId: null, replaced: true } satisfies Attachment);
-        this.safeClose(other, 4000, 'replaced');
+        this.safeClose(other, CLOSE_REPLACED, 'replaced');
       }
       ws.serializeAttachment({ playerId: res.playerId } satisfies Attachment);
       this.room = tick(res.room, now, Math.random);
@@ -145,7 +144,7 @@ export class RoomDO extends DurableObject<Env> {
     if (!this.room) return;
     const now = Date.now();
     if (isExpired(this.room, now)) {
-      for (const ws of this.ctx.getWebSockets()) this.safeClose(ws, 4004, 'expired');
+      for (const ws of this.ctx.getWebSockets()) this.safeClose(ws, CLOSE_GONE, 'expired');
       this.room = null;
       await this.ctx.storage.deleteAll();
       await this.ctx.storage.deleteAlarm();
@@ -209,6 +208,6 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private sendError(ws: WebSocket, code: string): void {
-    this.send(ws, { t: 'error', code, message: ERROR_MESSAGES[code] ?? 'Algo deu errado.' });
+    this.send(ws, { t: 'error', code, message: errorMessage(code) });
   }
 }
