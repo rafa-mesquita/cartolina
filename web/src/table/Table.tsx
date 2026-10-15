@@ -8,6 +8,7 @@ import { FH, FW } from './constants';
 import { TableEngine, type EngineSnapshot } from './engine';
 import { Hand } from './Hand';
 import { ReadyColumn } from './ReadyColumn';
+import { ResultBanner } from './ResultBanner';
 import { Seat } from './Seat';
 import { arrangeSeats } from './seatLayout';
 import { ThemeCard } from './ThemeCard';
@@ -162,7 +163,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
         )}
       </div>
 
-      {view.game.phase === 'reveal' && revealDone && <div data-reveal-done />}
+      {view.game.phase === 'reveal' && revealDone && <ResultBanner view={view} conn={conn} />}
 
       <div className="overlay-layer" ref={overlay} />
       <div className="cursor-layer" ref={cursors} />
