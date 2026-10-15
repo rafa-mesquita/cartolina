@@ -7,6 +7,7 @@ import {
   inRowZone,
   insertIndex,
   intentSettled,
+  INTENT_TTL_MS,
   rowEntries,
   toServerIndex,
   toVisibleIndex,
@@ -1036,16 +1037,20 @@ export class TableEngine {
         this.revealing = false;
         this.revealTimers.forEach((t) => clearTimeout(t));
         this.revealTimers = [];
+        this.unflipAll();
       }
       return;
     }
-    const key = g.reveal.map((e) => e.cardId).join('|');
+    // Ids se repetem entre rodadas: o valor entra na chave (igual ao Table).
+    const key = g.reveal.map((e) => `${e.cardId}=${e.value}`).join('|');
     if (key === this.revealKey) return;
     this.revealKey = key;
     this.revealing = true;
-    // Uma revelação nova substitui a anterior: os timers velhos chamariam revealDone de novo.
+    // Uma revelação nova substitui a anterior: os timers velhos chamariam revealDone de novo,
+    // e cartas com id repetido (reconexão revelação→revelação) ainda estariam viradas/marcadas.
     this.revealTimers.forEach((t) => clearTimeout(t));
     this.revealTimers = [];
+    this.unflipAll();
     this.pendingDrag = null;
     this.abortDrag();
     for (const r of this.remotes.values()) if (r.drag) this.remoteDrop(r);
@@ -1066,6 +1071,17 @@ export class TableEngine {
       this.emit();
       this.handlers.revealDone();
     });
+  }
+
+  /** Volta todas as cartas da fila pra frente, sem ✕ (estado de revelação apagado). */
+  private unflipAll(): void {
+    for (const rc of this.cards.values()) {
+      rc.sp.flip.snap(0);
+      rc.sp.stamp.snap(0);
+      rc.sp.shake.snap(0);
+      rc.el.classList.remove('err');
+      rc.dirty = true;
+    }
   }
 
   private later(ms: number, fn: () => void): void {
@@ -1197,7 +1213,8 @@ export class TableEngine {
     // 1) Leituras de layout de fora do motor, todas juntas antes de qualquer escrita deste quadro.
     this.inFrame = true;
     this.anchors.clear();
-    for (const r of this.remotes.values()) this.anchor(seatSel(r.id));
+    // Assento só de quem o cursor vai seguir até lá (mão, ou mesa ainda sem homografia).
+    for (const r of this.remotes.values()) if (r.target.zone !== 'table' || !this.H) this.anchor(seatSel(r.id));
     for (const o of this.overlays) if (o.home) this.anchor(o.home.sel);
     // 2) Mesa (a homografia precisa ler os marcadores depois de escrever a inclinação/escala).
     const tiltMoving = !this.tilt.resting;
@@ -1216,6 +1233,7 @@ export class TableEngine {
     p.px = p.x;
     p.py = p.y;
 
+    this.expireIntents(now);
     this.updateDrag();
     this.stepRemotes(dt, now);
     if (this.layoutDirty) this.relayout();
@@ -1231,6 +1249,16 @@ export class TableEngine {
     this.inFrame = false;
     this.raf = requestAnimationFrame(this.frame);
   };
+
+  /** Intenção sem resposta por mais que o TTL sai mesmo sem `state` novo (senão a fila errada fica na tela). */
+  private expireIntents(now: number): void {
+    if (!this.pending.length) return;
+    const kept = this.pending.filter((p) => now - p.at <= INTENT_TTL_MS);
+    if (kept.length === this.pending.length) return;
+    this.pending = kept;
+    this.reconcile(false);
+    this.emit();
+  }
 
   private stepRemotes(dt: number, now: number): void {
     for (const r of this.remotes.values()) {

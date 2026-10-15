@@ -144,6 +144,13 @@ describe('intenções otimistas', () => {
     expect(intentSettled(['a', 'm'], first, 10)).toBe(false);
   });
 
+  it('âncora movida por outra pessoa: assenta pelo índice', () => {
+    // Pus `m` no índice 1 (depois de `p1`); antes de processar, alguém levou `p1` pro fim.
+    const place = { kind: 'place' as const, cardId: 'm', index: 1, after: 'p1', at: 0 };
+    expect(intentSettled(['p2', 'm', 'p1'], place, 10)).toBe(true);
+    expect(intentSettled(['m', 'p2', 'p1'], place, 10)).toBe(false);
+  });
+
   it('colocação concorrente antes da minha não prende a minha carta até o TTL', () => {
     // Eu pus `m` depois de `a` (índice 1); alguém pôs `x` no começo ao mesmo tempo.
     const place = { kind: 'place' as const, cardId: 'm', index: 1, after: 'a', at: 0 };

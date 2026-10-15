@@ -748,6 +748,73 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
     late.engine.destroy();
   });
 
+  it('âncora movida antes do meu place: a fila bate com o servidor (sem ficar presa)', () => {
+    let room = fullRow(3); // [p0:0, p1:0, p2:0]
+    const { d, h, engine } = table(room);
+    drop(d, 'p0:0', 480, 330); // p0:0 depois de p1:0
+    expect(h.place).toHaveBeenLastCalledWith('p0:0', 1);
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p0:0', 'p2:0']);
+    room = act(room, 'p2', { type: 'place', cardId: 'p1:0', index: 2 }); // p2 leva p1:0 pro fim antes
+    room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 1 });
+    expect(room.game.row).toEqual(['p2:0', 'p0:0', 'p1:0']);
+    engine.update(viewOf(room, 'p0'));
+    expect(engine.getSnapshot().row).toEqual(['p2:0', 'p0:0', 'p1:0']);
+    frame(1600);
+    expect(engine.getSnapshot().row).toEqual(['p2:0', 'p0:0', 'p1:0']);
+    engine.destroy();
+  });
+
+  it('intenção que nunca bate com o servidor expira no loop, sem precisar de estado novo', () => {
+    let room = fullRow(3);
+    const { d, engine } = table(room);
+    drop(d, 'p0:0', 480, 330); // place(p0:0, 1) depois de p1:0
+    // Só chega o estado final: alguém já moveu a minha carta de novo pro começo.
+    room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 1 });
+    room = act(room, 'p2', { type: 'place', cardId: 'p0:0', index: 0 });
+    room = act(room, 'p2', { type: 'place', cardId: 'p1:0', index: 2 });
+    expect(room.game.row).toEqual(['p0:0', 'p2:0', 'p1:0']);
+    engine.update(viewOf(room, 'p0'));
+    frame(1600); // passou o TTL; nenhum estado novo
+    expect(engine.getSnapshot().row).toEqual(['p0:0', 'p2:0', 'p1:0']);
+    engine.destroy();
+  });
+
+  it('revelação nova com ids repetidos desvira as cartas e tira o ✕ da anterior', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let room = fullRow(2);
+    const { d, engine } = table(room);
+    room = act(room, 'p0', { type: 'forceReveal' });
+    const view = viewOf(room, 'p0');
+    const allWrong = { ...view, game: { ...view.game, reveal: view.game.reveal!.map((e) => ({ ...e, error: true })) } };
+    engine.update(allWrong);
+    vi.advanceTimersByTime(10_000);
+    frames(60);
+    expect(d.row.querySelectorAll('.rcard.err')).toHaveLength(2);
+    // reconexão: perdeu o estado intermediário e já chega outra revelação com os mesmos ids
+    const again = { ...view, game: { ...view.game, reveal: view.game.reveal!.map((e) => ({ ...e, error: false })).reverse() } };
+    engine.update(again);
+    frame();
+    expect(d.row.querySelectorAll('.rcard.err')).toHaveLength(0);
+    const card = cardEl(d, 'p0:0');
+    expect(card.querySelector<HTMLElement>('.flip')!.style.transform).toBe('rotateY(0.00deg)');
+    expect(card.querySelector<HTMLElement>('.xstamp')!.style.opacity).toBe('0');
+    engine.destroy();
+  });
+
+  it('pré-leitura do quadro só lê assento de quem precisa (cursor na mão)', () => {
+    const seat = anchor('seatAnchor', 'p1', 800, 100);
+    const { engine } = table(sortingRoom(2));
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.5, y: 0.3, drag: null });
+    const read = seat.getBoundingClientRect as ReturnType<typeof vi.fn>;
+    read.mockClear();
+    frames(3);
+    expect(read).not.toHaveBeenCalled();
+    engine.remoteCursor({ from: 'p1', zone: 'hand', x: 0, y: 0, drag: null });
+    frame();
+    expect(read).toHaveBeenCalledTimes(1);
+    engine.destroy();
+  });
+
   it('destroy no meio do arrasto avisa os outros; chamadas depois do destroy não fazem nada', () => {
     const room = fullRow(2);
     const { d, h, engine } = table(room);

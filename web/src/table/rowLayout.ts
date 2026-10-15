@@ -57,8 +57,9 @@ export function effectiveRow(serverRow: readonly string[], pending: Intent | nul
 export function intentSettled(serverRow: readonly string[], pending: Intent, now: number): boolean {
   if (now - pending.at > INTENT_TTL_MS) return true;
   if (pending.kind === 'return') return !serverRow.includes(pending.cardId);
+  // Bate pelo vizinho (colocações concorrentes antes da minha) OU pelo índice (alguém mexeu na minha âncora).
   const pos = serverRow.indexOf(pending.cardId);
-  return pos >= 0 && (pos === 0 ? null : serverRow[pos - 1]) === pending.after;
+  return pos >= 0 && (pos === pending.index || (pos === 0 ? null : serverRow[pos - 1]) === pending.after);
 }
 
 /**
