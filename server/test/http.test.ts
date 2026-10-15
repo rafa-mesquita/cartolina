@@ -1,7 +1,7 @@
 import { SELF } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { newRoomCode } from './helpers';
-import { ROOM_ALPHABET } from '../src/index';
+import { ROOM_ALPHABET } from '../src/codes';
 
 describe('HTTP', () => {
   it('POST /rooms cria sala com código de 4 letras do alfabeto', async () => {

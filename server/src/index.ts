@@ -1,9 +1,7 @@
+import { CODE_RE, randomCode } from './codes';
 import { RoomDO } from './room-do';
 
 export { RoomDO };
-
-export const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const CODE_RE = new RegExp(`^[${ROOM_ALPHABET}]{4}$`);
 
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -13,11 +11,6 @@ const CORS: Record<string, string> = {
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
-}
-
-export function randomCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(4));
-  return Array.from(bytes, (b) => ROOM_ALPHABET[b % ROOM_ALPHABET.length]).join('');
 }
 
 export default {
