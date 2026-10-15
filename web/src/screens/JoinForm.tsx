@@ -1,6 +1,20 @@
 import { PLAYER_COLORS, cleanName, errorMessage, NAME_MAX, type PlayerColor } from '@cartolina/shared';
-import { useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import type { Profile } from '../net/identity';
+
+/** Nomes em português das cores de jogador (mesma ordem de PLAYER_COLORS). */
+export const COLOR_NAMES: Record<PlayerColor, string> = {
+  '#8EC5FF': 'azul',
+  '#FF8FAB': 'rosa',
+  '#7EDDB5': 'verde',
+  '#C7B3FF': 'lilás',
+  '#FFD07A': 'amarelo',
+  '#FFB38A': 'laranja',
+  '#9EE6F0': 'ciano',
+  '#E6B8E0': 'malva',
+  '#C9E27A': 'lima',
+  '#D9C2A0': 'areia',
+};
 
 interface Props {
   takenColors: readonly string[];
@@ -17,6 +31,13 @@ export function JoinForm({ takenColors, initial, busy, error, onSubmit }: Props)
     initial && !takenColors.includes(initial.color) ? initial.color : firstFree,
   );
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Alguém pegou a cor que eu tinha selecionado enquanto eu preenchia: passa pra primeira livre.
+  useEffect(() => {
+    if (!takenColors.includes(color)) return;
+    const free = PLAYER_COLORS.find((c) => !takenColors.includes(c));
+    if (free) setColor(free);
+  }, [takenColors, color]);
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -53,7 +74,7 @@ export function JoinForm({ takenColors, initial, busy, error, onSubmit }: Props)
               key={c}
               type="button"
               className="swatch"
-              aria-label={`cor ${c}`}
+              aria-label={`cor ${COLOR_NAMES[c]}`}
               aria-pressed={c === color}
               disabled={takenColors.includes(c)}
               style={{ '--c': c } as CSSProperties}
@@ -62,7 +83,7 @@ export function JoinForm({ takenColors, initial, busy, error, onSubmit }: Props)
           ))}
         </div>
       </div>
-      {shown && <p className="error">{shown}</p>}
+      {shown && <p className="error" role="alert">{shown}</p>}
       <button className="btn" type="submit" disabled={busy}>
         {busy ? 'entrando…' : 'entrar'}
       </button>

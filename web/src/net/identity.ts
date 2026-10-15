@@ -20,56 +20,76 @@ function uuidV4(): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-/** Grava sem quebrar quando o armazenamento está bloqueado ou cheio (modo privado, cotas). */
-function safeSet(storage: Storage, key: string, value: string): void {
+type StoreGetter = () => Storage;
+const session: StoreGetter = () => sessionStorage;
+const local: StoreGetter = () => localStorage;
+
+/** Lê sem quebrar quando o armazenamento está bloqueado (o próprio acesso a `sessionStorage` pode lançar). */
+export function safeGet(getStore: StoreGetter, key: string): string | null {
   try {
-    storage.setItem(key, value);
+    return getStore().getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/** Grava sem quebrar quando o armazenamento está bloqueado ou cheio (modo privado, cotas). */
+export function safeSet(getStore: StoreGetter, key: string, value: string): void {
+  try {
+    getStore().setItem(key, value);
   } catch {
     // sem persistência: o app segue funcionando na sessão atual
   }
 }
 
-/** Um token por aba: duas abas são dois jogadores; recarregar a aba mantém o assento. */
-export function getToken(): string {
-  let token: string | null = null;
+function parseProfile(raw: string | null): Profile | null {
   try {
-    token = sessionStorage.getItem(TOKEN_KEY);
-  } catch {
-    // armazenamento bloqueado
-  }
-  if (!token) {
-    token = uuidV4();
-    safeSet(sessionStorage, TOKEN_KEY, token);
-  }
-  return token;
-}
-
-export function loadProfile(): Profile | null {
-  try {
-    const raw = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? 'null') as { name?: unknown; color?: unknown } | null;
-    if (raw && typeof raw.name === 'string' && isPlayerColor(raw.color)) return { name: raw.name, color: raw.color };
+    const p = JSON.parse(raw ?? 'null') as { name?: unknown; color?: unknown } | null;
+    if (p && typeof p.name === 'string' && isPlayerColor(p.color)) return { name: p.name, color: p.color };
   } catch {
     // perfil corrompido: ignora
   }
   return null;
 }
 
+let memoryToken: string | null = null;
+
+/** Um token por aba: duas abas são dois jogadores; recarregar a aba mantém o assento. Sem armazenamento, vale na memória. */
+export function getToken(): string {
+  const stored = safeGet(session, TOKEN_KEY);
+  if (stored) return stored;
+  if (memoryToken) return memoryToken;
+  const token = uuidV4();
+  memoryToken = token;
+  safeSet(session, TOKEN_KEY, token);
+  return token;
+}
+
+export function loadProfile(): Profile | null {
+  return parseProfile(safeGet(local, PROFILE_KEY));
+}
+
 export function saveProfile(profile: Profile): void {
-  safeSet(localStorage, PROFILE_KEY, JSON.stringify(profile));
+  safeSet(local, PROFILE_KEY, JSON.stringify(profile));
+}
+
+/** Perfil com que ESTA aba entrou na sala (sessionStorage: abas diferentes não se misturam). */
+export function joinedProfile(code: string): Profile | null {
+  return parseProfile(safeGet(session, joinedKey(code)));
 }
 
 export function wasJoined(code: string): boolean {
-  return sessionStorage.getItem(joinedKey(code)) === '1';
+  return joinedProfile(code) !== null;
 }
 
-export function markJoined(code: string): void {
-  safeSet(sessionStorage, joinedKey(code), '1');
+export function markJoined(code: string, profile: Profile): void {
+  safeSet(session, joinedKey(code), JSON.stringify(profile));
 }
 
 export function loadTiltPref(): boolean {
-  return localStorage.getItem(TILT_KEY) !== 'off';
+  return safeGet(local, TILT_KEY) !== 'off';
 }
 
 export function saveTiltPref(on: boolean): void {
-  safeSet(localStorage, TILT_KEY, on ? 'on' : 'off');
+  safeSet(local, TILT_KEY, on ? 'on' : 'off');
 }

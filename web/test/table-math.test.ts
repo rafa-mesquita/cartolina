@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CW, FH, FW, NAT_STEP, ROW_S, ROW_X0, ROW_X1, ROW_Y } from '../src/table/constants';
-import { applyH, inv3, solveH } from '../src/table/homography';
+import { applyH, inv3, inv3Safe, solveH, solveHSafe } from '../src/table/homography';
 import {
   INTENT_TTL_MS,
   cursorFromLocal,
@@ -60,6 +60,28 @@ describe('homografia', () => {
     const [lx, ly] = applyH(inv3(H), sx, sy);
     close(lx, 300, 1e-4);
     close(ly, 200, 1e-4);
+  });
+});
+
+describe('versões seguras', () => {
+  const src = [[0, 0], [FW, 0], [0, FH], [FW, FH]] as const;
+
+  it('solveHSafe devolve a mesma homografia em entrada válida', () => {
+    const dst = [[100, 50], [800, 50], [0, 400], [900, 400]] as const;
+    expect(solveHSafe(src, dst)).toEqual(solveH(src, dst));
+  });
+
+  it('solveHSafe devolve null para pontos degenerados (colineares)', () => {
+    const line = [[0, 0], [10, 0], [20, 0], [30, 0]] as const;
+    expect(solveHSafe(src, line)).toBeNull();
+    expect(solveHSafe(line, src)).toBeNull();
+  });
+
+  it('inv3Safe inverte matriz válida e devolve null se singular', () => {
+    const H = solveH(src, [[100, 50], [800, 50], [0, 400], [900, 400]]);
+    expect(inv3Safe(H)).toEqual(inv3(H));
+    expect(inv3Safe([1, 2, 3, 2, 4, 6, 3, 6, 9])).toBeNull();
+    expect(inv3Safe([0, 0, 0, 0, 0, 0, 0, 0, 0])).toBeNull();
   });
 });
 
@@ -127,6 +149,17 @@ describe('intenções otimistas', () => {
   it('toVisibleIndex é o inverso aproximado', () => {
     expect(toVisibleIndex(['a', 'c'], ['a', 'b', 'c'], 'm', 2)).toBe(1);
     expect(toVisibleIndex(['a', 'c'], ['a', 'b', 'c'], 'm', 3)).toBe(2);
+  });
+
+  it('toVisibleIndex conta a partir da última carta visível antes do ponto (com carta pendente minha na fila)', () => {
+    // visível: m (minha, pendente) + a + b; servidor: a, b. Arrasto remoto depois de "a" (índice 1 no servidor).
+    expect(toVisibleIndex(['m', 'a', 'b'], ['a', 'b'], 'x', 1)).toBe(2);
+    expect(toVisibleIndex(['m', 'a', 'b'], ['a', 'b'], 'x', 0)).toBe(0);
+  });
+
+  it('toServerIndex pula cartas visíveis que ainda não estão no servidor (pendentes)', () => {
+    expect(toServerIndex(['a', 'p', 'x'], ['a', 'x'], 'm', 2)).toBe(1);
+    expect(toServerIndex(['p', 'a'], ['a'], 'm', 1)).toBe(0);
   });
 });
 

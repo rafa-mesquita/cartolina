@@ -6,7 +6,7 @@ import { Toasts } from './Toasts';
 export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot; view: RoomView }) {
   return (
     <>
-      {snap.status === 'reconnecting' && <div className="banner-reconnect">reconectando…</div>}
+      {snap.status === 'reconnecting' && <div className="banner-reconnect" role="status">reconectando…</div>}
       {view.game.phase === 'lobby' ? (
         <Lobby view={view} conn={conn} />
       ) : (

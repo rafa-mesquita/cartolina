@@ -1,4 +1,5 @@
 import { MIN_PLAYERS, type ItoMode, type RoomView } from '@cartolina/shared';
+import { useEffect, useRef, useState } from 'react';
 import { isHost } from '../game/derive';
 import type { GameConn } from '../net/connection';
 import { Avatar } from './Avatar';
@@ -11,7 +12,29 @@ const MODES: { mode: ItoMode; title: string; text: string }[] = [
 export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
   const host = isHost(view);
   const connected = view.seats.filter((s) => s.connected).length;
+  const [copied, setCopied] = useState(false);
+  const [showLink, setShowLink] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
   const link = `${window.location.origin}${window.location.pathname}#/sala/${view.code}`;
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setShowLink(false);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // sem permissão ou sem clipboard (http fora de localhost): mostra o link pra copiar na mão
+      setShowLink(true);
+    }
+  }
+
   return (
     <main className="screen">
       <h1 className="logo">
@@ -31,9 +54,19 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
             </li>
           ))}
         </ul>
-        <button className="sbtn" type="button" onClick={() => void navigator.clipboard?.writeText(link)}>
-          copiar link da sala
+        <button className="sbtn" type="button" onClick={() => void copyLink()}>
+          {copied ? 'link copiado!' : 'copiar link da sala'}
         </button>
+        {showLink && (
+          <input
+            className="text-in"
+            readOnly
+            value={link}
+            aria-label="link da sala"
+            onFocus={(e) => e.currentTarget.select()}
+            ref={(el) => el?.select()}
+          />
+        )}
       </section>
       <section className="panel">
         <h2>modo</h2>
@@ -43,6 +76,7 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
               key={m.mode}
               type="button"
               className={`mode ${view.game.mode === m.mode ? 'on' : ''}`}
+              aria-pressed={view.game.mode === m.mode}
               disabled={!host}
               onClick={() => conn.sendAction({ type: 'setMode', mode: m.mode })}
             >

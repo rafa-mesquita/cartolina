@@ -1,18 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { goHome } from '../lib/router';
 import { getRoomInfo, type RoomInfo } from '../net/api';
 import { wsUrl } from '../net/config';
-import { RoomConnection } from '../net/connection';
-import { getToken, loadProfile, markJoined, saveProfile, wasJoined, type Profile } from '../net/identity';
+import { RoomConnection, type ConnOptions } from '../net/connection';
+import { getToken, joinedProfile, loadProfile, markJoined, saveProfile, type Profile } from '../net/identity';
 import { useConnSnapshot } from '../net/useConnSnapshot';
 import { Game } from './Game';
 import { JoinForm } from './JoinForm';
 
-function connect(code: string, profile: Profile): RoomConnection {
-  return new RoomConnection({ url: wsUrl(code), token: getToken(), name: profile.name, color: profile.color });
+function connect(code: string, profile: Profile, createSocket?: ConnOptions['createSocket']): RoomConnection {
+  return new RoomConnection({ url: wsUrl(code), token: getToken(), name: profile.name, color: profile.color, createSocket });
 }
 
-function Message({ title, text }: { title: string; text: string }) {
+function Message({ title, text, action }: { title: string; text: string; action?: { label: string; onClick(): void } }) {
   return (
     <main className="screen">
       <h1 className="logo">
@@ -21,7 +21,12 @@ function Message({ title, text }: { title: string; text: string }) {
       <section className="panel">
         <h2>{title}</h2>
         <p>{text}</p>
-        <button className="btn" type="button" onClick={goHome}>
+        {action && (
+          <button className="btn" type="button" onClick={action.onClick}>
+            {action.label}
+          </button>
+        )}
+        <button className={action ? 'sbtn' : 'btn'} type="button" onClick={goHome}>
           voltar pro início
         </button>
       </section>
@@ -29,15 +34,25 @@ function Message({ title, text }: { title: string; text: string }) {
   );
 }
 
-export function RoomScreen({ code }: { code: string }) {
+export function RoomScreen({ code, createSocket }: { code: string; createSocket?: ConnOptions['createSocket'] }) {
   const [info, setInfo] = useState<RoomInfo | null | undefined>(undefined);
+  const [netError, setNetError] = useState(false);
   const [conn, setConn] = useState<RoomConnection | null>(null);
+  const usedProfile = useRef<Profile | null>(null);
+  const hasInfo = useRef(false);
   const snap = useConnSnapshot(conn);
 
   const refresh = useCallback(() => {
     getRoomInfo(code)
-      .then(setInfo)
-      .catch(() => setInfo(null));
+      .then((i) => {
+        hasInfo.current = true;
+        setNetError(false);
+        setInfo(i);
+      })
+      .catch(() => {
+        // falha de rede só vira tela de erro se ainda não sabemos nada da sala
+        if (!hasInfo.current) setNetError(true);
+      });
   }, [code]);
 
   useEffect(() => {
@@ -50,19 +65,36 @@ export function RoomScreen({ code }: { code: string }) {
     return () => conn.stop();
   }, [conn]);
 
-  // Recarregou a página numa sala em que esta aba já tinha entrado: entra de novo sozinho.
+  // Recarregou a página numa sala em que esta aba já tinha entrado: entra de novo com o perfil DESTA aba.
   useEffect(() => {
-    if (!info || conn || !wasJoined(code)) return;
-    const profile = loadProfile();
-    if (profile) setConn(connect(code, profile));
-  }, [info, conn, code]);
+    if (!info || conn) return;
+    const profile = joinedProfile(code);
+    if (!profile) return;
+    usedProfile.current = profile;
+    setConn(connect(code, profile, createSocket));
+  }, [info, conn, code, createSocket]);
 
   const status = snap?.status;
   useEffect(() => {
-    if (status === 'joined') markJoined(code);
+    if (status === 'joined' && usedProfile.current) markJoined(code, usedProfile.current);
     if (status === 'join_failed') refresh();
   }, [status, code, refresh]);
 
+  if (netError) {
+    return (
+      <Message
+        title="não deu pra falar com o servidor"
+        text="Confira se o servidor está ligado e sua conexão com a internet."
+        action={{
+          label: 'tentar de novo',
+          onClick: () => {
+            setNetError(false);
+            refresh();
+          },
+        }}
+      />
+    );
+  }
   if (info === undefined) return <Message title="carregando…" text="procurando a sala" />;
   if (info === null || status === 'gone') {
     return <Message title="sala não encontrada" text="Essa sala não existe ou expirou. Crie uma nova no início." />;
@@ -77,11 +109,13 @@ export function RoomScreen({ code }: { code: string }) {
   const busy = !!snap && (snap.status === 'connecting' || snap.status === 'joining');
   const submit = (profile: Profile) => {
     saveProfile(profile);
+    usedProfile.current = profile;
     if (conn) conn.retryJoin(profile.name, profile.color);
-    else setConn(connect(code, profile));
+    else setConn(connect(code, profile, createSocket));
   };
-  const initial = loadProfile();
-  const takenColors = info.seats.map((s) => s.color).filter((c) => c !== initial?.color || !wasJoined(code));
+  const mine = joinedProfile(code);
+  const initial = mine ?? loadProfile();
+  const takenColors = info.seats.map((s) => s.color).filter((c) => c !== mine?.color);
   return (
     <main className="screen">
       <h1 className="logo">

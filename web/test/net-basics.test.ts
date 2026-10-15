@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRoom, getRoomInfo } from '../src/net/api';
 import { wsUrl } from '../src/net/config';
-import { getToken, loadProfile, loadTiltPref, markJoined, saveProfile, saveTiltPref, wasJoined } from '../src/net/identity';
+import { getToken, joinedProfile, loadProfile, loadTiltPref, markJoined, saveProfile, saveTiltPref, wasJoined } from '../src/net/identity';
 
 function fakeFetch(status: number, body: unknown) {
   return vi.fn(async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
@@ -71,7 +71,7 @@ describe('identity', () => {
     });
     try {
       expect(() => saveProfile({ name: 'Ana', color: '#8EC5FF' })).not.toThrow();
-      expect(() => markJoined('ABCD')).not.toThrow();
+      expect(() => markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' })).not.toThrow();
       expect(() => saveTiltPref(false)).not.toThrow();
       expect(getToken()).toMatch(/^[0-9a-f-]{36}$/);
     } finally {
@@ -87,10 +87,57 @@ describe('identity', () => {
     expect(loadProfile()).toBeNull();
   });
 
-  it('lembra em quais salas a aba já entrou', () => {
+  it('lembra com qual perfil esta aba entrou em cada sala', () => {
     expect(wasJoined('ABCD')).toBe(false);
-    markJoined('ABCD');
+    expect(joinedProfile('ABCD')).toBeNull();
+    markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
     expect(wasJoined('ABCD')).toBe(true);
+    expect(joinedProfile('ABCD')).toEqual({ name: 'Ana', color: '#8EC5FF' });
+    expect(joinedProfile('WXYZ')).toBeNull();
+  });
+
+  it('perfil da sala é por aba: não vaza do localStorage nem aceita lixo', () => {
+    saveProfile({ name: 'Outra aba', color: '#FF8FAB' });
+    expect(joinedProfile('ABCD')).toBeNull();
+    sessionStorage.setItem('cartolina.joined.ABCD', '1');
+    expect(joinedProfile('ABCD')).toBeNull();
+    expect(wasJoined('ABCD')).toBe(false);
+    sessionStorage.setItem('cartolina.joined.ABCD', JSON.stringify({ name: 'X', color: '#000000' }));
+    expect(joinedProfile('ABCD')).toBeNull();
+  });
+
+  describe('armazenamento bloqueado (getters lançam)', () => {
+    const block = (name: 'sessionStorage' | 'localStorage') => {
+      const original = Object.getOwnPropertyDescriptor(window, name)!;
+      Object.defineProperty(window, name, {
+        configurable: true,
+        get() {
+          throw new DOMException('blocked', 'SecurityError');
+        },
+      });
+      return () => Object.defineProperty(window, name, original);
+    };
+
+    it('leituras e gravações não lançam; token fica na memória', () => {
+      const restoreS = block('sessionStorage');
+      const restoreL = block('localStorage');
+      try {
+        expect(() => getToken()).not.toThrow();
+        const t = getToken();
+        expect(t).toMatch(/^[0-9a-f-]{36}$/);
+        expect(getToken()).toBe(t);
+        expect(loadProfile()).toBeNull();
+        expect(() => saveProfile({ name: 'Ana', color: '#8EC5FF' })).not.toThrow();
+        expect(joinedProfile('ABCD')).toBeNull();
+        expect(wasJoined('ABCD')).toBe(false);
+        expect(() => markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' })).not.toThrow();
+        expect(loadTiltPref()).toBe(true);
+        expect(() => saveTiltPref(false)).not.toThrow();
+      } finally {
+        restoreS();
+        restoreL();
+      }
+    });
   });
 
   it('preferência de mesa 3D começa ligada', () => {

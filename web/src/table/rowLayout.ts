@@ -55,19 +55,27 @@ export function intentSettled(serverRow: readonly string[], pending: Intent, now
     : !serverRow.includes(pending.cardId);
 }
 
-/** Converte "índice entre as cartas que eu vejo" para o índice que o servidor espera em `place`. */
+/**
+ * Converte "índice entre as cartas que eu vejo" para o índice que o servidor espera em `place`.
+ * Anda para trás até a primeira carta visível que o servidor também conhece (cartas pendentes só existem aqui).
+ */
 export function toServerIndex(visible: readonly string[], server: readonly string[], cardId: string, index: number): number {
   const base = server.filter((id) => id !== cardId);
-  if (index <= 0) return 0;
-  const prev = visible[index - 1];
-  const pos = prev === undefined ? -1 : base.indexOf(prev);
-  return pos >= 0 ? pos + 1 : Math.min(index, base.length);
+  for (let i = Math.min(index, visible.length) - 1; i >= 0; i--) {
+    const pos = base.indexOf(visible[i]!);
+    if (pos >= 0) return pos + 1;
+  }
+  return 0;
 }
 
-/** Inverso de `toServerIndex`: onde abrir o buraco de um arrasto remoto na fila que eu vejo. */
+/** Inverso de `toServerIndex`: onde abrir o buraco de um arrasto remoto na fila que eu vejo (logo após a última carta anterior). */
 export function toVisibleIndex(visible: readonly string[], server: readonly string[], cardId: string, index: number): number {
   const before = new Set(server.filter((id) => id !== cardId).slice(0, index));
-  return visible.filter((id) => before.has(id)).length;
+  let pos = 0;
+  visible.forEach((id, i) => {
+    if (before.has(id)) pos = i + 1;
+  });
+  return pos;
 }
 
 export function cursorFromLocal(lx: number, ly: number): { zone: 'table' | 'hand'; x: number; y: number } {

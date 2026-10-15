@@ -55,3 +55,22 @@ export function applyH(m: Mat3, x: number, y: number): [number, number] {
   const w = m[6] * x + m[7] * y + m[8];
   return [(m[0] * x + m[1] * y + m[2]) / w, (m[3] * x + m[4] * y + m[5]) / w];
 }
+
+/** `solveH` que devolve null quando os pontos são degenerados (pivô ~ 0 ou resultado não finito). */
+export function solveHSafe(src: readonly Point[], dst: readonly Point[]): Mat3 | null {
+  const H = solveH(src, dst);
+  return H.every(Number.isFinite) && isRegular(H) ? H : null;
+}
+
+/** `inv3` que devolve null para matriz singular. */
+export function inv3Safe(m: Mat3): Mat3 | null {
+  if (!isRegular(m)) return null;
+  const inv = inv3(m);
+  return inv.every(Number.isFinite) ? inv : null;
+}
+
+function isRegular(m: Mat3): boolean {
+  const [a, b, c, d, e, f, g, h, i] = m;
+  const det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+  return Number.isFinite(det) && Math.abs(det) >= 1e-12;
+}

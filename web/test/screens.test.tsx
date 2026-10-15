@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, type Mock } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { GameConn } from '../src/net/connection';
 import { JoinForm } from '../src/screens/JoinForm';
 import { Lobby } from '../src/screens/Lobby';
@@ -20,7 +20,7 @@ describe('JoinForm', () => {
   it('desabilita cores ocupadas e exige nome', () => {
     const onSubmit = vi.fn();
     render(<JoinForm takenColors={['#8EC5FF']} initial={null} busy={false} error={null} onSubmit={onSubmit} />);
-    expect((screen.getByRole('button', { name: 'cor #8EC5FF' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'entrar' }));
     expect(screen.getByText('Escolha um nome de 1 a 16 letras.')).toBeTruthy();
     expect(onSubmit).not.toHaveBeenCalled();
@@ -30,7 +30,7 @@ describe('JoinForm', () => {
     const onSubmit = vi.fn();
     render(<JoinForm takenColors={[]} initial={null} busy={false} error={null} onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText('seu nome'), { target: { value: '  Ana  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'cor #FF8FAB' }));
+    fireEvent.click(screen.getByRole('button', { name: 'cor rosa' }));
     fireEvent.click(screen.getByRole('button', { name: 'entrar' }));
     expect(onSubmit).toHaveBeenCalledWith({ name: 'Ana', color: '#FF8FAB' });
   });
@@ -41,7 +41,67 @@ describe('JoinForm', () => {
   });
 });
 
+describe('JoinForm (cor ocupada depois)', () => {
+  it('troca a cor selecionada pela primeira livre quando alguém a pega', () => {
+    const props = { initial: null, busy: false, error: null, onSubmit: () => {} };
+    const { rerender } = render(<JoinForm takenColors={[]} {...props} />);
+    expect(screen.getByRole('button', { name: 'cor azul' }).getAttribute('aria-pressed')).toBe('true');
+    rerender(<JoinForm takenColors={['#8EC5FF']} {...props} />);
+    expect(screen.getByRole('button', { name: 'cor azul' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: 'cor rosa' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('erros são anunciados (role=alert)', () => {
+    render(<JoinForm takenColors={[]} initial={null} busy={false} error="room_full" onSubmit={() => {}} />);
+    expect(screen.getByRole('alert')).toBeTruthy();
+  });
+});
+
 describe('Lobby', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+  });
+
+  it('modo atual fica marcado com aria-pressed', () => {
+    render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={fakeConn()} />);
+    expect(screen.getByRole('button', { name: /livre/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: /campanha/ }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('copiar link mostra "link copiado!" por 2 s', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={fakeConn()} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'copiar link da sala' }));
+    });
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('#/sala/ABCD'));
+    expect(screen.getByRole('button', { name: 'link copiado!' })).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(screen.getByRole('button', { name: 'copiar link da sala' })).toBeTruthy();
+  });
+
+  it('sem clipboard (ou recusado) mostra o link num campo selecionável', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={fakeConn()} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'copiar link da sala' }));
+    });
+    const input = screen.getByLabelText('link da sala') as HTMLInputElement;
+    expect(input.readOnly).toBe(true);
+    expect(input.value).toContain('#/sala/ABCD');
+
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn(async () => { throw new Error('denied'); }) }, configurable: true });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'copiar link da sala' }));
+    });
+    expect(screen.getByLabelText('link da sala')).toBeTruthy();
+  });
+
   it('host escolhe o modo e começa', () => {
     const conn = fakeConn();
     render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={conn} />);
