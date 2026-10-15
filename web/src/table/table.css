@@ -77,7 +77,6 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
 .face.back::before { content: ''; position: absolute; inset: 6px; border: 2px dashed rgba(59, 47, 47, 0.45); border-radius: 10px 7px 9px 6px; }
 .tilde { position: absolute; inset: 0; display: grid; place-items: center; font: 700 54px/1 var(--font-ui); }
 .rcard { pointer-events: auto; cursor: not-allowed; touch-action: none; }
-.rcard.mine { cursor: grab; }
 .rcard.movable { cursor: grab; }
 .rcard.err .face { border-color: var(--pink2); }
 .xstamp {

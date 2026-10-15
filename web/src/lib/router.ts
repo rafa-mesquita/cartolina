@@ -24,3 +24,8 @@ export function goToRoom(code: string): void {
 export function goHome(): void {
   window.location.hash = '#/';
 }
+
+/** Link completo de uma sala (pra copiar e mandar pros amigos). */
+export function roomLink(code: string): string {
+  return `${window.location.origin}${window.location.pathname}#/sala/${code}`;
+}

@@ -29,16 +29,34 @@ function EyeIcon() {
   );
 }
 
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
 export function ResultBanner({ view, conn }: { view: RoomView; conn: GameConn }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // "ver a mesa": esconde véu, banner e confete pra olhar a fila revelada; a pílula traz de volta.
   const [peek, setPeek] = useState(false);
+  // Host clicou: botões travados até chegar um estado novo do servidor.
+  const [sentFor, setSentFor] = useState<RoomView | null>(null);
+  // Confete uma vez por banner. Marcado só quando o timer dispara: no StrictMode a 1ª execução é desfeita antes.
+  const played = useRef(false);
   const outcome = view.game.outcome ?? 'round_lost';
   const errors = view.game.reveal?.filter((e) => e.error).length ?? 0;
   const copy = resultCopy(outcome, view.game.level, errors);
   const finished = outcome === 'won' || outcome === 'lost';
+  const busy = sentFor === view;
 
-  useEffect(() => (copy.win && !peek ? confetti(canvas.current) : undefined), [copy.win, peek]);
+  useEffect(() => {
+    if (!copy.win || peek || played.current || reducedMotion()) return;
+    let stop = () => {};
+    const t = window.setTimeout(() => {
+      played.current = true;
+      stop = confetti(canvas.current);
+    }, 0);
+    return () => {
+      clearTimeout(t);
+      stop();
+    };
+  }, [copy.win, peek]);
 
   if (peek) {
     return (
@@ -48,6 +66,10 @@ export function ResultBanner({ view, conn }: { view: RoomView; conn: GameConn })
     );
   }
 
+  const send = (type: 'next' | 'lobby') => {
+    setSentFor(view);
+    conn.sendAction({ type });
+  };
   const eye = (
     <button className="sbtn eye" type="button" aria-label="ver a mesa" title="ver a mesa" onClick={() => setPeek(true)}>
       <EyeIcon />
@@ -65,11 +87,11 @@ export function ResultBanner({ view, conn }: { view: RoomView; conn: GameConn })
         <div className="b-sub">{copy.sub}</div>
         {isHost(view) ? (
           <div className="b-actions">
-            <button className="btn" type="button" onClick={() => conn.sendAction({ type: 'next' })}>
+            <button className="btn" type="button" autoFocus disabled={busy} onClick={() => send('next')}>
               {copy.next}
             </button>
             {!finished && (
-              <button className="sbtn" type="button" onClick={() => conn.sendAction({ type: 'lobby' })}>
+              <button className="sbtn" type="button" disabled={busy} onClick={() => send('lobby')}>
                 voltar pro lobby
               </button>
             )}

@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
+import type { RoomView } from '@cartolina/shared';
 import type { GameConn } from '../src/net/connection';
+import { confetti } from '../src/table/confetti';
 import { resultCopy, ResultBanner } from '../src/table/ResultBanner';
+
+vi.mock('../src/table/confetti', () => ({ confetti: vi.fn(() => () => {}) }));
 import { act, sortingRoom, viewOf } from './fixtures';
 
 const conn = (): GameConn & { sendAction: Mock<GameConn['sendAction']> } => ({
@@ -33,11 +37,29 @@ describe('resultCopy', () => {
 describe('ResultBanner', () => {
   it('host vê próxima ação e voltar ao lobby', () => {
     const c = conn();
-    render(<ResultBanner view={viewOf(revealed(), 'p0')} conn={c} />);
+    const { unmount } = render(<ResultBanner view={viewOf(revealed(), 'p0')} conn={c} />);
     fireEvent.click(screen.getByRole('button', { name: 'nova rodada' }));
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'next' });
+    unmount();
+    render(<ResultBanner view={viewOf(revealed(), 'p0')} conn={c} />);
     fireEvent.click(screen.getByRole('button', { name: 'voltar pro lobby' }));
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'lobby' });
+  });
+
+  it('ação principal ganha o foco; botões travam após o clique até a sala mudar', () => {
+    const c = conn();
+    const view = viewOf(revealed(), 'p0');
+    const { rerender } = render(<ResultBanner view={view} conn={c} />);
+    const next = () => screen.getByRole('button', { name: 'nova rodada' }) as HTMLButtonElement;
+    const lobby = () => screen.getByRole('button', { name: 'voltar pro lobby' }) as HTMLButtonElement;
+    expect(document.activeElement).toBe(next());
+    fireEvent.click(next());
+    expect(next().disabled).toBe(true);
+    expect(lobby().disabled).toBe(true);
+    fireEvent.click(lobby());
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    rerender(<ResultBanner view={{ ...view }} conn={c} />);
+    expect(next().disabled).toBe(false);
   });
 
   it('quem não é host espera', () => {
@@ -59,5 +81,45 @@ describe('ResultBanner', () => {
       expect(screen.queryByRole('button', { name: `${title} · ver resultado` })).toBeNull();
       unmount();
     }
+  });
+});
+
+describe('ResultBanner (confete)', () => {
+  const withOutcome = (outcome: 'round_won' | 'round_lost'): RoomView => {
+    const v = viewOf(revealed(), 'p1');
+    return { ...v, game: { ...v.game, outcome } };
+  };
+  const won = () => withOutcome('round_won');
+  const mocked = vi.mocked(confetti);
+  afterEach(() => {
+    mocked.mockClear();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('uma vez por banner: voltar de "ver a mesa" não repete', () => {
+    vi.useFakeTimers();
+    render(<ResultBanner view={won()} conn={conn()} />);
+    vi.advanceTimersByTime(10);
+    expect(mocked).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'ver a mesa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'vitória · ver resultado' }));
+    vi.advanceTimersByTime(10);
+    expect(mocked).toHaveBeenCalledTimes(1);
+  });
+
+  it('respeita prefers-reduced-motion', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('reduce'), media: q }));
+    render(<ResultBanner view={won()} conn={conn()} />);
+    vi.advanceTimersByTime(10);
+    expect(mocked).not.toHaveBeenCalled();
+  });
+
+  it('derrota não solta confete', () => {
+    vi.useFakeTimers();
+    render(<ResultBanner view={withOutcome('round_lost')} conn={conn()} />);
+    vi.advanceTimersByTime(10);
+    expect(mocked).not.toHaveBeenCalled();
   });
 });

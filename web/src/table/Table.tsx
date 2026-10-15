@@ -1,5 +1,5 @@
 import type { Activity, RoomView } from '@cartolina/shared';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { isHost, seatStatus } from '../game/derive';
 import type { GameConn } from '../net/connection';
 import { loadTiltPref, saveTiltPref } from '../net/identity';
@@ -33,9 +33,14 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
   const [engine, setEngine] = useState<TableEngine | null>(null);
   const [tiltOn, setTiltOn] = useState(loadTiltPref);
   const [activities, setActivities] = useState<Record<string, { a: Activity; until: number }>>({});
-  const [revealDone, setRevealDone] = useState(false);
+  // Chave da revelação cuja animação terminou: o banner só aparece pra revelação atual.
+  const [revealDone, setRevealDone] = useState<string | null>(null);
+  // Ids de carta se repetem entre rodadas (`dono:n`), então a chave leva o valor também.
+  const revealKey = view.game.reveal?.map((e) => `${e.cardId}=${e.value}`).join(',') ?? '';
+  const revealKeyRef = useRef(revealKey);
 
-  useEffect(() => {
+  // Layout effect: o motor nasce e recebe a fila antes da primeira pintura (sem piscar a mesa vazia).
+  useLayoutEffect(() => {
     const e = new TableEngine(
       {
         wrap: wrap.current!,
@@ -52,7 +57,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
         cursor: (fx) => conn.sendCursor(fx),
         activity: (a) => conn.sendActivity(a),
         ping: (x, y) => conn.sendPing(x, y),
-        revealDone: () => setRevealDone(true),
+        revealDone: () => setRevealDone(revealKeyRef.current),
       },
     );
     e.setTilt(loadTiltPref(), true);
@@ -60,12 +65,13 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
     return () => e.destroy();
   }, [conn]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    revealKeyRef.current = revealKey;
     engine?.update(view);
-  }, [engine, view]);
+  }, [engine, view, revealKey]);
 
   useEffect(() => {
-    if (view.game.phase !== 'reveal') setRevealDone(false);
+    if (view.game.phase !== 'reveal') setRevealDone(null);
   }, [view.game.phase]);
 
   useEffect(() => {
@@ -73,7 +79,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
     return conn.onFx((fx) => {
       if (fx.t === 'fx.cursor') engine.remoteCursor(fx);
       else if (fx.t === 'fx.ping') engine.remotePing(fx.from, fx.x, fx.y);
-      else setActivities((m) => ({ ...m, [fx.from]: { a: fx.activity, until: Date.now() + ACTIVITY_TTL_MS } }));
+      else if (fx.t === 'fx.activity') setActivities((m) => ({ ...m, [fx.from]: { a: fx.activity, until: Date.now() + ACTIVITY_TTL_MS } }));
     });
   }, [conn, engine]);
 
@@ -98,6 +104,8 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
   const snap = useSyncExternalStore(engine ? engine.subscribe : noopSubscribe, engine ? engine.getSnapshot : getEmpty);
   const activityOf = (id: string): Activity | undefined => activities[id]?.a;
   const me = view.seats.find((s) => s.id === view.you);
+  const myStatus = me ? seatStatus(view, me, undefined) : null;
+  const allPlaced = Object.keys(view.game.cards).every((id) => view.game.row.includes(id));
   const toggleTilt = () => {
     const next = !tiltOn;
     setTiltOn(next);
@@ -136,12 +144,12 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
       {view.game.phase === 'theme' && <ThemePanel view={view} conn={conn} />}
 
       <div className="me-area">
-        {me && (
+        {me && myStatus && (
           <div className="me-id">
             <Avatar name={me.name} color={me.color} />
             <div className="name">você</div>
-            <div className="tag" data-s={seatStatus(view, me, undefined).replace(/[^a-z]/g, '')}>
-              {seatStatus(view, me, undefined)}
+            <div className="tag" data-s={myStatus.replace(/[^a-z]/g, '')}>
+              {myStatus}
             </div>
           </div>
         )}
@@ -157,13 +165,19 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
           </span>
         </button>
         {isHost(view) && view.game.phase === 'sorting' && (
-          <button className="sbtn" type="button" onClick={() => conn.sendAction({ type: 'forceReveal' })}>
+          <button
+            className="sbtn"
+            type="button"
+            disabled={!allPlaced}
+            title={allPlaced ? undefined : 'ainda tem carta fora da mesa'}
+            onClick={() => conn.sendAction({ type: 'forceReveal' })}
+          >
             revelar agora
           </button>
         )}
       </div>
 
-      {view.game.phase === 'reveal' && revealDone && <ResultBanner view={view} conn={conn} />}
+      {view.game.phase === 'reveal' && revealKey !== '' && revealDone === revealKey && <ResultBanner view={view} conn={conn} />}
 
       <div className="overlay-layer" ref={overlay} />
       <div className="cursor-layer" ref={cursors} />

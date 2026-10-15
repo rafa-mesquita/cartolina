@@ -12,12 +12,19 @@ export function ReadyColumn({ view, snap, conn }: { view: RoomView; snap: Engine
       </div>
     );
   }
-  if (phase === 'reveal' || snap.revealing) {
+  if (snap.revealing) {
     return (
       <div className="ready-col">
         <button className="btn" type="button" disabled>
           revelando…
         </button>
+      </div>
+    );
+  }
+  if (phase === 'reveal') {
+    return (
+      <div className="ready-col">
+        <p className="ready-hint">rodada revelada</p>
       </div>
     );
   }

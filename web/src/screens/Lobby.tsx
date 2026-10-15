@@ -1,6 +1,7 @@
 import { MIN_PLAYERS, type ItoMode, type RoomView } from '@cartolina/shared';
 import { useEffect, useRef, useState } from 'react';
 import { isHost } from '../game/derive';
+import { roomLink } from '../lib/router';
 import type { GameConn } from '../net/connection';
 import { Avatar } from './Avatar';
 
@@ -26,7 +27,7 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
     },
     [],
   );
-  const link = `${window.location.origin}${window.location.pathname}#/sala/${view.code}`;
+  const link = roomLink(view.code);
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(link);

@@ -1,10 +1,12 @@
 import { CLUE_MAX, type ItoCardView, type RoomView } from '@cartolina/shared';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { handCards, initialOf, type CardPlace } from '../game/derive';
 import type { GameConn } from '../net/connection';
 import type { EngineSnapshot, TableEngine } from './engine';
 
 const CLUE_DEBOUNCE_MS = 350;
+/** `fx.activity` 'writing' no máximo uma vez a cada tanto, por carta. */
+const ACTIVITY_THROTTLE_MS = 1500;
 
 function tiltOf(id: string): string {
   let h = 0;
@@ -24,17 +26,37 @@ function HandSlot({ card, place, color, name, phase, engine, conn }: {
   const [text, setText] = useState(card.clue);
   const ref = useRef<HTMLTextAreaElement>(null);
   const timer = useRef(0);
+  const pending = useRef<string | null>(null);
+  const lastActivity = useRef(-Infinity);
+  const latest = useRef({ clue: card.clue, id: card.id, conn });
+  useEffect(() => {
+    latest.current = { clue: card.clue, id: card.id, conn };
+  });
 
   useEffect(() => {
     if (document.activeElement !== ref.current) setText(card.clue);
   }, [card.clue]);
-  useEffect(() => () => clearTimeout(timer.current), []);
+
+  /** Manda a dica pendente agora. Dica igual à do servidor não vai (cada envio tira o autor do "pronto"). */
+  const flush = useCallback(() => {
+    clearTimeout(timer.current);
+    const value = pending.current;
+    pending.current = null;
+    const { clue, id, conn: c } = latest.current;
+    if (value !== null && value !== clue) c.sendAction({ type: 'clue', cardId: id, text: value });
+  }, []);
+  useEffect(() => flush, [flush]);
 
   const onChange = (value: string) => {
     setText(value);
-    conn.sendActivity('writing');
+    const now = Date.now();
+    if (now - lastActivity.current >= ACTIVITY_THROTTLE_MS) {
+      lastActivity.current = now;
+      conn.sendActivity('writing');
+    }
+    pending.current = value;
     clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => conn.sendAction({ type: 'clue', cardId: card.id, text: value }), CLUE_DEBOUNCE_MS);
+    timer.current = window.setTimeout(flush, CLUE_DEBOUNCE_MS);
   };
 
   return (
@@ -60,6 +82,7 @@ function HandSlot({ card, place, color, name, phase, engine, conn }: {
             value={text}
             disabled={phase !== 'sorting'}
             onChange={(e) => onChange(e.target.value)}
+            onBlur={flush}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

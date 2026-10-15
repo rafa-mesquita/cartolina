@@ -28,7 +28,10 @@ export function ThemePanel({ view, conn }: { view: RoomView; conn: GameConn }) {
       placeholder={placeholder}
       maxLength={max}
       value={draft[key]}
-      onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
+      onChange={(e) => {
+        setDraft({ ...draft, [key]: e.target.value });
+        setError(null);
+      }}
     />
   );
 
@@ -42,10 +45,17 @@ export function ThemePanel({ view, conn }: { view: RoomView; conn: GameConn }) {
           <button className="sbtn solid" type="submit">
             usar esse tema
           </button>
-          <button className="sbtn" type="button" onClick={() => setEditing(false)}>
+          <button className="sbtn" type="button" onClick={() => {
+              setEditing(false);
+              setError(null);
+            }}>
             cancelar
           </button>
-          {error && <p className="error">{error}</p>}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
         </form>
       ) : (
         <>
