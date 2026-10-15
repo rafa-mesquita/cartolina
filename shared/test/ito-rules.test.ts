@@ -198,6 +198,17 @@ describe('fila e dicas', () => {
     expect(errorOf(s, 'b', { type: 'clue', cardId: 'a:0', text: 'x' }, c)).toBe('not_owner');
   });
 
+  it('dica só muda com a carta na mão', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'clue', cardId: 'a:0', text: 'antes' }, c);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    expect(errorOf(s, 'a', { type: 'clue', cardId: 'a:0', text: 'depois' }, c)).toBe('card_on_table');
+    expect(s.cards['a:0']?.clue).toBe('antes');
+    s = act(s, 'a', { type: 'return', cardId: 'a:0' }, c);
+    s = act(s, 'a', { type: 'clue', cardId: 'a:0', text: 'depois' }, c);
+    expect(s.cards['a:0']?.clue).toBe('depois');
+  });
+
   it('ações de carta fora da ordenação são recusadas', () => {
     const s = act(initialItoState(), 'a', { type: 'start' }, c);
     expect(errorOf(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c)).toBe('bad_phase');
@@ -217,14 +228,12 @@ describe('prontos', () => {
     expect(errorOf(s, 'z', { type: 'ready', ready: true }, ctx(['a', 'b', 'z']))).toBe('not_player');
   });
 
-  it('mexer na carta ou na dica tira o pronto', () => {
+  it('mexer na carta tira o pronto', () => {
     let s = toSorting(['a', 'b']);
+    s = act(s, 'a', { type: 'clue', cardId: 'a:0', text: 'oi' }, c);
     s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
     s = act(s, 'a', { type: 'ready', ready: true }, c);
     expect(s.ready).toEqual(['a']);
-    s = act(s, 'a', { type: 'clue', cardId: 'a:0', text: 'oi' }, c);
-    expect(s.ready).toEqual([]);
-    s = act(s, 'a', { type: 'ready', ready: true }, c);
     s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
     expect(s.ready).toEqual([]);
   });
@@ -472,11 +481,11 @@ describe('robustez (revisão)', () => {
     expect(s.ready).toEqual([]);
   });
 
-  it('dica desmarca só o pronto do autor', () => {
+  it('dica recusada (carta na mesa) não mexe nos prontos', () => {
     let s = toSorting(['a', 'b']);
     s = placeAll(s, ['a:0', 'b:0'], c);
     s = act(s, 'a', { type: 'ready', ready: true }, c);
-    s = act(s, 'b', { type: 'clue', cardId: 'b:0', text: 'oi' }, c);
+    expect(errorOf(s, 'b', { type: 'clue', cardId: 'b:0', text: 'oi' }, c)).toBe('card_on_table');
     expect(s.ready).toEqual(['a']);
   });
 

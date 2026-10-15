@@ -186,6 +186,8 @@ export function applyItoAction(
     case 'clue': {
       const card = ownCard(state, playerId, action.cardId);
       if (typeof card === 'string') return fail(card);
+      // A dica só muda com a carta na mão: na mesa, todo mundo já está lendo.
+      if (state.row.includes(card.id)) return fail('card_on_table');
       const cards = { ...state.cards, [card.id]: { ...card, clue: cleanClue(action.text) } };
       return ok(unready({ ...state, cards }, playerId));
     }

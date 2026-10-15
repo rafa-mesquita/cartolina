@@ -91,6 +91,7 @@ export const ERROR_CODES = [
   'bad_message',
   'not_joined',
   'already_joined',
+  'card_on_table',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -114,6 +115,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   bad_message: 'Mensagem inválida.',
   not_joined: 'Entre na sala primeiro.',
   already_joined: 'Você já entrou nesta sala.',
+  card_on_table: 'Tira a carta da mesa pra mudar a dica.',
 };
 
 export function errorMessage(code: string): string {

@@ -27,12 +27,14 @@ cursores e as cartas sendo arrastadas pelos outros, com animações fluidas.
 - Os jogadores colocam suas cartas numa **fila compartilhada** (ordem crescente
   da esquerda pra direita) e podem reposicioná-las livremente. **Qualquer
   jogador da rodada move qualquer carta que já está na fila; só o dono coloca a
-  carta da mão na fila, tira a carta da fila (volta pra mão) ou edita a dica.**
+  carta da mão na fila, tira a carta da fila (volta pra mão) ou edita a dica.
+  A dica só pode ser escrita ou alterada com a carta na mão: pra mudar a dica de
+  uma carta que já está na mesa, o dono primeiro a tira da fila.**
   Se alguém solta a carta de outro fora da fila, ela volta pro lugar dela na
   fila. (Decisão do usuário em 2026-10-15, durante o Plano 2.)
 - Qualquer mudança na fila (colocar, mover ou tirar carta) **desmarca o "pronto"
-  de todos**, porque "pronto" significa "aprovo esta ordem". Editar a dica só
-  desmarca quem editou.
+  de todos**, porque "pronto" significa "aprovo esta ordem". Como a dica só
+  muda com a carta na mão, editá-la não mexe nos prontos dos outros.
 - Cada jogador marca **"tô pronto"**. Quando todos com cartas estiverem prontos
   e todas as cartas estiverem na fila, a revelação começa. O host pode **forçar a
   revelação** (só se todas as cartas estiverem na fila).

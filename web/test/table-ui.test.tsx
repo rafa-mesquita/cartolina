@@ -205,6 +205,36 @@ describe('Hand', () => {
     }
   });
 
+  it('com a carta na mesa (ou sendo arrastada) a dica fica só de leitura e nada é enviado', () => {
+    vi.useFakeTimers();
+    try {
+      const c = conn();
+      const view = viewOf(sortingRoom(2), 'p0');
+      const { rerender } = render(<Hand view={view} snap={snap([])} engine={null} conn={c} />);
+      const field = () => screen.getByPlaceholderText('escreve uma dica…') as HTMLTextAreaElement;
+      expect(field().readOnly).toBe(false);
+      expect(field().title).toBe('');
+      rerender(<Hand view={view} snap={snap(['p0:0'])} engine={null} conn={c} />);
+      expect(field().readOnly).toBe(true);
+      expect(field().title).toBe('tira a carta da mesa pra mudar a dica');
+      typeClue('nada');
+      vi.advanceTimersByTime(1000);
+      fireEvent.blur(field());
+      expect(clueSends(c)).toHaveLength(0);
+      expect(c.sendActivity).not.toHaveBeenCalled();
+      rerender(<Hand view={view} snap={snap([], [], 'p0:0')} engine={null} conn={c} />);
+      expect(field().readOnly).toBe(true);
+      // a carta volta pra mão: dá pra editar de novo
+      rerender(<Hand view={view} snap={snap([])} engine={null} conn={c} />);
+      expect(field().readOnly).toBe(false);
+      typeClue('de novo');
+      vi.advanceTimersByTime(400);
+      expect(clueSends(c)).toEqual([[{ type: 'clue', cardId: 'p0:0', text: 'de novo' }]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('atividade "escrevendo" no máximo uma vez a cada 1,5 s', () => {
     vi.useFakeTimers();
     try {

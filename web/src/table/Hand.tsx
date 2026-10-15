@@ -28,9 +28,11 @@ function HandSlot({ card, place, color, phase, engine, conn }: {
   const timer = useRef(0);
   const pending = useRef<string | null>(null);
   const lastActivity = useRef(-Infinity);
-  const latest = useRef({ clue: card.clue, id: card.id, conn });
+  /** Com a carta na mesa (ou sendo arrastada) a dica não muda: o servidor recusaria. */
+  const locked = place !== 'hand';
+  const latest = useRef({ clue: card.clue, id: card.id, conn, locked });
   useEffect(() => {
-    latest.current = { clue: card.clue, id: card.id, conn };
+    latest.current = { clue: card.clue, id: card.id, conn, locked };
   });
 
   useEffect(() => {
@@ -42,12 +44,13 @@ function HandSlot({ card, place, color, phase, engine, conn }: {
     clearTimeout(timer.current);
     const value = pending.current;
     pending.current = null;
-    const { clue, id, conn: c } = latest.current;
-    if (value !== null && value !== clue) c.sendAction({ type: 'clue', cardId: id, text: value });
+    const { clue, id, conn: c, locked: isLocked } = latest.current;
+    if (value !== null && !isLocked && value !== clue) c.sendAction({ type: 'clue', cardId: id, text: value });
   }, []);
   useEffect(() => flush, [flush]);
 
   const onChange = (value: string) => {
+    if (locked) return;
     setText(value);
     const now = Date.now();
     if (now - lastActivity.current >= ACTIVITY_THROTTLE_MS) {
@@ -83,6 +86,8 @@ function HandSlot({ card, place, color, phase, engine, conn }: {
             spellCheck={false}
             value={text}
             disabled={phase !== 'sorting'}
+            readOnly={locked}
+            title={locked ? 'tira a carta da mesa pra mudar a dica' : undefined}
             onChange={(e) => onChange(e.target.value)}
             onBlur={flush}
             onKeyDown={(e) => {
