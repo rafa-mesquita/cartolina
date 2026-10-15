@@ -1,5 +1,5 @@
-/** Sem ping há mais que isso, o socket é considerado morto (cliente pinga a cada 15 s). */
-export const HEARTBEAT_TIMEOUT_MS = 45_000;
+/** Sem ping há mais que isso, o socket é considerado morto (cliente pinga a cada 15 s; abas em segundo plano e celulares atrasam timers). */
+export const HEARTBEAT_TIMEOUT_MS = 90_000;
 /** Enquanto houver sockets, o DO acorda pelo menos neste intervalo para varrer os mortos. */
 export const SWEEP_INTERVAL_MS = 20_000;
 

@@ -1,5 +1,5 @@
 import { SELF } from 'cloudflare:test';
-import type { ClientMessage, RoomView, ServerMessage } from '@cartolina/shared';
+import { HEARTBEAT_PONG, type ClientMessage, type RoomView, type ServerMessage } from '@cartolina/shared';
 
 export async function newRoomCode(): Promise<string> {
   const res = await SELF.fetch('https://x/rooms', { method: 'POST' });
@@ -49,7 +49,7 @@ export async function connect(code: string): Promise<TestClient> {
   let wake: (() => void) | null = null;
   ws.addEventListener('message', (event) => {
     const data = event.data as string;
-    if (data === 'pong') {
+    if (data === HEARTBEAT_PONG) {
       raw.push(data);
       wake?.();
       return;

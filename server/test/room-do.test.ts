@@ -216,4 +216,60 @@ describe('RoomDO: heartbeat', () => {
     await barrier(a!.client);
     expect(a!.client.inbox.some((m) => m.t === 'error')).toBe(false);
   });
+
+  it('a varredura fecha o socket sem heartbeat (4002) e desconecta o jogador', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const ws = state.getWebSockets().find((s) => (s.deserializeAttachment() as { playerId: string | null }).playerId === b!.id);
+      ws!.serializeAttachment({ playerId: b!.id, acceptedAt: 0 });
+    });
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    expect((await b!.client.closed).code).toBe(4002);
+    const view = await a!.client.state((r) => r.seats.find((x) => x.id === b!.id)?.connected === false);
+    expect(view.seats.find((x) => x.id === a!.id)?.connected).toBe(true);
+  });
+
+  it('a varredura não desconecta quem ainda tem outro socket vivo', async () => {
+    const code = await newRoomCode();
+    const [a] = await joined(code, 1);
+    const stale = await connect(code);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const sockets = state.getWebSockets();
+      const fresh = sockets.find((s) => (s.deserializeAttachment() as { playerId: string | null }).playerId === null);
+      fresh!.serializeAttachment({ playerId: a!.id, acceptedAt: 0 });
+      expect(sockets).toHaveLength(2);
+    });
+    await runDurableObjectAlarm(stub);
+    expect((await stale.closed).code).toBe(4002);
+    await barrier(a!.client);
+    expect(a!.client.inbox.some((m) => m.t === 'state' && m.room.seats[0]?.connected === false)).toBe(false);
+    await runInDurableObject(stub, async (_instance, state) => {
+      expect((await state.storage.get<Room>('room'))?.seats[0]?.connected).toBe(true);
+    });
+  });
+
+  it('com sockets abertos o alarme é agendado em no máximo 20 s', async () => {
+    const code = await newRoomCode();
+    await joined(code, 1);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const at = await state.storage.getAlarm();
+      expect(at).not.toBeNull();
+      expect(at!).toBeLessThanOrEqual(Date.now() + 20_000 + 1000);
+    });
+  });
+
+  it('alarme sem mudança não retransmite o estado', async () => {
+    const code = await newRoomCode();
+    const [a] = await joined(code, 1);
+    await barrier(a!.client);
+    a!.client.inbox.length = 0;
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runDurableObjectAlarm(stub);
+    await barrier(a!.client);
+    expect(a!.client.inbox.some((m) => m.t === 'state')).toBe(false);
+  });
 });
