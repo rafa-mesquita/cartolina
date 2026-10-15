@@ -32,5 +32,7 @@ describe('rng', () => {
     const out = shuffle(mulberry32(3), input);
     expect(input).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect([...out].sort((a, b) => a - b)).toEqual(input);
+    expect(shuffle(mulberry32(3), input)).toEqual(out);
+    expect(out).not.toEqual(input);
   });
 });

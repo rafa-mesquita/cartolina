@@ -29,5 +29,5 @@ export function cleanName(raw: string): string | null {
 
 /** Mantém espaço no fim para não atrapalhar quem está digitando. */
 export function cleanClue(raw: string): string {
-  return raw.replace(/\s+/g, ' ').trimStart().slice(0, CLUE_MAX);
+  return Array.from(raw.replace(/\s+/g, ' ').trimStart()).slice(0, CLUE_MAX).join('');
 }

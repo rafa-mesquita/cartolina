@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CLUE_MAX, PLAYER_COLORS, cleanClue, cleanName, isPlayerColor } from '../src/players';
+import { CLUE_MAX, MAX_PLAYERS, PLAYER_COLORS, cleanClue, cleanName, isPlayerColor } from '../src/players';
 
 describe('players', () => {
-  it('tem 10 cores distintas', () => {
-    expect(PLAYER_COLORS).toHaveLength(10);
-    expect(new Set(PLAYER_COLORS).size).toBe(10);
+  it('tem uma cor distinta por vaga', () => {
+    expect(PLAYER_COLORS).toHaveLength(MAX_PLAYERS);
+    expect(new Set(PLAYER_COLORS).size).toBe(MAX_PLAYERS);
   });
 
   it('isPlayerColor aceita só cores da paleta', () => {
@@ -24,5 +24,6 @@ describe('players', () => {
     expect(cleanClue('  Paris   e   Roma')).toBe('Paris e Roma');
     expect(cleanClue('x'.repeat(100))).toHaveLength(CLUE_MAX);
     expect(cleanClue('Paris ')).toBe('Paris ');
+    expect(cleanClue('x'.repeat(39) + '😀😀')).toBe('x'.repeat(39) + '😀');
   });
 });
