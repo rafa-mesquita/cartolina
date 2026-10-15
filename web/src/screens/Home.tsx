@@ -1,11 +1,17 @@
+import { GROUP_NAME_MAX, cleanGroupName } from '@cartolina/shared';
 import { useState, type FormEvent } from 'react';
-import { goToRoom } from '../lib/router';
-import { createRoom } from '../net/api';
+import { goToGroup, goToRoom } from '../lib/router';
+import { createGroup, createRoom } from '../net/api';
+import { loadGroups, rememberGroup } from '../net/identity';
 
 export function Home() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groupName, setGroupName] = useState('');
+  const [groupBusy, setGroupBusy] = useState(false);
+  const [groupError, setGroupError] = useState<string | null>(null);
+  const [groups] = useState(loadGroups);
 
   async function create() {
     setBusy(true);
@@ -24,6 +30,26 @@ export function Home() {
     const c = code.trim().toUpperCase();
     if (/^[A-Z0-9]{4}$/.test(c)) goToRoom(c);
     else setError('O código da sala tem 4 letras.');
+  }
+
+  async function newGroup(e: FormEvent) {
+    e.preventDefault();
+    const name = cleanGroupName(groupName);
+    if (!name) {
+      setGroupError(`Dá um nome pro grupo (até ${GROUP_NAME_MAX} letras).`);
+      return;
+    }
+    setGroupBusy(true);
+    setGroupError(null);
+    try {
+      const group = await createGroup(name);
+      rememberGroup(group);
+      goToGroup(group.slug);
+    } catch {
+      setGroupError('Não deu pra criar o grupo. O servidor tá ligado?');
+    } finally {
+      setGroupBusy(false);
+    }
   }
 
   return (
@@ -52,6 +78,37 @@ export function Home() {
           </button>
         </form>
         {error && <p className="error" role="alert">{error}</p>}
+      </section>
+      <section className="panel">
+        <h2>grupos</h2>
+        <p>Um grupo guarda o histórico das partidas da galera: quem jogou, as dicas de cada um e os resultados.</p>
+        {groups.length > 0 && (
+          <ul className="group-list">
+            {groups.map((g) => (
+              <li key={g.slug}>
+                <a href={`#/g/${g.slug}`}>{g.name}</a>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form className="row-inline" onSubmit={newGroup}>
+          <input
+            className="text-in"
+            aria-label="nome do grupo"
+            placeholder="Galera da call"
+            value={groupName}
+            maxLength={GROUP_NAME_MAX * 2}
+            onChange={(e) => setGroupName(e.target.value)}
+          />
+          <button className="sbtn solid" type="submit" disabled={groupBusy}>
+            criar grupo
+          </button>
+        </form>
+        {groupError && (
+          <p className="error" role="alert">
+            {groupError}
+          </p>
+        )}
       </section>
     </main>
   );
