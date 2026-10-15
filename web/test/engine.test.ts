@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SoundName } from '../src/brand/sounds';
 import { TableEngine, type EngineDom } from '../src/table/engine';
-import { PLAYER_COLORS, joinRoom, type Room } from '@cartolina/shared';
+import { PLAYER_COLORS, joinRoom, type ItoOutcome, type Room } from '@cartolina/shared';
 import { act, sortingRoom, viewOf } from './fixtures';
 
 function dom(): EngineDom {
@@ -735,7 +735,7 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
   });
 
   /** Revelação de 3 cartas com erros e desfecho escolhidos pelo teste. */
-  function revealView(errors: boolean[], outcome: 'round_won' | 'round_lost' | 'level_cleared' | 'won' | 'lost') {
+  function revealView(errors: boolean[], outcome: ItoOutcome) {
     const room = act(fullRow(3), 'p0', { type: 'forceReveal' });
     const v = viewOf(room, 'p0');
     return { room, view: { ...v, game: { ...v.game, outcome, reveal: v.game.reveal!.map((e, i) => ({ ...e, error: errors[i]! })) } } };
@@ -764,6 +764,16 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
       expect(revealSounds(h)).toEqual([['flip', 0], ['flip', 1], ['flip', 2], ['win']]);
       engine.destroy();
     }
+  });
+
+  it('errar um nível da campanha (repete o nível) termina com o som de derrota', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { view } = revealView([false, true, false], 'level_failed');
+    const { h, engine } = table(fullRow(3));
+    engine.update(view);
+    vi.advanceTimersByTime(10_000);
+    expect(revealSounds(h).at(-1)).toEqual(['lose']);
+    engine.destroy();
   });
 
   it('quem entra com a revelação já feita não ouve nada da revelação', () => {

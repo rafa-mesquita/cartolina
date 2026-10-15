@@ -124,6 +124,8 @@ function next(state: ItoState, ctx: GameContext): ActionResult<ItoState> {
   const players = [...ctx.active];
   if (state.phase === 'sorting') return ok(toThemePhase(state, players, state.level, state.lives, ctx));
   if (state.outcome === 'level_cleared') return ok(toThemePhase(state, players, state.level + 1, state.lives, ctx));
+  // Errou com vida sobrando: mesmo nível, cartas e tema novos, vidas mantidas.
+  if (state.outcome === 'level_failed') return ok(toThemePhase(state, players, state.level, state.lives, ctx));
   return ok(toThemePhase(state, players, 1, CAMPAIGN_LIVES, ctx));
 }
 

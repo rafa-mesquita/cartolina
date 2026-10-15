@@ -19,8 +19,10 @@ export function resolveOutcome(
   if (mode === 'livre') {
     return { lives: livesBefore, outcome: errors === 0 ? 'round_won' : 'round_lost' };
   }
+  // Cada erro custa uma vida; com erro (e vida sobrando) o nível se repete. Só nível sem erro avança.
   const lives = Math.max(0, livesBefore - errors);
   if (lives === 0) return { lives, outcome: 'lost' };
+  if (errors > 0) return { lives, outcome: 'level_failed' };
   if (level >= CAMPAIGN_LEVELS) return { lives, outcome: 'won' };
   return { lives, outcome: 'level_cleared' };
 }

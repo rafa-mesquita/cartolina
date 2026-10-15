@@ -328,18 +328,61 @@ describe('campanha', () => {
     expect(Object.values(s.cards)).toHaveLength(4);
   });
 
-  it('perde vidas por erro e termina em derrota', () => {
+  it('perde vidas por erro (repetindo o nível) e termina em derrota', () => {
     let s = toSorting(['a', 'b'], 'campanha');
     s = playLevel(s, [50, 10]);
     expect(s.lives).toBe(2);
-    expect(s.outcome).toBe('level_cleared');
+    expect(s.outcome).toBe('level_failed');
     s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
-    s = playLevel(s, [90, 80, 70, 60]);
+    expect(s.level).toBe(1);
+    s = playLevel(s, [90, 80]);
+    expect(s.lives).toBe(1);
+    expect(s.outcome).toBe('level_failed');
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    s = playLevel(s, [90, 80]);
     expect(s.lives).toBe(0);
     expect(s.outcome).toBe('lost');
     s = act(s, 'a', { type: 'next' }, c);
     expect(s.phase).toBe('lobby');
     expect(s.mode).toBe('campanha');
+  });
+
+  it('erro no nível 2 repete o nível 2 (tema e cartas novos, vidas a menos)', () => {
+    let s = toSorting(['a', 'b'], 'campanha');
+    s = playLevel(s, [1, 2]);
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    expect(s.level).toBe(2);
+    s = playLevel(s, [1, 30, 20, 40]);
+    expect(s.outcome).toBe('level_failed');
+    expect(s.lives).toBe(2);
+    const tema = s.theme?.titulo;
+    s = act(s, 'a', { type: 'next' }, c);
+    expect(s.phase).toBe('theme');
+    expect(s.level).toBe(2);
+    expect(s.lives).toBe(2);
+    expect(s.theme?.titulo).not.toBe(tema);
+    s = act(s, 'a', { type: 'beginRound' }, c);
+    expect(Object.values(s.cards)).toHaveLength(4);
+    expect(s.reveal).toBeNull();
+    s = playLevel(s, [1, 2, 3, 4]);
+    expect(s.outcome).toBe('level_cleared');
+    s = act(s, 'a', { type: 'next' }, c);
+    expect(s.level).toBe(3);
+  });
+
+  it('nível 3 sem erro é vitória, mesmo depois de perder vida', () => {
+    let s = toSorting(['a', 'b'], 'campanha');
+    s = playLevel(s, [1, 2]);
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    s = playLevel(s, [1, 2, 3, 4]);
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    s = playLevel(s, [1, 2, 3, 5, 4, 6]);
+    expect(s.outcome).toBe('level_failed');
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    expect(s.level).toBe(3);
+    s = playLevel(s, [1, 2, 3, 4, 5, 6]);
+    expect(s.outcome).toBe('won');
+    expect(s.lives).toBe(2);
   });
 
   it('vence ao passar do nível 3', () => {
@@ -482,10 +525,11 @@ describe('robustez (revisão)', () => {
 
   it('depois de won/lost, next volta ao lobby zerado mantendo modo e temas usados', () => {
     let s = toSorting(['a', 'b'], 'campanha');
-    s = withValues(s, { 'a:0': 50, 'b:0': 10 });
-    s = readyAll(placeAll(s, ['a:0', 'b:0'], c), ['a', 'b'], c);
-    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
-    s = readyAll(placeAll(withValues(s, { 'a:0': 9, 'a:1': 8, 'b:0': 7, 'b:1': 6 }), ['a:0', 'a:1', 'b:0', 'b:1'], c), ['a', 'b'], c);
+    // Um erro por rodada no nível 1 (que se repete): 3 → 2 → 1 → 0 vidas.
+    for (let round = 0; round < 3; round++) {
+      if (round > 0) s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+      s = readyAll(placeAll(withValues(s, { 'a:0': 50, 'b:0': 10 }), ['a:0', 'b:0'], c), ['a', 'b'], c);
+    }
     expect(s.outcome).toBe('lost');
     const l = act(s, 'a', { type: 'next' }, c);
     expect(l.phase).toBe('lobby');

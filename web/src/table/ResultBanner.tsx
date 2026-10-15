@@ -12,7 +12,9 @@ export function resultCopy(outcome: ItoOutcome, level: number, errors: number): 
     case 'round_lost':
       return { win: false, title: 'xi, errou essa', sub: wrong, next: 'nova rodada' };
     case 'level_cleared':
-      return { win: true, title: `nível ${level} ✓`, sub: errors ? `${wrong}, mas ainda tem vida!` : 'sem errar nenhuma!', next: 'próximo nível' };
+      return { win: true, title: `nível ${level} ✓`, sub: 'sem errar nenhuma!', next: 'próximo nível' };
+    case 'level_failed':
+      return { win: false, title: 'xi, errou essa', sub: `${wrong} · bora repetir o nível ${level}`, next: 'repetir o nível' };
     case 'won':
       return { win: true, title: 'zeraram a campanha', sub: 'os três níveis, que time!', next: 'voltar pro lobby' };
     case 'lost':

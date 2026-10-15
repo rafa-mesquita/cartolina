@@ -47,8 +47,9 @@ describe('resolveOutcome', () => {
     expect(resolveOutcome('livre', 1, 3, 2)).toEqual({ lives: 3, outcome: 'round_lost' });
   });
 
-  it('campanha: cada erro custa uma vida', () => {
-    expect(resolveOutcome('campanha', 1, 3, 1)).toEqual({ lives: 2, outcome: 'level_cleared' });
+  it('campanha: cada erro custa uma vida e o nível se repete', () => {
+    expect(resolveOutcome('campanha', 1, 3, 1)).toEqual({ lives: 2, outcome: 'level_failed' });
+    expect(resolveOutcome('campanha', 2, 3, 2)).toEqual({ lives: 1, outcome: 'level_failed' });
   });
 
   it('campanha: vidas zeradas é derrota, nunca negativas', () => {
@@ -61,7 +62,8 @@ describe('resolveOutcome', () => {
 
   it('campanha: bordas', () => {
     expect(resolveOutcome('campanha', 1, 2, 2)).toEqual({ lives: 0, outcome: 'lost' });
-    expect(resolveOutcome('campanha', 3, 3, 2)).toEqual({ lives: 1, outcome: 'won' });
+    expect(resolveOutcome('campanha', 3, 3, 2)).toEqual({ lives: 1, outcome: 'level_failed' });
+    expect(resolveOutcome('campanha', 3, 2, 0)).toEqual({ lives: 2, outcome: 'won' });
     expect(resolveOutcome('campanha', 2, 3, 0)).toEqual({ lives: 3, outcome: 'level_cleared' });
   });
 });

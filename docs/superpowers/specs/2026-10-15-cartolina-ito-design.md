@@ -44,9 +44,10 @@ cursores e as cartas sendo arrastadas pelos outros, com animações fluidas.
 - **Livre:** 1 carta por jogador. 0 erros = vitória; ≥1 erro = derrota. Depois,
   "nova rodada" com novo tema.
 - **Campanha:** 3 vidas compartilhadas; níveis 1 → 2 → 3, onde o nível N dá N
-  cartas por jogador; tema novo a cada nível. Cada erro custa 1 vida. Terminar a
-  revelação do nível 3 com vidas > 0 = vitória. Vidas = 0 = derrota (imediata,
-  ao fim da revelação daquele nível).
+  cartas por jogador; tema novo a cada rodada. Cada carta fora de ordem custa 1
+  vida. Só um nível revelado **sem erro** avança; com erro e vidas > 0, o grupo
+  **repete o mesmo nível** (cartas e tema novos). Nível 3 sem erro = vitória.
+  Vidas = 0 = derrota (imediata, ao fim da revelação daquele nível).
 
 ### Temas
 

@@ -28,7 +28,8 @@ describe('resultCopy', () => {
   it('textos por resultado', () => {
     expect(resultCopy('round_won', 1, 0).win).toBe(true);
     expect(resultCopy('round_lost', 1, 2)).toMatchObject({ win: false, title: 'xi, errou essa', sub: '2 cartas fora de ordem', next: 'nova rodada' });
-    expect(resultCopy('level_cleared', 2, 1)).toMatchObject({ win: true, title: 'nível 2 ✓', next: 'próximo nível' });
+    expect(resultCopy('level_cleared', 2, 0)).toMatchObject({ win: true, title: 'nível 2 ✓', sub: 'sem errar nenhuma!', next: 'próximo nível' });
+    expect(resultCopy('level_failed', 2, 1)).toEqual({ win: false, title: 'xi, errou essa', sub: '1 carta fora de ordem · bora repetir o nível 2', next: 'repetir o nível' });
     expect(resultCopy('lost', 3, 1)).toMatchObject({ win: false, next: 'voltar pro lobby' });
     expect(resultCopy('won', 3, 0)).toMatchObject({ win: true, next: 'voltar pro lobby' });
   });
