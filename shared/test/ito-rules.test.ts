@@ -152,10 +152,28 @@ describe('fila e dicas', () => {
     expect(s.row).toEqual(['a:0']);
   });
 
-  it('não move carta alheia nem carta inexistente', () => {
+  it('não coloca na fila carta alheia (fora da fila) nem carta inexistente', () => {
     const s = toSorting(['a', 'b', 'c']);
     expect(errorOf(s, 'b', { type: 'place', cardId: 'a:0', index: 0 }, c)).toBe('not_owner');
     expect(errorOf(s, 'b', { type: 'place', cardId: 'zz:0', index: 0 }, c)).toBe('unknown_card');
+  });
+
+  it('qualquer jogador reordena carta que já está na fila e desmarca os prontos', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'b', { type: 'place', cardId: 'b:0', index: 1 }, c);
+    s = act(s, 'b', { type: 'ready', ready: true }, c);
+    expect(s.row).toEqual(['a:0', 'b:0']);
+    expect(s.ready).toEqual(['b']);
+    s = act(s, 'c', { type: 'place', cardId: 'a:0', index: 5 }, c);
+    expect(s.row).toEqual(['b:0', 'a:0']);
+    expect(s.ready).toEqual([]);
+  });
+
+  it('espectador não mexe em carta da fila', () => {
+    let s = toSorting(['a', 'b', 'c']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    expect(errorOf(s, 'z', { type: 'place', cardId: 'a:0', index: 0 }, ctx(['a', 'b', 'c', 'z']))).toBe('not_player');
   });
 
   it('return tira a carta da fila', () => {
