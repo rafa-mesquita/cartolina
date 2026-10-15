@@ -57,6 +57,15 @@ describe('sons dos botões (um listener delegado)', () => {
       expect(play).not.toHaveBeenCalled();
     });
 
+    it('botão que se desabilita no próprio clique (ex.: "criar sala" → "criando…") ainda soa', () => {
+      const b = button();
+      b.addEventListener('click', () => {
+        b.disabled = true;
+      });
+      b.click();
+      expect(play.mock.calls).toEqual([['click']]);
+    });
+
     it('desinstalar tira o listener', () => {
       uninstall();
       button().click();

@@ -25,6 +25,9 @@ interface Pool {
   next: number;
 }
 
+/** Volume de cada som de arquivo (a escolha de personagem é 30% mais baixa que a carta). */
+export const FILE_VOLUME: Record<FileSound, number> = { card: 1, pick: 0.7 };
+
 const pools = new Map<'card', Pool>();
 let lastFile = -Infinity;
 let ctx: AudioContext | null = null;

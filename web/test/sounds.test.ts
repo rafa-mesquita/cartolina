@@ -32,6 +32,12 @@ describe('sons de arquivo (carta)', () => {
     expect(played().every((a) => a.currentTime === 0)).toBe(true);
   });
 
+  it('escolher personagem usa o mesmo arquivo, 30% mais baixo que a carta', () => {
+    playSound('pick', 0, 0);
+    playSound('card', 0, 200);
+    expect(played().map((a) => a.volume)).toEqual([0.7, 1]);
+  });
+
   it('mudo não toca nada', () => {
     saveSoundPref(false);
     playSound('card', 0, 0);

@@ -22,6 +22,7 @@ export function installButtonSounds(root: Document = document, play: (name: Soun
     const sound = soundForButton(button);
     if (sound) play(sound);
   };
-  root.addEventListener('click', onClick);
-  return () => root.removeEventListener('click', onClick);
+  // Fase de captura: roda antes do onClick do React, que pode desabilitar o botão na hora ("criar sala" → "criando…").
+  root.addEventListener('click', onClick, true);
+  return () => root.removeEventListener('click', onClick, true);
 }
