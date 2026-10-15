@@ -153,7 +153,10 @@ describe('personagens', () => {
 
   it('JoinForm: um botão por personagem, rotulado pelo nome do bicho', () => {
     render(<JoinForm takenColors={['#C9E27A']} initial={null} busy={false} error={null} onSubmit={() => {}} />);
-    const names = ['cavaleiro', 'porquinho', 'dinossauro', 'polvo', 'pintinho', 'raposa', 'robô', 'gatinho', 'sapo', 'urso'];
+    const names = [
+      'cavaleiro', 'porquinho', 'dinossauro', 'polvo', 'pintinho', 'raposa', 'robô', 'gatinho', 'sapo',
+      'urso', 'galo', 'coruja', 'mago', 'panda', 'pinguim', 'abelha', 'vampiro', 'lobo',
+    ];
     expect(names).toHaveLength(PLAYER_COLORS.length);
     for (const n of names) expect(screen.getByRole('button', { name: n }).querySelector('svg')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'sapo' }) as HTMLButtonElement).disabled).toBe(true);
