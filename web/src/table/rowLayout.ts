@@ -33,7 +33,8 @@ export function insertIndex(entries: readonly RowEntry[], lx: number): number {
 }
 
 export type Intent =
-  | { kind: 'place'; cardId: string; index: number; at: number }
+  /** `after`: carta logo antes da minha na fila (ordem do servidor, já com a intenção anterior); null = primeira. */
+  | { kind: 'place'; cardId: string; index: number; after: string | null; at: number }
   | { kind: 'return'; cardId: string; at: number };
 
 export const INTENT_TTL_MS = 1500;
@@ -43,16 +44,21 @@ export function effectiveRow(serverRow: readonly string[], pending: Intent | nul
   let row = [...serverRow];
   if (pending) {
     row = row.filter((id) => id !== pending.cardId);
-    if (pending.kind === 'place') row.splice(Math.min(pending.index, row.length), 0, pending.cardId);
+    if (pending.kind === 'place') {
+      // Ancorada no vizinho: colocações concorrentes antes dela não a deslocam.
+      const anchor = pending.after === null ? -1 : row.indexOf(pending.after);
+      const at = anchor >= 0 ? anchor + 1 : Math.min(pending.index, row.length);
+      row.splice(at, 0, pending.cardId);
+    }
   }
   return row.filter((id) => !inFlight.has(id));
 }
 
 export function intentSettled(serverRow: readonly string[], pending: Intent, now: number): boolean {
   if (now - pending.at > INTENT_TTL_MS) return true;
-  return pending.kind === 'place'
-    ? serverRow.indexOf(pending.cardId) === pending.index
-    : !serverRow.includes(pending.cardId);
+  if (pending.kind === 'return') return !serverRow.includes(pending.cardId);
+  const pos = serverRow.indexOf(pending.cardId);
+  return pos >= 0 && (pos === 0 ? null : serverRow[pos - 1]) === pending.after;
 }
 
 /**

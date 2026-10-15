@@ -67,6 +67,10 @@ interface RowCard {
   paintedA: string;
   paintedB: string;
   sp: Record<SpringKey, Spring>;
+  /** As mesmas molas de `sp`, em lista (sem alocar `Object.values` por quadro). */
+  springs: Spring[];
+  /** Algo mudou sem mexer nas molas (snap, flip, aparecer): reescrever no próximo quadro. */
+  dirty: boolean;
 }
 
 interface Overlay {
@@ -81,7 +85,8 @@ interface Overlay {
   rot: Spring;
   rx: Spring;
   fl: Spring;
-  home: (() => [number, number, number, number] | null) | null;
+  /** Voando pra casa: âncora de destino (vaga da minha mão ou assento do dono). */
+  home: { sel: string; mine: boolean } | null;
   homeT: number;
   /** Quem está carregando (dono do buraco na fila): eu ou um remoto. Pode não ser o dono da carta. */
   carrier: string | null;
@@ -95,6 +100,7 @@ interface Gap {
   index: number;
   fresh: boolean;
   slot: number;
+  dirty: boolean;
 }
 
 interface Remote {
@@ -105,6 +111,12 @@ interface Remote {
   target: { zone: 'table' | 'hand'; lx: number; ly: number };
   lastSeen: number;
   drag: { cardId: string; o: Overlay } | null;
+  dirty: boolean;
+}
+
+interface Anchor {
+  x: number;
+  y: number;
 }
 
 interface PingFx {
@@ -122,6 +134,10 @@ const WAIT_DROP_MS = 400;
 const CURSOR_SVG =
   '<svg width="22" height="27" viewBox="0 0 22 27"><path d="M3 3 L3 22 L8 17.4 L11.4 25 L15 23.4 L11.7 16 L18.6 15.6 Z" style="fill:var(--c)" stroke="#3B2F2F" stroke-width="2" stroke-linejoin="round"/></svg>';
 
+const NO_IDS: ReadonlySet<string> = new Set();
+const attr = (s: string) => s.replace(/["\\]/g, '\\$&');
+const handSel = (cardId: string) => `[data-hand-slot="${attr(cardId)}"]`;
+const seatSel = (playerId: string) => `[data-seat-anchor="${attr(playerId)}"]`;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
@@ -142,14 +158,22 @@ function tiltFor(id: string): number {
 export class TableEngine {
   private view: RoomView | null = null;
   private serverRow: string[] = [];
-  private pending: Intent | null = null;
+  /** Minhas intenções ainda sem resposta, na ordem em que mandei (o servidor aplica nessa ordem). */
+  private pending: Intent[] = [];
   private visible: string[] = [];
   private entries: RowEntry[] = [];
   private cards = new Map<string, RowCard>();
   private dying: RowCard[] = [];
   private overlays = new Set<Overlay>();
   private inFlight = new Map<string, Overlay>();
-  private waiting = new Map<string, { o: Overlay; since: number }>();
+  /** Overlays soltos por remotos esperando o `state`; `seq` = quantos estados eu já tinha visto no drop. */
+  private waiting = new Map<string, { o: Overlay; since: number; seq: number }>();
+  private stateSeq = 0;
+  /** Âncoras (assentos, vagas da mão) lidas uma vez no começo do quadro, antes de qualquer escrita. */
+  private anchors = new Map<string, Anchor | null>();
+  private inFrame = false;
+  private layoutDirty = true;
+  private destroyed = false;
   private gaps = new Map<string, Gap>();
   private remotes = new Map<string, Remote>();
   private pings: PingFx[] = [];
@@ -217,6 +241,7 @@ export class TableEngine {
   getSnapshot = (): EngineSnapshot => this.snap;
 
   update(view: RoomView): void {
+    if (this.destroyed) return;
     const first = this.first;
     this.first = false;
     // Ids de carta se repetem entre rodadas (`dono:n`). Só se entra em `sorting` por uma distribuição nova,
@@ -226,21 +251,26 @@ export class TableEngine {
     const freshDeal = prevPhase !== null && prevPhase !== 'sorting' && view.game.phase === 'sorting';
     const gone = (id: string) => freshDeal || !view.game.cards[id];
     this.view = view;
+    this.stateSeq++;
     this.serverRow = [...view.game.row];
-    if (this.pending && intentSettled(this.serverRow, this.pending, performance.now())) this.pending = null;
-    if (this.pending && (view.game.phase !== 'sorting' || gone(this.pending.cardId))) this.pending = null;
+    const now = performance.now();
+    this.pending =
+      view.game.phase !== 'sorting' ? [] : this.pending.filter((p) => !gone(p.cardId) && !intentSettled(this.serverRow, p, now));
+    if (freshDeal || view.game.phase !== 'sorting') this.pendingDrag = null;
+    if (freshDeal) for (const owner of this.gaps.keys()) this.hideGap(owner);
 
     for (const [id, rc] of this.cards) {
       if (!gone(id)) continue;
       this.cards.delete(id);
       rc.sp.rs.t = 0;
       rc.sp.z.t = 0;
+      rc.el.style.pointerEvents = 'none';
       this.dying.push(rc);
     }
     for (const o of [...this.overlays]) {
       if (!gone(o.cardId)) continue;
       this.inFlight.delete(o.cardId);
-      this.waiting.delete(o.cardId);
+      if (this.waiting.delete(o.cardId)) this.hideGap(o.carrier ?? o.owner);
       this.removeOverlay(o);
     }
     if (this.drag && gone(this.drag.cardId)) {
@@ -255,20 +285,35 @@ export class TableEngine {
         r.drag = null;
         this.hideGap(r.id);
       }
-      if (!view.seats.some((s) => s.id === r.id)) {
+      const seat = view.seats.find((s) => s.id === r.id);
+      if (!seat) {
         // Sem isso o overlay do arrasto ficaria órfão em `inFlight` e a carta sumiria da fila pra sempre.
-        if (r.drag) this.remoteDrop(r);
-        this.hideGap(r.id);
+        if (r.drag) this.remoteDrop(r, true);
         r.el.remove();
         this.remotes.delete(r.id);
+      } else if (!seat.connected && r.drag) {
+        // Caiu a conexão: não vai chegar o cursor sem arrasto.
+        this.remoteDrop(r, true);
       }
+    }
+    for (const [owner, g] of this.gaps) {
+      if (view.seats.some((s) => s.id === owner)) continue;
+      g.el.remove();
+      this.gaps.delete(owner);
+      this.layoutDirty = true;
     }
 
     for (const rc of this.cards.values()) this.paint(rc);
     for (const [id, w] of this.waiting) {
-      if (!this.serverRow.includes(id)) continue;
-      this.waiting.delete(id);
-      this.land(w.o);
+      if (this.serverRow.includes(id)) {
+        this.waiting.delete(id);
+        this.land(w.o);
+      } else if (w.seq < this.stateSeq) {
+        // Chegou estado depois do drop e a carta não está na fila: não vem mais, volta já.
+        this.waiting.delete(id);
+        this.clearGap(w.o.carrier ?? w.o.owner);
+        this.sendHome(w.o);
+      }
     }
     this.reconcile(first);
     this.syncReveal(first);
@@ -277,7 +322,7 @@ export class TableEngine {
 
   remoteCursor(fx: RemoteCursorFx): void {
     const view = this.view;
-    if (!view || fx.from === view.you || !view.seats.some((s) => s.id === fx.from)) return;
+    if (this.destroyed || !view || fx.from === view.you || !view.seats.some((s) => s.id === fx.from)) return;
     const r = this.remotes.get(fx.from) ?? this.createRemote(fx.from);
     r.lastSeen = performance.now();
     r.target = { zone: fx.zone, lx: fx.x * FW, ly: fx.y * FH };
@@ -299,18 +344,19 @@ export class TableEngine {
   }
 
   remotePing(from: string, x: number, y: number): void {
-    if (!this.view || from === this.view.you) return;
+    if (this.destroyed || !this.view || from === this.view.you) return;
     this.ping(x * FW, y * FH, this.colorOf(from));
   }
 
   /** Chamado pela mão (React) no pointerdown de uma carta minha. */
   beginHandDrag(cardId: string, e: PointerEvent): void {
-    if (e.button !== 0 || this.revealing || !this.H || this.view?.game.phase !== 'sorting') return;
+    if (this.destroyed || e.button !== 0 || this.revealing || !this.H || this.view?.game.phase !== 'sorting') return;
     e.preventDefault();
     this.pendingDrag = { cardId, from: 'hand', sx: e.clientX, sy: e.clientY };
   }
 
   setTilt(on: boolean, instant = false): void {
+    if (this.destroyed) return;
     this.tiltOn = on;
     if (instant) this.tilt.snap(on ? TILT : 0);
     else this.tilt.t = on ? TILT : 0;
@@ -319,12 +365,22 @@ export class TableEngine {
 
   /** O servidor recusou uma ação minha: volta para a fila do servidor. */
   rollback(): void {
-    this.pending = null;
+    if (this.destroyed) return;
+    this.pending = [];
     this.reconcile(false);
     this.emit();
   }
 
   destroy(): void {
+    if (this.destroyed) return;
+    if (this.drag) {
+      // Os outros estão vendo meu arrasto: avisa que acabou antes de sumir.
+      const [lx, ly] = this.toLocal(this.ptr.x, this.ptr.y);
+      this.handlers.cursor({ ...(this.Hi ? cursorFromLocal(lx, ly) : { zone: 'hand' as const, x: 0, y: 0 }), drag: null });
+      this.handlers.activity('thinking');
+      this.drag = null;
+    }
+    this.destroyed = true;
     cancelAnimationFrame(this.raf);
     this.revealTimers.forEach((t) => clearTimeout(t));
     clearTimeout(this.tipTimer);
@@ -344,12 +400,13 @@ export class TableEngine {
   private reconcile(snapIn: boolean): void {
     const view = this.view;
     if (!view) return;
-    this.visible = effectiveRow(this.serverRow, this.pending, new Set(this.inFlight.keys()));
+    this.visible = this.inFlight.size ? this.placeBase().filter((id) => !this.inFlight.has(id)) : this.placeBase();
     for (const id of this.visible) {
       const rc = this.cards.get(id) ?? this.createCard(id);
       if (!rc || rc.shown) continue;
       rc.shown = true;
       rc.appear = snapIn ? 'snap' : 'pop';
+      rc.dirty = true;
       rc.el.style.display = '';
     }
     for (const rc of this.cards.values()) {
@@ -362,6 +419,7 @@ export class TableEngine {
   }
 
   private relayout(): void {
+    this.layoutDirty = false;
     const gaps: GapSpec[] = [];
     for (const [owner, g] of this.gaps) if (g.active) gaps.push({ owner, index: g.index });
     this.entries = rowEntries(this.visible, gaps);
@@ -382,6 +440,7 @@ export class TableEngine {
             rc.sp.rs.t = 1;
           } else rc.sp.rs.snap(1);
           rc.appear = null;
+          rc.dirty = true;
         }
       } else {
         const g = this.gaps.get(e.owner);
@@ -389,7 +448,9 @@ export class TableEngine {
         if (g.fresh) {
           g.x.snap(e.x);
           g.fresh = false;
+          g.dirty = true;
         } else g.x.t = e.x;
+        if (g.slot !== e.slot) g.dirty = true;
         g.slot = e.slot;
       }
     }
@@ -401,10 +462,22 @@ export class TableEngine {
     if (!view || !card) return null;
     const el = document.createElement('div');
     el.className = `card rcard${card.owner === view.you ? ' mine' : ''}`;
+    el.dataset.card = id;
     el.style.setProperty('--c', this.colorOf(card.owner));
     el.style.display = 'none';
     el.innerHTML = '<div class="flip"><div class="face a"></div><div class="face b num"></div></div><div class="xstamp">✕</div>';
     const flipEl = el.firstElementChild as HTMLElement;
+    const sp: Record<SpringKey, Spring> = {
+      x: new Spring(FW / 2, 230, 0.72),
+      y: new Spring(0, 300, 0.75),
+      z: new Spring(1, 320, 0.72),
+      stand: new Spring(0, 230, 0.86),
+      rs: new Spring(1, 420, 0.42),
+      wob: new Spring(0, 520, 0.2),
+      flip: new Spring(0, 150, 0.6),
+      shake: new Spring(0, 1100, 0.1),
+      stamp: new Spring(0, 520, 0.42),
+    };
     const rc: RowCard = {
       id,
       owner: card.owner,
@@ -419,17 +492,9 @@ export class TableEngine {
       appear: null,
       paintedA: '',
       paintedB: '',
-      sp: {
-        x: new Spring(FW / 2, 230, 0.72),
-        y: new Spring(0, 300, 0.75),
-        z: new Spring(1, 320, 0.72),
-        stand: new Spring(0, 230, 0.86),
-        rs: new Spring(1, 420, 0.42),
-        wob: new Spring(0, 520, 0.2),
-        flip: new Spring(0, 150, 0.6),
-        shake: new Spring(0, 1100, 0.1),
-        stamp: new Spring(0, 520, 0.42),
-      },
+      sp,
+      springs: Object.values(sp),
+      dirty: true,
     };
     el.addEventListener('pointerdown', (e) => this.onRowCardDown(e, rc));
     this.dom.row.appendChild(el);
@@ -445,11 +510,13 @@ export class TableEngine {
     if (a !== rc.paintedA) {
       rc.faceA.innerHTML = a;
       rc.paintedA = a;
+      rc.dirty = true;
     }
     const b = this.numHTML(card);
     if (b !== rc.paintedB) {
       rc.faceB.innerHTML = b;
       rc.paintedB = b;
+      rc.dirty = true;
     }
     // Participante pode mover qualquer carta da fila.
     rc.el.classList.toggle('movable', this.isPlayer() && this.view?.game.phase === 'sorting');
@@ -494,7 +561,7 @@ export class TableEngine {
     el.innerHTML = `<b>${esc(initial(this.nameOf(owner)))}</b>`;
     el.style.display = 'none';
     this.dom.row.appendChild(el);
-    g = { el, x: new Spring(FW / 2, 260, 0.8), s: new Spring(0, 320, 0.62), active: false, index: 0, fresh: true, slot: 0 };
+    g = { el, x: new Spring(FW / 2, 260, 0.8), s: new Spring(0, 320, 0.62), active: false, index: 0, fresh: true, slot: 0, dirty: true };
     this.gaps.set(owner, g);
     return g;
   }
@@ -504,10 +571,13 @@ export class TableEngine {
     if (!g.active) {
       g.active = true;
       g.fresh = true;
+      g.dirty = true;
       g.s.snap(0.55);
       g.s.t = 1;
       g.el.style.display = 'block';
+      this.layoutDirty = true;
     }
+    if (g.index !== index) this.layoutDirty = true;
     g.index = index;
   }
 
@@ -516,12 +586,14 @@ export class TableEngine {
     if (g?.active) {
       g.active = false;
       g.s.t = 0;
+      this.layoutDirty = true;
     }
   }
 
   private hideGap(owner: string): void {
     const g = this.gaps.get(owner);
     if (!g) return;
+    if (g.active) this.layoutDirty = true;
     g.active = false;
     g.s.snap(0);
     g.el.style.display = 'none';
@@ -599,6 +671,7 @@ export class TableEngine {
       rc.landing = true;
       rc.shown = true;
       rc.appear = null;
+      rc.dirty = true;
       rc.el.style.display = '';
     }
     this.removeOverlay(o);
@@ -612,13 +685,26 @@ export class TableEngine {
     o.y.set(240, 0.74);
     o.homeT = performance.now();
     const mine = o.owner === this.view?.you;
-    o.home = () => {
-      const sel = mine ? `[data-hand-slot="${o.cardId}"]` : `[data-seat-anchor="${o.owner}"]`;
-      const el = document.querySelector<HTMLElement>(sel);
-      if (!el) return null;
+    o.home = { sel: mine ? handSel(o.cardId) : seatSel(o.owner), mine };
+  }
+
+  /**
+   * Centro de uma âncora fora do motor (assento, vaga da mão). Dentro do quadro, lê do cache montado
+   * no começo do quadro (antes das escritas), pra não forçar layout no meio do loop.
+   */
+  private anchor(sel: string): Anchor | null {
+    if (this.inFrame) {
+      const hit = this.anchors.get(sel);
+      if (hit !== undefined) return hit;
+    }
+    const el = document.querySelector<HTMLElement>(sel);
+    let a: Anchor | null = null;
+    if (el) {
       const r = el.getBoundingClientRect();
-      return mine ? [r.left + r.width / 2, r.top + r.height / 2, HAND_S, 0] : [r.left + r.width / 2, r.top + r.height / 2, 0.35, 1];
-    };
+      a = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
+    if (this.inFrame) this.anchors.set(sel, a);
+    return a;
   }
 
   private finishHome(o: Overlay): void {
@@ -642,6 +728,8 @@ export class TableEngine {
 
   private onRowCardDown(e: PointerEvent, rc: RowCard): void {
     const view = this.view;
+    // Carta morrendo (rodada anterior) pode dividir o id com uma carta nova: ignora.
+    if (this.destroyed || this.cards.get(rc.id) !== rc || !rc.shown) return;
     if (e.button !== 0 || !this.H || this.revealing || !view || view.game.phase !== 'sorting') return;
     // Qualquer participante da rodada move qualquer carta da fila; espectador só olha.
     if (this.isPlayer()) {
@@ -674,27 +762,49 @@ export class TableEngine {
     const [lx, ly] = this.toLocal(this.ptr.x, this.ptr.y);
     const g = this.gaps.get(me);
     const drag = this.drag
-      ? { cardId: this.drag.cardId, index: g?.active ? toServerIndex(this.visible, this.serverRow, this.drag.cardId, g.index) : null }
+      ? { cardId: this.drag.cardId, index: g?.active ? toServerIndex(this.visible, this.placeBase(), this.drag.cardId, g.index) : null }
       : null;
     this.handlers.cursor({ ...cursorFromLocal(lx, ly), drag });
+  }
+
+  /**
+   * Fila em ordem de servidor contra a qual um `place` novo é interpretado: a do servidor já com as minhas
+   * intenções anteriores aplicadas (o servidor processa as minhas ações em ordem).
+   */
+  private placeBase(): string[] {
+    let row: readonly string[] = this.serverRow;
+    for (const p of this.pending) row = effectiveRow(row, p, NO_IDS);
+    return [...row];
   }
 
   private startDrag(): void {
     const p = this.pendingDrag;
     this.pendingDrag = null;
     const me = this.view?.you;
-    if (!p || !me) return;
+    if (!p || !me || this.view?.game.phase !== 'sorting') return;
+    const flying = this.inFlight.get(p.cardId);
+    // Já está na mão de alguém (sem destino), ou não é uma carta minha voltando pra mão.
+    if (flying && (!flying.home || p.from !== 'hand')) return;
     let x: number;
     let y: number;
     let s: number;
-    let rx = 0;
-    if (p.from === 'hand') {
-      const slot = document.querySelector<HTMLElement>(`[data-hand-slot="${p.cardId}"]`);
+    let o: Overlay | null;
+    if (flying) {
+      // Pegou de volta no ar a carta que voltava pra mão: reaproveita o overlay.
+      o = flying;
+      o.home = null;
+      o.x.set(1400, 0.92);
+      o.y.set(1400, 0.92);
+      x = o.x.v;
+      y = o.y.v;
+      s = Math.max(0.05, o.s.v);
+    } else if (p.from === 'hand') {
+      const slot = this.anchor(handSel(p.cardId));
       if (!slot) return;
-      const r = slot.getBoundingClientRect();
-      x = r.left + r.width / 2;
-      y = r.top + r.height / 2;
+      x = slot.x;
+      y = slot.y;
       s = HAND_S;
+      o = this.makeOverlay(p.cardId, x, y, s, 0, 0);
     } else {
       const rc = this.cards.get(p.cardId);
       if (!rc?.shown) return;
@@ -702,16 +812,15 @@ export class TableEngine {
       const ly = ROW_Y + rc.sp.y.v;
       [x, y] = this.toScreen(lx, ly);
       s = ROW_S * rc.sp.rs.v * this.hScale(lx, ly);
-      rx = this.tilt.v;
       this.setGap(me, Math.max(0, this.visible.indexOf(rc.id)));
       this.gaps.get(me)!.s.snap(1);
+      o = this.makeOverlay(p.cardId, x, y, s, this.tilt.v, 0);
     }
-    const o = this.makeOverlay(p.cardId, x, y, s, rx, 0);
     if (!o) return;
     o.carrier = me;
     o.s.t = HAND_S * 1.07;
     this.inFlight.set(p.cardId, o);
-    if (this.pending?.cardId === p.cardId) this.pending = null;
+    this.pending = this.pending.filter((i) => i.cardId !== p.cardId);
     this.drag = { cardId: p.cardId, from: p.from, o, offX: (this.ptr.x - x) / s, offY: (this.ptr.y - y) / s };
     document.body.classList.add('grabbing');
     this.handlers.activity('dragging');
@@ -753,8 +862,9 @@ export class TableEngine {
       const now = performance.now();
       const owner = this.view?.game.cards[d.cardId]?.owner ?? d.o.owner;
       if (g?.active) {
-        const index = toServerIndex(this.visible, this.serverRow, d.cardId, g.index);
-        this.pending = { kind: 'place', cardId: d.cardId, index, at: now };
+        const base = this.placeBase().filter((id) => id !== d.cardId);
+        const index = toServerIndex(this.visible, base, d.cardId, g.index);
+        this.pending.push({ kind: 'place', cardId: d.cardId, index, after: base[index - 1] ?? null, at: now });
         this.handlers.place(d.cardId, index);
         this.land(d.o);
       } else if (d.from === 'row' && owner !== me) {
@@ -765,7 +875,7 @@ export class TableEngine {
       } else {
         this.clearGap(me);
         if (d.from === 'row') {
-          this.pending = { kind: 'return', cardId: d.cardId, at: now };
+          this.pending.push({ kind: 'return', cardId: d.cardId, at: now });
           this.handlers.ret(d.cardId);
         }
         this.sendHome(d.o);
@@ -813,16 +923,15 @@ export class TableEngine {
       target: { zone: 'hand', lx: 0, ly: 0 },
       lastSeen: performance.now(),
       drag: null,
+      dirty: true,
     };
     this.remotes.set(id, r);
     return r;
   }
 
   private seatPoint(id: string): [number, number] | null {
-    const el = document.querySelector<HTMLElement>(`[data-seat-anchor="${id}"]`);
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    return [r.left + r.width / 2 + 10, r.top + r.height / 2 + 10];
+    const a = this.anchor(seatSel(id));
+    return a ? [a.x + 10, a.y + 10] : null;
   }
 
   private remotePickup(r: Remote, cardId: string): void {
@@ -865,13 +974,18 @@ export class TableEngine {
     this.emit();
   }
 
-  private remoteDrop(r: Remote): void {
+  /** `immediate`: não espera um `state` (o remoto saiu/caiu): fora da fila, volta já pra casa. */
+  private remoteDrop(r: Remote, immediate = false): void {
     const d = r.drag;
     if (!d) return;
     r.drag = null;
     // Normalmente o `state` do place/return chega antes do cursor sem arrasto.
     if (this.serverRow.includes(d.cardId)) this.land(d.o);
-    else this.waiting.set(d.cardId, { o: d.o, since: performance.now() });
+    else if (immediate) {
+      this.hideGap(d.o.carrier ?? d.o.owner);
+      this.sendHome(d.o);
+      this.emit();
+    } else this.waiting.set(d.cardId, { o: d.o, since: performance.now(), seq: this.stateSeq });
   }
 
   // ---------- ping ----------
@@ -921,6 +1035,9 @@ export class TableEngine {
     if (key === this.revealKey) return;
     this.revealKey = key;
     this.revealing = true;
+    // Uma revelação nova substitui a anterior: os timers velhos chamariam revealDone de novo.
+    this.revealTimers.forEach((t) => clearTimeout(t));
+    this.revealTimers = [];
     this.pendingDrag = null;
     this.abortDrag();
     for (const r of this.remotes.values()) if (r.drag) this.remoteDrop(r);
@@ -950,6 +1067,7 @@ export class TableEngine {
     const rc = this.cards.get(e.cardId);
     if (!rc) return;
     this.paint(rc);
+    rc.dirty = true;
     if (instant) {
       rc.sp.flip.snap(1);
       if (e.error) {
@@ -962,6 +1080,7 @@ export class TableEngine {
     this.later(330, () => {
       if (e.error) {
         rc.el.classList.add('err');
+        rc.dirty = true;
         rc.sp.stamp.snap(2.3);
         rc.sp.stamp.t = 1;
         rc.sp.shake.vel = 950;
@@ -1063,11 +1182,20 @@ export class TableEngine {
   // ---------- loop ----------
 
   private frame = (now: number): void => {
+    if (this.destroyed) return;
     const dt = Math.min(0.033, Math.max(0.001, (now - this.last) / 1000));
     this.last = now;
+    // 1) Leituras de layout de fora do motor, todas juntas antes de qualquer escrita deste quadro.
+    this.inFrame = true;
+    this.anchors.clear();
+    for (const r of this.remotes.values()) this.anchor(seatSel(r.id));
+    for (const o of this.overlays) if (o.home) this.anchor(o.home.sel);
+    // 2) Mesa (a homografia precisa ler os marcadores depois de escrever a inclinação/escala).
+    const tiltMoving = !this.tilt.resting;
+    const tableMoving = tiltMoving || !this.scale.resting;
     this.tilt.step(dt);
     this.scale.step(dt);
-    if (!this.tilt.resting || !this.scale.resting || this.hDirty || !this.H) {
+    if (tableMoving || this.hDirty || !this.H) {
       this.dom.felt.style.transform = `rotateX(${this.tilt.v.toFixed(3)}deg)`;
       this.dom.wrap.style.transform = `translateX(-50%) scale(${this.scale.v.toFixed(4)})`;
       this.readH();
@@ -1081,21 +1209,24 @@ export class TableEngine {
 
     this.updateDrag();
     this.stepRemotes(dt, now);
-    this.relayout();
-    this.stepCards(dt);
+    if (this.layoutDirty) this.relayout();
+    this.stepCards(dt, tiltMoving);
     this.stepGaps(dt);
     this.stepOverlays(dt, now);
     this.stepPings(dt, now);
-    this.tipSpring.step(dt);
-    this.dom.tip.style.opacity = this.tipSpring.v > 0.02 ? '1' : '0';
-    this.dom.tip.style.transform = `scale(${Math.max(0, this.tipSpring.v).toFixed(3)})`;
+    if (!this.tipSpring.resting) {
+      this.tipSpring.step(dt);
+      this.dom.tip.style.opacity = this.tipSpring.v > 0.02 ? '1' : '0';
+      this.dom.tip.style.transform = `scale(${Math.max(0, this.tipSpring.v).toFixed(3)})`;
+    }
+    this.inFrame = false;
     this.raf = requestAnimationFrame(this.frame);
   };
 
   private stepRemotes(dt: number, now: number): void {
     for (const r of this.remotes.values()) {
       if (now - r.lastSeen > REMOTE_STALE_MS) {
-        r.el.style.opacity = '0';
+        if (r.el.style.opacity !== '0') r.el.style.opacity = '0';
         if (r.drag) this.remoteDrop(r);
       }
       const t = r.target.zone === 'table' && this.H ? this.toScreen(r.target.lx, r.target.ly) : this.seatPoint(r.id);
@@ -1103,9 +1234,13 @@ export class TableEngine {
         r.x.t = t[0];
         r.y.t = t[1];
       }
+      const moving = r.dirty || !r.x.resting || !r.y.resting;
       r.x.step(dt);
       r.y.step(dt);
-      r.el.style.transform = `translate(${r.x.v.toFixed(1)}px,${r.y.v.toFixed(1)}px)`;
+      if (moving) {
+        r.el.style.transform = `translate(${r.x.v.toFixed(1)}px,${r.y.v.toFixed(1)}px)`;
+        r.dirty = false;
+      }
       if (r.drag) {
         const o = r.drag.o;
         o.x.t = r.x.v + 8 * o.s.v;
@@ -1146,16 +1281,24 @@ export class TableEngine {
     rc.stampEl.style.transform = `translateZ(6px) rotate(-10deg) scale(${Math.max(0, st).toFixed(3)})`;
   }
 
-  private stepCards(dt: number): void {
+  private stepCards(dt: number, tiltMoving: boolean): void {
     for (const rc of this.cards.values()) {
       if (!rc.shown) continue;
-      for (const s of Object.values(rc.sp)) s.step(dt);
+      // Carta parada, mesa parada e nada mudou: não toca no DOM.
+      let moving = rc.dirty || tiltMoving;
+      for (const s of rc.springs) {
+        if (s.resting) continue;
+        moving = true;
+        s.step(dt);
+      }
+      if (!moving) continue;
       if (rc.landing && rc.sp.z.v < rc.sp.z.t + 6) {
         rc.landing = false;
         rc.sp.rs.vel -= 1.5;
         rc.sp.y.vel *= 0.4;
       }
       this.writeCard(rc);
+      rc.dirty = false;
     }
     this.dying = this.dying.filter((rc) => {
       rc.sp.rs.step(dt);
@@ -1170,12 +1313,14 @@ export class TableEngine {
   private stepGaps(dt: number): void {
     for (const g of this.gaps.values()) {
       if (g.el.style.display === 'none') continue;
+      if (!g.dirty && g.x.resting && g.s.resting) continue;
       g.x.step(dt);
       g.s.step(dt);
       if (!g.active && g.s.v < 0.05) {
         g.el.style.display = 'none';
         continue;
       }
+      g.dirty = false;
       const s = Math.max(0, g.s.v);
       g.el.style.opacity = clamp(s * 1.3, 0, 1).toFixed(3);
       g.el.style.transform = `translate3d(${g.x.v.toFixed(2)}px,${ROW_Y}px,${(0.5 + g.slot * 0.7).toFixed(2)}px) scale(${(ROW_S * s).toFixed(4)})`;
@@ -1185,12 +1330,15 @@ export class TableEngine {
   private stepOverlays(dt: number, now: number): void {
     for (const o of [...this.overlays]) {
       if (o.home) {
-        const t = o.home();
-        if (!t) {
+        const a = this.anchor(o.home.sel);
+        if (!a) {
           this.finishHome(o);
           continue;
         }
-        [o.x.t, o.y.t, o.s.t, o.fl.t] = t;
+        o.x.t = a.x;
+        o.y.t = a.y;
+        o.s.t = o.home.mine ? HAND_S : 0.35;
+        o.fl.t = o.home.mine ? 0 : 1;
         o.rot.t = 0;
         o.rx.t = 0;
       }

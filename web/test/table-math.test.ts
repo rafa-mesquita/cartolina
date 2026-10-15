@@ -120,18 +120,36 @@ describe('rowEntries', () => {
 
 describe('intenções otimistas', () => {
   it('place move a carta; return tira; em voo some da fila visível', () => {
-    expect(effectiveRow(['a', 'b'], { kind: 'place', cardId: 'm', index: 1, at: 0 }, new Set())).toEqual(['a', 'm', 'b']);
-    expect(effectiveRow(['a', 'm', 'b'], { kind: 'place', cardId: 'm', index: 0, at: 0 }, new Set())).toEqual(['m', 'a', 'b']);
+    expect(effectiveRow(['a', 'b'], { kind: 'place', cardId: 'm', index: 1, after: 'a', at: 0 }, new Set())).toEqual(['a', 'm', 'b']);
+    expect(effectiveRow(['a', 'm', 'b'], { kind: 'place', cardId: 'm', index: 0, after: null, at: 0 }, new Set())).toEqual(['m', 'a', 'b']);
     expect(effectiveRow(['a', 'm'], { kind: 'return', cardId: 'm', at: 0 }, new Set())).toEqual(['a']);
     expect(effectiveRow(['a', 'b'], null, new Set(['b']))).toEqual(['a']);
   });
 
+  it('place ancorado: entra logo depois de `after` mesmo se a fila mudou; sem a âncora, usa o índice', () => {
+    const place = { kind: 'place' as const, cardId: 'm', index: 1, after: 'a', at: 0 };
+    expect(effectiveRow(['x', 'y', 'a', 'b'], place, new Set())).toEqual(['x', 'y', 'a', 'm', 'b']);
+    expect(effectiveRow(['x', 'b'], place, new Set())).toEqual(['x', 'm', 'b']);
+  });
+
   it('intenção resolve quando o servidor concorda ou expira', () => {
-    const place = { kind: 'place' as const, cardId: 'm', index: 1, at: 0 };
+    const place = { kind: 'place' as const, cardId: 'm', index: 1, after: 'a', at: 0 };
     expect(intentSettled(['a', 'b'], place, 10)).toBe(false);
     expect(intentSettled(['a', 'm', 'b'], place, 10)).toBe(true);
+    expect(intentSettled(['m', 'a', 'b'], place, 10)).toBe(false);
     expect(intentSettled(['a', 'b'], place, INTENT_TTL_MS + 1)).toBe(true);
     expect(intentSettled(['a'], { kind: 'return', cardId: 'm', at: 0 }, 10)).toBe(true);
+    const first = { kind: 'place' as const, cardId: 'm', index: 0, after: null, at: 0 };
+    expect(intentSettled(['m', 'a'], first, 10)).toBe(true);
+    expect(intentSettled(['a', 'm'], first, 10)).toBe(false);
+  });
+
+  it('colocação concorrente antes da minha não prende a minha carta até o TTL', () => {
+    // Eu pus `m` depois de `a` (índice 1); alguém pôs `x` no começo ao mesmo tempo.
+    const place = { kind: 'place' as const, cardId: 'm', index: 1, after: 'a', at: 0 };
+    const server = ['x', 'a', 'm', 'b'];
+    expect(intentSettled(server, place, 10)).toBe(true);
+    expect(effectiveRow(server, place, new Set())).toEqual(server);
   });
 
   it('toServerIndex compensa cartas escondidas (sendo carregadas por outros)', () => {

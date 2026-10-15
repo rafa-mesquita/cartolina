@@ -436,3 +436,258 @@ describe('TableEngine (qualquer participante move cartas da fila; só o dono tir
     engine.destroy();
   });
 });
+
+describe('TableEngine (revisão: robustez e custo por quadro)', () => {
+  let frameCb: FrameRequestCallback | null = null;
+  let clock = 0;
+  const frame = (advanceMs = 16) => {
+    clock += advanceMs;
+    frameCb?.(clock);
+  };
+  const frames = (n: number) => {
+    for (let i = 0; i < n; i++) frame();
+  };
+  const rect = (x: number, y: number) => () => ({ left: x, top: y, width: 0, height: 0, right: x, bottom: y, x, y, toJSON: () => ({}) });
+  const pointer = (type: string, x: number, y: number) => new MouseEvent(type, { clientX: x, clientY: y, button: 0, bubbles: true, cancelable: true });
+  const gapsShown = (d: EngineDom) => [...d.row.querySelectorAll<HTMLElement>('.gap')].filter((g) => g.style.display !== 'none').length;
+
+  /** Âncora (assento ou vaga da mão) com posição fixa na tela. */
+  function anchor(attr: 'seatAnchor' | 'handSlot', value: string, x: number, y: number) {
+    const el = document.createElement('div');
+    el.dataset[attr] = value;
+    el.getBoundingClientRect = vi.fn(rect(x, y));
+    document.body.appendChild(el);
+    return el;
+  }
+
+  /** Motor com homografia identidade (tela = feltro) já mostrando `room` como `me`. */
+  function table(room: Room, me = 'p0') {
+    const d = dom();
+    const corners = [
+      [0, 0],
+      [900, 0],
+      [0, 480],
+      [900, 480],
+    ] as const;
+    d.markers.forEach((el, i) => {
+      el.getBoundingClientRect = rect(corners[i]![0], corners[i]![1]);
+    });
+    const h = handlers();
+    const engine = new TableEngine(d, h);
+    engine.update(viewOf(room, me));
+    frame();
+    return { d, h, engine };
+  }
+
+  /** Todos os participantes põem a própria carta, na ordem dos assentos. */
+  function fullRow(n: number): Room {
+    let room = sortingRoom(n);
+    for (let i = 0; i < n; i++) room = act(room, `p${i}`, { type: 'place', cardId: `p${i}:0`, index: i });
+    return room;
+  }
+
+  const cardEl = (d: EngineDom, id: string) => d.row.querySelector<HTMLElement>(`[data-card="${id}"]`)!;
+
+  function grab(d: EngineDom, id: string, x: number, y: number) {
+    cardEl(d, id).dispatchEvent(pointer('pointerdown', 450, 318));
+    window.dispatchEvent(pointer('pointermove', 455, 325));
+    frame();
+    window.dispatchEvent(pointer('pointermove', x, y));
+    frames(3);
+  }
+
+  function drop(d: EngineDom, id: string, x: number, y: number) {
+    grab(d, id, x, y);
+    window.dispatchEvent(pointer('pointerup', x, y));
+  }
+
+  beforeEach(() => {
+    clock = performance.now();
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      frameCb = cb;
+      return 1;
+    });
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    frameCb = null;
+    document.body.innerHTML = '';
+    document.body.className = '';
+  });
+
+  it('índice do place conta com a minha intenção pendente (servidor termina em [B,D,C,A])', () => {
+    let room = fullRow(4); // [A,B,C,D] = [p0:0, p1:0, p2:0, p3:0]
+    const { d, h, engine } = table(room);
+    drop(d, 'p0:0', 880, 330); // A pro fim, ainda sem resposta do servidor
+    expect(h.place).toHaveBeenLastCalledWith('p0:0', 3);
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p2:0', 'p3:0', 'p0:0']);
+    drop(d, 'p2:0', 535, 330); // C entre D e A
+    const second = h.place.mock.calls[1] as [string, number];
+    expect(second[0]).toBe('p2:0');
+    // Duas intenções na fila: A não volta pro começo enquanto o servidor não responde.
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p3:0', 'p2:0', 'p0:0']);
+    room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 3 });
+    engine.update(viewOf(room, 'p0')); // servidor confirmou só A
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p3:0', 'p2:0', 'p0:0']);
+    room = act(room, 'p0', { type: 'place', cardId: 'p2:0', index: second[1] });
+    expect(room.game.row).toEqual(['p1:0', 'p3:0', 'p2:0', 'p0:0']);
+    engine.update(viewOf(room, 'p0'));
+    expect(engine.getSnapshot().row).toEqual(['p1:0', 'p3:0', 'p2:0', 'p0:0']);
+    engine.destroy();
+  });
+
+  it('âncoras são lidas uma vez por quadro (cursor remoto e carta voltando pro mesmo assento)', () => {
+    const seat = anchor('seatAnchor', 'p1', 800, 100);
+    const { engine } = table(sortingRoom(2));
+    engine.remoteCursor({ from: 'p1', zone: 'hand', x: 0, y: 0, drag: { cardId: 'p1:0', index: null } });
+    engine.remoteCursor({ from: 'p1', zone: 'hand', x: 0, y: 0, drag: null });
+    frame(1000); // sem estado novo: espera e manda pra casa (assento de p1)
+    const read = seat.getBoundingClientRect as ReturnType<typeof vi.fn>;
+    read.mockClear();
+    frame();
+    expect(read).toHaveBeenCalledTimes(1);
+    engine.destroy();
+  });
+
+  it('mesa parada não reescreve estilos de cartas nem da dica', () => {
+    const { d, engine } = table(fullRow(2));
+    frames(300);
+    const card = cardEl(d, 'p1:0');
+    const cardWrites = vi.spyOn(card.style, 'transform', 'set');
+    const tipWrites = vi.spyOn(d.tip.style, 'transform', 'set');
+    frames(5);
+    expect(cardWrites).not.toHaveBeenCalled();
+    expect(tipWrites).not.toHaveBeenCalled();
+    engine.destroy();
+  });
+
+  it('buraco de remoto com carta em espera não vaza pra próxima rodada', () => {
+    let room = act(sortingRoom(2), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    const { d, engine } = table(room);
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.3, y: 0.66, drag: { cardId: 'p1:0', index: 0 } });
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.3, y: 0.66, drag: null });
+    frame();
+    expect(gapsShown(d)).toBe(1);
+    room = act(room, 'p0', { type: 'next' });
+    engine.update(viewOf(room, 'p0'));
+    frame();
+    expect(gapsShown(d)).toBe(0);
+    engine.destroy();
+  });
+
+  it('pointerdown da rodada anterior não vira arrasto na rodada nova', () => {
+    let room = sortingRoom(2);
+    anchor('handSlot', 'p0:0', 450, 620);
+    const { h, engine } = table(room);
+    engine.beginHandDrag('p0:0', pointer('pointerdown', 450, 620) as unknown as PointerEvent);
+    room = act(room, 'p0', { type: 'next' });
+    engine.update(viewOf(room, 'p0'));
+    room = act(room, 'p0', { type: 'beginRound' });
+    engine.update(viewOf(room, 'p0'));
+    window.dispatchEvent(pointer('pointermove', 450, 300));
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    expect(h.activity).not.toHaveBeenCalledWith('dragging');
+    engine.destroy();
+  });
+
+  it('revelação trocada no meio cancela os timers antigos: revealDone uma vez só', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let room = fullRow(2);
+    const { h, engine } = table(room);
+    room = act(room, 'p0', { type: 'forceReveal' });
+    const view = viewOf(room, 'p0');
+    engine.update(view);
+    vi.advanceTimersByTime(800);
+    engine.update({ ...view, game: { ...view.game, reveal: [...view.game.reveal!].reverse() } });
+    vi.advanceTimersByTime(10_000);
+    expect(h.revealDone).toHaveBeenCalledTimes(1);
+    expect(engine.getSnapshot().revealing).toBe(false);
+    engine.destroy();
+  });
+
+  it('remoto que desconecta no meio do arrasto solta a carta na hora', () => {
+    const room = sortingRoom(2);
+    const { engine } = table(room);
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.5, y: 0.3, drag: { cardId: 'p1:0', index: null } });
+    expect(engine.getSnapshot().inFlight.has('p1:0')).toBe(true);
+    const view = viewOf(room, 'p0');
+    engine.update({ ...view, seats: view.seats.map((s) => (s.id === 'p1' ? { ...s, connected: false } : s)) });
+    frame();
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    engine.destroy();
+  });
+
+  it('estado novo depois de um drop remoto fora da fila manda a carta pra casa sem esperar', () => {
+    let room = sortingRoom(2);
+    const { d, engine } = table(room);
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.5, y: 0.3, drag: { cardId: 'p1:0', index: null } });
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.5, y: 0.3, drag: null });
+    room = act(room, 'p0', { type: 'clue', cardId: 'p0:0', text: 'oi' });
+    engine.update(viewOf(room, 'p0'));
+    frame();
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    expect(d.overlay.children).toHaveLength(0);
+    engine.destroy();
+  });
+
+  it('pegar da mão uma carta minha que ainda está voltando reaproveita o overlay', () => {
+    anchor('handSlot', 'p0:0', 450, 620);
+    const { d, h, engine } = table(fullRow(2));
+    drop(d, 'p0:0', 450, 40); // dono tira da mesa → voa pra mão
+    expect(h.ret).toHaveBeenCalledWith('p0:0');
+    expect(d.overlay.children).toHaveLength(1);
+    const flying = d.overlay.firstElementChild;
+    engine.beginHandDrag('p0:0', pointer('pointerdown', 450, 200) as unknown as PointerEvent);
+    window.dispatchEvent(pointer('pointermove', 470, 220));
+    frame();
+    expect(d.overlay.children).toHaveLength(1);
+    expect(d.overlay.firstElementChild).toBe(flying);
+    expect(engine.getSnapshot().dragging).toBe('p0:0');
+    frame(3000);
+    expect(d.overlay.children).toHaveLength(1); // preso ao arrasto, não pousa sozinho
+    engine.destroy();
+  });
+
+  it('carta morrendo (rodada anterior) ignora pointerdown', () => {
+    let room = fullRow(2);
+    room = act(room, 'p0', { type: 'forceReveal' });
+    const { d, engine } = table(room);
+    const old = cardEl(d, 'p0:0');
+    room = act(act(room, 'p0', { type: 'next' }), 'p0', { type: 'beginRound' });
+    room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    engine.update(viewOf(room, 'p0')); // pulou o `theme`: distribuição nova
+    old.dispatchEvent(pointer('pointerdown', 450, 318));
+    window.dispatchEvent(pointer('pointermove', 470, 330));
+    expect(engine.getSnapshot().inFlight.size).toBe(0);
+    engine.destroy();
+  });
+
+  it('quem sai da sala leva junto o elemento do buraco', () => {
+    const room = act(sortingRoom(2), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    const { d, engine } = table(room);
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.3, y: 0.66, drag: { cardId: 'p1:0', index: 0 } });
+    expect(d.row.querySelectorAll('.gap')).toHaveLength(1);
+    const view = viewOf(room, 'p0');
+    engine.update({ ...view, seats: view.seats.filter((s) => s.id !== 'p1') });
+    expect(d.row.querySelectorAll('.gap')).toHaveLength(0);
+    engine.destroy();
+  });
+
+  it('destroy no meio do arrasto avisa os outros; chamadas depois do destroy não fazem nada', () => {
+    const room = fullRow(2);
+    const { d, h, engine } = table(room);
+    grab(d, 'p0:0', 450, 40);
+    engine.destroy();
+    expect(h.cursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+    expect(h.activity).toHaveBeenLastCalledWith('thinking');
+    expect(document.body.classList.contains('grabbing')).toBe(false);
+    engine.update(viewOf(room, 'p0'));
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.5, y: 0.3, drag: { cardId: 'p1:0', index: null } });
+    engine.remotePing('p1', 0.5, 0.5);
+    expect(d.row.children).toHaveLength(0);
+    expect(d.overlay.children).toHaveLength(0);
+    expect(d.cursors.children).toHaveLength(0);
+  });
+});
