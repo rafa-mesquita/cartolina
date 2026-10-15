@@ -59,6 +59,7 @@ function playFile(name: FileSound, now: number): void {
   const audio = pool.list[pool.next]!;
   pool.next = (pool.next + 1) % pool.list.length;
   audio.currentTime = 0;
+  audio.volume = FILE_VOLUME[name];
   const p = audio.play() as Promise<void> | undefined;
   // Autoplay bloqueado antes do primeiro gesto do usuário: ignora.
   p?.catch(() => {});
