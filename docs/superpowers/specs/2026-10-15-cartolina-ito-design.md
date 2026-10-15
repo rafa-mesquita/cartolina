@@ -282,5 +282,39 @@ Tokens em `web/src/brand/tokens.css`, documentados em `#/marca` e resumidos em
 
 ## 10. Fora de escopo (esta versão)
 
-Chat de texto, sons, login/contas, ranking/histórico, espectador com visão
-privilegiada, Timeline, Dixit.
+Chat de texto, sons, login/contas, espectador com visão privilegiada,
+Timeline, Dixit.
+
+## 11. Histórico do grupo (adicionado em 2026-10-15, Plano 3)
+
+Pedido do usuário depois do design inicial: guardar o histórico das partidas
+da galera, de forma permanente e compartilhada.
+
+- **Grupo:** espaço permanente com nome (ex.: "Galera da call") e link secreto
+  `#/g/<slug>` (10 caracteres aleatórios). Quem tem o link vê tudo; sem login.
+  A página do grupo tem "criar sala", a lista de partidas e as estatísticas.
+- **Salas do grupo:** salas criadas a partir da página do grupo ficam ligadas a
+  ele (`groupId` guardado no `Room`). Salas avulsas continuam funcionando, sem
+  histórico.
+- **O que é salvo:** a cada revelação (fase `reveal`), uma linha com data, modo,
+  nível, tema (título + extremos), jogadores (nome + cor), fila final (dono,
+  número, dica, erro), número de erros e `outcome`. Rodadas de uma mesma
+  campanha compartilham um `campaignId`, e a última traz o resultado final.
+- **Página do grupo:**
+  - lista de partidas (mais recentes primeiro), cada uma expansível mostrando a
+    fila revelada com as dicas;
+  - números gerais: rodadas jogadas, % de vitórias no modo livre, campanhas
+    zeradas;
+  - destaques por **nome** de jogador: quem mais acerta a posição (menos cartas
+    com erro / total de cartas), temas mais jogados, maior sequência de
+    vitórias.
+- **Armazenamento:** Cloudflare D1 (SQLite, plano gratuito), tabelas `groups`
+  (`id`, `slug`, `name`, `created_at`) e `rounds` (`id`, `group_id`,
+  `room_code`, `played_at`, `mode`, `level`, `outcome`, `errors`,
+  `campaign_id`, `theme_json`, `players_json`, `cards_json`). O Durable Object
+  da sala grava a linha ao entrar em `reveal`.
+- **Rotas novas:** `POST /groups` (cria, devolve slug), `GET /groups/:slug`
+  (grupo + rodadas paginadas + estatísticas), `POST /groups/:slug/rooms` (cria
+  sala ligada ao grupo).
+- **Ordem dos planos:** Plano 2 (mesa jogável) → Plano 3 (histórico do grupo) →
+  Plano 4 (celular, manual de marca, deploy, E2E).
