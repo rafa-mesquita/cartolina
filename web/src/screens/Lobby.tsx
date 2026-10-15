@@ -78,6 +78,11 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
             ref={linkInput}
           />
         )}
+        {view.group && (
+          <a className="sbtn" href={`#/g/${view.group.slug}`} target="_blank" rel="noopener">
+            📜 histórico de {view.group.name}
+          </a>
+        )}
       </section>
       <section className="panel">
         <h2>modo</h2>

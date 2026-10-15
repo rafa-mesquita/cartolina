@@ -69,6 +69,8 @@ function HandSlot({ card, place, color, phase, engine, conn }: {
         style={{ '--c': color, '--tilt': tiltOf(card.id) } as CSSProperties}
         onPointerDown={(e) => {
           if ((e.target as HTMLElement).closest('textarea') || place !== 'hand') return;
+          // Dica digitada e ainda no debounce vai agora, com a carta na mão: arrastando, ela trava e se perderia.
+          flush();
           engine?.beginHandDrag(card.id, e.nativeEvent);
         }}
       >

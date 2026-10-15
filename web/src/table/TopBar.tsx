@@ -26,8 +26,16 @@ export function TopBar({ view }: { view: RoomView }) {
   }
   return (
     <div className="topbar">
-      <div className="logo">
-        cartolina<span>~</span>
+      <div className="brandcol">
+        <div className="logo">
+          cartolina<span>~</span>
+        </div>
+        {/* Embaixo do logo, e não nas pílulas: ali ele empurraria as pílulas por cima dos assentos de cima. */}
+        {view.group && (
+          <a className="grouplink" href={`#/g/${view.group.slug}`} target="_blank" rel="noopener" title="histórico do grupo">
+            📜 {view.group.name}
+          </a>
+        )}
       </div>
       <div className="pills">
         <button className="pill code" type="button" onClick={() => void copy()} title="copiar link da sala">

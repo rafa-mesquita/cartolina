@@ -7,3 +7,12 @@ export function randomCode(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(4));
   return Array.from(bytes, (b) => ROOM_ALPHABET[b % ROOM_ALPHABET.length]).join('');
 }
+
+/** Slug do grupo: 10 caracteres sem ambíguos (vai no link secreto `#/g/<slug>`). */
+export const SLUG_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+export const SLUG_RE = new RegExp(`^[${SLUG_ALPHABET}]{10}$`);
+
+export function randomSlug(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(bytes, (b) => SLUG_ALPHABET[b % SLUG_ALPHABET.length]).join('');
+}

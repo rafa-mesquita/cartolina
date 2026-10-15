@@ -28,6 +28,14 @@ Os sons em `web/public/sounds/` são do autor do projeto.
 
 Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do `@cloudflare/vitest-pool-workers`).
 
+## Grupos e histórico
+
+- Na tela inicial, **criar grupo** gera um link secreto (`#/g/<slug>`). Quem tem o link vê o histórico.
+- Salas criadas na página do grupo gravam cada rodada revelada (tema, quem jogou, a fila com números e dicas, resultado) no banco **Cloudflare D1** `cartolina`.
+- A página do grupo mostra números (rodadas, % de vitórias no livre, campanhas zeradas, maior sequência sem erro), quem mais acerta a posição, os temas mais jogados e as partidas (clique pra ver a fila revelada).
+- Em desenvolvimento, `npm run dev:server` aplica as migrações no D1 local antes de subir (`npm run db:migrate -w server`).
+- API: `POST /groups { name }` → `{ slug, name }` · `GET /groups/:slug[?before=<ms>]` → grupo, 20 rodadas, estatísticas e cursor · `POST /groups/:slug/rooms` → `{ code }`.
+
 ## API do servidor
 
 - `POST /rooms` → `{ code }`

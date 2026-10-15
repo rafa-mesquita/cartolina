@@ -258,3 +258,28 @@ describe('reconcilePresence', () => {
     expect(next.lastActivity).toBe(room.lastActivity);
   });
 });
+
+describe('grupo e início da partida', () => {
+  const group = { id: 'g-1', slug: 'abcdefghjk', name: 'Galera' };
+
+  it('sala avulsa não tem grupo; sala de grupo expõe só slug e nome na visão', () => {
+    expect(createRoom('ABCD', T0).group).toBeNull();
+    const joined = joinRoom(createRoom('ABCD', T0, group), { token: 't0', name: 'Ana', color: PLAYER_COLORS[0] }, 'p0', T0);
+    if (!joined.ok) throw new Error(joined.error);
+    const room = joined.room;
+    expect(roomView(room, 'p0').group).toEqual({ slug: 'abcdefghjk', name: 'Galera' });
+    expect(JSON.stringify(roomView(room, 'p0'))).not.toContain('g-1');
+  });
+
+  it('marca runStartedAt quando o host começa (lobby → tema) e mantém nas rodadas seguintes', () => {
+    let room = roomWith(2);
+    expect(room.runStartedAt).toBeNull();
+    const started = roomAction(room, 'id-tok0', { type: 'start' }, rng, T0 + 50);
+    if (!started.ok) throw new Error(started.error);
+    room = started.room;
+    expect(room.runStartedAt).toBe(T0 + 50);
+    const dealt = roomAction(room, 'id-tok0', { type: 'beginRound' }, rng, T0 + 90);
+    if (!dealt.ok) throw new Error(dealt.error);
+    expect(dealt.room.runStartedAt).toBe(T0 + 50);
+  });
+});

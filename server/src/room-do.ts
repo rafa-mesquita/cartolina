@@ -12,15 +12,32 @@ import {
   joinRoom,
   nextAlarmAt,
   parseClientMessage,
+  pendingRecord,
   reconcilePresence,
   roomAction,
   roomSummary,
   roomView,
   tick,
   type Room,
+  type RoomGroup,
+  type RoundRecord,
   type ServerMessage,
 } from '@cartolina/shared';
+import { insertRound } from './history-db';
 import { isStale, nextWakeAt } from './liveness';
+
+/**
+ * Rodada revelada ainda não confirmada no D1 (fila durável no storage do DO, uma chave por rodada).
+ * Entra no mesmo `put` que marca `recordedRevealKey`, então nem queda do DO nem falha do D1 perdem a rodada.
+ */
+interface PendingRound {
+  groupId: string;
+  key: string;
+  record: RoundRecord;
+}
+const PENDING_ROUND_PREFIX = 'pendingRound:';
+/** Com rodada pendente, o DO acorda pelo menos neste intervalo para tentar de novo (mesmo sem ninguém na sala). */
+const PENDING_ROUND_RETRY_MS = 30_000;
 
 interface Attachment {
   playerId: string | null;
@@ -40,8 +57,15 @@ export class RoomDO extends DurableObject<Env> {
     super(ctx, env);
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(HEARTBEAT_PING, HEARTBEAT_PONG));
     ctx.blockConcurrencyWhile(async () => {
-      this.room = (await ctx.storage.get<Room>('room')) ?? null;
-      if (!this.room) return;
+      const stored = (await ctx.storage.get<Room>('room')) ?? null;
+      if (!stored) return;
+      // Salas gravadas antes do histórico do grupo não têm estes campos.
+      this.room = {
+        ...stored,
+        group: stored.group ?? null,
+        runStartedAt: stored.runStartedAt ?? null,
+        recordedRevealKey: stored.recordedRevealKey ?? null,
+      };
       // Após um restart, `connected` pode estar obsoleto: quem não tem socket vivo está desconectado.
       const live = new Set(
         ctx.getWebSockets().map((s) => this.attachment(s).playerId).filter((id): id is string => id !== null),
@@ -51,7 +75,7 @@ export class RoomDO extends DurableObject<Env> {
       if (reconciled !== this.room) {
         this.room = reconciled;
         await ctx.storage.put('room', this.room);
-        await ctx.storage.setAlarm(nextWakeAt(nextAlarmAt(this.room, now), this.liveSocketCount(), now));
+        await this.scheduleAlarm();
       }
     });
   }
@@ -61,7 +85,8 @@ export class RoomDO extends DurableObject<Env> {
 
     if (url.pathname === '/init') {
       if (this.room) return new Response('taken', { status: 409 });
-      this.room = createRoom(url.searchParams.get('code') ?? '', Date.now());
+      const body = (await request.json().catch(() => ({}))) as { group?: RoomGroup | null };
+      this.room = createRoom(url.searchParams.get('code') ?? '', Date.now(), body.group ?? null);
       await this.commit();
       return new Response('ok', { status: 201 });
     }
@@ -150,8 +175,13 @@ export class RoomDO extends DurableObject<Env> {
 
   async alarm(): Promise<void> {
     if (!this.room) return;
+    // Antes da expiração: uma sala que expira com rodada ainda pendente teria a fila apagada no deleteAll.
+    await this.flushPendingRounds();
     const now = Date.now();
     if (isExpired(this.room, now)) {
+      // D1 falhou a sala inteira: as rodadas que sobraram somem com o deleteAll. Fica registrado no log.
+      const lost = await this.ctx.storage.list({ prefix: PENDING_ROUND_PREFIX });
+      if (lost.size > 0) console.error(`sala ${this.room.code} expirou com ${lost.size} rodada(s) sem gravar no histórico`);
       for (const ws of this.ctx.getWebSockets()) this.safeClose(ws, CLOSE_GONE, 'expired');
       this.room = null;
       await this.ctx.storage.deleteAll();
@@ -177,7 +207,28 @@ export class RoomDO extends DurableObject<Env> {
   private async scheduleAlarm(): Promise<void> {
     if (!this.room) return;
     const now = Date.now();
-    await this.ctx.storage.setAlarm(nextWakeAt(nextAlarmAt(this.room, now), this.liveSocketCount(), now));
+    let at = nextWakeAt(nextAlarmAt(this.room, now), this.liveSocketCount(), now);
+    if (await this.hasPendingRounds()) at = Math.min(at, now + PENDING_ROUND_RETRY_MS);
+    await this.ctx.storage.setAlarm(at);
+  }
+
+  private async hasPendingRounds(): Promise<boolean> {
+    return (await this.ctx.storage.list({ prefix: PENDING_ROUND_PREFIX, limit: 1 })).size > 0;
+  }
+
+  /** Tenta gravar uma rodada pendente no D1; sai da fila só se deu certo (o UNIQUE do D1 absorve repetições). */
+  private async flushRound(storageKey: string, round: PendingRound): Promise<void> {
+    try {
+      await insertRound(this.env.DB, round.groupId, round.record, round.key);
+      await this.ctx.storage.delete(storageKey);
+    } catch (err) {
+      console.error('falha ao gravar rodada no histórico (tenta de novo no alarme)', err);
+    }
+  }
+
+  private async flushPendingRounds(): Promise<void> {
+    const pending = await this.ctx.storage.list<PendingRound>({ prefix: PENDING_ROUND_PREFIX });
+    for (const [storageKey, round] of pending) await this.flushRound(storageKey, round);
   }
 
   private liveSocketCount(): number {
@@ -222,12 +273,25 @@ export class RoomDO extends DurableObject<Env> {
     if (!this.room) return;
     // Aplica transições pendentes (host, fase) antes de gravar, agendar e transmitir, para o alarme não correr com o estado.
     this.room = tick(this.room, Date.now(), Math.random);
-    await this.ctx.storage.put('room', this.room);
+    // Sala de grupo entrou numa revelação nova: marca como gravada e põe a rodada na fila durável no MESMO put
+    // (síncrono até aqui, então outro evento que intercale depois já vê a marca e não enfileira de novo).
+    const pending = pendingRecord(this.room, Date.now(), crypto.randomUUID());
+    let queued: [string, PendingRound] | null = null;
+    const group = this.room.group;
+    if (pending && group) {
+      this.room = { ...this.room, recordedRevealKey: pending.key };
+      queued = [PENDING_ROUND_PREFIX + pending.record.id, { groupId: group.id, key: pending.key, record: pending.record }];
+      await this.ctx.storage.put<unknown>({ room: this.room, [queued[0]]: queued[1] });
+    } else {
+      await this.ctx.storage.put('room', this.room);
+    }
     await this.scheduleAlarm();
     for (const ws of this.ctx.getWebSockets()) {
       const playerId = this.attachment(ws).playerId;
       if (playerId) this.send(ws, { t: 'state', room: roomView(this.room, playerId) });
     }
+    // Só depois de todos verem a revelação: grava no D1. Se falhar, fica na fila e o alarme tenta de novo.
+    if (queued) await this.flushRound(...queued);
   }
 
   private broadcastFx(msg: ServerMessage, exclude: string | null): void {
