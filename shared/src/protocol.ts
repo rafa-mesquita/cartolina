@@ -89,4 +89,5 @@ export const ERROR_MESSAGES: Record<string, string> = {
   not_member: 'Você não está nesta sala.',
   bad_message: 'Mensagem inválida.',
   not_joined: 'Entre na sala primeiro.',
+  already_joined: 'Você já entrou nesta sala.',
 };

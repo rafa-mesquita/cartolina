@@ -50,7 +50,7 @@ describe('parseClientMessage', () => {
     for (const code of [
       'not_host', 'bad_phase', 'not_owner', 'unknown_card', 'not_enough_players', 'cards_missing',
       'bad_theme', 'not_player', 'bad_action', 'room_full', 'bad_name', 'bad_color', 'color_taken',
-      'not_member', 'bad_message', 'not_joined',
+      'not_member', 'bad_message', 'not_joined', 'already_joined',
     ]) {
       expect(ERROR_MESSAGES[code]).toBeTruthy();
     }
