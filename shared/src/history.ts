@@ -75,10 +75,11 @@ export interface GroupResponse {
   nextBefore: number | null;
 }
 
-/** Identifica uma revelação (ids das cartas se repetem entre rodadas, então entra o valor). */
+/** Identifica uma revelação (ids das cartas se repetem entre rodadas: entram nível, vidas, tema e valores). */
 export function revealKey(game: ItoState): string | null {
   if (game.phase !== 'reveal' || !game.reveal) return null;
-  return game.reveal.map((e) => `${e.cardId}=${e.value}`).join('|');
+  const head = `${game.level}|${game.lives}|${game.theme?.titulo ?? ''}|`;
+  return head + game.reveal.map((e) => `${e.cardId}=${e.value}`).join('|');
 }
 
 /** Registro a gravar se a sala é de um grupo e está numa revelação ainda não gravada. */
@@ -107,8 +108,8 @@ export function pendingRecord(room: Room, now: number, id: string): { key: strin
       mode: game.mode,
       level: game.level,
       outcome: game.outcome,
-      errors: game.reveal.filter((e) => e.error).length,
-      campaignId: game.mode === 'campanha' ? `${room.code}-${room.runStartedAt ?? 0}` : null,
+      errors: cards.filter((c) => c.error).length,
+      campaignId: game.mode === 'campanha' && room.runStartedAt != null ? `${room.code}-${room.runStartedAt}` : null,
       theme: game.theme,
       players,
       cards,
@@ -150,10 +151,10 @@ export function summarizeHistory(rounds: readonly RoundRecord[]): HistoryStats {
   const sharpest =
     [...players.values()]
       .filter((p) => p.cards >= SHARPEST_MIN_CARDS)
-      .sort((a, b) => b.accuracy - a.accuracy || b.cards - a.cards || a.name.localeCompare(b.name))[0] ?? null;
+      .sort((a, b) => b.accuracy - a.accuracy || b.cards - a.cards || a.name.localeCompare(b.name, 'pt-BR'))[0] ?? null;
   const topThemes = [...themes.entries()]
     .map(([titulo, count]) => ({ titulo, count }))
-    .sort((a, b) => b.count - a.count || a.titulo.localeCompare(b.titulo))
+    .sort((a, b) => b.count - a.count || a.titulo.localeCompare(b.titulo, 'pt-BR'))
     .slice(0, 5);
   return { rounds: ordered.length, livreRounds, livreWins, campaigns, campaignsWon, bestStreak, sharpest, topThemes };
 }

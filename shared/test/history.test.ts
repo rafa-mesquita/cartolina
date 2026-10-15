@@ -38,6 +38,14 @@ function revealedRoom(mode: 'livre' | 'campanha' = 'livre', group: typeof GROUP 
   return play(room, 'p0', { type: 'forceReveal' });
 }
 
+/** Da fase de tema até a revelação, com as cartas em ordem crescente (sem erro) ou decrescente (com erro). */
+function dealAndReveal(room: Room, dir: 'asc' | 'desc'): Room {
+  let r = play(room, 'p0', { type: 'beginRound' });
+  const cards = Object.values(r.game.cards).sort((a, b) => (dir === 'asc' ? a.value - b.value : b.value - a.value));
+  for (const [index, card] of cards.entries()) r = play(r, card.owner, { type: 'place', cardId: card.id, index });
+  return play(r, 'p0', { type: 'forceReveal' });
+}
+
 describe('cleanGroupName', () => {
   it('limpa espaços e limita a 40 caracteres', () => {
     expect(cleanGroupName('  Galera   da call ')).toBe('Galera da call');
@@ -80,6 +88,74 @@ describe('pendingRecord', () => {
   it('campanha usa o início da partida como id da campanha', () => {
     const r = pendingRecord(revealedRoom('campanha'), 1, 'r')!.record;
     expect(r.campaignId).toBe('ABCD-50');
+  });
+
+  it('campanha sem início conhecido fica sem campaignId (não inventa)', () => {
+    const room = { ...revealedRoom('campanha'), runStartedAt: null };
+    expect(pendingRecord(room, 1, 'r')!.record.campaignId).toBeNull();
+  });
+
+  it('a chave da rodada seguinte difere, então ela volta a ser gravada', () => {
+    const first = revealedRoom();
+    const key1 = pendingRecord(first, 1, 'r1')!.key;
+    let room: Room = { ...first, recordedRevealKey: key1 };
+    expect(pendingRecord(room, 2, 'r2')).toBeNull();
+    room = play(room, 'p0', { type: 'next' });
+    room = dealAndReveal(room, 'asc');
+    const second = pendingRecord(room, 3, 'r3');
+    expect(second).not.toBeNull();
+    expect(second!.key).not.toBe(key1);
+  });
+
+  it('a chave inclui nível, vidas e tema', () => {
+    const room = revealedRoom('campanha');
+    const g = room.game;
+    expect(revealKey(g)!.startsWith(`${g.level}|${g.lives}|${g.theme!.titulo}|`)).toBe(true);
+  });
+
+  it('o id da campanha sobrevive a repetir o nível; voltar ao lobby e começar gera outro', () => {
+    let room = createRoom('ABCD', 0, GROUP);
+    for (const [i, name] of ['Ana', 'Bia'].entries()) {
+      const res = joinRoom(room, { token: `t${i}`, name, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+      if (!res.ok) throw new Error(res.error);
+      room = res.room;
+    }
+    room = play(room, 'p0', { type: 'setMode', mode: 'campanha' });
+    room = play(room, 'p0', { type: 'start' }, 50);
+    room = dealAndReveal(room, 'desc');
+    expect(room.game.outcome).toBe('level_failed');
+    const first = pendingRecord(room, 1, 'a')!;
+    expect(first.record.campaignId).toBe('ABCD-50');
+    expect(first.record.errors).toBe(1);
+
+    room = play({ ...room, recordedRevealKey: first.key }, 'p0', { type: 'next' });
+    room = dealAndReveal(room, 'asc');
+    const second = pendingRecord(room, 2, 'b')!;
+    expect(second.record.level).toBe(1);
+    expect(second.record.campaignId).toBe('ABCD-50');
+    expect(second.key).not.toBe(first.key);
+
+    room = play(room, 'p0', { type: 'lobby' });
+    room = play(room, 'p0', { type: 'start' }, 70);
+    room = dealAndReveal(room, 'asc');
+    expect(pendingRecord(room, 3, 'c')!.record.campaignId).toBe('ABCD-70');
+  });
+
+  it('errors acompanha as cartas gravadas', () => {
+    let room = createRoom('ABCD', 0, GROUP);
+    for (const [i, name] of ['Ana', 'Bia'].entries()) {
+      const res = joinRoom(room, { token: `t${i}`, name, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+      if (!res.ok) throw new Error(res.error);
+      room = res.room;
+    }
+    room = play(room, 'p0', { type: 'start' }, 50);
+    room = dealAndReveal(room, 'desc');
+    const wrong = room.game.reveal!.find((e) => e.error)!;
+    const trimmed = { ...room, seats: room.seats.filter((s) => s.id !== wrong.owner) };
+    const r = pendingRecord(trimmed, 1, 'r')!.record;
+    expect(r.cards).toHaveLength(1);
+    expect(r.errors).toBe(0);
+    expect(r.errors).toBe(r.cards.filter((c) => c.error).length);
   });
 });
 
@@ -131,6 +207,15 @@ describe('summarizeHistory', () => {
     expect(s.campaigns).toBe(2);
     expect(s.campaignsWon).toBe(1);
     expect(s.bestStreak).toBe(2);
+  });
+
+  it('level_failed e level_cleared não contam como campanha; só won/lost', () => {
+    const c = (outcome: RoundRecord['outcome'], playedAt: number) =>
+      rec({ playedAt, mode: 'campanha', outcome, errors: outcome === 'level_failed' ? 1 : 0 });
+    const s = summarizeHistory([c('level_failed', 1), c('level_cleared', 2), c('won', 3), c('level_failed', 4), c('lost', 5)]);
+    expect(s.campaigns).toBe(2);
+    expect(s.campaignsWon).toBe(1);
+    expect(s.livreRounds).toBe(0);
   });
 
   it('mais certeiro precisa de pelo menos 3 cartas', () => {
