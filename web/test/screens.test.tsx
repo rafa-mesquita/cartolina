@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { GameConn } from '../src/net/connection';
+import { PLAYER_COLORS } from '@cartolina/shared';
+import { Avatar } from '../src/screens/Avatar';
 import { JoinForm } from '../src/screens/JoinForm';
 import { Lobby } from '../src/screens/Lobby';
 import { makeRoom, viewOf } from './fixtures';
@@ -20,7 +22,7 @@ describe('JoinForm', () => {
   it('desabilita cores ocupadas e exige nome', () => {
     const onSubmit = vi.fn();
     render(<JoinForm takenColors={['#8EC5FF']} initial={null} busy={false} error={null} onSubmit={onSubmit} />);
-    expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'cavaleiro' }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'entrar' }));
     expect(screen.getByText('Escolha um nome de 1 a 16 letras.')).toBeTruthy();
     expect(onSubmit).not.toHaveBeenCalled();
@@ -30,7 +32,7 @@ describe('JoinForm', () => {
     const onSubmit = vi.fn();
     render(<JoinForm takenColors={[]} initial={null} busy={false} error={null} onSubmit={onSubmit} />);
     fireEvent.change(screen.getByLabelText('seu nome'), { target: { value: '  Ana  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'cor rosa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'porquinho' }));
     fireEvent.click(screen.getByRole('button', { name: 'entrar' }));
     expect(onSubmit).toHaveBeenCalledWith({ name: 'Ana', color: '#FF8FAB' });
   });
@@ -45,10 +47,10 @@ describe('JoinForm (cor ocupada depois)', () => {
   it('troca a cor selecionada pela primeira livre quando alguém a pega', () => {
     const props = { initial: null, busy: false, error: null, onSubmit: () => {} };
     const { rerender } = render(<JoinForm takenColors={[]} {...props} />);
-    expect(screen.getByRole('button', { name: 'cor azul' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'cavaleiro' }).getAttribute('aria-pressed')).toBe('true');
     rerender(<JoinForm takenColors={['#8EC5FF']} {...props} />);
-    expect(screen.getByRole('button', { name: 'cor azul' }).getAttribute('aria-pressed')).toBe('false');
-    expect(screen.getByRole('button', { name: 'cor rosa' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: 'cavaleiro' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: 'porquinho' }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('erros são anunciados (role=alert)', () => {
@@ -135,5 +137,26 @@ describe('Lobby', () => {
     render(<Lobby view={viewOf(makeRoom(2), 'p1')} conn={fakeConn()} />);
     expect(screen.queryByRole('button', { name: 'começar' })).toBeNull();
     expect(screen.getByText('esperando o host começar…')).toBeTruthy();
+  });
+});
+
+describe('personagens', () => {
+  it('Avatar desenha o personagem (svg) e não mostra a inicial', () => {
+    const { container } = render(<Avatar color='#C9E27A' anchor='p0' />);
+    const box = container.querySelector('.avatar')!;
+    expect(box.querySelector('svg')).toBeTruthy();
+    expect(box.textContent).toBe('');
+    expect(box.getAttribute('data-seat-anchor')).toBe('p0');
+    // o nome do personagem não aparece na tela
+    expect(container.textContent).not.toContain('sapo');
+  });
+
+  it('JoinForm: um botão por personagem, rotulado pelo nome do bicho', () => {
+    render(<JoinForm takenColors={['#C9E27A']} initial={null} busy={false} error={null} onSubmit={() => {}} />);
+    const names = ['cavaleiro', 'porquinho', 'dinossauro', 'polvo', 'pintinho', 'raposa', 'robô', 'gatinho', 'sapo', 'urso'];
+    expect(names).toHaveLength(PLAYER_COLORS.length);
+    for (const n of names) expect(screen.getByRole('button', { name: n }).querySelector('svg')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'sapo' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText('sapo')).toBeNull();
   });
 });

@@ -1,20 +1,8 @@
 import { PLAYER_COLORS, cleanName, errorMessage, NAME_MAX, type PlayerColor } from '@cartolina/shared';
-import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { critterOf } from '../brand/critters';
 import type { Profile } from '../net/identity';
-
-/** Nomes em português das cores de jogador (mesma ordem de PLAYER_COLORS). */
-export const COLOR_NAMES: Record<PlayerColor, string> = {
-  '#8EC5FF': 'azul',
-  '#FF8FAB': 'rosa',
-  '#7EDDB5': 'verde',
-  '#C7B3FF': 'lilás',
-  '#FFD07A': 'amarelo',
-  '#FFB38A': 'laranja',
-  '#9EE6F0': 'ciano',
-  '#E6B8E0': 'malva',
-  '#C9E27A': 'lima',
-  '#D9C2A0': 'areia',
-};
+import { Critter } from './Critter';
 
 interface Props {
   takenColors: readonly string[];
@@ -67,19 +55,20 @@ export function JoinForm({ takenColors, initial, busy, error, onSubmit }: Props)
         />
       </label>
       <div className="field">
-        sua cor
+        seu personagem
         <div className="swatches">
           {PLAYER_COLORS.map((c) => (
             <button
               key={c}
               type="button"
               className="swatch"
-              aria-label={`cor ${COLOR_NAMES[c]}`}
+              aria-label={critterOf(c).name}
               aria-pressed={c === color}
               disabled={takenColors.includes(c)}
-              style={{ '--c': c } as CSSProperties}
               onClick={() => setColor(c)}
-            />
+            >
+              <Critter color={c} />
+            </button>
           ))}
         </div>
       </div>

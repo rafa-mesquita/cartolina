@@ -82,7 +82,7 @@ describe('RoomScreen', () => {
     mocked.mockResolvedValue(info());
     renderRoom();
     fireEvent.change(await screen.findByLabelText('seu nome'), { target: { value: 'Ana' } });
-    fireEvent.click(screen.getByRole('button', { name: 'cor rosa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'porquinho' }));
     fireEvent.click(screen.getByRole('button', { name: 'entrar' }));
     expect(last().url).toContain('/rooms/ABCD/ws');
     act(() => last().open());
@@ -103,10 +103,10 @@ describe('RoomScreen', () => {
     mocked.mockResolvedValue(info([{ id: 'p9', name: 'Zé', color: '#8EC5FF', connected: true }]));
     act(() => last().receive({ t: 'error', code: 'color_taken', message: 'x' }));
     expect((await screen.findByRole('alert')).textContent).toBe('Essa cor já foi escolhida.');
-    await waitFor(() => expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(true));
+    await waitFor(() => expect((screen.getByRole('button', { name: 'cavaleiro' }) as HTMLButtonElement).disabled).toBe(true));
     expect(mocked).toHaveBeenCalledTimes(2);
     // a cor selecionada (azul, a primeira) foi trocada pela primeira livre
-    await waitFor(() => expect(screen.getByRole('button', { name: 'cor rosa' }).getAttribute('aria-pressed')).toBe('true'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'porquinho' }).getAttribute('aria-pressed')).toBe('true'));
   });
 
   it('fechamento 4000 mostra o aviso de outra aba', async () => {
@@ -142,7 +142,7 @@ describe('RoomScreen', () => {
     act(() => last().receive({ t: 'error', code: 'color_taken', message: 'x' }));
     await screen.findByRole('alert');
     await waitFor(() => expect(mocked).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(true));
+    await waitFor(() => expect((screen.getByRole('button', { name: 'cavaleiro' }) as HTMLButtonElement).disabled).toBe(true));
   });
 
   it('o assento com minha cor e meu nome não bloqueia minha cor', async () => {
@@ -154,7 +154,7 @@ describe('RoomScreen', () => {
     act(() => last().receive({ t: 'error', code: 'room_full', message: 'x' }));
     await screen.findByRole('alert');
     await waitFor(() => expect(mocked).toHaveBeenCalledTimes(2));
-    expect((screen.getByRole('button', { name: 'cor azul' }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'cavaleiro' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('sem perfil desta aba não entra sozinho, mesmo com perfil salvo em outra aba', async () => {

@@ -146,7 +146,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
       <div className="me-area">
         {me && myStatus && (
           <div className="me-id">
-            <Avatar name={me.name} color={me.color} />
+            <Avatar color={me.color} />
             <div className="name">você</div>
             <div className="tag" data-s={myStatus.replace(/[^a-z]/g, '')}>
               {myStatus}

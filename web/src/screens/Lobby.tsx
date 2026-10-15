@@ -51,7 +51,7 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
         <ul className="seat-list">
           {view.seats.map((s) => (
             <li key={s.id} className={s.connected ? '' : 'off'}>
-              <Avatar name={s.name} color={s.color} />
+              <Avatar color={s.color} />
               <span>
                 {s.name}
                 {s.id === view.you ? ' (você)' : ''}

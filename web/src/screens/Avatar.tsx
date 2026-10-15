@@ -1,10 +1,9 @@
-import type { CSSProperties } from 'react';
-import { initialOf } from '../game/derive';
+import { Critter } from './Critter';
 
-export function Avatar({ name, color, anchor }: { name: string; color: string; anchor?: string }) {
+export function Avatar({ color, anchor }: { color: string; anchor?: string }) {
   return (
-    <div className="avatar" style={{ '--c': color } as CSSProperties} data-seat-anchor={anchor}>
-      {initialOf(name)}
+    <div className="avatar" data-seat-anchor={anchor}>
+      <Critter color={color} />
     </div>
   );
 }

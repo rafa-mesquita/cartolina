@@ -47,10 +47,10 @@ button, input, textarea { font: inherit; color: inherit; }
   font: 500 15px/1 var(--font-ui); padding: 8px 14px 7px; border: 2px solid var(--ink);
   border-radius: 999px 990px 999px 980px; background: var(--paper); white-space: nowrap;
 }
-.avatar {
-  width: 52px; height: 52px; border-radius: 50% 46% 52% 47%; background: var(--c); border: 2px solid var(--ink);
-  display: grid; place-items: center; font: 700 22px/1 var(--font-ui); box-shadow: 2px 3px 0 var(--ink); flex: none;
-}
+/* personagem: só o desenho, numa caixa transparente (orelhas e antenas podem sair dela) */
+.avatar { width: 52px; height: 52px; flex: none; overflow: visible; }
+.critter { display: block; width: 100%; height: 100%; overflow: visible; }
+.critter svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .tag {
   display: inline-block; font: 500 13px/1 var(--font-ui); padding: 4px 10px 3px; border: 2px solid var(--ink);
   border-radius: 999px; background: var(--paper); white-space: nowrap;
@@ -68,8 +68,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .text-in:focus { box-shadow: 0 0 0 3px var(--pink); }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .swatch {
-  width: 38px; height: 38px; border-radius: 50% 46% 52% 47%; border: 2px solid var(--ink);
-  background: var(--c); cursor: pointer; padding: 0;
+  width: 44px; height: 44px; border-radius: 50%; border: none; background: transparent; cursor: pointer; padding: 3px;
 }
 .swatch[aria-pressed='true'] { box-shadow: 0 0 0 3px var(--paper), 0 0 0 5px var(--ink); }
 .swatch:disabled { opacity: 0.25; cursor: not-allowed; }
@@ -80,7 +79,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .seat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .seat-list li { display: flex; align-items: center; gap: 10px; font: 500 18px/1 var(--font-ui); }
 .seat-list li.off { opacity: 0.5; }
-.seat-list .avatar { width: 38px; height: 38px; font-size: 16px; }
+.seat-list .avatar { width: 38px; height: 38px; }
 .modes { display: flex; gap: 10px; flex-wrap: wrap; }
 .mode {
   flex: 1 1 180px; text-align: left; padding: 12px 14px; border: 2px solid var(--ink);

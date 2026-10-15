@@ -15,7 +15,7 @@ export function Seat({ view, seat, slot, snap, activity }: { view: RoomView; sea
   const status = seatStatus(view, seat, activity);
   return (
     <div className={`seat ${slot.side}`} style={positionOf(slot)}>
-      <Avatar name={seat.name} color={seat.color} anchor={seat.id} />
+      <Avatar color={seat.color} anchor={seat.id} />
       <div className="meta">
         <div className="name">
           {seat.name}
