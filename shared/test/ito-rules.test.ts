@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../src/game';
-import { applyItoAction, initialItoState } from '../src/games/ito/rules';
+import { applyItoAction, initialItoState, itoViewFor, maybeReveal } from '../src/games/ito/rules';
 import type { ItoAction, ItoState } from '../src/games/ito/types';
 import { mulberry32 } from '../src/rng';
 
@@ -200,5 +200,169 @@ describe('prontos', () => {
     s = act(s, 'a', { type: 'ready', ready: true }, c);
     s = act(s, 'a', { type: 'ready', ready: false }, c);
     expect(s.ready).toEqual([]);
+  });
+});
+
+/** Força valores conhecidos nas cartas para testes determinísticos. */
+function withValues(state: ItoState, values: Record<string, number>): ItoState {
+  const cards = { ...state.cards };
+  for (const [id, value] of Object.entries(values)) cards[id] = { ...cards[id]!, value };
+  return { ...state, cards };
+}
+
+function placeAll(state: ItoState, order: string[], c: GameContext): ItoState {
+  let s = state;
+  order.forEach((cardId, i) => {
+    s = act(s, cardId.split(':')[0]!, { type: 'place', cardId, index: i }, c);
+  });
+  return s;
+}
+
+function readyAll(state: ItoState, players: string[], c: GameContext): ItoState {
+  return players.reduce((s, p) => act(s, p, { type: 'ready', ready: true }, c), state);
+}
+
+describe('revelação', () => {
+  const c = ctx(['a', 'b']);
+
+  it('revela sozinho quando todos ficam prontos', () => {
+    let s = withValues(toSorting(['a', 'b']), { 'a:0': 10, 'b:0': 80 });
+    s = placeAll(s, ['a:0', 'b:0'], c);
+    s = readyAll(s, ['a', 'b'], c);
+    expect(s.phase).toBe('reveal');
+    expect(s.outcome).toBe('round_won');
+    expect(s.reveal?.map((e) => e.value)).toEqual([10, 80]);
+  });
+
+  it('modo livre perde com carta fora de ordem', () => {
+    let s = withValues(toSorting(['a', 'b']), { 'a:0': 90, 'b:0': 20 });
+    s = readyAll(placeAll(s, ['a:0', 'b:0'], c), ['a', 'b'], c);
+    expect(s.outcome).toBe('round_lost');
+    expect(s.reveal?.map((e) => e.error)).toEqual([false, true]);
+  });
+
+  it('ignora jogador inativo na contagem de prontos', () => {
+    let s = withValues(toSorting(['a', 'b']), { 'a:0': 10, 'b:0': 80 });
+    s = placeAll(s, ['a:0', 'b:0'], c);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    expect(s.phase).toBe('sorting');
+    s = maybeReveal(s, ctx(['a']));
+    expect(s.phase).toBe('reveal');
+  });
+
+  it('não revela sozinho se faltar carta na fila', () => {
+    let s = toSorting(['a', 'b']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    expect(maybeReveal(s, ctx(['a'])).phase).toBe('sorting');
+  });
+
+  it('host força revelação só com todas as cartas na fila', () => {
+    let s = toSorting(['a', 'b']);
+    expect(errorOf(s, 'a', { type: 'forceReveal' }, c)).toBe('cards_missing');
+    s = placeAll(s, ['a:0', 'b:0'], c);
+    expect(errorOf(s, 'b', { type: 'forceReveal' }, c)).toBe('not_host');
+    expect(act(s, 'a', { type: 'forceReveal' }, c).phase).toBe('reveal');
+  });
+});
+
+describe('campanha', () => {
+  const c = ctx(['a', 'b']);
+
+  function playLevel(s: ItoState, valuesInRowOrder: number[]): ItoState {
+    const order = [...s.players.flatMap((p) => Object.values(s.cards).filter((x) => x.owner === p).map((x) => x.id))];
+    const values: Record<string, number> = {};
+    order.forEach((id, i) => {
+      values[id] = valuesInRowOrder[i]!;
+    });
+    let next = withValues(s, values);
+    next = placeAll(next, order, c);
+    return readyAll(next, s.players, c);
+  }
+
+  it('sobe de nível com tema novo e mais cartas', () => {
+    let s = toSorting(['a', 'b'], 'campanha');
+    s = playLevel(s, [10, 20]);
+    expect(s.outcome).toBe('level_cleared');
+    const tema1 = s.theme?.titulo;
+    s = act(s, 'a', { type: 'next' }, c);
+    expect(s.phase).toBe('theme');
+    expect(s.level).toBe(2);
+    expect(s.theme?.titulo).not.toBe(tema1);
+    s = act(s, 'a', { type: 'beginRound' }, c);
+    expect(Object.values(s.cards)).toHaveLength(4);
+  });
+
+  it('perde vidas por erro e termina em derrota', () => {
+    let s = toSorting(['a', 'b'], 'campanha');
+    s = playLevel(s, [50, 10]);
+    expect(s.lives).toBe(2);
+    expect(s.outcome).toBe('level_cleared');
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    s = playLevel(s, [90, 80, 70, 60]);
+    expect(s.lives).toBe(0);
+    expect(s.outcome).toBe('lost');
+    s = act(s, 'a', { type: 'next' }, c);
+    expect(s.phase).toBe('lobby');
+    expect(s.mode).toBe('campanha');
+  });
+
+  it('vence ao passar do nível 3', () => {
+    let s = toSorting(['a', 'b'], 'campanha');
+    s = playLevel(s, [1, 2]);
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    s = playLevel(s, [1, 2, 3, 4]);
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    s = playLevel(s, [1, 2, 3, 4, 5, 6]);
+    expect(s.outcome).toBe('won');
+  });
+
+  it('next durante a ordenação descarta a rodada sem perder vida', () => {
+    let s = toSorting(['a', 'b'], 'campanha');
+    s = act(s, 'a', { type: 'next' }, c);
+    expect(s.phase).toBe('theme');
+    expect(s.level).toBe(1);
+    expect(s.lives).toBe(3);
+  });
+
+  it('modo livre: next após revelar começa nova rodada com os ativos', () => {
+    let s = withValues(toSorting(['a', 'b']), { 'a:0': 1, 'b:0': 2 });
+    s = readyAll(placeAll(s, ['a:0', 'b:0'], c), ['a', 'b'], c);
+    s = act(s, 'a', { type: 'next' }, ctx(['a', 'b', 'c']));
+    expect(s.phase).toBe('theme');
+    expect(s.players).toEqual(['a', 'b', 'c']);
+  });
+
+  it('next exige host, fase certa e 2 ativos', () => {
+    const s = toSorting(['a', 'b']);
+    expect(errorOf(s, 'b', { type: 'next' }, c)).toBe('not_host');
+    expect(errorOf(s, 'a', { type: 'next' }, ctx(['a']))).toBe('not_enough_players');
+    expect(errorOf(initialItoState(), 'a', { type: 'next' }, c)).toBe('bad_phase');
+  });
+});
+
+describe('visão por jogador', () => {
+  const c = ctx(['a', 'b']);
+
+  it('esconde números alheios antes da revelação', () => {
+    const s = toSorting(['a', 'b']);
+    const v = itoViewFor(s, 'a');
+    expect(v.cards['a:0']?.value).toBe(s.cards['a:0']?.value);
+    expect(v.cards['b:0']?.value).toBeNull();
+    expect(JSON.stringify(itoViewFor(s, null))).not.toContain(`"value":${s.cards['b:0']?.value}`);
+    expect('usedThemes' in v).toBe(false);
+  });
+
+  it('mostra todos os números na revelação', () => {
+    let s = toSorting(['a', 'b']);
+    s = act(placeAll(s, ['a:0', 'b:0'], c), 'a', { type: 'forceReveal' }, c);
+    const v = itoViewFor(s, 'a');
+    expect(v.cards['b:0']?.value).toBe(s.cards['b:0']?.value);
+  });
+
+  it('dicas são visíveis para todos', () => {
+    let s = toSorting(['a', 'b']);
+    s = act(s, 'b', { type: 'clue', cardId: 'b:0', text: 'Japão' }, c);
+    expect(itoViewFor(s, 'a').cards['b:0']?.clue).toBe('Japão');
   });
 });
