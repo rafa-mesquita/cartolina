@@ -48,9 +48,10 @@ export async function findGroup(db: D1Database, slug: string): Promise<GroupRow 
   return (await db.prepare('SELECT id, slug, name, created_at FROM groups WHERE slug = ?').bind(slug).first<GroupRow>()) ?? null;
 }
 
-export async function insertRound(db: D1Database, groupId: string, r: RoundRecord): Promise<void> {
+/** Idempotente por (grupo, sala, chave da revelação): gravar a mesma revelação de novo não duplica. */
+export async function insertRound(db: D1Database, groupId: string, r: RoundRecord, revealKey: string): Promise<void> {
   await db
-    .prepare(`INSERT INTO rounds (${ROUND_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .prepare(`INSERT OR IGNORE INTO rounds (${ROUND_COLS}, reveal_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(
       r.id,
       groupId,
@@ -64,6 +65,7 @@ export async function insertRound(db: D1Database, groupId: string, r: RoundRecor
       JSON.stringify(r.theme),
       JSON.stringify(r.players),
       JSON.stringify(r.cards),
+      revealKey,
     )
     .run();
 }

@@ -30,7 +30,7 @@ describe('history-db', () => {
 
   it('grava e lista rodadas (mais recentes primeiro, com paginação)', async () => {
     const g = await createGroup(env.DB, 'Galera', 1000);
-    for (const t of [10, 30, 20]) await insertRound(env.DB, g.id, rec(t));
+    for (const t of [10, 30, 20]) await insertRound(env.DB, g.id, rec(t), `k${t}`);
     const page1 = await listRounds(env.DB, g.id, null, 2);
     expect(page1.map((r) => r.playedAt)).toEqual([30, 20]);
     const page2 = await listRounds(env.DB, g.id, 20, 2);
@@ -43,7 +43,17 @@ describe('history-db', () => {
   it('rodadas de um grupo não aparecem em outro', async () => {
     const a = await createGroup(env.DB, 'A', 1);
     const b = await createGroup(env.DB, 'B', 1);
-    await insertRound(env.DB, a.id, rec(5));
+    await insertRound(env.DB, a.id, rec(5), 'k5');
     expect(await listRounds(env.DB, b.id, null, 20)).toEqual([]);
+  });
+
+  it('gravar a mesma revelação duas vezes deixa uma linha só', async () => {
+    const g = await createGroup(env.DB, 'Galera', 1000);
+    const r = rec(7);
+    await insertRound(env.DB, g.id, r, 'mesma-chave');
+    await insertRound(env.DB, g.id, { ...r, id: crypto.randomUUID() }, 'mesma-chave');
+    expect(await listRounds(env.DB, g.id, null, 20)).toHaveLength(1);
+    await insertRound(env.DB, g.id, { ...r, id: crypto.randomUUID() }, 'outra-chave');
+    expect(await listRounds(env.DB, g.id, null, 20)).toHaveLength(2);
   });
 });

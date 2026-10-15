@@ -43,8 +43,15 @@ export class RoomDO extends DurableObject<Env> {
     super(ctx, env);
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(HEARTBEAT_PING, HEARTBEAT_PONG));
     ctx.blockConcurrencyWhile(async () => {
-      this.room = (await ctx.storage.get<Room>('room')) ?? null;
-      if (!this.room) return;
+      const stored = (await ctx.storage.get<Room>('room')) ?? null;
+      if (!stored) return;
+      // Salas gravadas antes do histórico do grupo não têm estes campos.
+      this.room = {
+        ...stored,
+        group: stored.group ?? null,
+        runStartedAt: stored.runStartedAt ?? null,
+        recordedRevealKey: stored.recordedRevealKey ?? null,
+      };
       // Após um restart, `connected` pode estar obsoleto: quem não tem socket vivo está desconectado.
       const live = new Set(
         ctx.getWebSockets().map((s) => this.attachment(s).playerId).filter((id): id is string => id !== null),
@@ -230,7 +237,7 @@ export class RoomDO extends DurableObject<Env> {
     const pending = pendingRecord(this.room, Date.now(), crypto.randomUUID());
     if (pending && this.room.group) {
       try {
-        await insertRound(this.env.DB, this.room.group.id, pending.record);
+        await insertRound(this.env.DB, this.room.group.id, pending.record, pending.key);
         this.room = { ...this.room, recordedRevealKey: pending.key };
       } catch (err) {
         console.error('falha ao gravar rodada no histórico', err);
