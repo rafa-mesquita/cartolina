@@ -5,7 +5,7 @@ import { loadSoundPref } from '../net/identity';
  * sintetizados na hora com Web Audio (opção "A" de `prototipo/sons.html`): um "tic" de madeira por
  * carta que vira, subindo de tom; um "tunc" grave em cada erro; arpejo feliz ou "uó-uó" no fim.
  */
-export type SoundName = 'card' | 'pick' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
+export type SoundName = 'card' | 'pick' | 'slide' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
 
 /**
  * Sons de arquivo. `pick` (escolher personagem) usa o mesmo arquivo e os mesmos elementos da carta.
@@ -148,6 +148,11 @@ const SYNTH: Record<Exclude<SoundName, FileSound>, (c: AudioContext, index: numb
   },
   /** Estalinho curto e baixinho dos botões. */
   click: (c) => tone(c, { f: 880, dur: 0.06, type: 'triangle', vol: 0.06, attack: 0.003 }),
+  /** Outra pessoa mexeu na fila: carta deslizando no papel + toquinho de madeira, mais baixo que o da sua carta. */
+  slide: (c) => {
+    noise(c, { dur: 0.14, vol: 0.07, freq: 1400, q: 0.7 });
+    tone(c, { f: 520, t: 0.11, dur: 0.07, type: 'triangle', vol: 0.06, partial: 3 });
+  },
 };
 
 /**

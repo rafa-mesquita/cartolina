@@ -684,7 +684,8 @@ export class TableEngine {
       rc.el.style.display = '';
     }
     this.removeOverlay(o);
-    if (rc) this.handlers.sound?.('card');
+    // sua carta (ou carta que você moveu) faz o som da carta; mexida de outra pessoa faz um som diferente, mais suave
+    if (rc) this.handlers.sound?.((o.carrier ?? o.owner) === this.view?.you ? 'card' : 'slide');
     this.reconcile(false);
     this.emit();
   }

@@ -748,6 +748,8 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
     engine.update(viewOf(room, 'p0'));
     engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.6, y: 0.66, drag: null });
     expect(h.sound).toHaveBeenCalledTimes(2);
+    // mexida de outra pessoa tem som próprio (não repete o da minha carta)
+    expect(h.sound).toHaveBeenLastCalledWith('slide');
     // p2 aparece na fila só pelo estado (sem arrasto visível): entra sem som
     room = act(room, 'p2', { type: 'place', cardId: 'p2:0', index: 0 });
     engine.update(viewOf(room, 'p0'));
@@ -769,7 +771,7 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
     const v = viewOf(room, 'p0');
     return { room, view: { ...v, game: { ...v.game, outcome, reveal: v.game.reveal!.map((e, i) => ({ ...e, error: errors[i]! })) } } };
   }
-  const revealSounds = (h: ReturnType<typeof handlers>) => h.sound.mock.calls.filter(([n]) => n !== 'card');
+  const revealSounds = (h: ReturnType<typeof handlers>) => h.sound.mock.calls.filter(([n]) => n !== 'card' && n !== 'slide');
 
   it('revelação animada: tic por carta (índice sobe), tunc só nos erros, derrota no fim', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
