@@ -1,0 +1,159 @@
+import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
+import type { PlayerColor } from './players';
+import type { Room } from './room';
+
+export const GROUP_NAME_MAX = 40;
+export const SHARPEST_MIN_CARDS = 3;
+
+export function cleanGroupName(raw: string): string | null {
+  const name = raw.trim().replace(/\s+/g, ' ');
+  const length = Array.from(name).length;
+  return length >= 1 && length <= GROUP_NAME_MAX ? name : null;
+}
+
+export interface RoundPlayer {
+  name: string;
+  color: PlayerColor;
+}
+
+export interface RoundCard {
+  name: string;
+  color: PlayerColor;
+  value: number;
+  clue: string;
+  error: boolean;
+}
+
+/** Uma rodada revelada, como fica gravada no histórico do grupo. */
+export interface RoundRecord {
+  id: string;
+  roomCode: string;
+  playedAt: number;
+  mode: ItoMode;
+  level: number;
+  outcome: ItoOutcome;
+  errors: number;
+  campaignId: string | null;
+  theme: Theme;
+  players: RoundPlayer[];
+  /** Na ordem da fila revelada. */
+  cards: RoundCard[];
+}
+
+export interface PlayerStat {
+  name: string;
+  color: PlayerColor;
+  cards: number;
+  correct: number;
+  accuracy: number;
+}
+
+export interface HistoryStats {
+  rounds: number;
+  livreRounds: number;
+  livreWins: number;
+  campaigns: number;
+  campaignsWon: number;
+  /** Maior sequência de rodadas seguidas sem nenhum erro. */
+  bestStreak: number;
+  /** Quem mais acerta a posição (mín. 3 cartas). */
+  sharpest: PlayerStat | null;
+  topThemes: { titulo: string; count: number }[];
+}
+
+export interface GroupInfo {
+  slug: string;
+  name: string;
+  createdAt: number;
+}
+
+/** Resposta de `GET /groups/:slug`. */
+export interface GroupResponse {
+  group: GroupInfo;
+  rounds: RoundRecord[];
+  stats: HistoryStats;
+  nextBefore: number | null;
+}
+
+/** Identifica uma revelação (ids das cartas se repetem entre rodadas, então entra o valor). */
+export function revealKey(game: ItoState): string | null {
+  if (game.phase !== 'reveal' || !game.reveal) return null;
+  return game.reveal.map((e) => `${e.cardId}=${e.value}`).join('|');
+}
+
+/** Registro a gravar se a sala é de um grupo e está numa revelação ainda não gravada. */
+export function pendingRecord(room: Room, now: number, id: string): { key: string; record: RoundRecord } | null {
+  if (!room.group) return null;
+  const game = room.game;
+  const key = revealKey(game);
+  if (!key || key === room.recordedRevealKey || !game.outcome || !game.theme || !game.reveal) return null;
+  const seatOf = (playerId: string) => room.seats.find((s) => s.id === playerId);
+  const players = game.players.flatMap((playerId) => {
+    const seat = seatOf(playerId);
+    return seat ? [{ name: seat.name, color: seat.color }] : [];
+  });
+  const cards = game.reveal.flatMap((entry) => {
+    const seat = seatOf(entry.owner);
+    if (!seat) return [];
+    const clue = game.cards[entry.cardId]?.clue.trim() ?? '';
+    return [{ name: seat.name, color: seat.color, value: entry.value, clue, error: entry.error }];
+  });
+  return {
+    key,
+    record: {
+      id,
+      roomCode: room.code,
+      playedAt: now,
+      mode: game.mode,
+      level: game.level,
+      outcome: game.outcome,
+      errors: game.reveal.filter((e) => e.error).length,
+      campaignId: game.mode === 'campanha' ? `${room.code}-${room.runStartedAt ?? 0}` : null,
+      theme: game.theme,
+      players,
+      cards,
+    },
+  };
+}
+
+export function summarizeHistory(rounds: readonly RoundRecord[]): HistoryStats {
+  const ordered = [...rounds].sort((a, b) => a.playedAt - b.playedAt);
+  let streak = 0;
+  let bestStreak = 0;
+  let livreRounds = 0;
+  let livreWins = 0;
+  let campaigns = 0;
+  let campaignsWon = 0;
+  const players = new Map<string, PlayerStat>();
+  const themes = new Map<string, number>();
+  for (const r of ordered) {
+    streak = r.errors === 0 ? streak + 1 : 0;
+    bestStreak = Math.max(bestStreak, streak);
+    if (r.mode === 'livre') {
+      livreRounds++;
+      if (r.outcome === 'round_won') livreWins++;
+    }
+    if (r.outcome === 'won' || r.outcome === 'lost') {
+      campaigns++;
+      if (r.outcome === 'won') campaignsWon++;
+    }
+    themes.set(r.theme.titulo, (themes.get(r.theme.titulo) ?? 0) + 1);
+    for (const c of r.cards) {
+      const p = players.get(c.name) ?? { name: c.name, color: c.color, cards: 0, correct: 0, accuracy: 0 };
+      p.cards++;
+      if (!c.error) p.correct++;
+      p.color = c.color;
+      p.accuracy = p.correct / p.cards;
+      players.set(c.name, p);
+    }
+  }
+  const sharpest =
+    [...players.values()]
+      .filter((p) => p.cards >= SHARPEST_MIN_CARDS)
+      .sort((a, b) => b.accuracy - a.accuracy || b.cards - a.cards || a.name.localeCompare(b.name))[0] ?? null;
+  const topThemes = [...themes.entries()]
+    .map(([titulo, count]) => ({ titulo, count }))
+    .sort((a, b) => b.count - a.count || a.titulo.localeCompare(b.titulo))
+    .slice(0, 5);
+  return { rounds: ordered.length, livreRounds, livreWins, campaigns, campaignsWon, bestStreak, sharpest, topThemes };
+}

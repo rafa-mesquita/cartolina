@@ -7,3 +7,4 @@ export * from './games/ito/types';
 export { THEMES, THEME_LIMITS, cleanTheme, pickTheme } from './games/ito/themes';
 export { computeReveal, resolveOutcome } from './games/ito/scoring';
 export { applyItoAction, initialItoState, ito, itoViewFor, maybeReveal } from './games/ito/rules';
+export * from './history';
