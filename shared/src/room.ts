@@ -65,14 +65,18 @@ export function joinRoom(
   if (!name) return { ok: false, error: 'bad_name' };
   if (!isPlayerColor(input.color)) return { ok: false, error: 'bad_color' };
   const color = input.color;
-  const id = room.tokens[input.token] ?? newId;
+  // Object.hasOwn: tokens como '__proto__' ou 'toString' não podem resolver para o protótipo.
+  const known = Object.hasOwn(room.tokens, input.token) ? room.tokens[input.token] : undefined;
+  const id = typeof known === 'string' ? known : newId;
 
   let seats = room.seats;
+  let tokens = room.tokens;
   const existing = seats.find((s) => s.id === id);
   if (!existing && seats.length >= MAX_PLAYERS) {
     const ghost = seats.find((s) => !isActive(s, now) && !room.game.players.includes(s.id));
     if (!ghost) return { ok: false, error: 'room_full' };
     seats = seats.filter((s) => s.id !== ghost.id);
+    tokens = Object.fromEntries(Object.entries(tokens).filter(([, v]) => v !== ghost.id));
   }
   if (seats.some((s) => s.id !== id && s.color === color)) return { ok: false, error: 'color_taken' };
 
@@ -82,7 +86,7 @@ export function joinRoom(
   return {
     ok: true,
     playerId: id,
-    room: { ...room, seats, hostId, tokens: { ...room.tokens, [input.token]: id }, lastActivity: now },
+    room: { ...room, seats, hostId, tokens: { ...tokens, [input.token]: id }, lastActivity: now },
   };
 }
 
@@ -102,7 +106,9 @@ export function tick(room: Room, now: number, rng: Rng): Room {
     const order = room.seats.map((s) => s.id);
     const start = hostId === null ? 0 : order.indexOf(hostId) + 1;
     const rotated = [...order.slice(start), ...order.slice(0, start)];
-    hostId = rotated.find((id) => active.includes(id)) ?? hostId;
+    const connected = new Set(room.seats.filter((s) => s.connected).map((s) => s.id));
+    hostId =
+      rotated.find((id) => connected.has(id)) ?? rotated.find((id) => active.includes(id)) ?? hostId;
   }
   const game = ito.onPresenceChange(room.game, { hostId, active, rng });
   return { ...room, hostId, game };
@@ -136,7 +142,8 @@ export function isExpired(room: Room, now: number): boolean {
 /** Próximo momento em que o servidor precisa acordar: fim de uma tolerância de desconexão ou expiração. */
 export function nextAlarmAt(room: Room, now: number): number {
   const pending = room.seats
-    .filter((s) => !s.connected && s.disconnectedAt !== null && now - s.disconnectedAt < DISCONNECT_GRACE_MS)
-    .map((s) => s.disconnectedAt! + DISCONNECT_GRACE_MS + 1000);
+    .filter((s) => !s.connected && s.disconnectedAt !== null)
+    .map((s) => s.disconnectedAt! + DISCONNECT_GRACE_MS + 1000)
+    .filter((at) => at > now);
   return Math.min(room.lastActivity + ROOM_TTL_MS, ...pending);
 }

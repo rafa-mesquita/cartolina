@@ -77,6 +77,49 @@ describe('joinRoom', () => {
   });
 });
 
+describe('joinRoom (segurança e limites)', () => {
+  it('tokens com nome de protótipo criam assento normal', () => {
+    for (const token of ['__proto__', 'toString', 'constructor', 'hasOwnProperty']) {
+      const res = join(createRoom('ABCD', T0), token, 'Ana', 0);
+      expect(res.playerId).toBe(`id-${token}`);
+      expect(res.room.seats).toHaveLength(1);
+      expect(res.room.seats[0]!.id).toBe(`id-${token}`);
+    }
+  });
+
+  it('reconexão com token existente funciona em sala cheia', () => {
+    let room = roomWith(10);
+    room = disconnect(room, 'id-tok4', T0);
+    const res = join(room, 'tok4', 'Volta', 4, T0 + DISCONNECT_GRACE_MS + 5);
+    expect(res.playerId).toBe('id-tok4');
+    expect(res.room.seats).toHaveLength(10);
+    expect(res.room.seats.find((s) => s.id === 'id-tok4')).toMatchObject({ name: 'Volta', connected: true });
+  });
+
+  it('sala cheia cujo único assento inativo está no jogo continua cheia', () => {
+    let room = roomWith(10);
+    room = { ...room, game: { ...room.game, players: ['id-tok3'] } };
+    room = disconnect(room, 'id-tok3', T0);
+    const later = T0 + DISCONNECT_GRACE_MS + 1;
+    expect(joinRoom(room, { token: 'novo', name: 'X', color: PLAYER_COLORS[3] }, 'id-novo', later)).toEqual({
+      ok: false,
+      error: 'room_full',
+    });
+  });
+
+  it('ao reaproveitar assento, remove os tokens do jogador removido', () => {
+    let room = roomWith(10);
+    room = disconnect(room, 'id-tok3', T0);
+    const res = joinRoom(room, { token: 'novo', name: 'X', color: PLAYER_COLORS[3] }, 'id-novo', T0 + DISCONNECT_GRACE_MS + 1);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(Object.values(res.room.tokens)).not.toContain('id-tok3');
+      expect(Object.hasOwn(res.room.tokens, 'tok3')).toBe(false);
+      expect(res.room.tokens['novo']).toBe('id-novo');
+    }
+  });
+});
+
 describe('presença e host', () => {
   it('desconectado continua ativo durante a tolerância', () => {
     let room = roomWith(2);
@@ -89,6 +132,28 @@ describe('presença e host', () => {
     let room = roomWith(3);
     room = disconnect(room, 'id-tok0', T0);
     expect(tick(room, T0 + 1000, rng).hostId).toBe('id-tok0');
+    expect(tick(room, T0 + DISCONNECT_GRACE_MS, rng).hostId).toBe('id-tok1');
+  });
+
+  it('host passa para o próximo conectado, pulando quem só está em tolerância', () => {
+    let room = roomWith(3);
+    room = disconnect(room, 'id-tok0', T0);
+    room = disconnect(room, 'id-tok1', T0 + DISCONNECT_GRACE_MS - 10);
+    const next = tick(room, T0 + DISCONNECT_GRACE_MS, rng);
+    expect(next.hostId).toBe('id-tok2');
+  });
+
+  it('host passa adiante com volta ao início quando o host é o último assento', () => {
+    let room = roomWith(3);
+    room = { ...room, hostId: 'id-tok2' };
+    room = disconnect(room, 'id-tok2', T0);
+    expect(tick(room, T0 + DISCONNECT_GRACE_MS, rng).hostId).toBe('id-tok0');
+  });
+
+  it('sem ninguém conectado, cai para um assento ativo em tolerância', () => {
+    let room = roomWith(2);
+    room = disconnect(room, 'id-tok0', T0);
+    room = disconnect(room, 'id-tok1', T0 + DISCONNECT_GRACE_MS - 10);
     expect(tick(room, T0 + DISCONNECT_GRACE_MS, rng).hostId).toBe('id-tok1');
   });
 
@@ -138,6 +203,22 @@ describe('alarmes', () => {
   it('com desconexão recente, o alarme é logo após a tolerância', () => {
     const room = disconnect(roomWith(2), 'id-tok1', T0 + 100);
     expect(nextAlarmAt(room, T0 + 200)).toBe(T0 + 100 + DISCONNECT_GRACE_MS + 1000);
+  });
+
+  it('o alarme ainda inclui a desconexão enquanto a janela de +1 s não passou', () => {
+    const room = disconnect(roomWith(2), 'id-tok1', T0);
+    expect(nextAlarmAt(room, T0 + DISCONNECT_GRACE_MS + 500)).toBe(T0 + DISCONNECT_GRACE_MS + 1000);
+  });
+
+  it('com duas desconexões pendentes, usa a mais próxima', () => {
+    let room = disconnect(roomWith(3), 'id-tok1', T0 + 500);
+    room = disconnect(room, 'id-tok2', T0 + 100);
+    expect(nextAlarmAt(room, T0 + 600)).toBe(T0 + 100 + DISCONNECT_GRACE_MS + 1000);
+  });
+
+  it('desconexão cuja janela já passou volta ao TTL', () => {
+    const room = disconnect(roomWith(2), 'id-tok1', T0);
+    expect(nextAlarmAt(room, T0 + DISCONNECT_GRACE_MS + 1000)).toBe(T0 + ROOM_TTL_MS);
   });
 
   it('expira após 6 h sem atividade', () => {

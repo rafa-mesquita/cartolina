@@ -5,9 +5,9 @@ const parse = (v: unknown) => parseClientMessage(JSON.stringify(v));
 
 describe('parseClientMessage', () => {
   it('aceita join válido', () => {
-    expect(parse({ t: 'join', token: 'abcdefgh-1234', name: 'Ana', color: '#8EC5FF' })).toEqual({
+    expect(parse({ t: 'join', token: '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b', name: 'Ana', color: '#8EC5FF' })).toEqual({
       t: 'join',
-      token: 'abcdefgh-1234',
+      token: '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b',
       name: 'Ana',
       color: '#8EC5FF',
     });
@@ -25,6 +25,16 @@ describe('parseClientMessage', () => {
   it('aceita fx de cursor com e sem arrasto', () => {
     expect(parse({ t: 'fx.cursor', zone: 'table', x: 0.5, y: 0.2, drag: null })).not.toBeNull();
     expect(parse({ t: 'fx.cursor', zone: 'hand', x: 0.1, y: 0.9, drag: { cardId: 'a:0', index: 1 } })).not.toBeNull();
+  });
+
+  it('aceita token no formato de crypto.randomUUID() (UUID v4)', () => {
+    expect(parse({ t: 'join', token: 'c9bf9e57-1685-4c89-bafb-ff5af830be8a', name: 'Ana', color: '#8EC5FF' })).not.toBeNull();
+  });
+
+  it('rejeita token que não é UUID', () => {
+    for (const token of ['__proto__', 'toString', 'abcdefgh-1234', 'x'.repeat(36)]) {
+      expect(parse({ t: 'join', token, name: 'Ana', color: '#8EC5FF' })).toBeNull();
+    }
   });
 
   it('rejeita lixo', () => {

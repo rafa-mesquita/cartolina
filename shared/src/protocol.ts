@@ -33,7 +33,7 @@ export const ACTIVITIES = ['thinking', 'writing', 'dragging'] as const;
 export type Activity = (typeof ACTIVITIES)[number];
 
 export const clientMessageSchema = z.discriminatedUnion('t', [
-  z.object({ t: z.literal('join'), token: z.string().min(8).max(64), name: z.string().max(100), color: z.string().max(16) }),
+  z.object({ t: z.literal('join'), token: z.string().uuid(), name: z.string().max(100), color: z.string().max(16) }),
   z.object({ t: z.literal('action'), action: itoActionSchema }),
   z.object({
     t: z.literal('fx.cursor'),
