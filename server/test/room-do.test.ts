@@ -204,3 +204,16 @@ describe('RoomDO: expiração', () => {
     expect((await SELF.fetch(`https://x/rooms/${code}`)).status).toBe(404);
   });
 });
+
+describe('RoomDO: heartbeat', () => {
+  it('responde "pong" a "ping" sem gerar erro', async () => {
+    const code = await newRoomCode();
+    const [a] = await joined(code, 1);
+    a!.client.ws.send('ping');
+    const deadline = Date.now() + 2000;
+    while (!a!.client.raw.includes('pong') && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+    expect(a!.client.raw).toContain('pong');
+    await barrier(a!.client);
+    expect(a!.client.inbox.some((m) => m.t === 'error')).toBe(false);
+  });
+});
