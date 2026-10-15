@@ -1,7 +1,7 @@
 import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import type { GameConn } from '../src/net/connection';
-import type { EngineSnapshot } from '../src/table/engine';
+import type { EngineSnapshot, TableEngine } from '../src/table/engine';
 import { Hand } from '../src/table/Hand';
 import { ReadyColumn } from '../src/table/ReadyColumn';
 import { Table } from '../src/table/Table';
@@ -230,6 +230,27 @@ describe('Hand', () => {
       typeClue('de novo');
       vi.advanceTimersByTime(400);
       expect(clueSends(c)).toEqual([[{ type: 'clue', cardId: 'p0:0', text: 'de novo' }]]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('arrastar a carta logo depois de digitar manda a dica antes (senão ela se perderia)', () => {
+    vi.useFakeTimers();
+    try {
+      const c = conn();
+      const order: string[] = [];
+      c.sendAction.mockImplementation((a) => void order.push(a.type));
+      const engine = { beginHandDrag: vi.fn(() => void order.push('drag')) } as unknown as TableEngine;
+      const view = viewOf(sortingRoom(2), 'p0');
+      const { container, rerender } = render(<Hand view={view} snap={snap([])} engine={engine} conn={c} />);
+      typeClue('boletim');
+      fireEvent.pointerDown(slot(container).querySelector('.mynum')!);
+      expect(order).toEqual(['clue', 'drag']);
+      expect(clueSends(c)).toEqual([[{ type: 'clue', cardId: 'p0:0', text: 'boletim' }]]);
+      rerender(<Hand view={view} snap={snap([], [], 'p0:0')} engine={engine} conn={c} />);
+      vi.advanceTimersByTime(1000);
+      expect(clueSends(c)).toHaveLength(1);
     } finally {
       vi.useRealTimers();
     }
