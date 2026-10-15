@@ -17,6 +17,7 @@ import {
 } from './rowLayout';
 import { Spring } from './spring';
 import { critterSvg } from '../brand/critters';
+import type { SoundName } from '../brand/sounds';
 
 export interface EngineDom {
   wrap: HTMLElement;
@@ -35,8 +36,8 @@ export interface EngineHandlers {
   activity(activity: Activity): void;
   ping(x: number, y: number): void;
   revealDone(): void;
-  /** Efeito sonoro: carta pousando na fila; começo de uma revelação animada. */
-  sound?(name: 'card' | 'reveal'): void;
+  /** Efeito sonoro: carta pousando; na revelação animada, tic por carta (`index`), erro e desfecho. */
+  sound?(name: SoundName, index?: number): void;
 }
 
 export interface EngineSnapshot {
@@ -1060,15 +1061,19 @@ export class TableEngine {
       this.handlers.revealDone();
       return;
     }
-    this.handlers.sound?.('reveal');
+    const won = g.outcome === 'round_won' || g.outcome === 'level_cleared' || g.outcome === 'won';
     let t = 750;
-    for (const e of g.reveal) {
-      this.later(t, () => this.flipCard(e, false));
+    g.reveal.forEach((e, i) => {
+      this.later(t, () => {
+        this.flipCard(e, false);
+        this.handlers.sound?.('flip', i);
+      });
       t += 620;
-    }
+    });
     this.later(t + 500, () => {
       this.revealing = false;
       this.emit();
+      this.handlers.sound?.(won ? 'win' : 'lose');
       this.handlers.revealDone();
     });
   }
@@ -1104,6 +1109,7 @@ export class TableEngine {
     rc.sp.flip.t = 1;
     this.later(330, () => {
       if (e.error) {
+        this.handlers.sound?.('error');
         rc.el.classList.add('err');
         rc.dirty = true;
         rc.sp.stamp.snap(2.3);

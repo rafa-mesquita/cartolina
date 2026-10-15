@@ -59,7 +59,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
         activity: (a) => conn.sendActivity(a),
         ping: (x, y) => conn.sendPing(x, y),
         revealDone: () => setRevealDone(revealKeyRef.current),
-        sound: (name) => playSound(name),
+        sound: (name, index) => playSound(name, index),
       },
     );
     e.setTilt(loadTiltPref(), true);

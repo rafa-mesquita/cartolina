@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { SoundName } from '../src/brand/sounds';
 import { TableEngine, type EngineDom } from '../src/table/engine';
 import { PLAYER_COLORS, joinRoom, type Room } from '@cartolina/shared';
 import { act, sortingRoom, viewOf } from './fixtures';
@@ -19,7 +20,7 @@ const handlers = () => ({
   activity: vi.fn(),
   ping: vi.fn(),
   revealDone: vi.fn(),
-  sound: vi.fn<(name: 'card' | 'reveal') => void>(),
+  sound: vi.fn<(name: SoundName, index?: number) => void>(),
 });
 
 describe('TableEngine (fumaça)', () => {
@@ -733,18 +734,44 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
     engine.destroy();
   });
 
-  it('som da revelação uma vez por revelação animada; quem entra com ela já feita não ouve', () => {
+  /** Revelação de 3 cartas com erros e desfecho escolhidos pelo teste. */
+  function revealView(errors: boolean[], outcome: 'round_won' | 'round_lost' | 'level_cleared' | 'won' | 'lost') {
+    const room = act(fullRow(3), 'p0', { type: 'forceReveal' });
+    const v = viewOf(room, 'p0');
+    return { room, view: { ...v, game: { ...v.game, outcome, reveal: v.game.reveal!.map((e, i) => ({ ...e, error: errors[i]! })) } } };
+  }
+  const revealSounds = (h: ReturnType<typeof handlers>) => h.sound.mock.calls.filter(([n]) => n !== 'card');
+
+  it('revelação animada: tic por carta (índice sobe), tunc só nos erros, derrota no fim', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    let room = fullRow(2);
-    const { h, engine } = table(room);
-    room = act(room, 'p0', { type: 'forceReveal' });
-    engine.update(viewOf(room, 'p0'));
-    engine.update(viewOf(room, 'p0'));
+    const { view } = revealView([false, true, false], 'round_lost');
+    const { h, engine } = table(fullRow(3));
+    engine.update(view);
+    engine.update(view); // mesmo estado de novo: não repete
     vi.advanceTimersByTime(10_000);
-    expect(h.sound.mock.calls.filter(([n]) => n === 'reveal')).toHaveLength(1);
+    expect(revealSounds(h)).toEqual([['flip', 0], ['flip', 1], ['error'], ['flip', 2], ['lose']]);
+    expect(h.revealDone).toHaveBeenCalledTimes(1);
     engine.destroy();
+  });
+
+  it('revelação sem erro termina com vitória (rodada, nível ou campanha)', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    for (const outcome of ['round_won', 'level_cleared', 'won'] as const) {
+      const { view } = revealView([false, false, false], outcome);
+      const { h, engine } = table(fullRow(3));
+      engine.update(view);
+      vi.advanceTimersByTime(10_000);
+      expect(revealSounds(h)).toEqual([['flip', 0], ['flip', 1], ['flip', 2], ['win']]);
+      engine.destroy();
+    }
+  });
+
+  it('quem entra com a revelação já feita não ouve nada da revelação', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { room } = revealView([false, true, false], 'round_lost');
     const late = table(room);
-    expect(late.h.sound).not.toHaveBeenCalledWith('reveal');
+    vi.advanceTimersByTime(10_000);
+    expect(revealSounds(late.h)).toEqual([]);
     late.engine.destroy();
   });
 
