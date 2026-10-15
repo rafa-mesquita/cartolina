@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 
-export type Route = { name: 'home' } | { name: 'room'; code: string };
+export type Route = { name: 'home' } | { name: 'room'; code: string } | { name: 'group'; slug: string };
 
 export function parseHash(hash: string): Route {
-  const match = hash.match(/^#\/sala\/([A-Za-z0-9]{4})$/);
-  return match ? { name: 'room', code: match[1]!.toUpperCase() } : { name: 'home' };
+  const room = hash.match(/^#\/sala\/([A-Za-z0-9]{4})$/);
+  if (room) return { name: 'room', code: room[1]!.toUpperCase() };
+  const group = hash.match(/^#\/g\/([a-z0-9]{10})$/);
+  if (group) return { name: 'group', slug: group[1]! };
+  return { name: 'home' };
 }
 
 export function useHashRoute(): Route {
@@ -28,4 +31,13 @@ export function goHome(): void {
 /** Link completo de uma sala (pra copiar e mandar pros amigos). */
 export function roomLink(code: string): string {
   return `${window.location.origin}${window.location.pathname}#/sala/${code}`;
+}
+
+export function goToGroup(slug: string): void {
+  window.location.hash = `#/g/${slug}`;
+}
+
+/** Link completo do grupo (é o segredo: quem tem vê o histórico). */
+export function groupLink(slug: string): string {
+  return `${window.location.origin}${window.location.pathname}#/g/${slug}`;
 }
