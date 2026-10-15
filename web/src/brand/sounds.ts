@@ -5,10 +5,15 @@ import { loadSoundPref } from '../net/identity';
  * sintetizados na hora com Web Audio (opção "A" de `prototipo/sons.html`): um "tic" de madeira por
  * carta que vira, subindo de tom; um "tunc" grave em cada erro; arpejo feliz ou "uó-uó" no fim.
  */
-export type SoundName = 'card' | 'flip' | 'error' | 'win' | 'lose';
+export type SoundName = 'card' | 'pick' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
 
-type FileSound = 'card';
-const FILES: Record<FileSound, { file: string; pool: number }> = {
+/**
+ * Sons de arquivo. `pick` (escolher personagem) usa o mesmo arquivo e os mesmos elementos da carta.
+ * Os outros dos menus são sintetizados: `join` ("plim-plim" ao entrar) e `click` (estalinho dos botões).
+ */
+type FileSound = 'card' | 'pick';
+const POOL_OF: Record<FileSound, 'card'> = { card: 'card', pick: 'card' };
+const FILES: Record<'card', { file: string; pool: number }> = {
   // Cartas pousando em sequência tocam por cima umas das outras.
   card: { file: 'card.mp3', pool: 3 },
 };
@@ -20,14 +25,15 @@ interface Pool {
   next: number;
 }
 
-const pools = new Map<FileSound, Pool>();
+const pools = new Map<'card', Pool>();
 let lastFile = -Infinity;
 let ctx: AudioContext | null = null;
 
 /** Relativo à base do site (`base: './'` no Vite): funciona em subpasta, como no GitHub Pages. */
 const urlOf = (file: string) => `${import.meta.env.BASE_URL}sounds/${file}`;
 
-function poolOf(name: FileSound): Pool {
+function poolOf(sound: FileSound): Pool {
+  const name = POOL_OF[sound];
   let pool = pools.get(name);
   if (!pool) {
     // Criados só no primeiro toque: ninguém baixa áudio antes de precisar.
@@ -131,6 +137,13 @@ const SYNTH: Record<Exclude<SoundName, FileSound>, (c: AudioContext, index: numb
     tone(c, { f: NOTE(67), dur: 0.35, type: 'square', vol: 0.06 });
     tone(c, { f: NOTE(62), t: 0.32, dur: 0.6, type: 'square', vol: 0.06, glideTo: NOTE(58) });
   },
+  /** "plim-plim" alegre ao entrar: dó e sol agudos. */
+  join: (c) => {
+    tone(c, { f: NOTE(84), dur: 0.25, type: 'triangle', vol: 0.18, partial: 2 });
+    tone(c, { f: NOTE(91), t: 0.15, dur: 0.35, type: 'triangle', vol: 0.18, partial: 2 });
+  },
+  /** Estalinho curto e baixinho dos botões. */
+  click: (c) => tone(c, { f: 880, dur: 0.06, type: 'triangle', vol: 0.06, attack: 0.003 }),
 };
 
 /**
@@ -140,7 +153,7 @@ const SYNTH: Record<Exclude<SoundName, FileSound>, (c: AudioContext, index: numb
 export function playSound(name: SoundName, index = 0, now: number = performance.now()): void {
   if (!loadSoundPref()) return;
   try {
-    if (name === 'card') {
+    if (name === 'card' || name === 'pick') {
       playFile(name, now);
       return;
     }

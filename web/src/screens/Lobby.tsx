@@ -4,6 +4,7 @@ import { isHost } from '../game/derive';
 import { roomLink } from '../lib/router';
 import type { GameConn } from '../net/connection';
 import { Avatar } from './Avatar';
+import { SoundToggle } from './SoundToggle';
 
 /** Bots para testar sozinho: só existe em dev; em produção o import some e o código não vai pro bundle. */
 const BotControls = import.meta.env.DEV ? lazy(() => import('../dev/BotControls')) : null;
@@ -66,6 +67,7 @@ export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
         <button className="sbtn" type="button" onClick={() => void copyLink()}>
           {copied ? 'link copiado!' : 'copiar link da sala'}
         </button>
+        <SoundToggle />
         {showLink && (
           <input
             className="text-in"

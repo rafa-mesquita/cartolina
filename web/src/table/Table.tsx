@@ -3,8 +3,9 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { isHost, seatStatus } from '../game/derive';
 import type { GameConn } from '../net/connection';
 import { playSound } from '../brand/sounds';
-import { loadSoundPref, loadTiltPref, saveSoundPref, saveTiltPref } from '../net/identity';
+import { loadTiltPref, saveTiltPref } from '../net/identity';
 import { Avatar } from '../screens/Avatar';
+import { SoundToggle } from '../screens/SoundToggle';
 import { FH, FW } from './constants';
 import { TableEngine, type EngineSnapshot } from './engine';
 import { Hand } from './Hand';
@@ -32,7 +33,6 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
   const tip = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<TableEngine | null>(null);
   const [tiltOn, setTiltOn] = useState(loadTiltPref);
-  const [soundOn, setSoundOn] = useState(loadSoundPref);
   const [activities, setActivities] = useState<Record<string, { a: Activity; until: number }>>({});
   // Chave da revelação cuja animação terminou: o banner só aparece pra revelação atual.
   const [revealDone, setRevealDone] = useState<string | null>(null);
@@ -114,11 +114,6 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
     saveTiltPref(next);
     engine?.setTilt(next);
   };
-  const toggleSound = () => {
-    const next = !soundOn;
-    setSoundOn(next);
-    saveSoundPref(next);
-  };
 
   return (
     <div className="table-screen">
@@ -169,12 +164,7 @@ export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
             <span className="knob" />
           </span>
         </button>
-        <button className="toggle-row" type="button" onClick={toggleSound} aria-pressed={soundOn}>
-          <span>som</span>
-          <span className={`toggle ${soundOn ? 'on' : ''}`}>
-            <span className="knob" />
-          </span>
-        </button>
+        <SoundToggle />
         {isHost(view) && view.game.phase === 'sorting' && (
           <button
             className="sbtn"

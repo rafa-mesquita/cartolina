@@ -41,6 +41,12 @@ describe('JoinForm', () => {
     render(<JoinForm takenColors={[]} initial={null} busy={false} error="color_taken" onSubmit={() => {}} />);
     expect(screen.getByText('Esse personagem já foi escolhido.')).toBeTruthy();
   });
+
+  it('personagens soam como carta; "entrar" tem o som de entrada', () => {
+    render(<JoinForm takenColors={[]} initial={null} busy={false} error={null} onSubmit={() => {}} />);
+    expect(screen.getByRole('button', { name: 'porquinho' }).dataset.sound).toBe('pick');
+    expect(screen.getByRole('button', { name: 'entrar' }).dataset.sound).toBe('join');
+  });
 });
 
 describe('JoinForm (cor ocupada depois)', () => {
@@ -63,6 +69,15 @@ describe('Lobby', () => {
   afterEach(() => {
     vi.useRealTimers();
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+  });
+
+  it('dá pra desligar o som já no lobby', () => {
+    render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={fakeConn()} />);
+    const btn = screen.getByRole('button', { name: /som/ });
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    expect(localStorage.getItem('cartolina.sound')).toBe('off');
   });
 
   it('modo atual fica marcado com aria-pressed', () => {

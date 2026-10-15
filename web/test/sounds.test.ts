@@ -50,7 +50,7 @@ describe('sons de arquivo (carta)', () => {
 });
 
 describe('sons sintetizados (revelação)', () => {
-  const SYNTH: SoundName[] = ['flip', 'error', 'win', 'lose'];
+  const SYNTH: SoundName[] = ['flip', 'error', 'win', 'lose', 'join', 'click'];
 
   /** AudioContext mínimo: conta osciladores e ruídos criados. */
   function fakeAudio(resume: () => Promise<void> = () => Promise.resolve()) {

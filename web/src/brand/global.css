@@ -102,3 +102,10 @@ button, input, textarea { font: inherit; color: inherit; }
   position: fixed; left: 0; right: 0; top: 0; z-index: 90; background: var(--pink); border-bottom: 2px solid var(--ink);
   text-align: center; font: 700 15px/1 var(--font-ui); padding: 8px;
 }
+
+/* chave liga/desliga (mesa 3D, som) */
+.toggle-row { display: flex; align-items: center; gap: 8px; font: 500 15px/1 var(--font-ui); background: none; border: none; cursor: pointer; padding: 0; }
+.toggle { width: 46px; height: 26px; border: 2px solid var(--ink); border-radius: 999px; background: var(--disabled); position: relative; display: inline-block; }
+.toggle.on { background: var(--pink); }
+.knob { position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink); transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.toggle.on .knob { transform: translateX(20px); }

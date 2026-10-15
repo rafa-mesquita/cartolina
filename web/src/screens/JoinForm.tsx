@@ -62,6 +62,7 @@ export function JoinForm({ takenColors, initial, busy, error, onSubmit }: Props)
               key={c}
               type="button"
               className="swatch"
+              data-sound="pick"
               aria-label={critterOf(c).name}
               aria-pressed={c === color}
               disabled={takenColors.includes(c)}
@@ -73,7 +74,7 @@ export function JoinForm({ takenColors, initial, busy, error, onSubmit }: Props)
         </div>
       </div>
       {shown && <p className="error" role="alert">{shown}</p>}
-      <button className="btn" type="submit" disabled={busy}>
+      <button className="btn" type="submit" disabled={busy} data-sound="join">
         {busy ? 'entrando…' : 'entrar'}
       </button>
     </form>
