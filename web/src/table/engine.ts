@@ -1136,7 +1136,8 @@ export class TableEngine {
     const visH = (this.tiltOn ? 0.74 : 1) * FH;
     const availW = window.innerWidth - 2 * 175;
     const availH = window.innerHeight - 210 - 110;
-    const k = clamp(Math.min(availW / FW, availH / visH), 0.4, 1.12);
+    // teto alto: em telas grandes a mesa cresce até encostar nos assentos de cima
+    const k = clamp(Math.min(availW / FW, availH / visH), 0.4, 1.7);
     if (snapIt) this.scale.snap(k);
     else this.scale.t = k;
     this.hDirty = true;
@@ -1307,7 +1308,10 @@ export class TableEngine {
     const standRad = (this.tilt.v * Math.max(0, sp.stand.v) * Math.PI) / 180;
     const halfH = (CH * ROW_S * Math.max(0, sp.rs.v)) / 2;
     const lift = halfH * Math.sin(standRad) + 0.5;
-    const z = Math.max(lift, Math.max(0.5, sp.z.v)) + Math.sin(Math.PI * clamp(f, 0, 1)) * 34;
+    // no flip a carta gira no próprio eixo: metade da largura afundaria no feltro inclinado, então sobe pelo menos isso
+    const flipSin = Math.abs(Math.sin(Math.PI * clamp(f, 0, 1)));
+    const flipLift = Math.max(34, (CW * ROW_S * Math.max(1, sp.rs.v)) / 2 + 6) * flipSin;
+    const z = Math.max(lift, Math.max(0.5, sp.z.v)) + flipLift;
     rc.el.style.transform =
       `translate3d(${(sp.x.v + sp.shake.v).toFixed(2)}px,${(ROW_Y + sp.y.v).toFixed(2)}px,${z.toFixed(2)}px) ` +
       `rotateX(${(-this.tilt.v * sp.stand.v).toFixed(2)}deg) rotateZ(${(rc.tilt + sp.wob.v + sp.shake.v * 0.25).toFixed(2)}deg) ` +
