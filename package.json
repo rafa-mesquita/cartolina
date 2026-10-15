@@ -9,7 +9,7 @@
   "scripts": {
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "dev:server": "npm run dev -w server",
+    "dev:server": "npm run db:migrate -w server && npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w web",
     "smoke": "node scripts/smoke.mjs"

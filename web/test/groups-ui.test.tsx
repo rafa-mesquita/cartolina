@@ -6,6 +6,9 @@ import * as api from '../src/net/api';
 import { loadGroups, rememberGroup } from '../src/net/identity';
 import { GroupPage } from '../src/screens/GroupPage';
 import { Home } from '../src/screens/Home';
+import { Lobby } from '../src/screens/Lobby';
+import { TopBar } from '../src/table/TopBar';
+import { makeRoom, viewOf } from './fixtures';
 
 vi.mock('../src/net/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/net/api')>();
@@ -230,5 +233,32 @@ describe('GroupPage', () => {
     vi.mocked(api.getGroup).mockResolvedValue(null);
     render(<GroupPage slug="abcdefghjk" />);
     expect(await screen.findByText('grupo não encontrado')).toBeTruthy();
+  });
+});
+
+describe('sala de grupo', () => {
+  const conn = () => ({
+    sendAction: vi.fn(),
+    sendActivity: vi.fn(),
+    sendCursor: vi.fn(),
+    sendPing: vi.fn(),
+    onFx: vi.fn(() => () => {}),
+    onError: vi.fn(() => () => {}),
+  });
+  const groupView = () => ({ ...viewOf(makeRoom(2), 'p0'), group: { slug: 'abcdefghjk', name: 'Galera' } });
+
+  it('lobby mostra o link do histórico do grupo', () => {
+    render(<Lobby view={groupView()} conn={conn()} />);
+    expect(screen.getByRole('link', { name: '📜 histórico de Galera' }).getAttribute('href')).toBe('#/g/abcdefghjk');
+  });
+
+  it('mesa mostra o nome do grupo no topo', () => {
+    render(<TopBar view={groupView()} />);
+    expect(screen.getByRole('link', { name: 'Galera' }).getAttribute('href')).toBe('#/g/abcdefghjk');
+  });
+
+  it('sala avulsa não mostra nada de grupo', () => {
+    render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={conn()} />);
+    expect(screen.queryByText(/histórico de/)).toBeNull();
   });
 });

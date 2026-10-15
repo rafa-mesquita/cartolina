@@ -30,6 +30,11 @@ export function TopBar({ view }: { view: RoomView }) {
         cartolina<span>~</span>
       </div>
       <div className="pills">
+        {view.group && (
+          <a className="pill" href={`#/g/${view.group.slug}`} target="_blank" rel="noopener" title="histórico do grupo">
+            {view.group.name}
+          </a>
+        )}
         <button className="pill code" type="button" onClick={() => void copy()} title="copiar link da sala">
           {copied ? 'copiado!' : `sala ${view.code}`}
         </button>

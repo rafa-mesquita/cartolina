@@ -8,6 +8,7 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
 .pill.lives i { font-style: normal; }
 .pill.lives i.lost { color: transparent; -webkit-text-stroke: 1.5px var(--ink); opacity: 0.55; }
 .pill.code { cursor: pointer; }
+.pills a.pill { color: var(--ink); text-decoration: none; }
 
 /* assentos */
 .seat { position: absolute; display: flex; align-items: center; gap: 10px; z-index: 4; }
