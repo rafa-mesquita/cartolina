@@ -31,6 +31,25 @@ describe('pickTheme', () => {
     const res = pickTheme(mulberry32(1), all);
     expect(res.used).toHaveLength(1);
   });
+
+  it('ao recomeçar, exclui o último usado mesmo nos extremos do sorteio', () => {
+    const last = THEMES.length - 1;
+    const endsWith = (k: number) => [...THEMES.map((_, i) => i).filter((i) => i !== k), k];
+    expect(pickTheme(() => 0, endsWith(0)).used[0]).not.toBe(0);
+    expect(pickTheme(() => 0.999999, endsWith(last)).used[0]).not.toBe(last);
+  });
+
+  it('ao recomeçar, nunca repete o último tema usado', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const k = seed % THEMES.length;
+      const all = THEMES.map((_, i) => i).filter((i) => i !== k);
+      all.push(k);
+      const res = pickTheme(mulberry32(seed), all);
+      expect(res.theme).not.toBe(THEMES[k]);
+      expect(res.used).toHaveLength(1);
+      expect(res.used[0]).not.toBe(k);
+    }
+  });
 });
 
 describe('cleanTheme', () => {
@@ -40,6 +59,16 @@ describe('cleanTheme', () => {
       min: 'ruim',
       max: 'boa',
     });
+  });
+
+  it('colapsa espaços internos e quebras de linha', () => {
+    expect(cleanTheme({ titulo: 'a\n\n b', min: 'x', max: 'y' })).toEqual({ titulo: 'a b', min: 'x', max: 'y' });
+  });
+
+  it('mede o tamanho em code points, não em unidades UTF-16', () => {
+    const titulo = '😀'.repeat(THEME_LIMITS.titulo);
+    expect(cleanTheme({ titulo, min: 'x', max: 'y' })).toEqual({ titulo, min: 'x', max: 'y' });
+    expect(cleanTheme({ titulo: titulo + '😀', min: 'x', max: 'y' })).toBeNull();
   });
 
   it('rejeita campos vazios ou longos demais', () => {

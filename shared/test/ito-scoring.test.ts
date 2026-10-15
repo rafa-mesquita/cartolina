@@ -28,6 +28,10 @@ describe('computeReveal', () => {
     expect(computeReveal(row, cards).map((e) => e.error)).toEqual([false, true, true, false]);
   });
 
+  it('fila vazia devolve lista vazia', () => {
+    expect(computeReveal([], {})).toEqual([]);
+  });
+
   it('inclui dono e valor na ordem da fila', () => {
     const { row, cards } = cardsFrom([5, 7]);
     expect(computeReveal(row, cards)).toEqual([
@@ -53,5 +57,11 @@ describe('resolveOutcome', () => {
 
   it('campanha: passar do nível 3 com vida é vitória', () => {
     expect(resolveOutcome('campanha', 3, 1, 0)).toEqual({ lives: 1, outcome: 'won' });
+  });
+
+  it('campanha: bordas', () => {
+    expect(resolveOutcome('campanha', 1, 2, 2)).toEqual({ lives: 0, outcome: 'lost' });
+    expect(resolveOutcome('campanha', 3, 3, 2)).toEqual({ lives: 1, outcome: 'won' });
+    expect(resolveOutcome('campanha', 2, 3, 0)).toEqual({ lives: 3, outcome: 'level_cleared' });
   });
 });

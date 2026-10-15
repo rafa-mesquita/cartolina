@@ -114,16 +114,22 @@ export function pickTheme(rng: Rng, used: readonly number[]): { theme: Theme; us
   const all = THEMES.map((_, i) => i);
   const available = all.filter((i) => !used.includes(i));
   const exhausted = available.length === 0;
-  const pool = exhausted ? all : available;
+  // Ao recomeçar o ciclo, não repete o tema que acabou de sair.
+  const last = used[used.length - 1];
+  const pool = exhausted ? all.filter((i) => i !== last) : available;
   const index = pool[randomInt(rng, pool.length)]!;
   return { theme: THEMES[index]!, used: [...(exhausted ? [] : used), index] };
 }
 
 export function cleanTheme(input: Theme): Theme | null {
-  const titulo = input.titulo.trim();
-  const min = input.min.trim();
-  const max = input.max.trim();
-  const fits = (s: string, limit: number) => s.length >= 1 && s.length <= limit;
+  const tidy = (s: string) => s.replace(/\s+/g, ' ').trim();
+  const titulo = tidy(input.titulo);
+  const min = tidy(input.min);
+  const max = tidy(input.max);
+  const fits = (s: string, limit: number) => {
+    const len = Array.from(s).length;
+    return len >= 1 && len <= limit;
+  };
   if (!fits(titulo, THEME_LIMITS.titulo)) return null;
   if (!fits(min, THEME_LIMITS.extremo) || !fits(max, THEME_LIMITS.extremo)) return null;
   return { titulo, min, max };
