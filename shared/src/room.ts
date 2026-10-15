@@ -14,6 +14,12 @@ export interface Seat {
   disconnectedAt: number | null;
 }
 
+export interface RoomGroup {
+  id: string;
+  slug: string;
+  name: string;
+}
+
 export interface Room {
   code: string;
   hostId: string | null;
@@ -22,6 +28,12 @@ export interface Room {
   tokens: Record<string, string>;
   game: ItoState;
   lastActivity: number;
+  /** Grupo dono da sala (histórico). `null` em salas avulsas. */
+  group: RoomGroup | null;
+  /** Quando o host clicou "começar" (lobby → tema); identifica a campanha. */
+  runStartedAt: number | null;
+  /** Chave da última revelação já gravada no histórico (evita duplicar). */
+  recordedRevealKey: string | null;
 }
 
 export interface SeatView {
@@ -37,6 +49,7 @@ export interface RoomView {
   you: string | null;
   seats: SeatView[];
   game: ItoView;
+  group: { slug: string; name: string } | null;
 }
 
 export interface RoomSummary {
@@ -57,8 +70,18 @@ export type JoinError = 'room_full' | 'bad_name' | 'bad_color' | 'color_taken';
 export type JoinResult = { ok: true; room: Room; playerId: string } | { ok: false; error: JoinError };
 export type RoomActionResult = { ok: true; room: Room } | { ok: false; error: string };
 
-export function createRoom(code: string, now: number): Room {
-  return { code, hostId: null, seats: [], tokens: {}, game: ito.initialState(), lastActivity: now };
+export function createRoom(code: string, now: number, group: RoomGroup | null = null): Room {
+  return {
+    code,
+    hostId: null,
+    seats: [],
+    tokens: {},
+    game: ito.initialState(),
+    lastActivity: now,
+    group,
+    runStartedAt: null,
+    recordedRevealKey: null,
+  };
 }
 
 function isActive(seat: Seat, now: number): boolean {
@@ -136,7 +159,11 @@ export function roomAction(room: Room, playerId: string, action: ItoAction, rng:
     rng,
   });
   if (!res.ok) return res;
-  return { ok: true, room: { ...room, game: res.state, lastActivity: now } };
+  const startedRun = room.game.phase === 'lobby' && res.state.phase === 'theme';
+  return {
+    ok: true,
+    room: { ...room, game: res.state, lastActivity: now, runStartedAt: startedRun ? now : (room.runStartedAt ?? null) },
+  };
 }
 
 export function roomView(room: Room, viewerId: string | null): RoomView {
@@ -146,6 +173,7 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     you: viewerId,
     seats: room.seats.map(seatView),
     game: ito.viewFor(room.game, viewerId),
+    group: room.group ? { slug: room.group.slug, name: room.group.name } : null,
   };
 }
 
