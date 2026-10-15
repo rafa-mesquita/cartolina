@@ -117,7 +117,7 @@ Cliente → servidor:
 | `theme.reroll` | — | host |
 | `theme.custom` | `titulo, min, max` | host |
 | `round.begin` | — (confirma o tema e distribui) | host |
-| `card.place` | `cardId, index` (mão → fila ou reposicionar) | dono |
+| `card.place` | `cardId, index` (mão → fila: dono; reposicionar na fila: qualquer jogador da rodada) | dono / jogadores |
 | `card.return` | `cardId` (fila → mão) | dono |
 | `card.clue` | `cardId, text` | dono |
 | `player.ready` | `ready: boolean` | todos |
@@ -242,8 +242,9 @@ Tokens em `web/src/brand/tokens.css`, documentados em `#/marca` e resumidos em
 - **Sala cheia:** aviso.
 - **Host some:** transferência automática após 30 s.
 - **Jogador desconectado com cartas na rodada:** cartas dele permanecem; a regra
-  de "todos prontos" ignora desconectados há >30 s. O host **não** pode mover
-  cartas alheias: só força a revelação quando todas as cartas já estão na fila;
+  de "todos prontos" ignora desconectados há >30 s. Ninguém pode tirar da mão
+  as cartas de quem saiu (só o dono coloca da mão), então o host só força a
+  revelação quando todas as cartas já estão na fila;
   caso contrário, aguarda a reconexão ou usa `round.next` para descartar a
   rodada e começar outra (no modo campanha, repete o mesmo nível sem perder
   vida).
