@@ -45,8 +45,10 @@ export function Home() {
       const group = await createGroup(name);
       rememberGroup(group);
       goToGroup(group.slug);
-    } catch {
-      setGroupError('Não deu pra criar o grupo. O servidor tá ligado?');
+    } catch (err) {
+      // 400: o servidor recusou o nome (ex.: só símbolos); o resto é falha de rede/servidor
+      const rejected = err instanceof Error && err.message.endsWith('_400');
+      setGroupError(rejected ? 'Nome inválido.' : 'Não deu pra criar o grupo. O servidor tá ligado?');
     } finally {
       setGroupBusy(false);
     }
@@ -101,7 +103,7 @@ export function Home() {
             onChange={(e) => setGroupName(e.target.value)}
           />
           <button className="sbtn solid" type="submit" disabled={groupBusy}>
-            criar grupo
+            {groupBusy ? 'criando…' : 'criar grupo'}
           </button>
         </form>
         {groupError && (

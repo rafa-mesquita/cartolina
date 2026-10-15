@@ -16,9 +16,16 @@
 .round-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .round { border: 2px solid var(--ink); border-radius: 16px 12px 15px 11px; background: var(--kraft); overflow: hidden; }
 .round-head {
-  width: 100%; display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 10px; align-items: center; padding: 10px 12px;
+  width: 100%; display: grid; gap: 8px 10px; align-items: center; padding: 10px 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto; grid-template-areas: 'date theme mode outcome players';
   background: none; border: none; cursor: pointer; text-align: left; color: var(--ink);
 }
+.round-head:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; }
+.round-date { grid-area: date; }
+.round-theme { grid-area: theme; overflow-wrap: anywhere; }
+.round-mode { grid-area: mode; }
+.round-outcome { grid-area: outcome; }
+.round-players { grid-area: players; }
 .round-head[aria-expanded='true'] { background: var(--paper); border-bottom: 2px dashed rgba(59, 47, 47, 0.3); }
 .round-date { font: 500 13px/1 var(--font-ui); opacity: 0.7; white-space: nowrap; }
 .round-theme { font: 700 16px/1.15 var(--font-ui); }
@@ -26,7 +33,7 @@
 .round-outcome { font: 700 12px/1 var(--font-ui); padding: 4px 9px 3px; border: 2px solid var(--ink); border-radius: 999px; white-space: nowrap; }
 .round-outcome.good { background: var(--ok); }
 .round-outcome.bad { background: var(--pink); }
-.round-players { display: flex; gap: 2px; }
+.round-players { display: flex; flex-wrap: wrap; gap: 2px; }
 .round-players .mini-avatar { width: 24px; height: 24px; }
 .round-body { padding: 12px 14px 16px; background: var(--paper); }
 .round-scale { margin: 0 0 10px; font: 18px/1.2 var(--font-hand); }
@@ -40,12 +47,24 @@
 .mini-badge { width: 24px; height: 24px; align-self: flex-start; }
 .mini-num { font: 700 24px/1 var(--font-ui); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px 6px 7px 5px; padding: 3px 6px 2px; }
 .mini-clue { font: 16px/1 var(--font-hand); text-align: center; overflow-wrap: anywhere; }
-.mini-name { margin-top: auto; font: 500 11px/1 var(--font-ui); opacity: 0.75; }
+.mini-name { margin-top: auto; font: 500 11px/1 var(--font-ui); opacity: 0.75; overflow-wrap: anywhere; text-align: center; }
 .mini-x {
   position: absolute; right: -10px; top: -10px; width: 28px; height: 28px; border-radius: 50%; background: var(--pink2);
   border: 2px solid var(--ink); color: var(--paper); font: 700 16px/24px var(--font-ui); text-align: center;
 }
+.copy-msg { font: 17px/1.1 var(--font-hand); }
+/* telas médias: jogadores e resultado descem pra uma segunda linha (nada fica cortado) */
+@media (max-width: 720px) {
+  .round-head {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'date theme mode' 'players players outcome';
+  }
+  .round-outcome { justify-self: end; }
+}
 @media (max-width: 560px) {
-  .round-head { grid-template-columns: 1fr auto; }
-  .round-date, .round-mode { grid-column: 1 / -1; }
+  .round-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'date mode' 'theme theme' 'players outcome';
+  }
+  .round-mode { justify-self: end; }
 }

@@ -1,5 +1,5 @@
 import type { GroupResponse, ItoOutcome, RoundCard, RoundRecord } from '@cartolina/shared';
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { critterSvg } from '../brand/critters';
 import { goHome, goToRoom, groupLink } from '../lib/router';
 import { createGroupRoom, getGroup } from '../net/api';
@@ -14,6 +14,8 @@ const OUTCOME: Record<ItoOutcome, { label: string; good: boolean }> = {
   won: { label: 'zerou a campanha', good: true },
   lost: { label: 'acabaram as vidas', good: false },
 };
+
+const COPY_MSG_MS = 2000;
 
 const dateFmt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 const dayFmt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' });
@@ -49,21 +51,23 @@ function MiniCard({ card }: { card: RoundCard }) {
 
 function RoundItem({ round, open, onToggle }: { round: RoundRecord; open: boolean; onToggle(): void }) {
   const outcome = OUTCOME[round.outcome];
+  const bodyId = useId();
   return (
     <li className="round">
-      <button type="button" className="round-head" aria-expanded={open} onClick={onToggle}>
+      <button type="button" className="round-head" aria-expanded={open} aria-controls={bodyId} onClick={onToggle}>
         <span className="round-date">{dateFmt.format(new Date(round.playedAt))}</span>
         <span className="round-theme">{round.theme.titulo}</span>
         <span className="round-mode">{round.mode === 'livre' ? 'livre' : `campanha · nível ${round.level}`}</span>
         <span className={`round-outcome ${outcome.good ? 'good' : 'bad'}`}>{outcome.label}</span>
         <span className="round-players">
+          {/* nomes podem repetir numa sala; cores não */}
           {round.players.map((p) => (
-            <CritterIcon key={p.name} color={p.color} title={p.name} />
+            <CritterIcon key={p.color} color={p.color} title={p.name} />
           ))}
         </span>
       </button>
       {open && (
-        <div className="round-body">
+        <div className="round-body" id={bodyId}>
           <p className="round-scale">
             <b>1</b> {round.theme.min} · <b>100</b> {round.theme.max}
           </p>
@@ -80,25 +84,36 @@ function RoundItem({ round, open, onToggle }: { round: RoundRecord; open: boolea
 
 export function GroupPage({ slug }: { slug: string }) {
   const [data, setData] = useState<GroupResponse | null | undefined>(undefined);
-  const [failed, setFailed] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [roomError, setRoomError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Geração das requisições: cada carga nova (ou a desmontagem) invalida as respostas que ainda estão a caminho. */
+  const generation = useRef(0);
 
   const load = useCallback(() => {
-    setFailed(false);
+    const gen = ++generation.current;
+    setLoadFailed(false);
     getGroup(slug)
       .then((d) => {
+        if (gen !== generation.current) return;
         setData(d);
         if (d) rememberGroup({ slug, name: d.group.name });
       })
-      .catch(() => setFailed(true));
+      .catch(() => {
+        if (gen === generation.current) setLoadFailed(true);
+      });
   }, [slug]);
 
   useEffect(() => {
     load();
+    return () => {
+      generation.current++;
+    };
   }, [load]);
   useEffect(
     () => () => {
@@ -109,38 +124,57 @@ export function GroupPage({ slug }: { slug: string }) {
 
   async function loadMore() {
     if (!data || data.nextBefore === null) return;
+    const gen = generation.current;
+    const before = data.nextBefore;
     setLoadingMore(true);
+    setMoreError(null);
     try {
-      const more = await getGroup(slug, data.nextBefore);
-      // Páginas seguintes podem vir sem estatísticas (`stats: null`): mantém as da primeira página.
-      if (more) setData({ ...data, rounds: [...data.rounds, ...more.rounds], nextBefore: more.nextBefore, stats: data.stats ?? more.stats });
+      const more = await getGroup(slug, before);
+      if (gen !== generation.current) return;
+      if (!more) {
+        setMoreError('Não achei mais partidas desse grupo.');
+        return;
+      }
+      setData((prev) => {
+        if (!prev) return prev;
+        const seen = new Set(prev.rounds.map((r) => r.id));
+        return {
+          ...prev,
+          rounds: [...prev.rounds, ...more.rounds.filter((r) => !seen.has(r.id))],
+          nextBefore: more.nextBefore,
+          // páginas seguintes vêm sem estatísticas: mantém as da primeira
+          stats: prev.stats ?? more.stats,
+        };
+      });
     } catch {
-      setFailed(true);
+      if (gen === generation.current) setMoreError('Não deu pra carregar mais partidas. Tenta de novo.');
     } finally {
-      setLoadingMore(false);
+      if (gen === generation.current) setLoadingMore(false);
     }
   }
 
   async function newRoom() {
     setCreating(true);
+    setRoomError(null);
     try {
       goToRoom(await createGroupRoom(slug));
     } catch {
-      setFailed(true);
+      setRoomError('Não deu pra criar a sala. Tenta de novo.');
     } finally {
       setCreating(false);
     }
   }
 
   async function copyLink() {
+    let msg = 'link copiado!';
     try {
       await navigator.clipboard.writeText(groupLink(slug));
     } catch {
-      return; // sem clipboard (http fora de localhost): o link está na barra de endereço
+      msg = 'copia o link da barra de endereço'; // sem clipboard (http fora de localhost) ou sem permissão
     }
-    setCopied(true);
+    setCopyMsg(msg);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setCopied(false), 2000);
+    timer.current = setTimeout(() => setCopyMsg(null), COPY_MSG_MS);
   }
 
   const header = (
@@ -149,7 +183,7 @@ export function GroupPage({ slug }: { slug: string }) {
     </h1>
   );
 
-  if (data === undefined && failed) {
+  if (data === undefined && loadFailed) {
     return (
       <main className="screen">
         {header}
@@ -166,7 +200,9 @@ export function GroupPage({ slug }: { slug: string }) {
     return (
       <main className="screen">
         {header}
-        <p className="hint">carregando…</p>
+        <p className="hint" role="status">
+          carregando…
+        </p>
       </main>
     );
   }
@@ -198,15 +234,18 @@ export function GroupPage({ slug }: { slug: string }) {
             {creating ? 'criando…' : 'criar sala do grupo'}
           </button>
           <button className="sbtn" type="button" onClick={() => void copyLink()}>
-            {copied ? 'link copiado!' : 'copiar link do grupo'}
+            copiar link do grupo
           </button>
+          <span className="copy-msg" aria-live="polite">
+            {copyMsg}
+          </span>
         </div>
-        <p className="hint">Quem tem o link do grupo vê o histórico. Partidas jogadas em salas criadas aqui entram sozinhas.</p>
-        {failed && (
+        {roomError && (
           <p className="error" role="alert">
-            Algo deu errado agora há pouco. Tenta de novo.
+            {roomError}
           </p>
         )}
+        <p className="hint">Quem tem o link do grupo vê o histórico. Partidas jogadas em salas criadas aqui entram sozinhas.</p>
       </section>
 
       {stats && (
@@ -257,6 +296,11 @@ export function GroupPage({ slug }: { slug: string }) {
           <button className="sbtn" type="button" onClick={() => void loadMore()} disabled={loadingMore}>
             {loadingMore ? 'carregando…' : 'carregar mais'}
           </button>
+        )}
+        {moreError && (
+          <p className="error" role="alert">
+            {moreError}
+          </p>
         )}
       </section>
     </main>
