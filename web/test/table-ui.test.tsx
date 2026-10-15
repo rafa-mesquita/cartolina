@@ -106,6 +106,14 @@ describe('ThemePanel', () => {
     const { container } = render(<ThemePanel view={viewOf(inTheme(), 'p1')} conn={conn()} />);
     expect(container.innerHTML).toBe('');
   });
+
+  it('campanha: só sortear outro e dar as cartas (sem escrever tema)', () => {
+    const campaign = act(act(makeRoom(2), 'p0', { type: 'setMode', mode: 'campanha' }), 'p0', { type: 'start' });
+    render(<ThemePanel view={viewOf(campaign, 'p0')} conn={conn()} />);
+    expect(screen.queryByRole('button', { name: 'escrever tema' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'sortear outro' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'dar as cartas' })).toBeTruthy();
+  });
 });
 
 describe('Hand', () => {

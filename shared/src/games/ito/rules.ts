@@ -155,6 +155,8 @@ export function applyItoAction(
     case 'customTheme': {
       const e = hostOnly(isHost, state, 'theme');
       if (e) return fail(e);
+      // Campanha: o tema é sempre sorteado (dá pra sortear outro, não escrever).
+      if (state.mode === 'campanha') return fail('theme_random_only');
       const theme = cleanTheme(action.theme);
       if (!theme) return fail('bad_theme');
       return ok({ ...state, theme });

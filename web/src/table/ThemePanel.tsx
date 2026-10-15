@@ -62,9 +62,12 @@ export function ThemePanel({ view, conn }: { view: RoomView; conn: GameConn }) {
           <button className="sbtn" type="button" onClick={() => conn.sendAction({ type: 'rerollTheme' })}>
             sortear outro
           </button>
-          <button className="sbtn" type="button" onClick={() => setEditing(true)}>
-            escrever tema
-          </button>
+          {/* Campanha: o tema é sempre sorteado. */}
+          {view.game.mode !== 'campanha' && (
+            <button className="sbtn" type="button" onClick={() => setEditing(true)}>
+              escrever tema
+            </button>
+          )}
           <button className="btn" type="button" onClick={() => conn.sendAction({ type: 'beginRound' })}>
             dar as cartas
           </button>

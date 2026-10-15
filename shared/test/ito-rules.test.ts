@@ -92,6 +92,14 @@ describe('tema', () => {
     expect(errorOf(inTheme(), 'a', { type: 'customTheme', theme: { titulo: '', min: 'a', max: 'b' } }, c)).toBe('bad_theme');
     expect(errorOf(inTheme(), 'b', { type: 'rerollTheme' }, c)).toBe('not_host');
   });
+
+  it('campanha: tema só sorteado (escrever é recusado; sortear outro continua valendo)', () => {
+    const campaign = () => act(act(initialItoState(), 'a', { type: 'setMode', mode: 'campanha' }, c), 'a', { type: 'start' }, c);
+    const s0 = campaign();
+    expect(errorOf(s0, 'a', { type: 'customTheme', theme: { titulo: 'Pizzas', min: 'ruim', max: 'boa' } }, c)).toBe('theme_random_only');
+    const s1 = act(s0, 'a', { type: 'rerollTheme' }, ctx(['a', 'b'], 'a', 99));
+    expect(s1.theme?.titulo).not.toBe(s0.theme?.titulo);
+  });
 });
 
 describe('distribuição', () => {

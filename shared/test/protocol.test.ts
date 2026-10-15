@@ -50,6 +50,7 @@ describe('parseClientMessage', () => {
     for (const code of ERROR_CODES) expect(errorMessage(code)).not.toBe('Algo deu errado.');
     expect(errorMessage('codigo_inventado')).toBe('Algo deu errado.');
     expect(errorMessage('bad_color')).toBe('Personagem inválido.');
+    expect(errorMessage('theme_random_only')).toBe('No modo campanha o tema é sempre sorteado.');
   });
 
   it('expõe os códigos de fechamento do WebSocket', () => {

@@ -54,6 +54,7 @@ cursores e as cartas sendo arrastadas pelos outros, com animações fluidas.
   cada um `{ titulo, min, max }`.
 - Na fase de tema, o host pode **sortear outro** ou **escrever um tema próprio**
   (título + rótulos dos extremos).
+- No modo campanha o tema é sempre sorteado (o host pode sortear outro, mas não escrever).
 
 ## 3. Arquitetura
 
