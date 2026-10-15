@@ -6,13 +6,13 @@
 
 **Architecture:** O React cuida das telas (início, entrada, lobby) e dos controles da mesa (assentos, mão com dicas, botões). A mesa em si (feltro 3D, fila, buracos, cartas voando, cursores remotos, pings, flip da revelação) é um **motor imperativo** em TypeScript (`TableEngine`), portado do protótipo aprovado `prototipo/index.html` (molas + homografia + um único `requestAnimationFrame`). O motor recebe `RoomView` do servidor e eventos `fx.*`, e emite intenções (`place`, `return`, cursor, atividade, ping). O estado do jogo continua 100% autoritativo no servidor; o motor só faz otimismo local (intenção pendente) e desfaz se o servidor recusar.
 
-**Tech Stack:** React 19, Vite 7, TypeScript 5.9, Vitest 4 (jsdom) + Testing Library, `@cartolina/shared` (workspace), Cloudflare Worker/Durable Object do Plano 1.
+**Tech Stack:** React 19, Vite 8 (com @vitejs/plugin-react 6; o plano previa Vite 7, trocado para ter uma única versão do Vite na árvore), TypeScript 5.9, Vitest 4 (jsdom) + Testing Library, `@cartolina/shared` (workspace), Cloudflare Worker/Durable Object do Plano 1.
 
 **Spec:** `docs/superpowers/specs/2026-10-15-cartolina-ito-design.md` · **Notas herdadas:** `docs/superpowers/plans/notas-para-plano-2.md` · **Referência de UX:** `prototipo/index.html`
 
 **Branch:** se o PR do Plano 1 já estiver mergeado, crie `feat/plano-2-web` a partir de `main`; senão, a partir de `feat/plano-1-fundacao`.
 
-**Fora deste plano (Plano 3):** layout de celular/toque, manual de marca `#/marca`, deploy (Pages + Cloudflare), E2E com Playwright, rate limit.
+**Fora deste plano:** Plano 3 = histórico do grupo (spec §11); Plano 4 = layout de celular/toque, manual de marca `#/marca`, deploy (Pages + Cloudflare), E2E com Playwright, rate limit.
 
 **Decisões deste plano:**
 - O token do jogador fica no `sessionStorage` (cada aba = um jogador; recarregar mantém o assento). Nome e cor ficam no `localStorage`.
@@ -4968,4 +4968,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 | Spec §5 identidade cartolina (tokens, fontes, formas) | 4, 10 |
 | Spec §6 reconexão com backoff, ação inválida desfaz, sala inexistente/cheia | 6, 9, 10, 11 |
 | Notas do Plano 1: resumo da sala, reconcilePresence pura, códigos tipados, heartbeat, cleanName | 1, 2, 3, 6 |
-| Celular, manual de marca, deploy, E2E | Plano 3 |
+| Celular, manual de marca, deploy, E2E | Plano 4 |
+
+## Adições feitas durante a execução (pedidos do usuário e revisões)
+
+- **Regra de mover:** qualquer jogador da rodada move qualquer carta já na fila; só o dono coloca da mão, tira da fila ou edita a dica (shared `movableCard`, motor, spec §2).
+- **Resultado:** botão de olho "ver a mesa" + pílula para voltar ao banner; host pode "pular rodada" durante a ordenação.
+- **Personagens:** 18 desenhos (`web/src/brand/critters.ts`) no lugar de cores/iniciais (entrada, lobby, assentos, selo das cartas, buraco da fila); 18 cores no `shared`.
+- **Sons:** `web/public/sounds/{reveal,card}.mp3` (do autor), `web/src/brand/sounds.ts`, botão "som".
+- **Bots de teste:** só em desenvolvimento (`web/src/dev/*`, carregados com `import.meta.env.DEV`), fora do build de produção.
+- **Robustez:** heartbeat (auto-response + varredura no servidor, reconexão ao voltar para a aba), identidade por aba em dev e persistente em produção, correção do corte da carta ao assentar na mesa 3D, intenções otimistas ancoradas.
