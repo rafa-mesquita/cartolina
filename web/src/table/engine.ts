@@ -15,6 +15,7 @@ import {
   type RowEntry,
 } from './rowLayout';
 import { Spring } from './spring';
+import { critterSvg } from '../brand/critters';
 
 export interface EngineDom {
   wrap: HTMLElement;
@@ -141,7 +142,6 @@ const seatSel = (playerId: string) => `[data-seat-anchor="${attr(playerId)}"]`;
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const esc = (s: string) => s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
-const initial = (name: string) => (Array.from(name.trim())[0] ?? '?').toUpperCase();
 const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) => a.size === b.size && [...a].every((x) => b.has(x));
 
@@ -529,7 +529,7 @@ export class TableEngine {
   private frontHTML(card: ItoCardView): string {
     const mine = card.owner === this.view?.you && card.value !== null;
     return (
-      `<div class="badge">${esc(initial(this.nameOf(card.owner)))}</div>` +
+      `<div class="badge">${this.critterOf(card.owner)}</div>` +
       (mine ? `<div class="mynum">${card.value}</div>` : '') +
       `<div class="clue">${this.clueHTML(card)}</div>`
     );
@@ -537,9 +537,14 @@ export class TableEngine {
 
   private numHTML(card: ItoCardView): string {
     return (
-      `<div class="band"></div><div class="badge">${esc(initial(this.nameOf(card.owner)))}</div>` +
+      `<div class="band"></div><div class="badge">${this.critterOf(card.owner)}</div>` +
       `<div class="bignum">${card.value ?? '?'}</div><div class="clue mini">${this.clueHTML(card)}</div>`
     );
+  }
+
+  /** Selo do dono: o personagem da cor dele (o nome só aparece no cursor). */
+  private critterOf(id: string): string {
+    return critterSvg(this.colorOf(id));
   }
 
   private nameOf(id: string): string {
@@ -558,7 +563,7 @@ export class TableEngine {
     const el = document.createElement('div');
     el.className = 'gap';
     el.style.setProperty('--c', this.colorOf(owner));
-    el.innerHTML = `<b>${esc(initial(this.nameOf(owner)))}</b>`;
+    el.innerHTML = `<b>${this.critterOf(owner)}</b>`;
     el.style.display = 'none';
     this.dom.row.appendChild(el);
     g = { el, x: new Spring(FW / 2, 260, 0.8), s: new Spring(0, 320, 0.62), active: false, index: 0, fresh: true, slot: 0, dirty: true };

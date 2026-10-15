@@ -81,7 +81,7 @@ describe('RoomDO: entrada', () => {
     b.send({ t: 'join', token: crypto.randomUUID(), name: 'B', color: COLORS[0] });
     const err = await b.next('error');
     expect(err.code).toBe('color_taken');
-    expect(err.message).toBe('Essa cor já foi escolhida.');
+    expect(err.message).toBe('Esse personagem já foi escolhido.');
   });
 
   it('persiste a sala no storage', async () => {

@@ -125,6 +125,13 @@ describe('Hand', () => {
     expect(slot(container).classList.contains('dragging')).toBe(true);
   });
 
+  it('selo da carta na mão é o meu personagem (sem inicial)', () => {
+    const { container } = render(<Hand view={viewOf(sortingRoom(2), 'p0')} snap={snap([])} engine={null} conn={conn()} />);
+    const badge = slot(container).querySelector('.badge')!;
+    expect(badge.querySelector('svg')).not.toBeNull();
+    expect(badge.textContent).toBe('');
+  });
+
   const clueSends = (c: ReturnType<typeof conn>) => c.sendAction.mock.calls.filter(([a]) => a.type === 'clue');
   const typeClue = (value: string) => fireEvent.change(screen.getByPlaceholderText('escreve uma dica…'), { target: { value } });
 

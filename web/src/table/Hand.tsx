@@ -1,6 +1,7 @@
 import { CLUE_MAX, type ItoCardView, type RoomView } from '@cartolina/shared';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { handCards, initialOf, type CardPlace } from '../game/derive';
+import { handCards, type CardPlace } from '../game/derive';
+import { Critter } from '../screens/Critter';
 import type { GameConn } from '../net/connection';
 import type { EngineSnapshot, TableEngine } from './engine';
 
@@ -14,11 +15,10 @@ function tiltOf(id: string): string {
   return `${(Math.abs(h) % 50) / 10 - 2.5}deg`;
 }
 
-function HandSlot({ card, place, color, name, phase, engine, conn }: {
+function HandSlot({ card, place, color, phase, engine, conn }: {
   card: ItoCardView;
   place: CardPlace;
   color: string;
-  name: string;
   phase: string;
   engine: TableEngine | null;
   conn: GameConn;
@@ -70,7 +70,9 @@ function HandSlot({ card, place, color, name, phase, engine, conn }: {
         }}
       >
         <div className="face a">
-          <div className="badge">{initialOf(name)}</div>
+          <div className="badge">
+            <Critter color={color} />
+          </div>
           <div className="mynum">{card.value}</div>
           <textarea
             ref={ref}
@@ -103,7 +105,7 @@ export function Hand({ view, snap, engine, conn }: { view: RoomView; snap: Engin
   return (
     <div className="hand">
       {handCards(view, snap.row, snap.inFlight, snap.dragging).map(({ card, place }) => (
-        <HandSlot key={card.id} card={card} place={place} color={me.color} name={me.name} phase={view.game.phase} engine={engine} conn={conn} />
+        <HandSlot key={card.id} card={card} place={place} color={me.color} phase={view.game.phase} engine={engine} conn={conn} />
       ))}
     </div>
   );

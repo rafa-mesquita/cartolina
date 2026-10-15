@@ -38,6 +38,28 @@ describe('TableEngine (fumaça)', () => {
     engine.destroy();
   });
 
+  it('selos das cartas e do buraco mostram o personagem do dono, não a inicial', () => {
+    let room = sortingRoom(2);
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
+    const d = dom();
+    const engine = new TableEngine(d, handlers());
+    engine.update(viewOf(room, 'p0'));
+    const badges = [...d.row.querySelectorAll('.rcard .badge')];
+    expect(badges).toHaveLength(2); // frente e verso
+    for (const b of badges) {
+      expect(b.querySelector('svg')).not.toBeNull();
+      expect(b.textContent).toBe('');
+    }
+    engine.remoteCursor({ from: 'p1', zone: 'table', x: 0.5, y: 0.66, drag: { cardId: 'p1:0', index: 0 } });
+    expect(d.overlay.querySelector('.badge svg')).not.toBeNull();
+    const gap = d.row.querySelector('.gap b')!;
+    expect(gap.querySelector('svg')).not.toBeNull();
+    expect(gap.textContent).toBe('');
+    // o cursor remoto continua com o NOME
+    expect(d.cursors.textContent).toContain('P1');
+    engine.destroy();
+  });
+
   it('nova rodada tira as cartas antigas da fila', () => {
     let room = sortingRoom(2);
     room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });

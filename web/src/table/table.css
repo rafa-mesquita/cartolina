@@ -56,10 +56,9 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
   backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; box-shadow: 2px 3px 0 var(--ink);
 }
 .face.b { transform: rotateY(180deg); }
-.badge {
-  position: absolute; left: 5px; top: 5px; width: 22px; height: 22px; border-radius: 50% 46% 52% 47%; background: var(--paper);
-  border: 2px solid var(--ink); font: 700 11px/18px var(--font-ui); text-align: center;
-}
+/* selo do dono: o personagem (tem contorno próprio; orelhas e antenas saem da caixa) */
+.badge { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; overflow: visible; pointer-events: none; }
+.badge svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .mynum {
   position: absolute; right: 5px; top: 4px; font: 700 18px/1 var(--font-ui); background: var(--paper); border: 2px solid var(--ink);
   border-radius: 8px 6px 7px 5px; padding: 3px 5px 2px; min-width: 30px; text-align: center;
@@ -88,10 +87,8 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
   position: absolute; left: 0; top: 0; width: 88px; height: 120px; margin: -60px 0 0 -44px; border: 3px dashed var(--pink2);
   border-radius: var(--r); background: rgba(255, 143, 171, 0.16); display: none;
 }
-.gap b {
-  position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: var(--c);
-  border: 2px solid var(--ink); font: 700 12px/22px var(--font-ui); text-align: center;
-}
+.gap b { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; overflow: visible; }
+.gap b svg { display: block; width: 100%; height: 100%; overflow: visible; }
 
 /* pings */
 .ping { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }

@@ -93,7 +93,7 @@ describe('RoomConnection', () => {
   it('erro de entrada vira join_failed e retryJoin tenta de novo no mesmo socket', () => {
     const conn = make();
     last().open();
-    last().receive({ t: 'error', code: 'color_taken', message: 'Essa cor já foi escolhida.' });
+    last().receive({ t: 'error', code: 'color_taken', message: 'Esse personagem já foi escolhido.' });
     expect(conn.getSnapshot()).toMatchObject({ status: 'join_failed', joinError: 'color_taken' });
     conn.retryJoin('Ana', '#FF8FAB');
     expect(FakeSocket.all).toHaveLength(1);

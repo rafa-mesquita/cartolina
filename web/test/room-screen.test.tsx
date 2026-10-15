@@ -102,7 +102,7 @@ describe('RoomScreen', () => {
     act(() => last().open());
     mocked.mockResolvedValue(info([{ id: 'p9', name: 'Zé', color: '#8EC5FF', connected: true }]));
     act(() => last().receive({ t: 'error', code: 'color_taken', message: 'x' }));
-    expect((await screen.findByRole('alert')).textContent).toBe('Essa cor já foi escolhida.');
+    expect((await screen.findByRole('alert')).textContent).toBe('Esse personagem já foi escolhido.');
     await waitFor(() => expect((screen.getByRole('button', { name: 'cavaleiro' }) as HTMLButtonElement).disabled).toBe(true));
     expect(mocked).toHaveBeenCalledTimes(2);
     // a cor selecionada (azul, a primeira) foi trocada pela primeira livre

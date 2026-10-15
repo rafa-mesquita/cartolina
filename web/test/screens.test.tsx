@@ -39,7 +39,7 @@ describe('JoinForm', () => {
 
   it('mostra o erro vindo do servidor', () => {
     render(<JoinForm takenColors={[]} initial={null} busy={false} error="color_taken" onSubmit={() => {}} />);
-    expect(screen.getByText('Essa cor já foi escolhida.')).toBeTruthy();
+    expect(screen.getByText('Esse personagem já foi escolhido.')).toBeTruthy();
   });
 });
 
