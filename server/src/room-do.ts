@@ -179,6 +179,9 @@ export class RoomDO extends DurableObject<Env> {
     await this.flushPendingRounds();
     const now = Date.now();
     if (isExpired(this.room, now)) {
+      // D1 falhou a sala inteira: as rodadas que sobraram somem com o deleteAll. Fica registrado no log.
+      const lost = await this.ctx.storage.list({ prefix: PENDING_ROUND_PREFIX });
+      if (lost.size > 0) console.error(`sala ${this.room.code} expirou com ${lost.size} rodada(s) sem gravar no histórico`);
       for (const ws of this.ctx.getWebSockets()) this.safeClose(ws, CLOSE_GONE, 'expired');
       this.room = null;
       await this.ctx.storage.deleteAll();

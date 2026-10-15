@@ -349,5 +349,9 @@ da galera, de forma permanente e compartilhada.
 - **Rotas novas:** `POST /groups` (cria, devolve slug), `GET /groups/:slug`
   (grupo + rodadas paginadas + estatísticas), `POST /groups/:slug/rooms` (cria
   sala ligada ao grupo).
+- **Risco aceito:** a sala de um grupo manda o `slug` para quem entra nela, e o
+  código da sala tem só 4 letras. Enquanto a sala existe, quem adivinhar o
+  código chega ao link secreto do grupo. A pessoa aparece como jogador na mesa,
+  e isso está de acordo com "quem tem o link vê tudo".
 - **Ordem dos planos:** Plano 2 (mesa jogável) → Plano 3 (histórico do grupo) →
   Plano 4 (celular, manual de marca, deploy, E2E).
