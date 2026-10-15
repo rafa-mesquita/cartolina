@@ -50,7 +50,8 @@ export type ItoAction =
   | { type: 'clue'; cardId: string; text: string }
   | { type: 'ready'; ready: boolean }
   | { type: 'forceReveal' }
-  | { type: 'next' };
+  | { type: 'next' }
+  | { type: 'lobby' };
 
 export interface ItoCardView {
   id: string;

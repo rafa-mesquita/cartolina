@@ -8,14 +8,23 @@ export function ctx(active: string[], hostId: string | null = active[0] ?? null,
   return { hostId, active, rng: mulberry32(seed) };
 }
 
+/** Congela o estado recursivamente: qualquer mutação nas regras lança erro. */
+export function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value)) deepFreeze(v);
+  }
+  return value;
+}
+
 export function act(state: ItoState, playerId: string, action: ItoAction, c: GameContext): ItoState {
-  const res = applyItoAction(state, playerId, action, c);
+  const res = applyItoAction(deepFreeze(state), playerId, action, c);
   if (!res.ok) throw new Error(`ação recusada: ${res.error}`);
   return res.state;
 }
 
 export function errorOf(state: ItoState, playerId: string, action: ItoAction, c: GameContext): string {
-  const res = applyItoAction(state, playerId, action, c);
+  const res = applyItoAction(deepFreeze(state), playerId, action, c);
   if (res.ok) throw new Error('esperava erro');
   return res.error;
 }
@@ -364,5 +373,100 @@ describe('visão por jogador', () => {
     let s = toSorting(['a', 'b']);
     s = act(s, 'b', { type: 'clue', cardId: 'b:0', text: 'Japão' }, c);
     expect(itoViewFor(s, 'a').cards['b:0']?.clue).toBe('Japão');
+  });
+});
+
+describe('robustez (revisão)', () => {
+  const c = ctx(['a', 'b']);
+
+  it('beginRound dá cartas só a quem ainda está ativo', () => {
+    const s = act(initialItoState(), 'a', { type: 'start' }, ctx(['a', 'b', 'c']));
+    const r = act(s, 'a', { type: 'beginRound' }, ctx(['a', 'b']));
+    expect(r.players).toEqual(['a', 'b']);
+    expect(Object.keys(r.cards).sort()).toEqual(['a:0', 'b:0']);
+  });
+
+  it('beginRound recusa se sobrarem menos de 2 ativos', () => {
+    const s = act(initialItoState(), 'a', { type: 'start' }, ctx(['a', 'b']));
+    expect(errorOf(s, 'a', { type: 'beginRound' }, ctx(['a']))).toBe('not_enough_players');
+  });
+
+  it('mexer na fila desmarca o pronto de todos', () => {
+    let s = toSorting(['a', 'b']);
+    s = act(s, 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    expect(s.ready).toEqual(['a']);
+    s = act(s, 'b', { type: 'place', cardId: 'b:0', index: 0 }, c);
+    expect(s.ready).toEqual([]);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    s = act(s, 'b', { type: 'return', cardId: 'b:0' }, c);
+    expect(s.ready).toEqual([]);
+  });
+
+  it('dica desmarca só o pronto do autor', () => {
+    let s = toSorting(['a', 'b']);
+    s = placeAll(s, ['a:0', 'b:0'], c);
+    s = act(s, 'a', { type: 'ready', ready: true }, c);
+    s = act(s, 'b', { type: 'clue', cardId: 'b:0', text: 'oi' }, c);
+    expect(s.ready).toEqual(['a']);
+  });
+
+  it('lobby: host volta ao lobby a partir da revelação, mantendo modo e temas usados', () => {
+    let s = withValues(toSorting(['a', 'b']), { 'a:0': 1, 'b:0': 2 });
+    s = readyAll(placeAll(s, ['a:0', 'b:0'], c), ['a', 'b'], c);
+    expect(s.phase).toBe('reveal');
+    expect(errorOf(s, 'b', { type: 'lobby' }, c)).toBe('not_host');
+    const l = act(s, 'a', { type: 'lobby' }, c);
+    expect(l).toEqual({ ...initialItoState(), mode: 'livre', usedThemes: s.usedThemes });
+  });
+
+  it('lobby: também vale na fase de tema; recusado na ordenação e no lobby', () => {
+    const t = act(initialItoState(), 'a', { type: 'setMode', mode: 'campanha' }, c);
+    const theme = act(t, 'a', { type: 'start' }, c);
+    const l = act(theme, 'a', { type: 'lobby' }, c);
+    expect(l.phase).toBe('lobby');
+    expect(l.mode).toBe('campanha');
+    expect(l.usedThemes).toEqual(theme.usedThemes);
+    expect(errorOf(toSorting(['a', 'b']), 'a', { type: 'lobby' }, c)).toBe('bad_phase');
+    expect(errorOf(initialItoState(), 'a', { type: 'lobby' }, c)).toBe('bad_phase');
+  });
+
+  it('ids de carta como __proto__/constructor são cartas desconhecidas', () => {
+    const s = toSorting(['a', 'b']);
+    for (const cardId of ['__proto__', 'constructor', 'toString']) {
+      expect(errorOf(s, 'a', { type: 'place', cardId, index: 0 }, c)).toBe('unknown_card');
+      expect(errorOf(s, 'a', { type: 'clue', cardId, text: 'x' }, c)).toBe('unknown_card');
+      expect(errorOf(s, 'a', { type: 'return', cardId }, c)).toBe('unknown_card');
+    }
+  });
+
+  it('return por quem não é dono é recusado', () => {
+    const s = act(toSorting(['a', 'b']), 'a', { type: 'place', cardId: 'a:0', index: 0 }, c);
+    expect(errorOf(s, 'b', { type: 'return', cardId: 'a:0' }, c)).toBe('not_owner');
+  });
+
+  it('ações fora da fase certa são recusadas', () => {
+    const sorting = toSorting(['a', 'b']);
+    expect(errorOf(sorting, 'a', { type: 'setMode', mode: 'campanha' }, c)).toBe('bad_phase');
+    expect(errorOf(sorting, 'a', { type: 'beginRound' }, c)).toBe('bad_phase');
+    const theme = act(initialItoState(), 'a', { type: 'start' }, c);
+    expect(errorOf(theme, 'a', { type: 'clue', cardId: 'a:0', text: 'x' }, c)).toBe('bad_phase');
+    expect(errorOf(theme, 'a', { type: 'return', cardId: 'a:0' }, c)).toBe('bad_phase');
+  });
+
+  it('depois de won/lost, next volta ao lobby zerado mantendo modo e temas usados', () => {
+    let s = toSorting(['a', 'b'], 'campanha');
+    s = withValues(s, { 'a:0': 50, 'b:0': 10 });
+    s = readyAll(placeAll(s, ['a:0', 'b:0'], c), ['a', 'b'], c);
+    s = act(act(s, 'a', { type: 'next' }, c), 'a', { type: 'beginRound' }, c);
+    s = readyAll(placeAll(withValues(s, { 'a:0': 9, 'a:1': 8, 'b:0': 7, 'b:1': 6 }), ['a:0', 'a:1', 'b:0', 'b:1'], c), ['a', 'b'], c);
+    expect(s.outcome).toBe('lost');
+    const l = act(s, 'a', { type: 'next' }, c);
+    expect(l.phase).toBe('lobby');
+    expect(l.level).toBe(1);
+    expect(l.lives).toBe(3);
+    expect(l.players).toEqual([]);
+    expect(l.usedThemes).toEqual(s.usedThemes);
+    expect(l.usedThemes.length).toBeGreaterThan(0);
   });
 });

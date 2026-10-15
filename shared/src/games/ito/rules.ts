@@ -79,8 +79,8 @@ function unready(state: ItoState, playerId: string): ItoState {
 
 function ownCard(state: ItoState, playerId: string, cardId: string): ItoCard | string {
   if (state.phase !== 'sorting') return 'bad_phase';
-  const card = state.cards[cardId];
-  if (!card) return 'unknown_card';
+  if (!Object.hasOwn(state.cards, cardId)) return 'unknown_card';
+  const card = state.cards[cardId]!;
   if (card.owner !== playerId) return 'not_owner';
   return card;
 }
@@ -152,7 +152,9 @@ export function applyItoAction(
     case 'beginRound': {
       const e = hostOnly(isHost, state, 'theme');
       if (e) return fail(e);
-      return ok(deal(state, ctx));
+      const players = state.players.filter((p) => ctx.active.includes(p));
+      if (players.length < MIN_PLAYERS) return fail('not_enough_players');
+      return ok(deal({ ...state, players }, ctx));
     }
     case 'place': {
       const card = ownCard(state, playerId, action.cardId);
@@ -160,12 +162,12 @@ export function applyItoAction(
       const row = state.row.filter((id) => id !== card.id);
       const index = Math.min(Math.max(0, Math.trunc(action.index)), row.length);
       row.splice(index, 0, card.id);
-      return ok(unready({ ...state, row }, playerId));
+      return ok({ ...state, row, ready: [] });
     }
     case 'return': {
       const card = ownCard(state, playerId, action.cardId);
       if (typeof card === 'string') return fail(card);
-      return ok(unready({ ...state, row: state.row.filter((id) => id !== card.id) }, playerId));
+      return ok({ ...state, row: state.row.filter((id) => id !== card.id), ready: [] });
     }
     case 'clue': {
       const card = ownCard(state, playerId, action.cardId);
@@ -191,6 +193,11 @@ export function applyItoAction(
     case 'next': {
       if (!isHost) return fail('not_host');
       return next(state, ctx);
+    }
+    case 'lobby': {
+      if (!isHost) return fail('not_host');
+      if (state.phase !== 'theme' && state.phase !== 'reveal') return fail('bad_phase');
+      return ok({ ...initialItoState(), mode: state.mode, usedThemes: state.usedThemes });
     }
     default:
       return fail('bad_action');
