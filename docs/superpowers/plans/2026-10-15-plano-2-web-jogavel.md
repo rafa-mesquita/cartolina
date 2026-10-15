@@ -15,7 +15,7 @@
 **Fora deste plano:** Plano 3 = histórico do grupo (spec §11); Plano 4 = layout de celular/toque, manual de marca `#/marca`, deploy (Pages + Cloudflare), E2E com Playwright, rate limit.
 
 **Decisões deste plano:**
-- O token do jogador fica no `sessionStorage` (cada aba = um jogador; recarregar mantém o assento). Nome e cor ficam no `localStorage`.
+- O token do jogador fica no `sessionStorage` em desenvolvimento (cada aba = um jogador) e no `localStorage` em produção (fechar a aba e voltar pelo link devolve o assento) — decidido na revisão final. Nome e personagem ficam no `localStorage`.
 - `SERVER_URL` padrão é `http://127.0.0.1:8787` (no Windows, `localhost` pode resolver para `::1` e o `wrangler dev` escuta em IPv4).
 - Inclinação de carta é determinística a partir do id (todo mundo vê a mesma carta torta igual).
 - O índice de `place` enviado ao servidor é traduzido do que o jogador vê (`toServerIndex`), porque cartas que outros estão carregando ficam escondidas da fila local.
