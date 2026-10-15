@@ -1,0 +1,16 @@
+{
+  "name": "cartolina",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.0",
+    "vitest": "^3.2.7"
+  }
+}
