@@ -1,23 +1,33 @@
 import { DurableObject } from 'cloudflare:workers';
 import {
-  ERROR_MESSAGES,
+  CLOSE_GONE,
+  CLOSE_REPLACED,
+  CLOSE_TIMEOUT,
   createRoom,
   disconnect,
+  errorMessage,
+  HEARTBEAT_PING,
+  HEARTBEAT_PONG,
   isExpired,
   joinRoom,
   nextAlarmAt,
   parseClientMessage,
+  reconcilePresence,
   roomAction,
+  roomSummary,
   roomView,
   tick,
   type Room,
   type ServerMessage,
 } from '@cartolina/shared';
+import { isStale, nextWakeAt } from './liveness';
 
 interface Attachment {
   playerId: string | null;
-  /** Socket substituído por uma reconexão: ignora tudo que ele ainda enviar. */
+  /** Socket descartado (substituído por reconexão ou sem heartbeat): ignora tudo que ele ainda enviar. */
   replaced?: boolean;
+  /** Quando o socket foi aceito; base do heartbeat enquanto não houve nenhum ping. */
+  acceptedAt?: number;
 }
 
 const CURSOR_MIN_INTERVAL_MS = 33;
@@ -28,23 +38,20 @@ export class RoomDO extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair(HEARTBEAT_PING, HEARTBEAT_PONG));
     ctx.blockConcurrencyWhile(async () => {
       this.room = (await ctx.storage.get<Room>('room')) ?? null;
       if (!this.room) return;
-      // Após um restart do DO, `connected` pode estar obsoleto: quem não tem socket vivo está desconectado.
-      const live = new Set(ctx.getWebSockets().map((s) => this.attachment(s).playerId));
+      // Após um restart, `connected` pode estar obsoleto: quem não tem socket vivo está desconectado.
+      const live = new Set(
+        ctx.getWebSockets().map((s) => this.attachment(s).playerId).filter((id): id is string => id !== null),
+      );
       const now = Date.now();
-      let changed = false;
-      for (const seat of this.room.seats) {
-        if (seat.connected && !live.has(seat.id)) {
-          // disconnect() atualiza lastActivity; a reconciliação não é atividade, então preserva o valor guardado.
-          this.room = { ...disconnect(this.room, seat.id, now), lastActivity: this.room.lastActivity };
-          changed = true;
-        }
-      }
-      if (changed) {
+      const reconciled = reconcilePresence(this.room, live, now);
+      if (reconciled !== this.room) {
+        this.room = reconciled;
         await ctx.storage.put('room', this.room);
-        await ctx.storage.setAlarm(nextAlarmAt(this.room, now));
+        await ctx.storage.setAlarm(nextWakeAt(nextAlarmAt(this.room, now), this.liveSocketCount(), now));
       }
     });
   }
@@ -60,7 +67,8 @@ export class RoomDO extends DurableObject<Env> {
     }
 
     if (url.pathname === '/exists') {
-      return Response.json({ exists: this.room !== null }, { status: this.room ? 200 : 404 });
+      if (!this.room) return Response.json({ exists: false }, { status: 404 });
+      return Response.json({ exists: true, ...roomSummary(this.room) });
     }
 
     if (url.pathname.endsWith('/ws')) {
@@ -69,7 +77,8 @@ export class RoomDO extends DurableObject<Env> {
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair) as [WebSocket, WebSocket];
       this.ctx.acceptWebSocket(server);
-      server.serializeAttachment({ playerId: null } satisfies Attachment);
+      server.serializeAttachment({ playerId: null, acceptedAt: Date.now() } satisfies Attachment);
+      await this.scheduleAlarm();
       return new Response(null, { status: 101, webSocket: client });
     }
 
@@ -79,7 +88,7 @@ export class RoomDO extends DurableObject<Env> {
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
     if (this.attachment(ws).replaced) return;
     if (!this.room) {
-      this.safeClose(ws, 4004, 'not_found');
+      this.safeClose(ws, CLOSE_GONE, 'not_found');
       return;
     }
     const msg = parseClientMessage(typeof raw === 'string' ? raw : new TextDecoder().decode(raw));
@@ -93,9 +102,9 @@ export class RoomDO extends DurableObject<Env> {
       for (const other of this.socketsOf(res.playerId)) {
         if (other === ws) continue;
         other.serializeAttachment({ playerId: null, replaced: true } satisfies Attachment);
-        this.safeClose(other, 4000, 'replaced');
+        this.safeClose(other, CLOSE_REPLACED, 'replaced');
       }
-      ws.serializeAttachment({ playerId: res.playerId } satisfies Attachment);
+      ws.serializeAttachment({ playerId: res.playerId, acceptedAt: this.attachment(ws).acceptedAt } satisfies Attachment);
       this.room = tick(res.room, now, Math.random);
       this.send(ws, { t: 'welcome', playerId: res.playerId, code: this.room.code });
       await this.commit();
@@ -143,14 +152,17 @@ export class RoomDO extends DurableObject<Env> {
     if (!this.room) return;
     const now = Date.now();
     if (isExpired(this.room, now)) {
-      for (const ws of this.ctx.getWebSockets()) this.safeClose(ws, 4004, 'expired');
+      for (const ws of this.ctx.getWebSockets()) this.safeClose(ws, CLOSE_GONE, 'expired');
       this.room = null;
       await this.ctx.storage.deleteAll();
       await this.ctx.storage.deleteAlarm();
       return;
     }
+    const before = this.room;
+    const swept = this.sweepStaleSockets(now);
     this.room = tick(this.room, now, Math.random);
-    await this.commit();
+    if (swept || this.room.hostId !== before.hostId || this.room.game !== before.game) await this.commit();
+    else await this.scheduleAlarm();
   }
 
   private async handleGone(ws: WebSocket): Promise<void> {
@@ -160,6 +172,33 @@ export class RoomDO extends DurableObject<Env> {
     if (this.socketsOf(playerId).length > 0) return;
     this.room = disconnect(this.room, playerId, Date.now());
     await this.commit();
+  }
+
+  private async scheduleAlarm(): Promise<void> {
+    if (!this.room) return;
+    const now = Date.now();
+    await this.ctx.storage.setAlarm(nextWakeAt(nextAlarmAt(this.room, now), this.liveSocketCount(), now));
+  }
+
+  private liveSocketCount(): number {
+    return this.ctx.getWebSockets().filter((ws) => !this.attachment(ws).replaced).length;
+  }
+
+  /** Fecha sockets sem heartbeat e desconecta o jogador se não sobrou outro socket dele. Devolve true se desconectou alguém. */
+  private sweepStaleSockets(now: number): boolean {
+    let changed = false;
+    for (const ws of this.ctx.getWebSockets()) {
+      const att = this.attachment(ws);
+      const lastPing = this.ctx.getWebSocketAutoResponseTimestamp(ws)?.getTime() ?? null;
+      if (!isStale(lastPing, att.acceptedAt ?? now, now)) continue;
+      ws.serializeAttachment({ playerId: null, replaced: true } satisfies Attachment);
+      this.safeClose(ws, CLOSE_TIMEOUT, 'timeout');
+      if (att.playerId && this.room && this.socketsOf(att.playerId).length === 0) {
+        this.room = disconnect(this.room, att.playerId, now);
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   /** Fechar um socket já em CLOSING/CLOSED lança; isso não pode abortar o fluxo do chamador. */
@@ -184,7 +223,7 @@ export class RoomDO extends DurableObject<Env> {
     // Aplica transições pendentes (host, fase) antes de gravar, agendar e transmitir, para o alarme não correr com o estado.
     this.room = tick(this.room, Date.now(), Math.random);
     await this.ctx.storage.put('room', this.room);
-    await this.ctx.storage.setAlarm(nextAlarmAt(this.room, Date.now()));
+    await this.scheduleAlarm();
     for (const ws of this.ctx.getWebSockets()) {
       const playerId = this.attachment(ws).playerId;
       if (playerId) this.send(ws, { t: 'state', room: roomView(this.room, playerId) });
@@ -207,6 +246,6 @@ export class RoomDO extends DurableObject<Env> {
   }
 
   private sendError(ws: WebSocket, code: string): void {
-    this.send(ws, { t: 'error', code, message: ERROR_MESSAGES[code] ?? 'Algo deu errado.' });
+    this.send(ws, { t: 'error', code, message: errorMessage(code) });
   }
 }

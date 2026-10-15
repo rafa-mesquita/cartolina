@@ -1,0 +1,68 @@
+import { MAX_PLAYERS } from '@cartolina/shared';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const fake = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  const state = { bots: [] as { code: string }[], version: 0 };
+  const emit = () => {
+    state.version++;
+    listeners.forEach((fn) => fn());
+  };
+  return { state, listeners, emit };
+});
+
+vi.mock('../src/dev/bots', () => ({
+  subscribeBots: (fn: () => void) => {
+    fake.listeners.add(fn);
+    return () => fake.listeners.delete(fn);
+  },
+  botsVersion: () => fake.state.version,
+  botsIn: (code: string) => fake.state.bots.filter((b) => b.code === code),
+  addBot: vi.fn((code: string) => {
+    fake.state.bots.push({ code });
+    fake.emit();
+  }),
+  removeAllBots: vi.fn(() => {
+    fake.state.bots = [];
+    fake.emit();
+  }),
+}));
+
+import BotControls from '../src/dev/BotControls';
+import { addBot, removeAllBots } from '../src/dev/bots';
+import { Lobby } from '../src/screens/Lobby';
+import { makeRoom, viewOf } from './fixtures';
+
+describe('BotControls (dev)', () => {
+  afterEach(() => {
+    fake.state.bots = [];
+    vi.clearAllMocks();
+  });
+
+  it('adiciona bots e mostra "tirar bots" só quando existem', () => {
+    render(<BotControls code="ABCD" seats={2} />);
+    expect(screen.getByText('modo teste (só no localhost)')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /tirar bots/ })).toBeNull();
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /adicionar bot/ }));
+    });
+    expect(addBot).toHaveBeenCalledWith('ABCD');
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /tirar bots/ }));
+    });
+    expect(removeAllBots).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /tirar bots/ })).toBeNull();
+  });
+
+  it('sala cheia desabilita "adicionar bot"', () => {
+    render(<BotControls code="ABCD" seats={MAX_PLAYERS} />);
+    expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('o lobby carrega os controles em dev', async () => {
+    const conn = { sendAction: vi.fn(), sendActivity: vi.fn(), sendCursor: vi.fn(), sendPing: vi.fn(), onFx: vi.fn(), onError: vi.fn() };
+    render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={conn} />);
+    expect(await screen.findByRole('button', { name: /adicionar bot/ })).toBeTruthy();
+  });
+});

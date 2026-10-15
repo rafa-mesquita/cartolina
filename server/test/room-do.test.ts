@@ -4,6 +4,17 @@ import { describe, expect, it } from 'vitest';
 import { COLORS, barrier, connect, joined, newRoomCode } from './helpers';
 
 describe('RoomDO: entrada', () => {
+  it('GET /rooms/:code lista quem já está na sala', async () => {
+    const code = await newRoomCode();
+    await joined(code, 2);
+    const res = await SELF.fetch(`https://x/rooms/${code}`);
+    const body = (await res.json()) as { exists: boolean; phase: string; seats: { name: string; color: string }[] };
+    expect(body.exists).toBe(true);
+    expect(body.phase).toBe('lobby');
+    expect(body.seats.map((s) => s.name)).toEqual(['P0', 'P1']);
+    expect(body.seats.map((s) => s.color)).toEqual([COLORS[0], COLORS[1]]);
+  });
+
   it('join devolve welcome e estado com o assento', async () => {
     const code = await newRoomCode();
     const a = await connect(code);
@@ -70,7 +81,7 @@ describe('RoomDO: entrada', () => {
     b.send({ t: 'join', token: crypto.randomUUID(), name: 'B', color: COLORS[0] });
     const err = await b.next('error');
     expect(err.code).toBe('color_taken');
-    expect(err.message).toBe('Essa cor já foi escolhida.');
+    expect(err.message).toBe('Esse personagem já foi escolhido.');
   });
 
   it('persiste a sala no storage', async () => {
@@ -191,5 +202,74 @@ describe('RoomDO: expiração', () => {
       expect(await state.storage.getAlarm()).toBeNull();
     });
     expect((await SELF.fetch(`https://x/rooms/${code}`)).status).toBe(404);
+  });
+});
+
+describe('RoomDO: heartbeat', () => {
+  it('responde "pong" a "ping" sem gerar erro', async () => {
+    const code = await newRoomCode();
+    const [a] = await joined(code, 1);
+    a!.client.ws.send('ping');
+    const deadline = Date.now() + 2000;
+    while (!a!.client.raw.includes('pong') && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
+    expect(a!.client.raw).toContain('pong');
+    await barrier(a!.client);
+    expect(a!.client.inbox.some((m) => m.t === 'error')).toBe(false);
+  });
+
+  it('a varredura fecha o socket sem heartbeat (4002) e desconecta o jogador', async () => {
+    const code = await newRoomCode();
+    const [a, b] = await joined(code, 2);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const ws = state.getWebSockets().find((s) => (s.deserializeAttachment() as { playerId: string | null }).playerId === b!.id);
+      ws!.serializeAttachment({ playerId: b!.id, acceptedAt: 0 });
+    });
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+    expect((await b!.client.closed).code).toBe(4002);
+    const view = await a!.client.state((r) => r.seats.find((x) => x.id === b!.id)?.connected === false);
+    expect(view.seats.find((x) => x.id === a!.id)?.connected).toBe(true);
+  });
+
+  it('a varredura não desconecta quem ainda tem outro socket vivo', async () => {
+    const code = await newRoomCode();
+    const [a] = await joined(code, 1);
+    const stale = await connect(code);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const sockets = state.getWebSockets();
+      const fresh = sockets.find((s) => (s.deserializeAttachment() as { playerId: string | null }).playerId === null);
+      fresh!.serializeAttachment({ playerId: a!.id, acceptedAt: 0 });
+      expect(sockets).toHaveLength(2);
+    });
+    await runDurableObjectAlarm(stub);
+    expect((await stale.closed).code).toBe(4002);
+    await barrier(a!.client);
+    expect(a!.client.inbox.some((m) => m.t === 'state' && m.room.seats[0]?.connected === false)).toBe(false);
+    await runInDurableObject(stub, async (_instance, state) => {
+      expect((await state.storage.get<Room>('room'))?.seats[0]?.connected).toBe(true);
+    });
+  });
+
+  it('com sockets abertos o alarme é agendado em no máximo 20 s', async () => {
+    const code = await newRoomCode();
+    await joined(code, 1);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (_instance, state) => {
+      const at = await state.storage.getAlarm();
+      expect(at).not.toBeNull();
+      expect(at!).toBeLessThanOrEqual(Date.now() + 20_000 + 1000);
+    });
+  });
+
+  it('alarme sem mudança não retransmite o estado', async () => {
+    const code = await newRoomCode();
+    const [a] = await joined(code, 1);
+    await barrier(a!.client);
+    a!.client.inbox.length = 0;
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runDurableObjectAlarm(stub);
+    await barrier(a!.client);
+    expect(a!.client.inbox.some((m) => m.t === 'state')).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { ito } from './games/ito/rules';
-import type { ItoAction, ItoState, ItoView } from './games/ito/types';
+import type { ItoAction, ItoPhase, ItoState, ItoView } from './games/ito/types';
 import { MAX_PLAYERS, cleanName, isPlayerColor, type PlayerColor } from './players';
 import type { Rng } from './rng';
 
@@ -37,6 +37,20 @@ export interface RoomView {
   you: string | null;
   seats: SeatView[];
   game: ItoView;
+}
+
+export interface RoomSummary {
+  phase: ItoPhase;
+  seats: SeatView[];
+}
+
+function seatView({ id, name, color, connected }: Seat): SeatView {
+  return { id, name, color, connected };
+}
+
+/** Resumo público da sala para quem ainda não entrou: fase e assentos (cores ocupadas). */
+export function roomSummary(room: Room): RoomSummary {
+  return { phase: room.game.phase, seats: room.seats.map(seatView) };
 }
 
 export type JoinError = 'room_full' | 'bad_name' | 'bad_color' | 'color_taken';
@@ -130,7 +144,7 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     code: room.code,
     hostId: room.hostId,
     you: viewerId,
-    seats: room.seats.map(({ id, name, color, connected }) => ({ id, name, color, connected })),
+    seats: room.seats.map(seatView),
     game: ito.viewFor(room.game, viewerId),
   };
 }
@@ -146,4 +160,17 @@ export function nextAlarmAt(room: Room, now: number): number {
     .map((s) => s.disconnectedAt! + DISCONNECT_GRACE_MS + 1000)
     .filter((at) => at > now);
   return Math.min(room.lastActivity + ROOM_TTL_MS, ...pending);
+}
+
+/**
+ * Após um reinício do servidor, quem consta como conectado mas não tem socket vivo
+ * passa a desconectado. Não é atividade: `lastActivity` não muda.
+ */
+export function reconcilePresence(room: Room, liveIds: ReadonlySet<string>, now: number): Room {
+  const stale = room.seats.filter((s) => s.connected && !liveIds.has(s.id));
+  if (stale.length === 0) return room;
+  return {
+    ...room,
+    seats: room.seats.map((s) => (stale.includes(s) ? { ...s, connected: false, disconnectedAt: now } : s)),
+  };
 }

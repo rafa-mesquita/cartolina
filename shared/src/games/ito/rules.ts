@@ -85,6 +85,16 @@ function ownCard(state: ItoState, playerId: string, cardId: string): ItoCard | s
   return card;
 }
 
+/** Place: qualquer jogador da rodada move carta já na fila; só o dono põe carta da mão na fila. */
+function movableCard(state: ItoState, playerId: string, cardId: string): ItoCard | string {
+  if (state.phase !== 'sorting') return 'bad_phase';
+  if (!Object.hasOwn(state.cards, cardId)) return 'unknown_card';
+  if (!state.players.includes(playerId)) return 'not_player';
+  const card = state.cards[cardId]!;
+  if (!state.row.includes(card.id) && card.owner !== playerId) return 'not_owner';
+  return card;
+}
+
 function allCardsInRow(state: ItoState): boolean {
   return state.row.length === Object.keys(state.cards).length;
 }
@@ -114,6 +124,8 @@ function next(state: ItoState, ctx: GameContext): ActionResult<ItoState> {
   const players = [...ctx.active];
   if (state.phase === 'sorting') return ok(toThemePhase(state, players, state.level, state.lives, ctx));
   if (state.outcome === 'level_cleared') return ok(toThemePhase(state, players, state.level + 1, state.lives, ctx));
+  // Errou com vida sobrando: mesmo nível, cartas e tema novos, vidas mantidas.
+  if (state.outcome === 'level_failed') return ok(toThemePhase(state, players, state.level, state.lives, ctx));
   return ok(toThemePhase(state, players, 1, CAMPAIGN_LIVES, ctx));
 }
 
@@ -145,6 +157,8 @@ export function applyItoAction(
     case 'customTheme': {
       const e = hostOnly(isHost, state, 'theme');
       if (e) return fail(e);
+      // Campanha: o tema é sempre sorteado (dá pra sortear outro, não escrever).
+      if (state.mode === 'campanha') return fail('theme_random_only');
       const theme = cleanTheme(action.theme);
       if (!theme) return fail('bad_theme');
       return ok({ ...state, theme });
@@ -157,7 +171,7 @@ export function applyItoAction(
       return ok(deal({ ...state, players }, ctx));
     }
     case 'place': {
-      const card = ownCard(state, playerId, action.cardId);
+      const card = movableCard(state, playerId, action.cardId);
       if (typeof card === 'string') return fail(card);
       const row = state.row.filter((id) => id !== card.id);
       const index = Math.min(Math.max(0, Math.trunc(action.index)), row.length);
@@ -172,6 +186,8 @@ export function applyItoAction(
     case 'clue': {
       const card = ownCard(state, playerId, action.cardId);
       if (typeof card === 'string') return fail(card);
+      // A dica só muda com a carta na mão: na mesa, todo mundo já está lendo.
+      if (state.row.includes(card.id)) return fail('card_on_table');
       const cards = { ...state.cards, [card.id]: { ...card, clue: cleanClue(action.text) } };
       return ok(unready({ ...state, cards }, playerId));
     }

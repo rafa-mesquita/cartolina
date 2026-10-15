@@ -1,0 +1,14 @@
+:root {
+  --kraft: #eadbc0;
+  --paper: #f6eedd;
+  --ink: #3b2f2f;
+  --pink: #ff8fab;
+  --pink2: #e0567a;
+  --edge: #d3bf99;
+  --ok: #7eddb5;
+  --warm: #ffe7b3;
+  --disabled: #e3d2b3;
+  --r: 14px 10px 13px 9px;
+  --font-ui: 'Fredoka', system-ui, sans-serif;
+  --font-hand: 'Patrick Hand', 'Comic Sans MS', cursive;
+}

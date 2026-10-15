@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cartolina~ · sons da revelação</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{--kraft:#EADBC0;--paper:#F6EEDD;--ink:#3B2F2F;--pink:#FF8FAB;--pink2:#E0567A;--ok:#7EDDB5}
+*{box-sizing:border-box}
+body{margin:0;background:var(--kraft);color:var(--ink);font-family:Fredoka,system-ui,sans-serif;padding:32px 16px}
+h1{font:700 40px/1 Fredoka;margin:0 0 6px;text-align:center}h1 span{color:var(--pink2)}
+.sub{font:20px/1.2 'Patrick Hand';text-align:center;opacity:.8;margin:0 0 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;max-width:1100px;margin:0 auto}
+.opt{background:var(--paper);border:2px solid var(--ink);border-radius:20px 14px 18px 13px;box-shadow:4px 5px 0 var(--ink);padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.opt.rec{outline:3px dashed var(--pink2);outline-offset:5px}
+.opt h2{margin:0;font:700 22px/1 Fredoka}
+.opt p{margin:0;font:19px/1.2 'Patrick Hand'}
+.tag{align-self:flex-start;background:var(--pink);border:2px solid var(--ink);border-radius:999px;font:700 12px/1 Fredoka;padding:4px 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+button{font:700 16px/1 Fredoka;padding:11px 16px;background:var(--pink);border:2px solid var(--ink);border-radius:14px 10px 13px 9px;box-shadow:3px 4px 0 var(--ink);cursor:pointer;color:var(--ink)}
+button.s{background:var(--paper);font-weight:500}
+button:active{transform:translate(2px,3px);box-shadow:1px 1px 0 var(--ink)}
+.cards{display:flex;gap:8px;justify-content:center;margin:26px auto 0;max-width:600px}
+.c{width:56px;height:76px;border:2px solid var(--ink);border-radius:10px 7px 9px 6px;background:var(--pink);display:grid;place-items:center;font:700 22px/1 Fredoka;transition:transform .3s;color:transparent}
+.c.up{background:var(--paper);color:var(--ink);transform:translateY(-6px) rotate(-2deg)}
+.c.err{border-color:var(--pink2);box-shadow:0 0 0 3px var(--pink2)}
+</style>
+</head>
+<body>
+<h1>sons da revelação<span>~</span></h1>
+<p class="sub">clique pra ouvir · os sons são gerados na hora (sem arquivo), dá pra ajustar tudo</p>
+<div class="grid">
+  <div class="opt rec">
+    <span class="tag">minha sugestão</span>
+    <h2>A · tic por carta + final</h2>
+    <p>Um "tic" de madeira a cada carta que vira, subindo de tom (suspense). No fim: arpejo feliz se acertaram, "uó-uó" se erraram. Cada erro ganha um "tunc" grave.</p>
+    <div class="row"><button data-play="seqWin">rodada certa</button><button data-play="seqLose">rodada com erro</button></div>
+  </div>
+  <div class="opt">
+    <h2>B · tambor + tcham</h2>
+    <p>Rufar curto de tambor e um acorde brilhante, uma vez só quando a revelação começa.</p>
+    <div class="row"><button data-play="drum">ouvir</button></div>
+  </div>
+  <div class="opt">
+    <h2>C · caixinha de música</h2>
+    <p>Arpejo delicado de caixinha de música no começo da revelação. Combina com o visual "feito à mão".</p>
+    <div class="row"><button data-play="musicbox">ouvir</button></div>
+  </div>
+  <div class="opt">
+    <h2>D · suspense + pop</h2>
+    <p>Um tom que sobe devagar com tremolo e termina num "pop", como abrir uma surpresa.</p>
+    <div class="row"><button data-play="suspense">ouvir</button></div>
+  </div>
+</div>
+<div class="cards" id="cards"></div>
+
+<script>
+'use strict';
+let ctx = null;
+const ac = () => (ctx ??= new AudioContext());
+const now = () => ac().currentTime;
+
+function tone({ f, t = 0, dur = 0.4, type = 'sine', vol = 0.25, attack = 0.005, glideTo = null, partial = 0 }) {
+  const c = ac(), o = c.createOscillator(), g = c.createGain(), at = now() + t;
+  o.type = type; o.frequency.setValueAtTime(f, at);
+  if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, at + dur);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(c.destination); o.start(at); o.stop(at + dur + 0.05);
+  if (partial) tone({ f: f * partial, t, dur: dur * 0.5, type: 'sine', vol: vol * 0.25, attack });
+}
+function noise({ t = 0, dur = 0.08, vol = 0.2, freq = 1800, q = 1 }) {
+  const c = ac(), len = Math.ceil(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), at = now() + t;
+  s.buffer = buf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q; g.gain.value = vol;
+  s.connect(f).connect(g).connect(c.destination); s.start(at);
+}
+const NOTE = n => 440 * Math.pow(2, (n - 69) / 12);
+
+// A — tic por carta + final
+const tick = (i, t) => { tone({ f: NOTE(72 + i * 2), t, dur: 0.12, type: 'triangle', vol: 0.22, partial: 3 }); noise({ t, dur: 0.03, vol: 0.08, freq: 3200, q: 3 }); };
+const thunk = t => { tone({ f: 110, t, dur: 0.22, type: 'sine', vol: 0.35, glideTo: 70 }); noise({ t, dur: 0.06, vol: 0.12, freq: 400 }); };
+const winJingle = t => [72, 76, 79, 84].forEach((n, i) => tone({ f: NOTE(n), t: t + i * 0.09, dur: 0.5, type: 'triangle', vol: 0.2, partial: 2 }));
+const loseJingle = t => { tone({ f: NOTE(67), t, dur: 0.35, type: 'square', vol: 0.06 }); tone({ f: NOTE(62), t: t + 0.32, dur: 0.6, type: 'square', vol: 0.06, glideTo: NOTE(58) }); };
+
+function sequence(values) {
+  const el = document.getElementById('cards'); el.innerHTML = '';
+  const cards = values.map(v => { const d = document.createElement('div'); d.className = 'c'; d.textContent = v; el.appendChild(d); return d; });
+  let max = 0, t = 0.2, errs = 0;
+  values.forEach((v, i) => {
+    const err = v < max; max = Math.max(max, v); if (err) errs++;
+    tick(i, t);
+    setTimeout(() => cards[i].classList.add('up'), t * 1000);
+    if (err) { thunk(t + 0.18); setTimeout(() => cards[i].classList.add('err'), (t + 0.18) * 1000); }
+    t += 0.62;
+  });
+  (errs ? loseJingle : winJingle)(t + 0.15);
+}
+
+const PLAY = {
+  seqWin: () => sequence([7, 23, 41, 66, 92]),
+  seqLose: () => sequence([7, 41, 23, 66, 92]),
+  drum: () => { for (let i = 0; i < 10; i++) noise({ t: i * 0.055, dur: 0.05, vol: 0.12 + i * 0.012, freq: 220, q: 0.8 }); [60, 64, 67, 72].forEach(n => tone({ f: NOTE(n), t: 0.6, dur: 0.9, type: 'triangle', vol: 0.16, partial: 2 })); noise({ t: 0.6, dur: 0.35, vol: 0.15, freq: 5000, q: 0.5 }); },
+  musicbox: () => [79, 83, 86, 91, 86, 95].forEach((n, i) => tone({ f: NOTE(n), t: i * 0.13, dur: 0.9, type: 'sine', vol: 0.18, partial: 4 })),
+  suspense: () => { tone({ f: 220, dur: 0.9, type: 'sine', vol: 0.12, glideTo: 660 }); tone({ f: 226, dur: 0.9, type: 'sine', vol: 0.08, glideTo: 668 }); tone({ f: NOTE(84), t: 0.92, dur: 0.25, type: 'triangle', vol: 0.25, partial: 2 }); noise({ t: 0.92, dur: 0.05, vol: 0.2, freq: 2500, q: 2 }); },
+};
+document.querySelectorAll('[data-play]').forEach(b => b.addEventListener('click', () => { ac().resume(); PLAY[b.dataset.play](); }));
+</script>
+</body>
+</html>

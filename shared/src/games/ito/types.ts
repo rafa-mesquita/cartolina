@@ -1,6 +1,7 @@
 export type ItoMode = 'livre' | 'campanha';
 export type ItoPhase = 'lobby' | 'theme' | 'sorting' | 'reveal';
-export type ItoOutcome = 'round_won' | 'round_lost' | 'level_cleared' | 'won' | 'lost';
+/** Campanha: `level_failed` = errou com vida sobrando, o grupo repete o mesmo nível. */
+export type ItoOutcome = 'round_won' | 'round_lost' | 'level_cleared' | 'level_failed' | 'won' | 'lost';
 
 export interface Theme {
   titulo: string;

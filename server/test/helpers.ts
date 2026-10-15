@@ -1,5 +1,5 @@
 import { SELF } from 'cloudflare:test';
-import type { ClientMessage, RoomView, ServerMessage } from '@cartolina/shared';
+import { HEARTBEAT_PONG, type ClientMessage, type RoomView, type ServerMessage } from '@cartolina/shared';
 
 export async function newRoomCode(): Promise<string> {
   const res = await SELF.fetch('https://x/rooms', { method: 'POST' });
@@ -13,6 +13,8 @@ export interface TestClient {
   next<T extends ServerMessage['t']>(t: T): Promise<Extract<ServerMessage, { t: T }>>;
   state(pred: (room: RoomView) => boolean): Promise<RoomView>;
   inbox: ServerMessage[];
+  /** Respostas de texto puro (ex.: "pong") que não são mensagens JSON do protocolo. */
+  raw: string[];
   /** Resolve quando o servidor (ou nós) fecha o socket. */
   closed: Promise<{ code: number; reason: string }>;
 }
@@ -32,6 +34,7 @@ export async function connect(code: string): Promise<TestClient> {
   const ws = res.webSocket;
   ws.accept();
   const inbox: ServerMessage[] = [];
+  const raw: string[] = [];
   const closed = new Promise<{ code: number; reason: string }>((resolve) => {
     ws.addEventListener('close', (event) => {
       resolve({ code: event.code, reason: event.reason });
@@ -45,7 +48,13 @@ export async function connect(code: string): Promise<TestClient> {
   });
   let wake: (() => void) | null = null;
   ws.addEventListener('message', (event) => {
-    inbox.push(JSON.parse(event.data as string) as ServerMessage);
+    const data = event.data as string;
+    if (data === HEARTBEAT_PONG) {
+      raw.push(data);
+      wake?.();
+      return;
+    }
+    inbox.push(JSON.parse(data) as ServerMessage);
     wake?.();
   });
 
@@ -65,6 +74,7 @@ export async function connect(code: string): Promise<TestClient> {
   return {
     ws,
     inbox,
+    raw,
     closed,
     send: (msg) => ws.send(JSON.stringify(msg)),
     next: (t) => waitFor((m): m is Extract<ServerMessage, { t: typeof t }> => m.t === t, t),

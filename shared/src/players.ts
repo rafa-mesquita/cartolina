@@ -9,6 +9,14 @@ export const PLAYER_COLORS = [
   '#E6B8E0',
   '#C9E27A',
   '#D9C2A0',
+  '#F4877A',
+  '#B59A7A',
+  '#9C9CF0',
+  '#ECE8E2',
+  '#9FB5CC',
+  '#F9E36B',
+  '#A97AB0',
+  '#A7A9AE',
 ] as const;
 
 export type PlayerColor = (typeof PLAYER_COLORS)[number];
@@ -24,7 +32,8 @@ export function isPlayerColor(value: unknown): value is PlayerColor {
 
 export function cleanName(raw: string): string | null {
   const name = raw.trim().replace(/\s+/g, ' ');
-  return name.length >= 1 && name.length <= NAME_MAX ? name : null;
+  const length = Array.from(name).length;
+  return length >= 1 && length <= NAME_MAX ? name : null;
 }
 
 /** Mantém espaço no fim para não atrapalhar quem está digitando. */
