@@ -27,6 +27,9 @@ cursores e as cartas sendo arrastadas pelos outros, com animações fluidas.
 - Os jogadores colocam suas cartas numa **fila compartilhada** (ordem crescente
   da esquerda pra direita) e podem reposicioná-las livremente. **Cada um só move
   as próprias cartas.**
+- Qualquer mudança na fila (colocar, mover ou tirar carta) **desmarca o "pronto"
+  de todos**, porque "pronto" significa "aprovo esta ordem". Editar a dica só
+  desmarca quem editou.
 - Cada jogador marca **"tô pronto"**. Quando todos com cartas estiverem prontos
   e todas as cartas estiverem na fila, a revelação começa. O host pode **forçar a
   revelação** (só se todas as cartas estiverem na fila).
@@ -117,6 +120,7 @@ Cliente → servidor:
 | `player.ready` | `ready: boolean` | todos |
 | `round.forceReveal` | — | host |
 | `round.next` | — (próxima rodada/nível ou nova partida) | host |
+| `lobby` | — (voltar ao lobby a partir do tema ou da revelação) | host |
 | `fx.cursor` | `zone, x, y, drag?: { cardId }` (≤30/s) | todos |
 | `fx.activity` | `"thinking" \| "writing" \| "dragging"` | todos |
 | `fx.ping` | `x, y` (coordenadas da mesa) | todos |
