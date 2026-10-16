@@ -49,7 +49,9 @@ describe('estante de jogos', () => {
     unmount();
     window.location.hash = '#/g/d3jj53e9xj';
     render(<App />);
-    expect(screen.getByRole('tab', { name: 'histórico' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('link', { name: 'histórico' }).getAttribute('aria-current')).toBe('page');
     expect(screen.getByText(/grupos acabaram/)).toBeTruthy();
+    // a URL passa a ser a nova, e o aviso continua (replaceState não dispara hashchange)
+    expect(window.location.hash).toBe('#/ito/historico');
   });
 });

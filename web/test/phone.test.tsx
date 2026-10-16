@@ -48,7 +48,9 @@ describe('aviso no celular', () => {
     phone(true);
     const { unmount } = render(<Home />);
     expect(screen.getByRole('link', { name: /DITU/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'entrar' })).toBeTruthy();
+    // a linha do código fica de fora: a sala não abre no celular (como na aba jogar)
+    expect(screen.queryByText('tem um código?')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'entrar' })).toBeNull();
     expect(screen.queryByText(PHONE_TEXT)).toBeNull();
     unmount();
     render(<GamePage game="ito" tab="jogar" />);
@@ -62,6 +64,13 @@ describe('aviso no celular', () => {
     render(<GamePage game="ito" tab="historico" />);
     expect(await screen.findByText(/Nenhuma partida ainda/)).toBeTruthy();
     expect(screen.queryByText(PHONE_TEXT)).toBeNull();
+  });
+
+  it('no computador, a estante mostra a linha do código', () => {
+    phone(false);
+    render(<Home />);
+    expect(screen.getByText('tem um código?')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'entrar' })).toBeTruthy();
   });
 
   it('no computador, a página do DITU mantém "criar sala"', () => {

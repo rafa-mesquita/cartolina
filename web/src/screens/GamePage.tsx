@@ -1,48 +1,14 @@
 import type { GameId } from '@cartolina/shared';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { catalogEntry } from '../games/catalog';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goToRoom, type GameTab } from '../lib/router';
 import { createRoom } from '../net/api';
 import { TOO_MANY_MESSAGE, isTooMany } from '../net/errors';
 import { HistoryPanel } from './history/HistoryPanel';
+import { JoinByCode } from './JoinByCode';
 import { PHONE_TEXT } from './PhoneNotice';
 import './shelf.css';
-
-/** "entrar com código": usado na estante (compacto, botão "entrar") e na aba jogar de cada jogo. */
-export function JoinByCode({ compact = false }: { compact?: boolean }) {
-  const [code, setCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  function enter(e: FormEvent) {
-    e.preventDefault();
-    const c = code.trim().toUpperCase();
-    if (/^[A-Z0-9]{4}$/.test(c)) goToRoom(c);
-    else setError('O código da sala tem 4 letras.');
-  }
-  return (
-    <form className={`row-inline ${compact ? 'join-compact' : ''}`} onSubmit={enter}>
-      <input
-        className="text-in"
-        value={code}
-        onChange={(e) => {
-          setCode(e.target.value);
-          setError(null);
-        }}
-        placeholder="KXQ7"
-        maxLength={4}
-        aria-label="código da sala"
-      />
-      <button className="sbtn solid" type="submit">
-        {compact ? 'entrar' : 'entrar na sala'}
-      </button>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-    </form>
-  );
-}
 
 function PlayTab({ game }: { game: GameId }) {
   const entry = catalogEntry(game)!;
@@ -99,7 +65,7 @@ function PlayTab({ game }: { game: GameId }) {
 export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: GameTab; legacy?: boolean }) {
   const entry = catalogEntry(game)!;
   return (
-    <main className={`screen game-page game-${game}`}>
+    <main className="screen game-page">
       <h1 className="logo">
         cartolina<span>~</span>
       </h1>
@@ -115,9 +81,9 @@ export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: Gam
           <p className="tagline">{entry.tagline}</p>
         </div>
       </header>
-      <nav className="tabs" role="tablist">
+      <nav className="tabs" aria-label="seções do jogo">
         {(['jogar', 'historico'] as const).map((t) => (
-          <a key={t} role="tab" aria-selected={tab === t} className={`tab ${tab === t ? 'on' : ''}`} href={gameHash(game, t)}>
+          <a key={t} aria-current={tab === t ? 'page' : undefined} className={`tab ${tab === t ? 'on' : ''}`} href={gameHash(game, t)}>
             {t === 'jogar' ? 'jogar' : 'histórico'}
           </a>
         ))}

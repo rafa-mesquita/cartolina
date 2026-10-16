@@ -16,11 +16,10 @@ export interface CatalogEntry {
 }
 
 // Nomes de vitrine: o ITO aparece como DITU e o Dixit como Diquisti; os ids internos não mudam.
-const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory'>> = {
+const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> = {
   ito: {
     name: 'DITU',
     tagline: 'adivinhem a ordem sem dizer o número',
-    players: '2 a 10 pessoas',
     rules: [
       'Cada um recebe um número secreto de 1 a 100.',
       'Sem dizer o número, use o tema pra dar uma dica: quanto maior o número, mais perto do "100" do tema.',
@@ -32,7 +31,6 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory'>> = {
   dixit: {
     name: 'Diquisti',
     tagline: 'uma imagem, uma frase, muitas interpretações',
-    players: '3 a 10 pessoas',
     rules: [
       'O narrador escolhe uma carta da mão e diz uma frase sobre ela.',
       'Os outros escolhem a carta da mão que mais combina com a frase.',
@@ -42,7 +40,12 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory'>> = {
   },
 };
 
-export const CATALOG: CatalogEntry[] = GAME_IDS.map((id) => ({ id, ...TEXT[id], hasHistory: GAMES[id].recordsHistory }));
+export const CATALOG: CatalogEntry[] = GAME_IDS.map((id) => ({
+  id,
+  ...TEXT[id],
+  players: `${GAMES[id].minPlayers} a ${GAMES[id].maxPlayers} pessoas`,
+  hasHistory: GAMES[id].recordsHistory,
+}));
 
 export function catalogEntry(id: string): CatalogEntry | null {
   return isGameId(id) ? (CATALOG.find((g) => g.id === id) ?? null) : null;

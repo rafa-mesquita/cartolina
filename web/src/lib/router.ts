@@ -7,12 +7,17 @@ export type Route =
   | { name: 'room'; code: string }
   | { name: 'game'; game: GameId; tab: GameTab; legacy?: true };
 
-export function parseHash(hash: string): Route {
+/** Para onde os links antigos de grupo (#/g/...) são levados. */
+const LEGACY_TARGET = '#/ito/historico';
+
+export function parseHash(raw: string): Route {
+  // Tolera barra no fim (`#/ito/`) e maiúsculas (`#/ITO`).
+  const hash = raw.replace(/\/+$/, '');
   const room = hash.match(/^#\/sala\/([A-Za-z0-9]{4})$/);
   if (room) return { name: 'room', code: room[1]!.toUpperCase() };
   // Links antigos (#/g/<slug>): o histórico agora é do jogo.
-  if (/^#\/g\/[^/]+$/.test(hash)) return { name: 'game', game: 'ito', tab: 'historico', legacy: true };
-  const game = hash.match(/^#\/([a-z]+)(\/historico)?$/);
+  if (/^#\/g(\/[^/]+)?$/i.test(hash)) return { name: 'game', game: 'ito', tab: 'historico', legacy: true };
+  const game = hash.toLowerCase().match(/^#\/([a-z]+)(\/historico)?$/);
   if (game && isGameId(game[1])) return { name: 'game', game: game[1], tab: game[2] ? 'historico' : 'jogar' };
   return { name: 'home' };
 }
@@ -23,6 +28,11 @@ export function gameHash(game: GameId, tab: GameTab = 'jogar'): string {
 
 export function useHashRoute(): Route {
   const [route, setRoute] = useState(() => parseHash(window.location.hash));
+  // Link antigo de grupo: troca a URL pela nova sem recarregar (replaceState não dispara hashchange, então o aviso segue na tela).
+  const legacy = route.name === 'game' && route.legacy === true;
+  useEffect(() => {
+    if (legacy) window.history.replaceState(null, '', LEGACY_TARGET);
+  }, [legacy]);
   useEffect(() => {
     const onChange = () => setRoute(parseHash(window.location.hash));
     window.addEventListener('hashchange', onChange);
@@ -37,10 +47,6 @@ export function goToRoom(code: string): void {
 
 export function goHome(): void {
   window.location.hash = '#/';
-}
-
-export function goToGame(game: GameId, tab: GameTab = 'jogar'): void {
-  window.location.hash = gameHash(game, tab);
 }
 
 /** Link completo de uma sala (pra copiar e mandar pros amigos). */

@@ -64,10 +64,14 @@ describe('GamePage', () => {
       expect(api.createRoom).toHaveBeenCalledWith('ito');
     });
 
-    it('as abas são links com a rota de cada uma', () => {
+    it('as seções são links de navegação com a rota de cada uma; a atual tem aria-current', () => {
       render(<GamePage game="ito" tab="jogar" />);
-      expect(screen.getByRole('tab', { name: 'jogar' }).getAttribute('aria-selected')).toBe('true');
-      expect(screen.getByRole('tab', { name: 'histórico' }).getAttribute('href')).toBe('#/ito/historico');
+      const nav = screen.getByRole('navigation', { name: 'seções do jogo' });
+      expect(nav.querySelector('[role=tab], [role=tablist]')).toBeNull();
+      expect(screen.getByRole('link', { name: 'jogar' }).getAttribute('aria-current')).toBe('page');
+      const hist = screen.getByRole('link', { name: 'histórico' });
+      expect(hist.getAttribute('href')).toBe('#/ito/historico');
+      expect(hist.hasAttribute('aria-current')).toBe(false);
     });
 
     it('entrar com código vai pra sala', () => {
@@ -129,10 +133,11 @@ describe('GamePage', () => {
       expect(body?.textContent).toContain('Cracolândia');
     });
 
-    it('histórico vazio convida a jogar', async () => {
+    it('histórico vazio convida a jogar, com link pra aba jogar', async () => {
       vi.mocked(api.getHistory).mockResolvedValue(response([], null));
       render(<GamePage game="ito" tab="historico" />);
       expect(await screen.findByText(/Nenhuma partida ainda/)).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Crie uma sala' }).getAttribute('href')).toBe('#/ito');
     });
 
     it('jogadores com o mesmo nome não quebram a lista', async () => {

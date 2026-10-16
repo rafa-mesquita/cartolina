@@ -16,6 +16,7 @@ const MODES: { mode: ItoMode; title: string; text: string }[] = [
 ];
 
 export function Lobby({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
+  const history = catalogEntry(view.gameId);
   const host = isHost(view);
   const connected = view.seats.filter((s) => s.connected).length;
   const [copied, setCopied] = useState(false);
@@ -79,9 +80,9 @@ export function Lobby({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
             ref={linkInput}
           />
         )}
-        {catalogEntry(view.gameId)?.hasHistory && (
+        {history?.hasHistory && (
           <a className="sbtn" href={gameHash(view.gameId, 'historico')} target="_blank" rel="noopener">
-            📜 histórico do {catalogEntry(view.gameId)!.name}
+            📜 histórico do {history.name}
           </a>
         )}
       </section>

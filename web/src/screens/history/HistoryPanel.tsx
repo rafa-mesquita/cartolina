@@ -1,5 +1,6 @@
 import type { GameId, HistoryResponse } from '@cartolina/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { gameHash } from '../../lib/router';
 import { getHistory } from '../../net/api';
 import { CritterIcon, RoundItem, Stat } from './RoundItem';
 import './history.css';
@@ -128,7 +129,9 @@ export function HistoryPanel({ game }: { game: GameId }) {
       <section className="panel">
         <h2>partidas</h2>
         {rounds.length === 0 ? (
-          <p>Nenhuma partida ainda. Crie uma sala e bora jogar!</p>
+          <p>
+            Nenhuma partida ainda. <a href={gameHash(game)}>Crie uma sala</a> e bora jogar!
+          </p>
         ) : (
           <ul className="round-list">
             {rounds.map((r) => (

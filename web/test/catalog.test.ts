@@ -11,6 +11,10 @@ describe('catálogo de jogos do site', () => {
     for (const g of CATALOG) expect(g.hasHistory).toBe(GAMES[g.id].recordsHistory);
   });
 
+  it('o texto de jogadores vem do registro', () => {
+    for (const g of CATALOG) expect(g.players).toBe(`${GAMES[g.id].minPlayers} a ${GAMES[g.id].maxPlayers} pessoas`);
+  });
+
   it('DITU e Diquisti (o Dixit) jogáveis; id desconhecido não existe', () => {
     expect(catalogEntry('ito')?.name).toBe('DITU');
     expect(catalogEntry('ito')?.playable).toBe(true);

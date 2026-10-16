@@ -17,7 +17,7 @@
 .cover-dixit b { font: 400 30px/1.05 'DM Serif Display', Georgia, serif; }
 /* número decorativo no canto, como o da carta da mão */
 .shelf .cover-ito::after {
-  content: '87'; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
+  content: '87'; content: '87' / ''; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
   border: 2px solid var(--ink); border-radius: 8px 6px 7px 5px; padding: 3px 5px 2px; min-width: 30px; text-align: center;
 }
 /* selo pra um jogo que ainda não dá pra jogar: fica no topo da carta */
