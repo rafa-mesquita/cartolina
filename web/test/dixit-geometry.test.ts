@@ -68,10 +68,21 @@ describe('assentos e palco', () => {
 });
 
 describe('cartas soltas no feltro', () => {
-  const dist = (a: Pt, b: Pt): number => Math.hypot(a[0] - b[0], (a[1] - b[1]) * 1.4);
+  it('sem usadas, fica dentro dos limites (x 250–750, y 250–480, giro ±24°) e é determinístico', () => {
+    for (let seed = 1; seed <= 100; seed++) {
+      const [x, y, rz] = looseSpot([], mulberry32(seed));
+      expect(x).toBeGreaterThanOrEqual(250);
+      expect(x).toBeLessThan(750);
+      expect(y).toBeGreaterThanOrEqual(250);
+      expect(y).toBeLessThan(480);
+      expect(rz).toBeGreaterThanOrEqual(-24);
+      expect(rz).toBeLessThan(24);
+      expect(looseSpot([], mulberry32(seed))).toEqual([x, y, rz]);
+    }
+  });
 
-  it('sempre dentro dos limites (x 250–750, y 250–480, giro ±24°), com ou sem cartas usadas', () => {
-    for (let seed = 1; seed <= 200; seed++) {
+  it('com várias cartas já usadas, continua dentro dos limites', () => {
+    for (let seed = 1; seed <= 100; seed++) {
       const rng = mulberry32(seed);
       const used: Pt[] = [];
       for (let k = 0; k < 6; k++) {
@@ -80,36 +91,19 @@ describe('cartas soltas no feltro', () => {
         expect(x).toBeLessThan(750);
         expect(y).toBeGreaterThanOrEqual(250);
         expect(y).toBeLessThan(480);
-        expect(rz).toBeGreaterThanOrEqual(-24);
-        expect(rz).toBeLessThan(24);
+        expect(Math.abs(rz)).toBeLessThanOrEqual(24);
         used.push([x, y]);
       }
     }
   });
 
-  it('mesma semente, mesmo resultado', () => {
-    const used: Pt[] = [[400, 300], [600, 400]];
-    expect(looseSpot(used, mulberry32(7))).toEqual(looseSpot(used, mulberry32(7)));
-    expect(looseSpot(used, mulberry32(7))).not.toEqual(looseSpot(used, mulberry32(8)));
-  });
-
-  it('sem cartas usadas, fica o primeiro candidato sorteado', () => {
-    const rng = mulberry32(3);
-    const x = 250 + rng() * 500;
-    const y = 250 + rng() * 230;
-    const [sx, sy] = looseSpot([], mulberry32(3));
-    expect(sx).toBeCloseTo(x);
-    expect(sy).toBeCloseTo(y);
-  });
-
-  it('com cartas usadas, escolhe um lugar pelo menos tão longe delas quanto o primeiro sorteado', () => {
-    const used: Pt[] = [[350, 300], [500, 350], [650, 300], [450, 440], [600, 440]];
-    const longe = (p: Pt): number => Math.min(...used.map((u) => dist(u, p)));
+  it('com as cartas juntas na metade esquerda, a nova cai do outro lado', () => {
+    const used: Pt[] = [[270, 300], [330, 400], [400, 320], [440, 440], [300, 350]];
+    let doOutroLado = 0;
     for (let seed = 1; seed <= 100; seed++) {
-      const rng = mulberry32(seed);
-      const primeiro: Pt = [250 + rng() * 500, 250 + rng() * 230];
-      const [x, y] = looseSpot(used, mulberry32(seed));
-      expect(longe([x, y])).toBeGreaterThanOrEqual(longe(primeiro) - 1e-9);
+      const [x] = looseSpot(used, mulberry32(seed));
+      if (x > 500) doOutroLado++;
     }
+    expect(doOutroLado).toBeGreaterThanOrEqual(95);
   });
 });

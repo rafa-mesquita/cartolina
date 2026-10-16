@@ -1,3 +1,5 @@
+import type { Rng } from '@cartolina/shared';
+
 /** Palco desenhado em 1440×900; a largura real cresce com a janela (ver `fitStage`). */
 export const STAGE_W = 1440;
 export const STAGE_H = 900;
@@ -9,6 +11,8 @@ export const CARD_H = 177;
 export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
 export type Pt = readonly [number, number];
+/** Ponto no feltro com giro: [x, y, giro em graus]. */
+export type Spot = readonly [number, number, number];
 
 /** Escala e largura do palco: a altura manda; a largura cresce até a da janela (sem faixas vazias). */
 export function fitStage(winW: number, winH: number): { scale: number; width: number } {
@@ -93,19 +97,31 @@ export function seatArc(i: number, k: number, width: number): Pt {
   return [cx + rx * Math.cos(t), 392 - 272 * Math.sin(t)];
 }
 
-/** Lugar de uma carta solta no feltro na fase de escolha: [x, y, giro em graus]. Fica longe das já usadas. */
-export function looseSpot(used: readonly Pt[], rng: () => number): readonly [number, number, number] {
+const LOOSE_X = [250, 750] as const;
+const LOOSE_Y = [250, 480] as const;
+/** Quantos lugares sorteia por carta solta; fica o que está mais longe das outras. */
+const LOOSE_TRIES = 14;
+/** Giro máximo, em graus, pra cada lado. */
+const LOOSE_TILT = 24;
+/** O eixo y pesa mais na distância por causa da inclinação do feltro. */
+const LOOSE_Y_WEIGHT = 1.4;
+
+/**
+ * Lugar de uma carta solta no feltro na fase de escolha. [x, y] é o mesmo ponto de `tableSlots`
+ * (embaixo, no centro da carta) e o terceiro valor é o giro em graus. Fica longe das já usadas.
+ */
+export function looseSpot(used: readonly Pt[], rng: Rng): Spot {
   const between = (a: number, b: number): number => a + rng() * (b - a);
   let best: Pt = [0, 0];
   let bestD = -1;
-  for (let t = 0; t < 14; t++) {
-    const c: Pt = [between(250, 750), between(250, 480)];
-    // Sem cartas usadas todo candidato vale igual (fica o primeiro); o eixo y pesa mais por causa da inclinação do feltro.
-    const d = used.length ? Math.min(...used.map((u) => Math.hypot(u[0] - c[0], (u[1] - c[1]) * 1.4))) : 1;
+  for (let t = 0; t < LOOSE_TRIES; t++) {
+    const c: Pt = [between(...LOOSE_X), between(...LOOSE_Y)];
+    // Sem cartas usadas todo candidato vale igual (fica o primeiro).
+    const d = used.length ? Math.min(...used.map((u) => Math.hypot(u[0] - c[0], (u[1] - c[1]) * LOOSE_Y_WEIGHT))) : 1;
     if (d > bestD) {
       bestD = d;
       best = c;
     }
   }
-  return [best[0], best[1], between(-24, 24)];
+  return [best[0], best[1], between(-LOOSE_TILT, LOOSE_TILT)];
 }

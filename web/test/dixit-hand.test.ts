@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { insertIndex, moveCard, orderHand } from '../src/games/dixit/hand';
+import { HAND_W, handX, insertIndex, moveCard, orderHand } from '../src/games/dixit/hand';
 
 describe('ordem da mão', () => {
   it('mantém a ordem que a pessoa arrumou', () => {
@@ -87,6 +87,17 @@ describe('índice de soltura na mão', () => {
   it('com número par de cartas, o centro cai entre as duas do meio', () => {
     expect(insertIndex(420 - 40, 4)).toBe(1);
     expect(insertIndex(420 + 40, 4)).toBe(2);
+  });
+
+  it('soltar sobre o centro de cada carta devolve o índice dela', () => {
+    for (let count = 1; count <= 8; count++) {
+      for (let i = 0; i < count; i++) expect(insertIndex(handX(i, count), count)).toBe(i);
+    }
+  });
+
+  it('a mão fica centrada na largura da mão', () => {
+    const xs = [0, 1, 2, 3, 4, 5].map((i) => handX(i, 6));
+    expect((xs[0]! + xs[5]!) / 2).toBeCloseTo(HAND_W / 2);
   });
 
   it('sem cartas devolve 0', () => {

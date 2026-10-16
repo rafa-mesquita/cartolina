@@ -28,9 +28,19 @@ export function moveCard(order: readonly string[], id: string, toIndex: number):
   return rest;
 }
 
-/** Índice onde a carta arrastada cai na mão: `x` em px do palco dentro da mão de 840 px, cartas a cada 116 px centradas em 420. */
+/** Largura da mão, em px do palco. */
+export const HAND_W = 840;
+/** Distância entre os centros de duas cartas vizinhas da mão. */
+export const HAND_STEP = 116;
+
+/** Posição x do centro da carta `i` numa mão de `count` cartas, dentro da mão (0…HAND_W). */
+export function handX(i: number, count: number): number {
+  return HAND_W / 2 + (i - (count - 1) / 2) * HAND_STEP;
+}
+
+/** Índice onde a carta arrastada cai na mão: `x` em px do palco dentro da mão (conta inversa de `handX`). */
 export function insertIndex(x: number, count: number): number {
   if (count <= 0) return 0;
-  const i = Math.round((x - 420) / 116 + (count - 1) / 2);
+  const i = Math.round((x - HAND_W / 2) / HAND_STEP + (count - 1) / 2);
   return Math.min(Math.max(i, 0), count - 1);
 }
