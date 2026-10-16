@@ -22,6 +22,10 @@ export const dixitPicksPerPlayer = (players: number): number => (players === 3 ?
 /** O baralho precisa cobrir as mãos e uma rodada inteira. */
 export const dixitDeckTooSmall = (players: number, deckSize: number = DIXIT_DECK_SIZE): boolean => deckSize < players * 7;
 
+/**
+ * Diferente de `cleanClue` (players.ts), que preserva o espaço final porque a dica do ITO é digitada
+ * ao vivo: aqui a dica é enviada uma vez só, então aparamos tudo e limitamos a 80 caracteres.
+ */
 export function cleanDixitClue(raw: string): string {
   return Array.from(raw.replace(/\s+/g, ' ').trim()).slice(0, DIXIT_CLUE_MAX).join('');
 }
@@ -49,15 +53,28 @@ export function initialDixitState(target: DixitTarget = DIXIT_DEFAULT_TARGET): D
   };
 }
 
-/** Compra até a mão cheia; baralho vazio → embaralha o descarte e continua. */
+/**
+ * Compra até a mão cheia; baralho vazio → embaralha o descarte e continua.
+ * Se nem o descarte tem carta e alguém ainda precisa, recolhe as mãos de quem não está em `playerIds`
+ * (saiu e pode nunca voltar) pro descarte. Só nesse caso: quem volta normalmente mantém as cartas.
+ */
 function refill(state: DixitState, playerIds: readonly string[], size: number, rng: Rng): DixitState {
   let deck = [...state.deck];
   let discard = [...state.discard];
   const hands = { ...state.hands };
+  let reclaimed = false;
   for (const id of playerIds) {
     const hand = [...(hands[id] ?? [])];
     while (hand.length < size) {
       if (deck.length === 0) {
+        if (discard.length === 0 && !reclaimed) {
+          reclaimed = true;
+          for (const other of Object.keys(hands)) {
+            if (playerIds.includes(other)) continue;
+            discard = [...discard, ...(hands[other] ?? [])];
+            hands[other] = [];
+          }
+        }
         if (discard.length === 0) break;
         deck = shuffle(rng, discard);
         discard = [];
@@ -77,7 +94,10 @@ function nextStoryteller(state: DixitState, active: readonly string[], after: st
   return rotated.find((p) => state.inRound.includes(p) && active.includes(p)) ?? null;
 }
 
-/** Começa (ou recomeça) a narração: entra quem chegou, mãos cheias, narrador definido. */
+/**
+ * Começa (ou recomeça) a narração: entra quem chegou, mãos cheias, narrador definido.
+ * As mãos só são completadas, nunca reduzidas: passar de 3 para 4 jogadores deixa mãos de 7 por uma rodada (aceito).
+ */
 function beginRound(state: DixitState, ctx: GameContext, storyteller: { keep: string } | { after: string | null }): DixitState {
   const joiners = ctx.active.filter((p) => !state.players.includes(p));
   const players = [...state.players, ...joiners];
@@ -102,6 +122,12 @@ function beginRound(state: DixitState, ctx: GameContext, storyteller: { keep: st
   const dealt = refill(reset, inRound, dixitHandSize(inRound.length), ctx.rng);
   const chosen = 'keep' in storyteller ? storyteller.keep : nextStoryteller(dealt, ctx.active, storyteller.after);
   return { ...dealt, storyteller: chosen };
+}
+
+function hostOnly(isHost: boolean, state: DixitState, phase: DixitPhase): string | null {
+  if (!isHost) return 'not_host';
+  if (state.phase !== phase) return 'bad_phase';
+  return null;
 }
 
 /** Partida nova com os ativos (também usada em "jogar de novo"). */
@@ -208,14 +234,16 @@ export function applyDixitAction(
 ): ActionResult<DixitState> {
   const isHost = ctx.hostId === playerId;
   switch (action.type) {
-    case 'setTarget':
-      if (!isHost) return fail('not_host');
-      if (state.phase !== 'lobby') return fail('bad_phase');
+    case 'setTarget': {
+      const e = hostOnly(isHost, state, 'lobby');
+      if (e) return fail(e);
       return ok({ ...state, target: action.target });
-    case 'start':
-      if (!isHost) return fail('not_host');
-      if (state.phase !== 'lobby') return fail('bad_phase');
+    }
+    case 'start': {
+      const e = hostOnly(isHost, state, 'lobby');
+      if (e) return fail(e);
       return startMatch(state, ctx);
+    }
     case 'lobby':
       if (!isHost) return fail('not_host');
       if (state.phase === 'lobby') return fail('bad_phase');
@@ -264,6 +292,7 @@ export function applyDixitAction(
     case 'forceNext': {
       if (!isHost) return fail('not_host');
       if (state.paused) {
+        // `paused` só existe em storytelling, submitting e voting (o fim da rodada sempre reavalia).
         // Pausada: só destrava se já tem gente suficiente (ex.: alguém saiu de vez e outro entrou).
         if (ctx.active.length < DIXIT_MIN_PLAYERS) return fail('paused');
         return ok(restartRound(state, ctx));
@@ -276,14 +305,16 @@ export function applyDixitAction(
       if (state.phase === 'voting') return ok(toReveal(state));
       return fail('bad_phase');
     }
-    case 'next':
-      if (!isHost) return fail('not_host');
-      if (state.phase !== 'reveal') return fail('bad_phase');
+    case 'next': {
+      const e = hostOnly(isHost, state, 'reveal');
+      if (e) return fail(e);
       return ok(afterReveal(state, ctx));
-    case 'again':
-      if (!isHost) return fail('not_host');
-      if (state.phase !== 'gameover') return fail('bad_phase');
+    }
+    case 'again': {
+      const e = hostOnly(isHost, state, 'gameover');
+      if (e) return fail(e);
       return startMatch(state, ctx);
+    }
     default:
       return fail('bad_action');
   }
@@ -300,14 +331,22 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
 export function dixitOnPresenceChange(state: DixitState, ctx: GameContext): DixitState {
   if (state.phase === 'storytelling') {
     // Nada foi jogado ainda: dá pra refazer a rodada com quem está aqui agora.
+    // Primeiro confere barato se algo mudou, pra não distribuir cartas nem gastar sorteio à toa.
     const st = state.storyteller;
-    const next = beginRound(state, ctx, st !== null && ctx.active.includes(st) ? { keep: st } : { after: st });
-    const same =
-      next.storyteller === state.storyteller &&
-      next.paused === state.paused &&
-      sameList(next.players, state.players) &&
-      sameList(next.inRound, state.inRound);
-    return same ? state : next;
+    const keep = st !== null && ctx.active.includes(st);
+    const players = [...state.players, ...ctx.active.filter((p) => !state.players.includes(p))];
+    const inRound = players.filter((p) => ctx.active.includes(p));
+    const storyteller = keep ? st : nextStoryteller({ ...state, players, inRound }, ctx.active, st);
+    const paused = inRound.length < DIXIT_MIN_PLAYERS;
+    if (
+      storyteller === st &&
+      paused === state.paused &&
+      sameList(players, state.players) &&
+      sameList(inRound, state.inRound)
+    ) {
+      return state;
+    }
+    return beginRound(state, ctx, keep ? { keep: st } : { after: st });
   }
   if (state.phase !== 'submitting' && state.phase !== 'voting') return state;
   const paused = state.inRound.filter((p) => ctx.active.includes(p)).length < DIXIT_MIN_PLAYERS;

@@ -15,8 +15,17 @@ export function must(res: ActionResult<DixitState>): DixitState {
   return res.state;
 }
 
+/** Congela o objeto inteiro: qualquer mutação das regras estoura (ESM é strict). */
+export function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value)) deepFreeze(v);
+  }
+  return value;
+}
+
 export const act = (state: DixitState, playerId: string, action: DixitAction, ctx: GameContext): DixitState =>
-  must(applyDixitAction(state, playerId, action, ctx));
+  must(applyDixitAction(deepFreeze(state), playerId, action, ctx));
 
 /** Partida começada com `n` jogadores (p0…), na narração. */
 export function started(n: number, seed = 1): { state: DixitState; ctx: GameContext } {

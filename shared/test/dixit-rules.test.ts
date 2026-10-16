@@ -7,7 +7,7 @@ import {
   dixitOnPresenceChange,
   initialDixitState,
 } from '../src/games/dixit/rules';
-import { act, ctxOf, ids, others, revealed, started, told, voting } from './dixit-helpers';
+import { act, ctxOf, deepFreeze, ids, others, revealed, started, told, voting } from './dixit-helpers';
 
 describe('Dixit: lobby e início', () => {
   it('estado inicial é o lobby com meta 30', () => {
@@ -391,5 +391,84 @@ describe('Dixit: presença', () => {
     const all = [...s.deck, ...s.discard, ...Object.values(s.hands).flat()];
     expect(all).toHaveLength(DIXIT_DECK_SIZE);
     expect(new Set(all).size).toBe(DIXIT_DECK_SIZE);
+  });
+
+  it('baralho e descarte vazios: a mão de quem saiu volta pro jogo, sem perder nem duplicar carta', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const total = [...state.deck, ...state.discard, ...Object.values(state.hands).flat()];
+    const stuck = {
+      ...state,
+      deck: [],
+      discard: [],
+      players: [...state.players, 'p9'],
+      scores: { ...state.scores, p9: 0 },
+      hands: { ...state.hands, p9: [...state.deck, ...state.discard] },
+    };
+    const s = act(stuck, 'p0', { type: 'next' }, ctx);
+    for (const p of s.inRound) expect(s.hands[p]).toHaveLength(6);
+    expect(s.hands.p9).toEqual([]);
+    const all = [...s.deck, ...s.discard, ...Object.values(s.hands).flat()];
+    expect(all).toHaveLength(total.length);
+    expect(new Set(all).size).toBe(total.length);
+  });
+
+  it('quem voltou mantém a mão enquanto o baralho dá conta', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const withP9 = {
+      ...state,
+      players: [...state.players, 'p9'],
+      scores: { ...state.scores, p9: 0 },
+      hands: { ...state.hands, p9: ['d001'] },
+      deck: state.deck.filter((c) => c !== 'd001'),
+    };
+    expect(act(withP9, 'p0', { type: 'next' }, ctx).hands.p9).toEqual(['d001']);
+  });
+
+  it('presença na narração sem mudança não gasta sorteio nem muda o estado', () => {
+    const { state } = started(4);
+    const ctx = ctxOf(ids(4));
+    expect(dixitOnPresenceChange(deepFreeze(state), ctx)).toBe(state);
+  });
+
+  it('recomeçar a rodada na escolha, com uma escolha confirmada na mão, não perde nem duplica carta', () => {
+    const start = told(3);
+    let state = start.state;
+    const [a, b] = others(state);
+    state = act(state, a!, { type: 'submit', cardIds: state.hands[a!]!.slice(0, 2) }, start.ctx);
+    state = act(state, a!, { type: 'confirm' }, start.ctx);
+    const remaining = ids(3).filter((p) => p !== b);
+    const paused = dixitOnPresenceChange(state, ctxOf(remaining));
+    expect(paused.paused).toBe(true);
+    const s = act(paused, 'p0', { type: 'forceNext' }, ctxOf([...remaining, 'p9']));
+    expect(s.phase).toBe('storytelling');
+    const all = [...s.deck, ...s.discard, ...Object.values(s.hands).flat()];
+    expect(all).toHaveLength(DIXIT_DECK_SIZE);
+    expect(new Set(all).size).toBe(DIXIT_DECK_SIZE);
+  });
+});
+
+describe('Dixit: erros e conferência', () => {
+  it('contar a dica fora da narração: bad_phase', () => {
+    const { state, ctx } = told(4);
+    const st = state.storyteller!;
+    expect(applyDixitAction(state, st, { type: 'tell', cardId: state.hands[st]![0]!, clue: 'x' }, ctx)).toEqual({
+      ok: false,
+      error: 'bad_phase',
+    });
+  });
+
+  it('next, again e lobby por quem não é host: not_host', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    for (const type of ['next', 'again', 'lobby'] as const) {
+      expect(applyDixitAction(state, 'p1', { type }, ctx)).toEqual({ ok: false, error: 'not_host' });
+    }
+  });
+
+  it('dá pra trocar o voto antes de confirmar', () => {
+    const { state, ctx } = voting(4);
+    const p = others(state)[0]!;
+    const free = state.table.filter((c) => !state.picks[p]!.includes(c));
+    const s = act(act(state, p, { type: 'vote', cardId: free[0]! }, ctx), p, { type: 'vote', cardId: free[1]! }, ctx);
+    expect(s.votes[p]).toBe(free[1]);
   });
 });
