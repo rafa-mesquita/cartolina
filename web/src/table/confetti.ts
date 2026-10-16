@@ -1,7 +1,7 @@
 import { PLAYER_COLORS } from '@cartolina/shared';
 
 /** Confete simples em canvas; devolve uma função que interrompe a animação. */
-export function confetti(canvas: HTMLCanvasElement | null): () => void {
+export function confetti(canvas: HTMLCanvasElement | null, colors: readonly string[] = PLAYER_COLORS): () => void {
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx) return () => {};
   const dpr = window.devicePixelRatio || 1;
@@ -19,7 +19,7 @@ export function confetti(canvas: HTMLCanvasElement | null): () => void {
     vr: (Math.random() - 0.5) * 12,
     w: 6 + Math.random() * 6,
     h: 10 + Math.random() * 8,
-    c: PLAYER_COLORS[Math.floor(Math.random() * PLAYER_COLORS.length)]!,
+    c: colors[Math.floor(Math.random() * colors.length)]!,
   }));
   let last = performance.now();
   let raf = 0;

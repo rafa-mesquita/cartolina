@@ -13,12 +13,17 @@ export function soundForButton(button: HTMLButtonElement): SoundName | null {
 /**
  * Um único listener (delegado) para o som de todos os botões do app: menus, telas e controles da mesa.
  * O som desligado é respeitado por `playSound`. Devolve a função que desinstala.
+ *
+ * Uma área com sons próprios (ex.: a mesa do Diquisti, mais baixa) se marca com `data-button-sounds` e instala
+ * o próprio listener nela (`root` = a área): lá dentro só ele toca, o do documento fica quieto.
  */
-export function installButtonSounds(root: Document = document, play: (name: SoundName) => void = playSound): () => void {
+export function installButtonSounds(root: Document | HTMLElement = document, play: (name: SoundName) => void = playSound): () => void {
   const onClick = (e: Event) => {
     const target = e.target;
     const button = target instanceof Element ? target.closest('button') : null;
     if (!button) return;
+    const area = button.closest('[data-button-sounds]');
+    if (area && area !== root) return;
     const sound = soundForButton(button);
     if (sound) play(sound);
   };
