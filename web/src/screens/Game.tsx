@@ -1,4 +1,5 @@
 import { isItoRoomView, type RoomView } from '@cartolina/shared';
+import { goHome } from '../lib/router';
 import type { ConnSnapshot, GameConn } from '../net/connection';
 import { Table } from '../table/Table';
 import { Lobby } from './Lobby';
@@ -8,9 +9,15 @@ import { Toasts } from './Toasts';
 function DixitSoon() {
   return (
     <main className="screen">
+      <h1 className="logo">
+        cartolina<span>~</span>
+      </h1>
       <section className="panel">
         <h2>a mesa do Dixit está sendo montada</h2>
         <p>Já dá pra criar a sala, mas a mesa chega em breve.</p>
+        <button className="btn" type="button" onClick={goHome}>
+          voltar pro início
+        </button>
       </section>
     </main>
   );
