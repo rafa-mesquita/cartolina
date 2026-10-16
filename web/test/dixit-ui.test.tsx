@@ -1,4 +1,4 @@
-import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
+import { act as rtlAct, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ActionPanel, type PanelActions } from '../src/games/dixit/ActionPanel';
 import { CardArt } from '../src/games/dixit/CardArt';
@@ -6,8 +6,12 @@ import { CardViewer } from '../src/games/dixit/CardViewer';
 import { DixitTopBar } from '../src/games/dixit/DixitTopBar';
 import { Felt } from '../src/games/dixit/Felt';
 import { Hand } from '../src/games/dixit/Hand';
+import { RevealCaption } from '../src/games/dixit/RevealCaption';
+import { RoundBoard } from '../src/games/dixit/RoundBoard';
 import { Seats } from '../src/games/dixit/Seats';
-import { tableSlots } from '../src/games/dixit/geometry';
+import { fitStage, tableSlots } from '../src/games/dixit/geometry';
+import { useReveal } from '../src/games/dixit/useReveal';
+import { useStageFit } from '../src/games/dixit/useStageFit';
 import { playDixitSound } from '../src/games/dixit/sounds';
 import { colorer, namer } from '../src/games/dixit/status';
 import { dixitRoom, dixitView, othersOf, play, revealed, started, stateOf, told, voting } from './dixit-fixtures';
@@ -752,5 +756,143 @@ describe('topo', () => {
     const v1 = dixitView(room, 'p1');
     rerender(<DixitTopBar view={v1} name={namer(v1)} color={colorer(v1)} tilt onTilt={vi.fn()} host={false} onForce={onForce} />);
     expect(screen.queryByRole('button', { name: 'destravar' })).toBeNull();
+  });
+});
+
+describe('legenda da revelação', () => {
+  it('troca o texto com fade sem desmontar a caixa; pular chama onSkip', () => {
+    vi.useFakeTimers();
+    const onSkip = vi.fn();
+    const a = { step: 1 as const, parts: [{ text: 'primeiro' }] };
+    const b = { step: 2 as const, parts: [{ text: 'segundo', em: true }] };
+    const { container, rerender } = render(<RevealCaption caption={a} onSkip={onSkip} />);
+    const box = container.querySelector('.dx-step');
+    expect(screen.getByText('primeiro')).toBeTruthy();
+    rerender(<RevealCaption caption={b} onSkip={onSkip} />);
+    expect(container.querySelector('.dx-step.swap')).toBeTruthy();
+    rtlAct(() => vi.advanceTimersByTime(200));
+    expect(screen.getByText('segundo').tagName).toBe('EM');
+    expect(container.querySelector('.dx-step')).toBe(box);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    expect(onSkip).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('sem legenda não desenha nada', () => {
+    const { container } = render(<RevealCaption caption={null} onSkip={vi.fn()} />);
+    expect(container.querySelector('.dx-step')).toBeNull();
+  });
+});
+
+describe('placar da rodada', () => {
+  it('pontos, motivos e total; próxima rodada só pro host', () => {
+    const room = revealed(4);
+    const v = dixitView(room, 'p0');
+    const r = v.game.result!;
+    const onNext = vi.fn();
+    const props = { result: r, players: v.game.inRound, scores: v.game.scores, target: v.game.target, name: namer(v), color: colorer(v), onNext, onHide: vi.fn() };
+    const { rerender } = render(<RoundBoard {...props} host />);
+    expect(screen.getByText('placar da rodada')).toBeTruthy();
+    expect(screen.getAllByText(/todo mundo achou: \+2 pra quem votou/)).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', { name: 'próxima rodada' }));
+    expect(onNext).toHaveBeenCalled();
+    rerender(<RoundBoard {...props} host={false} />);
+    expect(screen.queryByRole('button', { name: 'próxima rodada' })).toBeNull();
+    expect(screen.getByText('esperando o host passar pra próxima…')).toBeTruthy();
+  });
+
+  it('quando alguém chegou na meta o botão vira "ver quem venceu"; "ver a mesa" esconde', () => {
+    const room = revealed(4);
+    const v = dixitView(room, 'p0');
+    const onHide = vi.fn();
+    const scores = { ...v.game.scores, p1: v.game.target };
+    render(<RoundBoard result={v.game.result!} players={v.game.inRound} scores={scores} target={v.game.target} name={namer(v)} color={colorer(v)} host onNext={vi.fn()} onHide={onHide} />);
+    expect(screen.getByRole('button', { name: 'ver quem venceu' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'ver a mesa' }));
+    expect(onHide).toHaveBeenCalled();
+  });
+});
+
+describe('relógio da revelação', () => {
+  const setup = (meId: string | null) => {
+    const room = revealed(4);
+    const v = dixitView(room, meId);
+    return { v, r: v.game.result!, order: v.game.inRound, name: namer(v) };
+  };
+
+  it('anda pela linha do tempo tocando os sons do Diquisti; pro narrador a legenda diz "a sua carta"', () => {
+    vi.useFakeTimers();
+    const { r, order } = setup('p0');
+    const me = r.storyteller;
+    const name = (id: string) => (id === me ? 'você' : id);
+    const { result } = renderHook(() => useReveal(r, 'k1', order, name, me));
+    expect(result.current.frame?.caption).toBeNull();
+    rtlAct(() => vi.advanceTimersByTime(1000));
+    expect(result.current.frame?.spot).toBe(true);
+    const texto = result.current.frame?.caption?.parts.map((p) => p.text).join('');
+    expect(texto).toContain('esta era a sua carta, que você narrou');
+    expect(sounds()).toContain('join');
+    rtlAct(() => vi.advanceTimersByTime(60000));
+    expect(result.current.frame?.done).toBe(true);
+    expect(sounds()).toEqual(expect.arrayContaining(['flip', 'slide']));
+  });
+
+  it('pular vai direto pro fim e só toca o som final (se você ganhou pontos)', () => {
+    vi.useFakeTimers();
+    const { r, order, name } = setup('p0');
+    const winner = Object.keys(r.gained).find((p) => (r.gained[p] ?? 0) > 0)!;
+    const { result } = renderHook(() => useReveal(r, 'k1', order, name, winner));
+    rtlAct(() => vi.advanceTimersByTime(500));
+    vi.mocked(playDixitSound).mockClear();
+    rtlAct(() => result.current.skip());
+    expect(result.current.frame?.done).toBe(true);
+    expect(sounds()).toEqual(['win']);
+  });
+
+  it('revelação nova (key nova) recomeça do zero, sem herdar o fim da anterior', () => {
+    vi.useFakeTimers();
+    const { r, order, name } = setup('p0');
+    const { result, rerender } = renderHook(({ k }) => useReveal(r, k, order, name, null), { initialProps: { k: 'k1' } });
+    rtlAct(() => result.current.skip());
+    expect(result.current.frame?.done).toBe(true);
+    vi.mocked(playDixitSound).mockClear();
+    rerender({ k: 'k2' });
+    expect(result.current.frame?.done).toBe(false);
+    expect(result.current.frame?.votes).toHaveLength(0);
+    expect(sounds()).toEqual([]);
+    rtlAct(() => vi.advanceTimersByTime(60000));
+    expect(result.current.frame?.done).toBe(true);
+  });
+
+  it('sem resultado não há quadro, e desmontar limpa o relógio', () => {
+    vi.useFakeTimers();
+    const none = renderHook(() => useReveal(null, '', [], () => '', null));
+    expect(none.result.current.frame).toBeNull();
+    const { r, order, name } = setup('p0');
+    const { unmount } = renderHook(() => useReveal(r, 'k1', order, name, null));
+    expect(vi.getTimerCount()).toBe(1);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('escala do palco', () => {
+  it('acompanha o redimensionamento da janela', () => {
+    const w = window.innerWidth, h = window.innerHeight;
+    const { result } = renderHook(() => useStageFit());
+    expect(result.current).toEqual(fitStage(w, h));
+    rtlAct(() => {
+      Object.assign(window, { innerWidth: 1000, innerHeight: 700 });
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(result.current).toEqual(fitStage(1000, 700));
+    Object.assign(window, { innerWidth: w, innerHeight: h });
+  });
+
+  it('para de ouvir ao desmontar', () => {
+    const rm = vi.spyOn(window, 'removeEventListener');
+    const { unmount } = renderHook(() => useStageFit());
+    unmount();
+    expect(rm).toHaveBeenCalledWith('resize', expect.any(Function));
   });
 });
