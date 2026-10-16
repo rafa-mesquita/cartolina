@@ -43,3 +43,7 @@ Textos que o jogador vê dizem "Diquisti" (também no `Game.tsx`).
 ## Carta ampliada (da revisão da Tarefa 6)
 - Ao ver a mesa no navegador: se aparecer um contorno em volta do overlay inteiro quando a carta ampliada abre, acrescente `.dixit .dx-viewer:focus { outline: none; }` no `dixit.css`.
 - Rodinha pra cima sobre uma carta da mão ou da mesa abre o `CardViewer`; rodinha pra baixo fecha (como no protótipo).
+
+## Contrato com o `Felt` (da revisão da Tarefa 7)
+- Atualize `pending` e `dropPoints` **no mesmo evento** (o mesmo handler do `onPlay`, para o React juntar os dois `setState`). O `Felt` decide o lugar da carta quando ela aparece em `pending`/`myPicks`/`storyCard`; se o ponto chegar depois, a carta cai num lugar sorteado.
+- O ponto do narrador também vai em `dropPoints[cardId]` antes de mandar o `tell`.
