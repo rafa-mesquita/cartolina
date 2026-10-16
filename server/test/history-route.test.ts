@@ -4,8 +4,26 @@ import { describe, expect, it } from 'vitest';
 import { insertRound } from '../src/history-db';
 import { newGameRoom, playRound } from './helpers';
 
-async function history(game: string, before?: number): Promise<Response> {
-  return SELF.fetch(`https://x/history/${game}${before === undefined ? '' : `?before=${before}`}`);
+async function history(game: string, before?: number, headers: Record<string, string> = {}): Promise<Response> {
+  return SELF.fetch(`https://x/history/${game}${before === undefined ? '' : `?before=${before}`}`, { headers });
+}
+
+/** Rodadas gravadas de uma sala, direto do D1 (o histórico compartilhado do ITO muda com outros testes). */
+async function roundsOf(code: string): Promise<{ id: string; game: string; mode: string; players_json: string; cards_json: string }[]> {
+  const { results } = await env.DB.prepare('SELECT id, game, mode, players_json, cards_json FROM rounds WHERE room_code = ?')
+    .bind(code)
+    .all<{ id: string; game: string; mode: string; players_json: string; cards_json: string }>();
+  return results;
+}
+
+/** O DO grava no D1 depois de transmitir o estado: espera a rodada aparecer. */
+async function waitForRounds(code: string, count = 1): Promise<Awaited<ReturnType<typeof roundsOf>>> {
+  let rows = await roundsOf(code);
+  for (let i = 0; i < 40 && rows.length < count; i++) {
+    await new Promise((r) => setTimeout(r, 50));
+    rows = await roundsOf(code);
+  }
+  return rows;
 }
 
 describe('GET /history/:game', () => {
@@ -27,18 +45,18 @@ describe('GET /history/:game', () => {
   it('grava a rodada revelada uma vez só (um novo commit não duplica)', async () => {
     const code = await newGameRoom('ito');
     const [a, b] = await playRound(code);
-    const mine = async () =>
-      ((await (await history('ito')).json()) as HistoryResponse).rounds.filter((r) => r.roomCode === code);
-    const first = await mine();
+    const first = await waitForRounds(code);
     expect(first).toHaveLength(1);
+    expect(first[0]!.game).toBe('ito');
     expect(first[0]!.mode).toBe('livre');
-    expect(first[0]!.players.map((p) => p.name)).toEqual(['P0', 'P1']);
-    expect(first[0]!.cards).toHaveLength(2);
+    expect((JSON.parse(first[0]!.players_json) as { name: string }[]).map((p) => p.name)).toEqual(['P0', 'P1']);
+    expect(JSON.parse(first[0]!.cards_json)).toHaveLength(2);
 
     // alguém sai da sala: novo commit, mas a mesma revelação
     b!.client.ws.close(1000, 'tchau');
     await a!.client.state((v) => v.seats.some((s) => !s.connected));
-    expect(await mine()).toHaveLength(1);
+    await new Promise((r) => setTimeout(r, 200)); // dá tempo de uma gravação indevida aparecer
+    expect(await roundsOf(code)).toHaveLength(1);
   });
 
   it('sala de Dixit não enfileira rodada para o histórico', async () => {
@@ -67,6 +85,28 @@ describe('GET /history/:game', () => {
     const xyz = await history('xyz');
     expect(xyz.status).toBe(404);
     expect(await xyz.json()).toEqual({ error: 'not_found' });
+  });
+
+  it('resposta de sucesso tem cache curto (primeira página e seguintes)', async () => {
+    for (const res of [await history('ito'), await history('ito', Date.now() + 1)]) {
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toBe('public, max-age=15');
+    }
+  });
+
+  // Sem o bloco `ratelimits` no wrangler.jsonc (fallback do docs/deploy.md) não há limitador: pula.
+  it.skipIf(!('HISTORY_LIMITER' in env))('o 61º pedido do mesmo IP no minuto dá 429', async () => {
+    const ip = `test-${crypto.randomUUID()}`; // chave única: não depende do estado de outros testes
+    const statuses: number[] = [];
+    for (let i = 0; i < 61; i++) { // 60 é o limite do HISTORY_LIMITER no wrangler.jsonc
+      statuses.push((await history('ito', 0, { 'CF-Connecting-IP': ip })).status);
+    }
+    expect(statuses.slice(0, 60).every((s) => s === 200)).toBe(true);
+    expect(statuses[60]).toBe(429);
+  });
+
+  it('sem o header de IP nunca limita', async () => {
+    for (let i = 0; i < 65; i++) expect((await history('ito', 0)).status).toBe(200);
   });
 
   it('só GET lê o histórico', async () => {
@@ -164,8 +204,7 @@ describe('histórico: falha no D1', () => {
     });
     expect(await runDurableObjectAlarm(stub)).toBe(true);
 
-    const body = (await (await history('ito')).json()) as HistoryResponse;
-    expect(body.rounds.some((r) => r.roomCode === code)).toBe(true);
+    expect(await roundsOf(code)).toHaveLength(1);
     await runInDurableObject(stub, async (_instance, state) => {
       expect((await state.storage.list({ prefix: 'pendingRound:' })).size).toBe(0);
     });
@@ -179,7 +218,7 @@ describe('histórico: falha no D1', () => {
       await state.storage.put(`pendingRound:${record.id}`, { groupId: 'g-antigo', key: 'chave-antiga', record });
     });
     expect(await runDurableObjectAlarm(stub)).toBe(true);
-    const body = (await (await history('ito')).json()) as HistoryResponse;
-    expect(body.rounds.some((r) => r.id === record.id)).toBe(true);
+    const rows = await roundsOf(code);
+    expect(rows.map((r) => [r.id, r.game])).toEqual([[record.id, 'ito']]);
   });
 });

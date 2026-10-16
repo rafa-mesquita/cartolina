@@ -82,7 +82,6 @@ type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &
 /** Sala lida do storage: salas antigas não têm `gameId` (eram todas ITO) e podem ter `group` (ignorado). */
 export function restoreRoom(stored: StoredRoom): Room {
   const { group: _legacyGroup, ...rest } = stored;
-  void _legacyGroup;
   return {
     ...rest,
     gameId: stored.gameId ?? 'ito',

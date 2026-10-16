@@ -1,7 +1,8 @@
 import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin';
 import { defineConfig } from 'vitest/config';
 
-// Os testes usam códigos de sala e slugs aleatórios e únicos, então não dependem de isolamento de storage entre testes.
+// Os testes usam códigos de sala aleatórios e únicos, mas o histórico do ITO é estado compartilhado entre os testes:
+// quem lê o histórico filtra pela própria sala (ou limpa o que semeou).
 export default defineConfig({
   plugins: [
     cloudflareTest(async () => ({

@@ -8,8 +8,8 @@ export { RoomDO };
 
 const PAGE_SIZE = 20;
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 }
 
 /** CORS só para origens permitidas. 101 (upgrade de WebSocket) passa intacto: os headers dele são imutáveis. */
@@ -74,7 +74,7 @@ async function getHistoryPage(env: Env, game: GameId, before: number | null): Pr
 }
 
 /** O binding pode não existir (removido do wrangler.jsonc se o plano não tiver): lê sem depender do tipo gerado. */
-function limiterOf(env: Env, name: 'ROOM_LIMITER'): Limiter | undefined {
+function limiterOf(env: Env, name: 'ROOM_LIMITER' | 'HISTORY_LIMITER'): Limiter | undefined {
   return (env as unknown as Partial<Record<typeof name, Limiter>>)[name];
 }
 
@@ -105,7 +105,9 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
     if (!GAMES[game].recordsHistory) return json({ error: 'no_history' }, 404);
     const before = parseBefore(url.searchParams.get('before'));
     if (before === undefined) return json({ error: 'bad_before' }, 400);
-    return json(await getHistoryPage(env, game, before));
+    // Público e caro na primeira página (lê até 5000 rodadas): limite por IP e cache curto.
+    if (!(await underLimit(limiterOf(env, 'HISTORY_LIMITER'), ip))) return tooMany();
+    return json(await getHistoryPage(env, game, before), 200, { 'Cache-Control': 'public, max-age=15' });
   }
 
   const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)(\/ws)?$/);
