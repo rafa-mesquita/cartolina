@@ -2906,7 +2906,7 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
 
 - [ ] **Step 2:** `git merge origin/main`. Conflitos esperados e como resolver:
   - **`web/src/screens/Game.tsx`:** fique com a versão desta branch (Tarefa 10) e reaplique o que a estante tiver mudado no ramo do ITO (links de histórico, por exemplo).
-  - **`web/test/dixit-fixtures.ts`:** a `createRoom` da estante não tem mais o grupo. Troque `createRoom('ABCD', 0, null, 'dixit')` por `createRoom('ABCD', 0, 'dixit')`.
+  - **`web/test/dixit-fixtures.ts`:** a `createRoom` da estante não tem mais o grupo. Troque `createRoom('ABCD', 0, null, 'dixit')` por `createRoom('ABCD', 0, 'dixit')`. Procure outras chamadas com `grep -rn "createRoom(" web/test server/test shared/test` (as fixtures do DITU em `web/test/fixtures.ts` chamam `createRoom('ABCD', 0)` e só continuam valendo se o `gameId` mantiver o padrão `'ito'`).
   - **`web/src/dev/BotControls.tsx`:** junte as duas versões.
   - **Qualquer outro conflito:** comportamento do `main` + mudanças do Dixit.
 
