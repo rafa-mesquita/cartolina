@@ -1737,7 +1737,15 @@ git add README.md docs
 git commit -m "docs: sem grupos; histórico por jogo na estante"
 ```
 
-- [ ] **Step 3: Revisão final, PR e merge (controlador + usuário)**
+- [ ] **Step 3: Ponto de restauração do banco de produção (antes do merge)**
+
+O merge aplica a `0002` no D1 de produção, e ela apaga a tabela antiga. Antes do merge:
+- Run (em `server/`): `npx.cmd wrangler d1 time-travel info cartolina`. Anote o **bookmark** que ele imprime.
+- Se a migração der errado em produção, a volta é: `npx.cmd wrangler d1 time-travel restore cartolina --bookmark=<bookmark>`.
+
+Isso precisa do login do wrangler neste PC. Se não houver, use o painel da Cloudflare: D1 → cartolina → Time Travel. Também dá pra pular o passo e confiar na transação da migração, mas avise o usuário.
+
+- [ ] **Step 4: Revisão final, PR e merge (controlador + usuário)**
 
 - Rode a revisão final do plano inteiro (subagente revisor), com foco na migração em produção:
   - a `0002` roda **antes** do Worker novo;
