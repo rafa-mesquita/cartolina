@@ -426,7 +426,12 @@ describe('Dixit: presença', () => {
 
   it('presença na narração sem mudança não gasta sorteio nem muda o estado', () => {
     const { state } = started(4);
-    const ctx = ctxOf(ids(4));
+    const ctx = {
+      ...ctxOf(ids(4)),
+      rng: (): number => {
+        throw new Error('rng');
+      },
+    };
     expect(dixitOnPresenceChange(deepFreeze(state), ctx)).toBe(state);
   });
 
