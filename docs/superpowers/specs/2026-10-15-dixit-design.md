@@ -153,97 +153,127 @@ diretas). Muda para:
 
 ## 4. Telas compartilhadas (`web/`)
 
-- **Início = estante de jogos:** uma capa por jogo (ITO no estilo cartolina~,
-  Dixit no conto ilustrado). Clicar na capa cria a sala daquele jogo. "Entrar
-  com código" e grupos continuam. Capas são imagens trocáveis
-  (`web/public/covers/<jogo>.webp`); a primeira versão é montada no código.
-- **Página do grupo:** "criar sala" pergunta o jogo (mesma estante, compacta).
-- **Entrar na sala / lobby:** os mesmos componentes, com `data-game` na raiz
-  da sala trocando tokens (cores, fontes, sons). Painel de opções do lobby é
-  por jogo (ITO: modo; Dixit: meta 15/30). "Começar" exige 3+ no Dixit.
-- `RoomScreen` escolhe a mesa pelo `gameId`.
-- Personagens (critters) continuam iguais em todos os jogos.
+**Substituída (2026-10-16)** pela spec da estante de jogos
+(`2026-10-16-estante-de-jogos-design.md`, da sessão do ITO): não há grupos;
+`#/` é a estante, `#/<jogo>` é a página do jogo (abas "jogar" e "histórico"),
+`POST /rooms { game }` cria a sala, e `web/src/games/catalog.ts` diz se o jogo
+já é jogável. O Dixit entra lá como "chegando" e o Plano D2 o liga.
+
+O que continua valendo daqui:
+
+- **Entrar na sala:** o mesmo formulário (nome + personagem) para todos os jogos.
+- **Lobby do Dixit:** próprio, na identidade do Dixit: assentos, copiar link,
+  som, meta 15/30 (host) e "começar" com 3+ (bots em desenvolvimento).
+- `Game.tsx` escolhe lobby e mesa pelo `gameId`.
+- Personagens (critters) iguais em todos os jogos.
 
 ## 5. Mesa do Dixit (`web/src/games/dixit/`)
 
+Validada no protótipo `prototipo/dixit/` (2026-10-16), com as regras reais e
+bots. O que o usuário aprovou e pediu durante o teste vale para a mesa do site.
+
 ### 5.1 Layout
 
-- Mesma estrutura "Uno online" do ITO: **você embaixo** com sua mão; outros
-  jogadores em assentos ao redor (personagem + nome + status), reaproveitando
-  `seatLayout`/`Seat`.
-- **Feltro em perspectiva** como no ITO (`perspective` no palco, `rotateX` no
-  feltro, opção "mesa 3D" no `localStorage`, reaproveitando `homography.ts`).
-  Assentos, mão, dica e botões ficam planos por cima.
-- **A arte não pode ficar distorcida:** cartas no feltro ficam "de pé"
-  (contra-rotação, como as cartas levantadas do ITO) quando em foco, e
-  **clicar numa carta abre ela grande e plana** (visualizador), em qualquer
-  fase. Na mão, as cartas são grandes e planas.
-- Topo: dica do narrador (com o personagem dele) e fase/progresso
-  ("votação · 3 de 5").
-- Centro do feltro: cartas viradas para baixo chegando (escolha), depois
-  viradas para cima com numeração romana (votação); voto = sua ficha
-  (personagem) sobre a carta.
+- **Tela inteira:** palco desenhado em 1440×900, escalado pela altura; a
+  largura cresce até a da janela (sem faixas vazias). Mesa, mão e legendas no
+  centro; logo, botões e painel nos cantos; assentos num arco que se abre com a
+  largura extra.
+- **Você embaixo à esquerda** (personagem, nome, pontos); outros jogadores no
+  arco acima da mesa (personagem, nome, cartas na mão em miniatura, status:
+  *narrando…*, *escolhendo…*, *pronto ✓*, *votando…*, *votou ✓*); narrador com
+  selo ✎.
+- **Feltro em perspectiva** (`rotateX(38°)`, opção "mesa 3D" lembrada no
+  navegador, a mesma do ITO). Cartas no feltro quase deitadas; de pé quando o
+  cursor passa ou quando estão em destaque. **Nenhuma carta pode afundar no
+  feltro** em animação: a mola só passa do ponto subindo, a carta fica sempre
+  2 px acima do feltro e levanta enquanto vira.
+- **Mão** embaixo, plana, em leque; a carta sobe ao passar o cursor; escolhida
+  ganha moldura mostarda.
+- **Topo:** dica do narrador num selo (personagem + dica em itálico, ou "dica
+  falada na call"), e pílulas de rodada/fase/meta, som e mesa 3D.
+- **Painel de ação** (canto inferior direito): o que fazer agora em cada fase
+  (narrar com campo de dica até 80 letras + "contei"; "jogar essa(s)";
+  "confirmar voto"; esperas com contagem).
+- **Visualizador:** clique duplo, botão ⤢ ou **rodinha pra cima** sobre
+  qualquer carta (mão ou mesa) amplia; **rodinha pra baixo**, Esc ou clique fora
+  fecha; setas navegam.
+- Nada de interface por cima dos personagens (placar, pílulas e avisos ficam no
+  centro ou embaixo) e nada de interface "sobrando" quando a rodada avança.
 
 ### 5.2 Placar como tabuleiro
 
-- Em vez de números, uma **trilha de casas 0…meta** desenhada no feltro (em
-  volta da área das cartas). Cada jogador é seu **personagem como peão**,
-  de pé sobre a casa da pontuação.
-- Na revelação, os peões andam casa a casa com mola (um por vez, rápido).
-- Vários peões na mesma casa se empilham/espalham levemente.
-- Número exato sempre acessível: no hover do peão/assento e no `aria-label`.
-- Risco: muita informação na mesa com 10 jogadores. Validado no protótipo
-  (§5.4); se não funcionar, plano B é a trilha numa faixa reta fora do feltro.
+- **Trilha de casas 0…meta** na borda do feltro; números de 5 em 5; meta em
+  mostarda. Peões = personagens de pé na casa da pontuação, espalhados quando
+  dividem a casa. Pontos exatos no `title`/`aria-label` do peão e do assento.
 
-### 5.3 Revelação e fim
+### 5.3 Revelação narrada
 
-- Sequência: vira a carta do narrador com destaque → fichas de voto aparecem
-  nas cartas → donos aparecem sob cada carta → peões andam.
-- `gameover`: vencedor(es) em destaque, confete no estilo da identidade,
-  botões do host.
+Um passo de cada vez, com legenda grande e numerada embaixo da mesa ("1 de 4")
+e "pular ›":
 
-### 5.4 Protótipo antes da mesa real
+1. **Holofote na carta do narrador:** ela cresce ~1,55×, sobe acima do feltro
+   com mola e brilho mostarda pulsante, com o rótulo "carta do narrador"; as
+   outras escurecem e perdem cor. Legenda: "esta era a carta de **X**, que
+   narrou “dica”". Depois a carta fica um pouco maior e destacada até o fim.
+2. **Votos:** as fichas (personagens) aparecem uma a uma nas cartas; legenda
+   final "**A e B** acharam a carta do narrador" / "ninguém achou…" / "todo
+   mundo achou: a dica foi fácil demais".
+3. **De quem era cada carta:** o dono aparece embaixo de cada carta; legenda
+   "a carta de **X** enganou 2 pessoas" (até 3 destaques).
+4. **Pontos:** os peões andam casa a casa, com "+n" sobre o assento.
 
-Como no ITO, a mesa é validada antes num **protótipo só de front com bots
-falsos** (`prototipo/dixit/`): mesa 3D, cartas de pé, visualizador, trilha com
-peões e revelação. O usuário joga sozinho contra bots, ajusta, e só então a
-mesa é portada para `web/`.
+A legenda não pula: a caixa fica parada (largura mínima estável) e só o texto
+troca com fade. No fim, o **placar da rodada** (no centro, sem cobrir os
+assentos): cada jogador com "+n", o total e o motivo ("achou a carta do
+narrador +3 · enganou 1 pessoa +1"; "ninguém achou a carta: quem narra não
+pontua"), com "ver a mesa" (esconde; uma pílula embaixo traz de volta) e
+"próxima rodada"/"ver quem venceu" (host; os outros veem "esperando o host").
+Fim de jogo: vencedores, confete na paleta, "jogar de novo"/"voltar pro lobby"
+(host).
+
+### 5.4 Protótipo
+
+`prototipo/dixit/` fica no repositório como referência (`launch.json`
+"prototipo-dixit", porta 5175). Regras empacotadas de `shared/` em `rules.js`.
 
 ### 5.5 Cartas provisórias
 
-- Geradas no navegador a partir do id (semente): formas e pinceladas na
-  paleta da identidade; cada carta diferente e reconhecível.
-- Verso provisório no estilo da identidade.
-- Quando existir `web/public/dixit/cards/<id>.webp`, usa a imagem; senão, a
-  provisória.
+Pequenas "pinturas" geradas a partir do id (céu em degradê, sol/lua, colinas,
+objetos como árvore, casa, porta, escada, balão, peixe no céu…), na paleta da
+identidade; verso com espirais e "dixit". Quando a arte real existir
+(`REAL_ART` ligado pelo script da §7), a carta usa
+`web/public/dixit/cards/<id>.webp`.
 
 ### 5.6 Bots (só em desenvolvimento)
 
-Botão "🤖 adicionar bot" no lobby do Dixit (como no ITO): bots narram com dica
-aleatória de uma lista, escolhem e votam ao acaso com pequenos atrasos. Não
-vão para o build de produção.
+"🤖 adicionar bot" no lobby do Dixit: bots narram com dica aleatória (às vezes
+vazia), escolhem e votam com atrasos humanos (40% acham a carta do narrador).
+Não vão para o build de produção.
 
 ## 6. Identidade visual do Dixit — "conto ilustrado"
 
-Escolhida pelo usuário a partir de mockups (2026-10-15). Tokens em
-`web/src/games/dixit/tokens.css`, escopados em `[data-game="dixit"]`.
+Escolhida pelo usuário a partir de mockups (2026-10-15). Tokens escopados na
+raiz `.dixit` das telas do Dixit (lobby e mesa).
 
 - **Cores:** fundo verde-floresta `#233D36`, superfície `#2F5046`, creme
   `#F6EAD2` (texto e molduras), mostarda `#F2A541` (acento: dica, voto,
   progresso), texto suave `#B7C7B0`.
 - **Fundo:** pinceladas suaves em verdes próximos do fundo (`#26403A`–
-  `#2C4A41`) com espirais em mostarda quase transparente; nunca compete com as
-  cartas.
-- **Traço fino em tudo:** molduras das cartas em fio creme (~0,75 px) com
-  respiro de 3 px antes da arte; linhas e contornos finos.
-- **Tipografia:** DM Serif Display (título, dica, números romanos, pontos);
-  Nunito 300/400 para interface.
-- **Numeração:** romana (I–X) nas cartas da votação, como etiqueta de museu.
-- **Movimento:** sempre mola (padrões do cartolina~).
-- **Voz:** PT-BR informal ("contei", "bora votar", "ninguém achou!").
-- **Sons:** pontos de som prontos (carta virando, voto, revelação, peão
-  andando), começando mudos até o usuário escolher os arquivos; mesmo botão de
-  som do ITO.
+  `#2C4A41`) com espirais em mostarda quase transparente.
+- **Traço fino em tudo:** molduras em fio creme (~0,75 px) com respiro de
+  3 px antes da arte.
+- **Tipografia:** DM Serif Display (título, dica, romanos, pontos, legendas);
+  Nunito 300/400/600 na interface.
+- **Numeração:** romana (I–X) nas cartas da votação.
+- **Movimento:** mola subindo; descida suave (nada atravessa o feltro).
+- **Voz:** PT-BR informal ("contei", "engane a mesa", "ninguém achou!").
+- **Sons (os do ITO, pedido do usuário):** carta pousando na mesa (arquivo da
+  carta, bem baixo); escolher carta na mão e clicar pra votar (arquivo da
+  carta a 70%, nunca engolido pelo intervalo mínimo); cartas virando e fichas
+  de voto ("tic" que sobe de tom); holofote e sua vez de narrar ("plim");
+  dono aparecendo ("deslize"); peão andando (estalinho); você pontuou
+  (vitória); fim de jogo (vitória/derrota); ação recusada ("tunc"); botões
+  (clique). Mesmo botão de som do ITO.
 
 ## 7. Arte das cartas (entrega do usuário, depois)
 
@@ -252,6 +282,7 @@ Escolhida pelo usuário a partir de mockups (2026-10-15). Tokens em
 - `npm run dixit:cartas <pasta>`: converte para WebP 800×1200 (visualizador)
   + miniatura, renomeia para `d001…`, grava em `web/public/dixit/cards/` e
   atualiza `DIXIT_DECK_SIZE`.
+- O script também liga `REAL_ART` em `web/src/games/dixit/art.ts`.
 - Verso, capa e sons também podem ser trocados por arquivos.
 
 ## 8. Erros e casos de borda
@@ -279,20 +310,16 @@ Escolhida pelo usuário a partir de mockups (2026-10-15). Tokens em
 
 ## 10. Ordem de construção
 
-1. **Plano D1 — fundação:** registro de jogos, sala genérica, regras do Dixit
-   em `shared/`, protocolo e servidor aceitando o jogo. Sem tela nova; ITO
-   intacto.
-2. **Plano D2 — jogo no site:** protótipo da mesa (§5.4) → estante de jogos →
-   tema e lobby do Dixit → mesa 3D, visualizador, trilha, revelação, fim →
-   cartas provisórias → bots.
-3. **Depois:** arte real (§7), sons, histórico do Dixit no grupo, celular
-   (junto com o Plano 5 do ITO).
-
-Branch `feat/dixit` (worktree a partir do `main`). O Plano 4 (em andamento)
-também mexe em `server/src/index.ts`: antes de mexer no servidor no D1, o
-`feat/dixit` é atualizado com o `main` depois que o Plano 4 entrar.
+1. **Plano D1 — fundação** (PR #5): registro de jogos, sala genérica, regras do
+   Dixit em `shared/`, protocolo e servidor aceitando o jogo.
+2. **Protótipo da mesa** (`prototipo/dixit/`, feito em 2026-10-16).
+3. **Plano D2 — mesa no site** (branch `feat/dixit-mesa`): parte A sem depender
+   da estante (cartas, revelação, trilha, sons, componentes, lobby, bots);
+   parte B depois que a estante (sessão do ITO) entrar no `main`: o Dixit fica
+   jogável no catálogo e o E2E cobre uma rodada.
+4. **Depois:** arte real (§7), histórico do Dixit, celular (com o Plano 5).
 
 ## 11. Fora de escopo (esta versão)
 
-Histórico/estatísticas do Dixit, arte final, sons finais, variantes (Odyssey,
+Histórico/estatísticas do Dixit, arte final, variantes (Odyssey,
 votos duplos), chat, celular, cursores ao vivo no Dixit.
