@@ -12,7 +12,7 @@ export function PhoneNotice() {
       <section className="panel">
         <h2>abre no computador</h2>
         <p>{PHONE_TEXT}</p>
-        <p>Manda o link pra você mesmo e abre no PC. O histórico do grupo funciona no celular.</p>
+        <p>Manda o link pra você mesmo e abre no PC. O histórico dos jogos funciona no celular.</p>
         <button className="btn" type="button" onClick={goHome}>
           voltar pro início
         </button>
