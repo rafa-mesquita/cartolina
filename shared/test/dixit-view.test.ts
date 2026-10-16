@@ -54,6 +54,31 @@ describe('dixitViewFor', () => {
     expect(vb).not.toHaveProperty('deck');
   });
 
+  it('ids estranhos de espectador não caem no protótipo', () => {
+    const { state } = voting(4);
+    for (const id of ['__proto__', 'constructor', 'toString']) {
+      const v = dixitViewFor(state, id);
+      expect(v.hand).toEqual([]);
+      expect(v.myPicks).toEqual([]);
+      expect(v.myVote).toBeNull();
+      expect(v.table.every((t) => !t.mine)).toBe(true);
+    }
+  });
+
+  it('espectador na votação não vê a carta do narrador nem cartas suas', () => {
+    const { state } = voting(4);
+    const v = dixitViewFor(state, null);
+    expect(v.storyCard).toBeNull();
+    expect(v.table.length).toBeGreaterThan(0);
+    expect(v.table.every((t) => !t.mine)).toBe(true);
+  });
+
+  it('o narrador na votação tem exatamente a própria carta marcada', () => {
+    const { state } = voting(4);
+    const v = dixitViewFor(state, state.storyteller!);
+    expect(v.table.filter((t) => t.mine).map((t) => t.cardId)).toEqual([state.storyCard]);
+  });
+
   it('na revelação: tudo aberto', () => {
     const { state } = revealed(4, (s) => s.storyCard!);
     const v = dixitViewFor(state, 'p1');

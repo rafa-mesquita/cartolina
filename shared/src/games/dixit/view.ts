@@ -2,18 +2,24 @@ import type { GameModule } from '../../game';
 import { applyDixitAction, dixitOnPresenceChange, initialDixitState } from './rules';
 import type { DixitAction, DixitState, DixitView } from './types';
 
+/** Lê o registro só se a chave for própria (ids como '__proto__' não podem cair no protótipo). */
+function own<T>(record: Record<string, T>, key: string | null): T | undefined {
+  return key !== null && Object.hasOwn(record, key) ? record[key] : undefined;
+}
+
 /**
  * Única fronteira de segredo do Dixit: mãos alheias, carta do narrador, escolhas e votos
  * só aparecem para quem pode ver (todo mundo, a partir da revelação).
+ *
+ * A visão compartilha arrays/objetos com o estado (é serializada no socket); quem consome não deve mutar.
  */
 export function dixitViewFor(state: DixitState, viewerId: string | null): DixitView {
   const revealed = state.phase === 'reveal' || state.phase === 'gameover';
-  const me = viewerId ?? '';
-  const myPicks = viewerId === null ? [] : (state.picks[me] ?? []);
+  const myPicks = own(state.picks, viewerId) ?? [];
   const isStoryteller = viewerId !== null && viewerId === state.storyteller;
   const tableCount =
     state.phase === 'submitting'
-      ? 1 + state.confirmed.reduce((n, p) => n + (state.picks[p]?.length ?? 0), 0)
+      ? 1 + state.confirmed.reduce((n, p) => n + (own(state.picks, p)?.length ?? 0), 0)
       : state.table.length;
   return {
     phase: state.phase,
@@ -26,12 +32,12 @@ export function dixitViewFor(state: DixitState, viewerId: string | null): DixitV
     paused: state.paused,
     winners: state.winners,
     result: revealed ? state.result : null,
-    hand: viewerId === null ? [] : (state.hands[me] ?? []),
+    hand: own(state.hands, viewerId) ?? [],
     handCounts: Object.fromEntries(Object.entries(state.hands).map(([p, hand]) => [p, hand.length])),
     deckCount: state.deck.length,
     storyCard: revealed || isStoryteller ? state.storyCard : null,
     myPicks,
-    myVote: viewerId === null ? null : (state.votes[me] ?? null),
+    myVote: own(state.votes, viewerId) ?? null,
     confirmed: state.confirmed,
     tableCount,
     table: state.table.map((cardId) => ({
