@@ -1,21 +1,40 @@
-/* Estante de jogos (início) e página do jogo. */
-.shelf { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; width: min(760px, 100%); }
+/* Estante de jogos (início): cartas na mesa. Página do jogo: cabeçalho, abas e regras. */
+.shelf { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; width: min(760px, 100%); padding: 18px 0 8px; }
 .cover {
-  display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; min-height: 260px; padding: 18px;
-  border: 2px solid var(--ink); border-radius: var(--r); box-shadow: 4px 5px 0 var(--ink); color: var(--ink);
-  text-decoration: none; transition: transform 0.15s;
+  --rot: 0deg;
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
+  width: 190px; height: 250px; padding: 16px; border: 2px solid var(--ink); border-radius: var(--r);
+  box-shadow: 4px 5px 0 var(--ink); color: var(--ink); text-decoration: none;
+  transform: rotate(var(--rot)); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.cover:hover, .cover:focus-visible { transform: translateY(-4px) rotate(-1deg); }
-.cover b { font: 700 34px/1 var(--font-ui); }
-.cover span { font: 19px/1.15 var(--font-hand); }
+.shelf .cover:nth-child(odd) { --rot: -3deg; }
+.shelf .cover:nth-child(even) { --rot: 2.5deg; }
+.shelf .cover:hover, .shelf .cover:focus-visible { transform: rotate(0deg) translateY(-6px); }
+.cover b { font: 700 34px/1 var(--font-ui); overflow-wrap: anywhere; }
+.cover span { font: 18px/1.1 var(--font-hand); }
 .cover-ito { background: var(--pink); }
 .cover-dixit { background: #2f5d50; color: #f4ecd8; }
-.cover.mini {
-  min-height: 0; width: 84px; height: 84px; padding: 6px; justify-content: center; align-items: center; text-align: center;
-  font: 700 14px/1 var(--font-ui); box-shadow: 2px 3px 0 var(--ink); flex: none;
+.cover-dixit b { font: 400 30px/1.05 'DM Serif Display', Georgia, serif; }
+/* número decorativo no canto, como o da carta da mão */
+.shelf .cover-ito::after {
+  content: '87'; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
+  border: 2px solid var(--ink); border-radius: 8px 6px 7px 5px; padding: 3px 5px 2px; min-width: 30px; text-align: center;
 }
-.cover.mini:hover { transform: none; }
-.cover .cover-badge { align-self: flex-start; font: 500 13px/1 var(--font-ui); padding: 3px 8px; border: 2px solid currentColor; border-radius: 999px; }
+/* selo pra um jogo que ainda não dá pra jogar: fica no topo da carta */
+.cover .cover-badge {
+  align-self: flex-start; margin-bottom: auto; font: 500 13px/1 var(--font-ui); padding: 3px 8px;
+  border: 2px solid currentColor; border-radius: 999px;
+}
+/* a mesma carta, pequena, no cabeçalho da página do jogo */
+.cover.mini {
+  --rot: -3deg; width: 76px; height: 100px; padding: 8px; justify-content: center; align-items: center; text-align: center;
+  box-shadow: 2px 3px 0 var(--ink); flex: none; font: 700 14px/1 var(--font-ui);
+}
+.cover-dixit.mini { font: 400 15px/1 'DM Serif Display', Georgia, serif; }
+.join-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+.join-line > span { font: 21px/1 var(--font-hand); }
+.join-compact .text-in { width: 96px; padding: 7px 10px; font-size: 19px; text-transform: uppercase; text-align: center; }
+.join-compact .sbtn { padding: 8px 14px 7px; }
 .game-page .panel, .game-head, .tabs { width: min(760px, 100%); }
 .game-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .game-head h2 { margin: 0; font: 700 30px/1 var(--font-ui); }
@@ -28,3 +47,6 @@
 }
 .tab.on { background: var(--paper); }
 .rules { margin: 0; padding-left: 22px; font: 19px/1.35 var(--font-hand); }
+@media (prefers-reduced-motion: reduce) {
+  .cover { transition: none; }
+}

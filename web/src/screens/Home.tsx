@@ -18,10 +18,10 @@ export function Home() {
           </a>
         ))}
       </nav>
-      <section className="panel">
-        <h2>entrar com código</h2>
-        <JoinByCode />
-      </section>
+      <div className="join-line">
+        <span>tem um código?</span>
+        <JoinByCode compact />
+      </div>
     </main>
   );
 }

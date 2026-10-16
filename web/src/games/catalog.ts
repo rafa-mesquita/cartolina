@@ -9,7 +9,7 @@ export interface CatalogEntry {
   players: string;
   /** "como jogar", em poucas linhas. */
   rules: string[];
-  /** Já dá pra criar sala e jogar (o Diquisti chega no D2). */
+  /** Já dá pra criar sala e jogar (sem mesa pronta, fica `false` e a capa ganha o selo "em breve"). */
   playable: boolean;
   /** Tem aba de histórico com partidas (segue `GAMES[id].recordsHistory`). */
   hasHistory: boolean;
@@ -38,7 +38,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory'>> = {
       'Os outros escolhem a carta da mão que mais combina com a frase.',
       'Todo mundo vota em qual era a do narrador. Nem todos podem acertar, nem ninguém.',
     ],
-    playable: false,
+    playable: true,
   },
 };
 

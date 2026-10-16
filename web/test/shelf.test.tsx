@@ -17,21 +17,27 @@ describe('estante de jogos', () => {
     render(<Home />);
     expect(screen.getByRole('link', { name: /DITU/ }).getAttribute('href')).toBe('#/ito');
     expect(screen.getByRole('link', { name: /Diquisti/ }).getAttribute('href')).toBe('#/dixit');
-    expect(screen.getByText('em breve')).toBeTruthy(); // selo na capa do Diquisti
+    expect(screen.queryByText('em breve')).toBeNull(); // os dois já dá pra jogar
     expect(screen.queryByText(/grupo/i)).toBeNull();
     expect(screen.queryByText(/Dixit/)).toBeNull();
+  });
+
+  it('a linha do código é compacta: "tem um código?" e um botão curto', () => {
+    render(<Home />);
+    expect(screen.getByText('tem um código?')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'entrar com código' })).toBeNull();
   });
 
   it('entrar com código vai pra sala', () => {
     render(<Home />);
     fireEvent.change(screen.getByLabelText('código da sala'), { target: { value: 'kxq7' } });
-    fireEvent.click(screen.getByRole('button', { name: 'entrar na sala' }));
+    fireEvent.click(screen.getByRole('button', { name: 'entrar' }));
     expect(window.location.hash).toBe('#/sala/KXQ7');
   });
 
   it('código inválido mostra erro', () => {
     render(<Home />);
-    fireEvent.click(screen.getByRole('button', { name: 'entrar na sala' }));
+    fireEvent.click(screen.getByRole('button', { name: 'entrar' }));
     expect(screen.getByText('O código da sala tem 4 letras.')).toBeTruthy();
     expect(window.location.hash).toBe('');
   });

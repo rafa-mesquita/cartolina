@@ -48,7 +48,7 @@ describe('aviso no celular', () => {
     phone(true);
     const { unmount } = render(<Home />);
     expect(screen.getByRole('link', { name: /DITU/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'entrar na sala' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'entrar' })).toBeTruthy();
     expect(screen.queryByText(PHONE_TEXT)).toBeNull();
     unmount();
     render(<GamePage game="ito" tab="jogar" />);
