@@ -38,7 +38,7 @@ describe('underLimit', () => {
   });
 
   it('se o limitador falhar, deixa passar', async () => {
-    const broken: Limiter = { limit: async () => Promise.reject(new Error('indisponível')) };
+    const broken: Limiter = { limit: async () => { throw new Error('indisponível'); } };
     expect(await underLimit(broken, '203.0.113.7')).toBe(true);
   });
 
