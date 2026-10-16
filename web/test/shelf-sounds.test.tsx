@@ -21,12 +21,12 @@ describe('sons da estante', () => {
     expect(screen.getByRole('link', { name: /Diquisti/ }).getAttribute('data-sound')).toBe('card');
   });
 
-  it('passar o mouse numa capa toca o "pick" baixinho, uma vez por entrada', () => {
+  it('passar o mouse numa capa toca o som de hover baixinho, uma vez por entrada', () => {
     render(<Home />);
     const ito = screen.getByRole('link', { name: /DITU/ });
     fireEvent.pointerEnter(ito);
     expect(playSound).toHaveBeenCalledTimes(1);
-    expect(playSound).toHaveBeenCalledWith('pick', 0, expect.any(Number), 0.5);
+    expect(playSound).toHaveBeenCalledWith('hover', 0, expect.any(Number), 0.5);
   });
 
   it('varrer duas capas seguidas toca só um som', () => {

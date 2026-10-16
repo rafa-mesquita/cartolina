@@ -14,7 +14,7 @@ export function playHover(
 ): void {
   if (now - last < HOVER_GAP_MS) return;
   last = now;
-  play('pick', 0, now, HOVER_GAIN);
+  play('hover', 0, now, HOVER_GAIN);
 }
 
 /** Só para testes. */

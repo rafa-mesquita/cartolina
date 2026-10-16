@@ -61,6 +61,12 @@ describe('sons de arquivo (carta)', () => {
     expect(played()[0]!.volume).toBeCloseTo(0.5);
   });
 
+  it('hover (mouse numa capa) não engole o som do clique logo depois', () => {
+    playSound('hover', 0, 0, 0.5);
+    playSound('card', 0, 10);
+    expect(played().map((a) => a.volume)).toEqual([0.35, 1]);
+  });
+
   it('mudo não toca nada', () => {
     saveSoundPref(false);
     playSound('card', 0, 0);

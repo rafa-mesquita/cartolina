@@ -5,14 +5,14 @@ import { loadSoundPref } from '../net/identity';
  * sintetizados na hora com Web Audio (opção "A" de `prototipo/sons.html`): um "tic" de madeira por
  * carta que vira, subindo de tom; um "tunc" grave em cada erro; arpejo feliz ou "uó-uó" no fim.
  */
-export type SoundName = 'card' | 'pick' | 'land' | 'slide' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
+export type SoundName = 'card' | 'pick' | 'hover' | 'land' | 'slide' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
 
 /**
  * Sons de arquivo. `pick` (escolher personagem, carta ou voto) usa o mesmo arquivo e os mesmos elementos da carta.
  * Os outros dos menus são sintetizados: `join` ("plim-plim" ao entrar) e `click` (estalinho dos botões).
  */
-type FileSound = 'card' | 'pick' | 'land';
-const POOL_OF: Record<FileSound, 'card'> = { card: 'card', pick: 'card', land: 'card' };
+type FileSound = 'card' | 'pick' | 'hover' | 'land';
+const POOL_OF: Record<FileSound, 'card'> = { card: 'card', pick: 'card', hover: 'card', land: 'card' };
 const FILES: Record<'card', { file: string; pool: number }> = {
   // Cartas pousando em sequência tocam por cima umas das outras.
   card: { file: 'card.mp3', pool: 3 },
@@ -29,7 +29,7 @@ interface Pool {
  * Volume de cada som de arquivo (a escolha de personagem é 30% mais baixa que a carta;
  * `land` é a carta pousando na mesa do Diquisti, bem mais baixa).
  */
-export const FILE_VOLUME: Record<FileSound, number> = { card: 1, pick: 0.7, land: 0.4 };
+export const FILE_VOLUME: Record<FileSound, number> = { card: 1, pick: 0.7, hover: 0.7, land: 0.4 };
 
 const pools = new Map<'card', Pool>();
 let lastFile = -Infinity;
@@ -56,10 +56,14 @@ function poolOf(sound: FileSound): Pool {
 }
 
 function playFile(name: FileSound, now: number, gain: number): void {
-  // `pick` é escolha da pessoa (personagem, carta, voto): sempre toca, mesmo colado em outro som de arquivo.
-  if (name !== 'pick' && now - lastFile < FILE_GAP_MS) return;
-  // O `pick` também marca `lastFile` de propósito: a escolha já soou, e um `card`/`land` colado nela é engolido.
-  lastFile = now;
+  // `hover` (mouse passando numa capa da estante) é só enfeite: sempre toca e não marca `lastFile`,
+  // senão engoliria o `card` do clique que vem logo depois.
+  if (name !== 'hover') {
+    // `pick` é escolha da pessoa (personagem, carta, voto): sempre toca, mesmo colado em outro som de arquivo.
+    if (name !== 'pick' && now - lastFile < FILE_GAP_MS) return;
+    // O `pick` também marca `lastFile` de propósito: a escolha já soou, e um `card`/`land` colado nela é engolido.
+    lastFile = now;
+  }
   const pool = poolOf(name);
   const audio = pool.list[pool.next]!;
   pool.next = (pool.next + 1) % pool.list.length;
@@ -180,7 +184,7 @@ const SYNTH: Record<Exclude<SoundName, FileSound>, (c: AudioContext, index: numb
 export function playSound(name: SoundName, index = 0, now: number = performance.now(), gain = 1): void {
   if (!loadSoundPref()) return;
   try {
-    if (name === 'card' || name === 'pick' || name === 'land') {
+    if (name === 'card' || name === 'pick' || name === 'hover' || name === 'land') {
       playFile(name, now, gain);
       return;
     }

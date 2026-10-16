@@ -8,10 +8,10 @@ describe('som ao passar o mouse numa capa', () => {
     resetHover();
   });
 
-  it('toca o "pick" com a metade do volume', () => {
+  it('toca o som de hover (mesmo áudio do "pick") com a metade do volume', () => {
     playHover(1000, play);
     expect(HOVER_GAIN).toBe(0.5);
-    expect(play).toHaveBeenCalledWith('pick', 0, 1000, 0.5);
+    expect(play).toHaveBeenCalledWith('hover', 0, 1000, 0.5);
   });
 
   it('varrer as capas não gagueja: no máximo um som a cada 150 ms', () => {
