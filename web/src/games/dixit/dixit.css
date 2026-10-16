@@ -130,6 +130,7 @@ button.dx-pill:hover { border-color: var(--must); }
 
 /* legenda, placar, aviso, carta ampliada, confete */
 .dx-step { position: absolute; left: 50%; bottom: 196px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 12px 16px 12px 22px; border: .75px solid rgba(242,165,65,.75); border-radius: 16px; background: rgba(27,47,42,.95); z-index: 9; min-width: 640px; max-width: 860px; animation: dxCenterIn .4s var(--spring); }
+.dx-step .live { flex: 1; display: flex; align-items: center; gap: 14px; }
 .dx-step .n { font: 400 13px/1 var(--ui); color: var(--must); letter-spacing: 1px; white-space: nowrap; }
 .dx-step .t { flex: 1; font: 400 24px/1.2 var(--serif); }
 .dx-step em { color: var(--must); }

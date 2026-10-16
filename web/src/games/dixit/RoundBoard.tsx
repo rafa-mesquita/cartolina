@@ -1,4 +1,5 @@
 import type { DixitRoundResult } from '@cartolina/shared';
+import { useId } from 'react';
 import { Critter } from '../../screens/Critter';
 import { reasons, summaryParts } from './reveal';
 
@@ -17,10 +18,11 @@ interface Props {
 /** Placar da rodada: quem fez quanto e por quê. Fica no centro, sem cobrir os assentos. */
 export function RoundBoard({ result: r, players, scores, target, name, color, host, onNext, onHide }: Props) {
   const rows = [...players].sort((a, b) => (r.gained[b] ?? 0) - (r.gained[a] ?? 0) || Number(b === r.storyteller) - Number(a === r.storyteller));
+  const titleId = useId();
   const over = Object.values(scores).some((s) => s >= target);
   return (
-    <section className="dx-board" aria-label="placar da rodada">
-      <h3>placar da rodada</h3>
+    <section className="dx-board" aria-labelledby={titleId}>
+      <h3 id={titleId}>placar da rodada</h3>
       <p className="sum">
         {summaryParts(r, name).map((p, i) => (p.em ? <em key={i}>{p.text}</em> : <span key={i}>{p.text}</span>))}.
         {r.clue && (
