@@ -124,7 +124,7 @@ button.pill:hover{border-color:var(--must)}
 #panel .err{color:#ffb4a8;font-size:12px;margin-top:6px;min-height:14px}
 
 /* ---------- toast, visualizador, confete ---------- */
-#toast{position:absolute;left:50%;top:76px;transform:translateX(-50%);padding:8px 16px;border-radius:999px;background:var(--cream);color:var(--deep);font:600 13px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast{position:absolute;left:50%;bottom:262px;transform:translateX(-50%);padding:8px 16px;border-radius:999px;background:var(--cream);color:var(--deep);font:600 13px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none}
 #toast.on{opacity:1}
 .viewer{position:absolute;inset:0;background:rgba(12,22,19,.82);z-index:50;display:none;align-items:center;justify-content:center;gap:34px}
 .viewer.on{display:flex}
@@ -139,7 +139,7 @@ button.pill:hover{border-color:var(--must)}
 #step .t{font:400 24px/1.2 var(--serif)}
 #step .t em{color:var(--must);font-style:italic}
 #step button{border:.75px solid rgba(246,234,210,.4);border-radius:999px;background:none;padding:6px 12px;font-size:12px;color:var(--mu);white-space:nowrap}
-#board{position:absolute;left:50%;top:120px;transform:translateX(-50%);width:560px;max-height:600px;overflow:auto;padding:20px 22px 18px;border:.75px solid rgba(246,234,210,.5);border-radius:16px;background:rgba(27,47,42,.97);z-index:20;display:none}
+#board{position:absolute;left:50%;top:196px;transform:translateX(-50%);width:560px;max-height:660px;overflow:auto;padding:20px 22px 18px;border:.75px solid rgba(246,234,210,.5);border-radius:16px;background:rgba(27,47,42,.97);z-index:20;display:none}
 #board.on{display:block;animation:pop .35s var(--spring)}
 #board h3{margin:0 0 4px;font:400 28px/1.1 var(--serif)}
 #board .sum{margin:0 0 14px;color:var(--mu);font-size:14px}
@@ -154,7 +154,7 @@ button.pill:hover{border-color:var(--must)}
 #board .r.st .nm::after{content:' · narrou';font-weight:300;color:var(--must)}
 #board .acts{display:flex;gap:10px;margin-top:14px}
 #board .acts .btn{margin:0}
-#boardPill{position:absolute;left:50%;top:76px;transform:translateX(-50%);z-index:20;display:none}
+#boardPill{position:absolute;left:50%;bottom:204px;transform:translateX(-50%);z-index:20;display:none;font-size:14px;padding:10px 18px 9px;border-color:rgba(242,165,65,.75)}
 #boardPill.on{display:block}
 </style>
 </head>
@@ -170,7 +170,7 @@ button.pill:hover{border-color:var(--must)}
     <div class="row">meta<div class="opts" id="optT"></div></div>
     <div class="row">bots<div class="opts" id="optS"></div></div>
     <button class="new" id="newBtn">nova partida</button>
-    <p>Regras reais do jogo (as mesmas do servidor). Os bots escolhem e votam ao acaso. Cartas provisórias geradas: a arte de verdade entra depois. Clique duplo (ou ⤢) amplia qualquer carta.</p>
+    <p>Regras reais do jogo (as mesmas do servidor). Os bots escolhem e votam ao acaso. Cartas provisórias geradas: a arte de verdade entra depois. Rodinha pra cima em cima de uma carta (ou clique duplo, ou ⤢) amplia; rodinha pra baixo fecha.</p>
   </div>
   <div id="stage"><div id="felt"></div></div>
   <div id="seats"></div>
@@ -339,10 +339,10 @@ function newGame() {
 function changed() {
   const v = view();
   if (v.phase !== prevPhase) {
-    if (v.phase === 'storytelling') { round++; sel = []; revealDone = false; clearTable(); if (v.storyteller === 'p0') play('join'); }
+    if (v.phase === 'storytelling') { round++; sel = []; revealDone = false; clearTable(); hideBoard(); if (v.storyteller === 'p0') play('join'); }
     if (v.phase === 'submitting' || v.phase === 'voting') sel = [];
     if (v.phase === 'reveal') runReveal(v);
-    if (v.phase === 'gameover') { launchConfetti(); play(v.winners.includes('p0') ? 'win' : 'lose'); }
+    if (v.phase === 'gameover') { hideBoard(); launchConfetti(); play(v.winners.includes('p0') ? 'win' : 'lose'); }
   }
   const from = prevPhase; prevPhase = v.phase;
   render(v, from); scheduleBots();
@@ -475,7 +475,7 @@ function slots(n) {
 function clearTable() { for (const el of tableEls.values()) { el.style.transition = 'opacity .35s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 360); } tableEls.clear(); }
 function feltMsg(text) { let m = felt.querySelector('.felt-msg'); if (!text) { m?.remove(); return; } if (!m) { m = document.createElement('div'); m.className = 'felt-msg'; felt.appendChild(m); } m.textContent = text; }
 function makeTableCard(key, cardId, faceUp) {
-  const el = document.createElement('div'); el.className = 'tcard';
+  const el = document.createElement('div'); el.className = 'tcard'; if (cardId) el.dataset.id = cardId;
   el.innerHTML = `<div class="flip"><div class="face"><div class="art">${cardId ? cardArt(cardId) : ''}</div></div><div class="backside"><div class="art">${BACK}</div></div></div>`;
   if (!faceUp) el.querySelector('.flip').style.transform = 'rotateY(180deg)';
   felt.appendChild(el); tableEls.set(key, el); return el;
@@ -720,10 +720,20 @@ function openViewer(kind, id) {
 function showViewer() { const id = vList[vIdx]; $('#vArt').innerHTML = cardArt(id);
   const v = view(); const cap = vKind === 'hand' ? `sua mão · ${vIdx + 1} de ${vList.length}` : `carta ${ROMAN[vIdx]}`;
   const owner = v.result && v.result.owners[id] ? ` · de ${v.result.owners[id] === 'p0' ? 'você' : nameOf(v.result.owners[id])}` : '';
-  $('#vCap').innerHTML = `<b>${cap}${owner}</b>setas ‹ › navegam · esc ou clique fora fecha`; }
+  $('#vCap').innerHTML = `<b>${cap}${owner}</b>setas ‹ › navegam · rodinha pra baixo, esc ou clique fora fecha`; }
 $('#viewer').addEventListener('click', (e) => { if (e.target.id === 'viewer') $('#viewer').classList.remove('on'); });
 $('#vPrev').addEventListener('click', () => { vIdx = (vIdx - 1 + vList.length) % vList.length; showViewer(); });
 $('#vNext').addEventListener('click', () => { vIdx = (vIdx + 1) % vList.length; showViewer(); });
+/* rodinha: pra cima em cima de uma carta amplia; pra baixo fecha */
+let wheelLock = 0;
+app.addEventListener('wheel', (e) => {
+  const open = $('#viewer').classList.contains('on');
+  if (open) { e.preventDefault(); if (performance.now() < wheelLock) return; if (e.deltaY > 0) $('#viewer').classList.remove('on'); return; }
+  const card = e.target.closest('.hcard[data-id], .tcard[data-id]'); if (!card) return;
+  e.preventDefault(); if (e.deltaY >= 0 || performance.now() < wheelLock) return;
+  wheelLock = performance.now() + 350; // ignora o resto do mesmo giro
+  openViewer(card.classList.contains('hcard') ? 'hand' : 'table', card.dataset.id);
+}, { passive: false });
 addEventListener('keydown', (e) => { if (!$('#viewer').classList.contains('on')) return; if (e.key === 'Escape') $('#viewer').classList.remove('on');
   if (e.key === 'ArrowLeft') $('#vPrev').click(); if (e.key === 'ArrowRight') $('#vNext').click(); });
 
