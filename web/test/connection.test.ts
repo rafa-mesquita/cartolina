@@ -165,16 +165,75 @@ describe('RoomConnection', () => {
     expect(last().sent.filter((s) => s === 'ping')).toHaveLength(2);
   });
 
-  it('cursor: o primeiro sai na hora, os seguintes no máximo a ~30 Hz com o valor mais recente', () => {
-    const conn = make();
-    last().open();
-    const cursor = (x: number) => ({ zone: 'table' as const, x, y: 0.5, drag: null });
-    conn.sendCursor(cursor(0.1));
-    conn.sendCursor(cursor(0.2));
-    conn.sendCursor(cursor(0.3));
-    expect(last().messages().filter((m) => m.t === 'fx.cursor').map((m) => m.x)).toEqual([0.1]);
-    vi.advanceTimersByTime(34);
-    expect(last().messages().filter((m) => m.t === 'fx.cursor').map((m) => m.x)).toEqual([0.1, 0.3]);
+  describe('cursor', () => {
+    const hover = (x: number) => ({ zone: 'table' as const, x, y: 0.5, drag: null });
+    const dragging = (x: number) => ({ zone: 'table' as const, x, y: 0.5, drag: { cardId: 'p0:0', index: null } });
+    const sentXs = () => last().messages().filter((m) => m.t === 'fx.cursor').map((m) => m.x);
+
+    beforeEach(() => {
+      vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it('solto: o primeiro sai na hora, depois no máximo a cada 84 ms com o valor mais recente', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.1));
+      conn.sendCursor(hover(0.2));
+      conn.sendCursor(hover(0.3));
+      expect(sentXs()).toEqual([0.1]);
+      vi.advanceTimersByTime(83);
+      expect(sentXs()).toEqual([0.1]);
+      vi.advanceTimersByTime(1);
+      expect(sentXs()).toEqual([0.1, 0.3]);
+    });
+
+    it('arrastando: até 20 por segundo (50 ms)', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(dragging(0.1));
+      conn.sendCursor(dragging(0.2));
+      vi.advanceTimersByTime(50);
+      expect(sentXs()).toEqual([0.1, 0.2]);
+    });
+
+    it('posição repetida não sai de novo; parado, reenvia a cada 2 s', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.4));
+      vi.advanceTimersByTime(100);
+      conn.sendCursor(hover(0.4));
+      vi.advanceTimersByTime(100);
+      expect(sentXs()).toEqual([0.4]);
+      vi.advanceTimersByTime(2000);
+      expect(sentXs()).toEqual([0.4, 0.4]);
+      vi.advanceTimersByTime(2000);
+      expect(sentXs()).toEqual([0.4, 0.4, 0.4]);
+    });
+
+    it('janela sem foco: cursor solto e reenvio não saem; soltar a carta sai', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(dragging(0.5));
+      vi.mocked(document.hasFocus).mockReturnValue(false);
+      vi.advanceTimersByTime(100);
+      conn.sendCursor(hover(0.6)); // soltou a carta: muda o arrasto, sai mesmo sem foco
+      vi.advanceTimersByTime(100);
+      conn.sendCursor(hover(0.7)); // solto e sem foco: não sai
+      vi.advanceTimersByTime(5000); // nem o reenvio
+      expect(sentXs()).toEqual([0.5, 0.6]);
+    });
+
+    it('stop cancela o reenvio', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.1));
+      const socket = last();
+      conn.stop();
+      vi.advanceTimersByTime(5000);
+      expect(socket.messages().filter((m) => m.t === 'fx.cursor')).toHaveLength(1);
+    });
   });
 
   it('stop fecha e não reconecta; ações só saem com o socket aberto', () => {
