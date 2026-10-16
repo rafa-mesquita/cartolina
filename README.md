@@ -1,6 +1,6 @@
 # cartolina~
 
-Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), e **Diquisti**, a nossa versão do Dixit (id `dixit`; ainda sem mesa: regras e servidor prontos).
+Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), e **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável).
 
 ## Estrutura
 

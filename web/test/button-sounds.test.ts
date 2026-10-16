@@ -66,6 +66,22 @@ describe('sons dos botões (um listener delegado)', () => {
       expect(play.mock.calls).toEqual([['click']]);
     });
 
+    it('área com sons próprios (data-button-sounds): só o listener dela toca lá dentro', () => {
+      const area = document.createElement('div');
+      area.dataset.buttonSounds = '';
+      document.body.appendChild(area);
+      const inside = document.createElement('button');
+      inside.dataset.sound = 'pick';
+      area.appendChild(inside);
+      const own = vi.fn();
+      const uninstallOwn = installButtonSounds(area, own);
+      inside.click();
+      button().click();
+      uninstallOwn();
+      expect(own.mock.calls).toEqual([['pick']]);
+      expect(play.mock.calls).toEqual([['click']]);
+    });
+
     it('desinstalar tira o listener', () => {
       uninstall();
       button().click();

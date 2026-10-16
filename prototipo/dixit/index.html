@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diquisti · protótipo da mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#233D36; --sf:#2F5046; --cream:#F6EAD2; --must:#F2A541; --mu:#B7C7B0; --deep:#1B2F2A; --crim:#D1495B;
+  --tilt:38deg;
+  --serif:'DM Serif Display',Georgia,serif; --ui:'Nunito',system-ui,sans-serif;
+  --spring:cubic-bezier(.34,1.56,.64,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#1d332d}
+body{font-family:var(--ui);font-weight:300;color:var(--cream);-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;background:var(--bg);overflow:hidden}
+#bg{position:absolute;inset:0;pointer-events:none}
+
+/* ---------- topo ---------- */
+.logo{position:absolute;left:30px;top:20px;font:400 34px/1 var(--serif);letter-spacing:.5px;z-index:8}
+.logo small{display:block;font:300 12px/1.4 var(--ui);color:var(--mu);letter-spacing:1px;margin-top:4px}
+#clue{position:absolute;left:50%;top:22px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;
+  padding:7px 20px 7px 8px;border:.75px solid rgba(242,165,65,.7);border-radius:999px;background:rgba(35,61,54,.85);z-index:8;max-width:640px;white-space:nowrap}
+#clue .who{width:30px;height:30px;flex:none}
+#clue .txt{font:italic 400 21px/1.15 var(--serif);overflow:hidden;text-overflow:ellipsis}
+#clue .txt.muted{font:300 15px/1 var(--ui);color:var(--mu);font-style:normal}
+.tr{position:absolute;right:26px;top:22px;display:flex;gap:10px;z-index:8}
+.pill{font:400 13px/1 var(--ui);padding:9px 14px 8px;border:.75px solid rgba(246,234,210,.45);border-radius:999px;background:rgba(35,61,54,.85);white-space:nowrap}
+button.pill:hover{border-color:var(--must)}
+#dev{position:absolute;right:26px;top:64px;width:250px;padding:14px 16px;border:.75px solid rgba(246,234,210,.4);border-radius:12px;background:rgba(27,47,42,.97);z-index:30;display:none;font-size:13px}
+#dev.on{display:block}
+#dev h4{margin:0 0 10px;font:400 18px/1 var(--serif)}
+#dev .row{display:flex;align-items:center;justify-content:space-between;margin:9px 0;gap:8px}
+#dev .opts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#dev .opts button{padding:4px 8px;border:.75px solid rgba(246,234,210,.35);border-radius:999px;background:none;font-size:12px}
+#dev .opts button.on{border-color:var(--must);color:var(--must)}
+#dev .new{width:100%;margin-top:8px;padding:8px;border:.75px solid var(--must);border-radius:999px;background:none;color:var(--must)}
+#dev p{color:var(--mu);font-size:11.5px;line-height:1.45;margin:10px 0 0}
+
+/* ---------- assentos ---------- */
+.seat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;z-index:4;transition:left .5s var(--spring),top .5s var(--spring)}
+.av{width:56px;height:56px;position:relative}
+.av svg{width:100%;height:100%;display:block}
+.seat .nm{font:600 13px/1 var(--ui);letter-spacing:.3px}
+.seat .badge{position:absolute;right:-8px;top:-6px;width:22px;height:22px;border-radius:50%;background:var(--must);color:var(--deep);display:grid;place-items:center;font-size:12px;border:.75px solid var(--cream)}
+.tag{font:400 11.5px/1 var(--ui);padding:4px 9px 3px;border:.75px solid rgba(246,234,210,.4);border-radius:999px;background:rgba(35,61,54,.9);white-space:nowrap;color:var(--mu)}
+.tag.ok{color:var(--deep);background:var(--mu);border-color:var(--mu)}
+.tag.act{color:var(--must);border-color:rgba(242,165,65,.6)}
+.minis{display:flex;gap:2px;height:14px}
+.minis i{width:9px;height:14px;border:.6px solid rgba(246,234,210,.6);border-radius:2px;background:var(--sf)}
+.float{position:absolute;left:50%;top:-6px;transform:translateX(-50%);font:400 22px/1 var(--serif);color:var(--must);pointer-events:none;animation:floatUp 1.6s ease-out forwards}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,8px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-34px)}}
+
+/* ---------- mesa 3D ---------- */
+#stage{position:absolute;left:calc(50% - 500px);top:118px;width:1000px;height:560px;perspective:1150px;perspective-origin:50% 0%;z-index:1}
+#felt{position:absolute;inset:0;transform-origin:50% 100%;transform:rotateX(var(--tilt));transform-style:preserve-3d;transition:transform .7s var(--spring);
+  border-radius:36px;background:var(--sf);border:.75px solid rgba(246,234,210,.55);box-shadow:inset 0 0 0 9px var(--sf),inset 0 0 0 9.75px rgba(246,234,210,.18)}
+.cell{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border:.75px solid rgba(246,234,210,.35);border-radius:9px;display:grid;place-items:center;font:400 13px/1 var(--serif);color:rgba(246,234,210,.5)}
+.cell.five{border-color:rgba(246,234,210,.6);color:var(--cream)}
+.cell.goal{border-color:var(--must);color:var(--must);box-shadow:0 0 0 3px rgba(242,165,65,.15)}
+.pawn{position:absolute;width:40px;height:40px;transform-origin:50% 100%;transform:translate(-50%,-100%) rotateX(calc(var(--tilt) * -1));transition:left .16s linear,top .16s linear;z-index:2}
+.pawn svg{width:100%;height:100%;display:block}
+.felt-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:italic 400 26px/1.3 var(--serif);color:rgba(246,234,210,.55);text-align:center;width:640px;pointer-events:none}
+
+/* cartas na mesa */
+.tcard{position:absolute;width:118px;height:177px;transform-origin:50% 100%;--stand:.28;--z:2px;
+  transform:translate(-50%,-100%) rotateZ(var(--rz,0deg)) rotateX(calc(var(--tilt) * -1 * var(--stand))) translateZ(var(--z)) scale(var(--sc,1));transition:transform .35s cubic-bezier(.2,.8,.25,1);cursor:pointer;z-index:3}
+/* a mola só passa do ponto subindo; descendo, para em cima do feltro (senão a carta afunda nele por uns quadros) */
+.tcard:hover,.tcard.voted,.tcard.story,.tcard.flipping{transition:transform .45s var(--spring)}
+.tcard.flipping{--stand:.7;--z:70px}
+.tcard:hover,.tcard.voted,.tcard.story{--stand:1;--z:18px;z-index:5}
+.tcard.loose{cursor:default}
+.tcard.loose:hover{--stand:.28;--z:2px}
+.tcard.gather{transition:left .75s cubic-bezier(.5,0,.2,1),top .75s cubic-bezier(.5,0,.2,1),transform .75s cubic-bezier(.5,0,.2,1)}
+#felt{transition:transform .7s var(--spring),box-shadow .25s,border-color .25s}
+#stage.drop-ready #felt{border-color:rgba(242,165,65,.7)}
+#stage.drop-no #felt{border-color:#D1495B;box-shadow:inset 0 0 0 9px var(--sf),inset 0 0 0 9.75px rgba(209,73,91,.5),0 0 40px 6px rgba(209,73,91,.25)}
+#stage.drop-over #felt{border-color:var(--must);box-shadow:inset 0 0 0 9px var(--sf),inset 0 0 0 9.75px rgba(242,165,65,.6),0 0 46px 8px rgba(242,165,65,.32)}
+.tcard .flip{position:absolute;inset:0;transform-style:preserve-3d}
+.face,.backside{position:absolute;inset:0;backface-visibility:hidden;border-radius:4px;padding:3px;border:.75px solid var(--cream);background:var(--bg)}
+.backside{transform:rotateY(180deg)}
+.face .art,.backside .art,.hcard .art,.viewer .art{width:100%;height:100%;border-radius:2px;overflow:hidden;display:block}
+.art svg,.art img{width:100%;height:100%;display:block}
+.art img{object-fit:cover;-webkit-user-drag:none;user-select:none}
+.tcard.voted .face{outline:.75px solid var(--must);outline-offset:3px}
+.tcard.story{--sc:1.16;--z:34px;z-index:8}
+.tcard.story .face{outline:1.5px solid var(--must);outline-offset:4px;box-shadow:0 0 22px 4px rgba(242,165,65,.35);animation:glow 1.8s ease-in-out infinite}
+/* holofote: o momento em que a carta do narrador é revelada */
+.tcard.story.spot{--sc:1.55;--z:90px;--stand:1;z-index:9;transition:transform .7s cubic-bezier(.3,1.7,.5,1)}
+.tcard.story.spot .face{outline-width:2px;outline-offset:6px;animation:glowBig 1.4s ease-in-out infinite}
+@keyframes glowBig{0%,100%{box-shadow:0 0 30px 8px rgba(242,165,65,.45)}50%{box-shadow:0 0 56px 18px rgba(242,165,65,.75)}}
+@keyframes glow{0%,100%{box-shadow:0 0 18px 3px rgba(242,165,65,.3)}50%{box-shadow:0 0 34px 9px rgba(242,165,65,.6)}}
+.tcard.dim{opacity:.32;filter:saturate(.35) brightness(.75)}
+.tcard.dim,.tcard.story{transition:transform .5s var(--spring),opacity .5s ease,filter .5s ease}
+/* numeral num medalhão no canto da carta: embaixo da carta ele afundaria no feltro (a carta levanta pela base) */
+.roman{position:absolute;left:-12px;bottom:10px;z-index:2;min-width:30px;height:30px;padding:0 7px;box-sizing:border-box;display:grid;place-items:center;border-radius:15px;background:var(--bg);border:.75px solid var(--cream);box-shadow:0 3px 8px rgba(0,0,0,.4);font:400 15px/1 var(--serif);color:var(--cream)}
+.tcard.voted .roman{color:var(--bg);background:var(--must);border-color:var(--must)}
+.tag-story{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:12px;font:italic 400 17px/1 var(--serif);color:var(--must);white-space:nowrap;text-shadow:0 1px 8px rgba(27,47,42,.9);animation:popOwner .5s var(--spring)}
+.tokens{position:absolute;left:22px;right:4px;bottom:8px;display:flex;flex-wrap:wrap;gap:2px;justify-content:center}
+.tokens span{width:26px;height:26px;animation:pop .45s var(--spring)}
+.tokens span svg{width:100%;height:100%}
+/* dono da carta: selo no topo da carta (os votos ficam embaixo) */
+.owner{position:absolute;left:50%;top:-15px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;gap:5px;padding:3px 11px 3px 3px;background:var(--bg);border:.75px solid var(--cream);border-radius:999px;font:400 15px/1 var(--serif);color:var(--cream);white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.4);animation:popOwner .45s var(--spring)}
+.owner svg{width:28px;height:28px}
+.owner.me{border-color:var(--must);color:var(--must)}
+.tcard.story .tag-story{margin-bottom:26px}
+.mine-tag{position:absolute;top:7px;left:7px;font:400 10.5px/1 var(--ui);padding:2px 6px;border:.5px solid var(--cream);background:var(--bg);border-radius:6px}
+@keyframes pop{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
+.owner{animation-name:popOwner}
+@keyframes popOwner{0%{transform:translateX(-50%) scale(.2);opacity:0}100%{transform:translateX(-50%) scale(1);opacity:1}}
+.zoom{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:.5px solid var(--cream);background:rgba(27,47,42,.85);display:none;place-items:center;font-size:13px;z-index:2}
+.tcard:hover .zoom,.hcard:hover .zoom{display:grid}
+
+/* ---------- mão ---------- */
+#hand{position:absolute;left:calc(50% - 420px);width:840px;bottom:0;height:230px;z-index:6}
+.hcard{position:absolute;bottom:20px;width:124px;height:186px;margin-left:-62px;transform-origin:50% 120%;transition:transform .35s var(--spring),left .35s var(--spring),opacity .3s;cursor:grab;touch-action:none;
+  border-radius:4px;padding:3px;border:.75px solid var(--cream);background:var(--bg)}
+.hcard:hover{z-index:5}
+.hcard.dragging{transition:none;z-index:30;pointer-events:none;cursor:grabbing;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+/* carta que já foi pra mesa some na hora (o "#hand.off" não pode deixá-la meio transparente) */
+#hand .hcard.away{opacity:0 !important;visibility:hidden;pointer-events:none;transition:none}
+#hand.off .hcard:not(.dragging){opacity:.6}
+#me{position:absolute;left:44px;bottom:40px;display:flex;align-items:center;gap:12px;z-index:6}
+#me .av{width:64px;height:64px}
+#me .nm{font:400 22px/1 var(--serif)}
+#me .sub{font-size:12px;color:var(--mu);margin-top:5px}
+
+/* ---------- painel de ação ---------- */
+#panel{position:absolute;right:34px;bottom:34px;width:270px;padding:16px 18px;border:.75px solid rgba(246,234,210,.4);border-radius:14px;background:rgba(27,47,42,.92);z-index:7}
+#panel h3{margin:0 0 6px;font:400 22px/1.1 var(--serif)}
+#panel p{margin:0 0 10px;color:var(--mu);font-size:13.5px;line-height:1.45}
+#panel textarea{width:100%;height:58px;resize:none;border:.75px solid rgba(246,234,210,.4);border-radius:10px;background:rgba(35,61,54,.9);color:var(--cream);font:italic 400 17px/1.25 var(--serif);padding:8px 10px;outline:none}
+#panel textarea:focus{border-color:var(--must)}
+#panel .cnt{font-size:11px;color:var(--mu);text-align:right;margin:3px 0 4px}
+#panel textarea:disabled{opacity:.4}
+#panel .spoken{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin:2px 0 4px;user-select:none}
+#panel .spoken input{width:16px;height:16px;accent-color:var(--must);cursor:pointer;margin:0}
+#panel .clue-box{border-radius:12px;transition:box-shadow .2s}
+#panel .clue-box.need{animation:need .45s;box-shadow:0 0 0 2px rgba(209,73,91,.7)}
+@keyframes need{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.btn{display:block;width:100%;padding:10px 12px;border:.75px solid var(--must);border-radius:999px;background:var(--must);color:var(--deep);font:600 14px/1 var(--ui);transition:transform .2s var(--spring)}
+.btn:hover{transform:translateY(-1px)}
+.btn.ghost{background:none;color:var(--must);margin-top:8px}
+#panel .err{color:#ffb4a8;font-size:12px;margin-top:6px;min-height:14px}
+
+/* ---------- toast, visualizador, confete ---------- */
+#toast{position:absolute;left:50%;bottom:262px;transform:translateX(-50%);padding:8px 16px;border-radius:999px;background:var(--cream);color:var(--deep);font:600 13px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.on{opacity:1}
+.viewer{position:absolute;inset:0;background:rgba(12,22,19,.82);z-index:50;display:none;align-items:center;justify-content:center;gap:34px}
+.viewer.on{display:flex}
+.viewer .big{width:420px;height:630px;padding:5px;border:.75px solid var(--cream);border-radius:6px;background:var(--bg);animation:pop .35s var(--spring)}
+.viewer .nav{width:46px;height:46px;border-radius:50%;border:.75px solid rgba(246,234,210,.5);background:none;font-size:22px}
+.viewer .cap{position:absolute;bottom:40px;left:0;right:0;text-align:center;color:var(--mu);font-size:13px}
+.viewer .cap b{font:400 22px/1 var(--serif);color:var(--cream);display:block;margin-bottom:6px;font-weight:400}
+#confetti{position:absolute;inset:0;pointer-events:none;z-index:45}
+#step{position:absolute;left:50%;bottom:196px;transform:translateX(-50%);display:none;align-items:center;gap:14px;padding:12px 16px 12px 22px;border:.75px solid rgba(242,165,65,.75);border-radius:16px;background:rgba(27,47,42,.95);z-index:9;min-width:640px;max-width:860px}
+#step .t{flex:1}
+#step.on{display:flex;animation:centerIn .4s var(--spring)}
+#step .t,#step .n{transition:opacity .18s ease}
+#step.swap .t,#step.swap .n{opacity:0}
+@keyframes centerIn{0%{opacity:0;transform:translateX(-50%) translateY(10px) scale(.96)}100%{opacity:1;transform:translateX(-50%)}}
+#step .n{font:400 13px/1 var(--ui);color:var(--must);letter-spacing:1px;white-space:nowrap}
+#step .t{font:400 24px/1.2 var(--serif)}
+#step .t em{color:var(--must);font-style:italic}
+#step button{border:.75px solid rgba(246,234,210,.4);border-radius:999px;background:none;padding:6px 12px;font-size:12px;color:var(--mu);white-space:nowrap}
+#board{position:absolute;left:50%;top:196px;transform:translateX(-50%);width:560px;max-height:660px;overflow:auto;padding:20px 22px 18px;border:.75px solid rgba(246,234,210,.5);border-radius:16px;background:rgba(27,47,42,.97);z-index:20;display:none}
+#board.on{display:block;animation:centerIn .4s var(--spring)}
+#board h3{margin:0 0 4px;font:400 28px/1.1 var(--serif)}
+#board .sum{margin:0 0 14px;color:var(--mu);font-size:14px}
+#board .sum em{color:var(--cream)}
+#board .r{display:grid;grid-template-columns:34px 1fr auto auto;align-items:center;gap:12px;padding:9px 0;border-top:.5px solid rgba(246,234,210,.15)}
+#board .r svg{width:34px;height:34px;display:block}
+#board .r .nm{font:600 14px/1.2 var(--ui)}
+#board .r .why{font-size:12.5px;color:var(--mu);margin-top:3px;line-height:1.35}
+#board .r .g{font:400 26px/1 var(--serif);color:var(--must);min-width:44px;text-align:right}
+#board .r .g.zero{color:rgba(246,234,210,.35)}
+#board .r .tot{font-size:12px;color:var(--mu);min-width:58px;text-align:right}
+#board .r.st .nm::after{content:' · narrou';font-weight:300;color:var(--must)}
+#board .acts{display:flex;gap:10px;margin-top:14px}
+#board .acts .btn{margin:0}
+#boardPill{position:absolute;left:50%;bottom:204px;transform:translateX(-50%);z-index:20;display:none;font-size:14px;padding:10px 18px 9px;border-color:rgba(242,165,65,.75)}
+#boardPill.on{display:block}
+</style>
+</head>
+<body>
+<div id="app">
+  <svg id="bg" viewBox="0 0 1440 900" preserveAspectRatio="none"></svg>
+  <div class="logo">diquisti<small>protótipo da mesa · cartolina~</small></div>
+  <div id="clue"></div>
+  <div class="tr"><span class="pill" id="phase"></span><button class="pill" id="soundBtn">som: ligado</button><button class="pill" id="tiltBtn">mesa 3D: ligada</button><button class="pill" id="devBtn">⚙ protótipo</button></div>
+  <div id="dev">
+    <h4>protótipo</h4>
+    <div class="row">jogadores<div class="opts" id="optN"></div></div>
+    <div class="row">meta<div class="opts" id="optT"></div></div>
+    <div class="row">bots<div class="opts" id="optS"></div></div>
+    <button class="new" id="newBtn">nova partida</button>
+    <p>Regras reais do jogo (as mesmas do servidor). Os bots escolhem e votam ao acaso. Cartas provisórias geradas: a arte de verdade entra depois. Rodinha pra cima em cima de uma carta (ou clique duplo, ou ⤢) amplia; rodinha pra baixo fecha.</p>
+  </div>
+  <div id="stage"><div id="felt"></div></div>
+  <div id="seats"></div>
+  <div id="me"></div>
+  <div id="hand"></div>
+  <div id="panel"></div>
+  <div id="toast"></div>
+  <div id="step"><span class="n" id="stepN"></span><span class="t" id="stepT"></span><button id="skipBtn">pular ›</button></div>
+  <div id="board"></div>
+  <button class="pill" id="boardPill">placar da rodada ▸</button>
+  <canvas id="confetti"></canvas>
+  <div class="viewer" id="viewer"><button class="nav" id="vPrev">‹</button><div class="big"><div class="art" id="vArt"></div></div><button class="nav" id="vNext">›</button><div class="cap" id="vCap"></div></div>
+</div>
+<script src="critters.js"></script>
+<script src="rules.js"></script>
+<script>
+'use strict';
+/* =========================================================
+   Protótipo da mesa do Diquisti (descartável). Regras: shared/src/games/dixit
+   empacotadas em rules.js. Tudo aqui é só interface + bots falsos.
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+const app = $('#app'), felt = $('#felt');
+const COLORS = Object.keys(window.CRITTERS);
+const NAMES = ['você', 'Bia', 'Léo', 'Nina', 'Caio', 'Duda', 'Theo', 'Lia', 'Gabi', 'Juca'];
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+const CLUES = ['saudade', 'um sonho que esqueci', 'silêncio', 'voltar pra casa', 'o primeiro dia', 'coragem', 'quase',
+  'segredo', 'domingo à tarde', 'a última página', 'eco', 'infância', 'caminho errado', 'maré', 'promessa', 'o que ficou',
+  'longe demais', 'chuva de verão', 'antes de dormir', 'alguém esperando'];
+const ERR = { own_card: 'Não dá pra votar na própria carta.', wrong_count: 'Escolha o número certo de cartas.',
+  nothing_chosen: 'Escolha antes de confirmar.', already_confirmed: 'Você já confirmou.', unknown_card: 'Carta não encontrada.',
+  not_storyteller: 'Só quem narra escolhe a carta da dica.', is_storyteller: 'Quem narra só espera nesta etapa.', paused: 'Esperando gente.' };
+
+/* ---------- sons (portados de web/src/brand/sounds.ts, os mesmos do ITO) ---------- */
+let soundOn = true, actx = null, lastFile = -1e9;
+/** volume geral: tudo mais suave que no ITO (sintetizados passam por um ganho mestre; o arquivo da carta, por CARD_VOL) */
+const MASTER_VOL = .5, CARD_VOL = .45;
+const cardPool = Array.from({ length: 3 }, () => { const a = new Audio('sounds/card.mp3'); a.preload = 'auto'; return a; }); let cardNext = 0;
+const NOTE = (n) => 440 * Math.pow(2, (n - 69) / 12);
+function ac() { if (!actx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return null; actx = new C(); actx.master = actx.createGain(); actx.master.gain.value = MASTER_VOL; actx.master.connect(actx.destination); } actx.resume?.(); return actx; }
+function tone(c, { f, t = 0, dur = .4, type = 'sine', vol = .25, attack = .005, glideTo = null, partial = 0 }) {
+  const o = c.createOscillator(), g = c.createGain(), at = c.currentTime + t; o.type = type; o.frequency.setValueAtTime(f, at);
+  if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, at + dur);
+  g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + attack); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
+  o.connect(g).connect(c.master); o.start(at); o.stop(at + dur + .05); if (partial) tone(c, { f: f * partial, t, dur: dur * .5, vol: vol * .25, attack }); }
+function noise(c, { t = 0, dur = .08, vol = .2, freq = 1800, q = 1 }) {
+  const len = Math.ceil(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), at = c.currentTime + t;
+  s.buffer = buf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q; g.gain.value = vol; s.connect(f).connect(g).connect(c.master); s.start(at); }
+const SYNTH = {
+  flip: (c, i) => { tone(c, { f: NOTE(72 + i * 2), dur: .12, type: 'triangle', vol: .15, partial: 3 }); noise(c, { dur: .03, vol: .05, freq: 3200, q: 3 }); },
+  error: (c) => { tone(c, { f: 110, dur: .22, vol: .2, glideTo: 70 }); noise(c, { dur: .06, vol: .07, freq: 400 }); },
+  win: (c) => [72, 76, 79, 84].forEach((n, i) => tone(c, { f: NOTE(n), t: i * .09, dur: .5, type: 'triangle', vol: .2, partial: 2 })),
+  lose: (c) => { tone(c, { f: NOTE(67), dur: .35, type: 'square', vol: .06 }); tone(c, { f: NOTE(62), t: .32, dur: .6, type: 'square', vol: .06, glideTo: NOTE(58) }); },
+  join: (c) => { tone(c, { f: NOTE(84), dur: .25, type: 'triangle', vol: .18, partial: 2 }); tone(c, { f: NOTE(91), t: .15, dur: .35, type: 'triangle', vol: .18, partial: 2 }); },
+  click: (c) => tone(c, { f: 880, dur: .06, type: 'triangle', vol: .06, attack: .003 }),
+  slide: (c) => { noise(c, { dur: .14, vol: .07, freq: 1400, q: .7 }); tone(c, { f: 520, t: .11, dur: .07, type: 'triangle', vol: .06, partial: 3 }); },
+};
+/** `vol` e `mine` só valem para o som de arquivo (card); `mine` = escolha sua, nunca é engolida pelo limite. */
+function play(name, i = 0, vol = 1, mine = false) {
+  if (!soundOn) return;
+  try {
+    if (name === 'card') { const now = performance.now(); if (!mine && now - lastFile < 80) return; lastFile = now; const a = cardPool[cardNext]; cardNext = (cardNext + 1) % 3; a.currentTime = 0; a.volume = Math.min(1, vol * CARD_VOL); a.play()?.catch(() => {}); return; }
+    const c = ac(); if (c) SYNTH[name](c, i);
+  } catch { /* sem áudio */ }
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && !b.classList.contains('zoom')) play('click'); }, true);
+
+/* ---------- escala do palco 1440×900 ---------- */
+let APPW = 1440;
+function fit() {
+  let sc = innerHeight / 900, w = innerWidth / sc;
+  if (w < 1440) { sc = innerWidth / 1440; w = 1440; }
+  APPW = Math.round(w); app.style.width = APPW + 'px';
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+  brushes(); if (ids.length) { layoutSeats(); }
+}
+addEventListener('resize', fit);
+
+/* ---------- utilidades ---------- */
+function rngOf(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
+const between = (a, b) => a + Math.random() * (b - a);
+const critter = (p) => window.CRITTERS[colorOf(p)];
+const colorOf = (p) => COLORS[Number(p.slice(1))];
+const nameOf = (p) => NAMES[Number(p.slice(1))];
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2200); }
+
+/* ---------- fundo: pinceladas suaves ---------- */
+function brushes() {
+  const r = rngOf(5), W = APPW; let s = ''; const C = ['#28443c', '#2a473f', '#26403a', '#2c4a41'];
+  for (let i = 0; i < Math.round(70 * W / 1440); i++) { const x = r() * W, y = r() * 900, l = 90 + r() * 200, a = r() * 50 - 25;
+    s += `<path d="M${x} ${y} q${l / 2} ${a} ${l} 0" stroke="${C[i % 4]}" stroke-width="${4 + r() * 7}" fill="none" stroke-linecap="round"/>`; }
+  [[120, 120, 60], [W - 110, 140, 50], [W - 90, 760, 66], [90, 770, 44], [W / 2, 860, 40]].forEach(([x, y, R]) => {
+    for (let k = 0; k < 4; k++) s += `<circle cx="${x}" cy="${y}" r="${R - k * 11}" stroke="${k % 2 ? '#2c4a41' : '#F2A541'}" stroke-width="${k % 2 ? 4 : .7}" fill="none" opacity="${k % 2 ? 1 : .13}" stroke-dasharray="${R * 2} ${R}"/>`; });
+  $('#bg').setAttribute('viewBox', `0 0 ${W} 900`); $('#bg').innerHTML = s;
+}
+
+/* ---------- cartas provisórias: pequenas "pinturas" geradas pelo id ---------- */
+const SKIES = [['#14241f', '#30638e', 1], ['#d1495b', '#f2a541', 0], ['#8fb8de', '#f6ead2', 0], ['#00798c', '#bfe0d4', 0], ['#3a2a4a', '#c0607a', 1], ['#1b2f2a', '#00798c', 1], ['#f2a541', '#f6ead2', 0]];
+const LANDS = ['#1b2f2a', '#2f5046', '#3d6b5c', '#5a4636', '#6b3a3a', '#24495a'];
+const SIL = '#132420', ACC = ['#f2a541', '#d1495b', '#f6ead2', '#00798c'];
+const artCache = new Map();
+function svgArt(id) {
+  if (artCache.has(id)) return artCache.get(id);
+  const r = rngOf(Number(id.slice(1)) * 7919 + 17), W = 200, H = 300, g = 'g' + id;
+  const [s1, s2, night] = pick(r, SKIES);
+  let s = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${s1}"/><stop offset="1" stop-color="${s2}"/></linearGradient></defs><rect width="${W}" height="${H}" fill="url(#${g})"/>`;
+  if (night) for (let i = 0; i < 26; i++) s += `<circle cx="${r() * W}" cy="${r() * H * .6}" r="${r() * 1.3 + .3}" fill="#f6ead2" opacity="${.4 + r() * .6}"/>`;
+  const cx = 30 + r() * 140, cy = 36 + r() * 90, cr = 13 + r() * 18, cc = night ? '#f6ead2' : pick(r, ['#f6ead2', '#f2a541', '#d1495b']);
+  s += `<circle cx="${cx}" cy="${cy}" r="${cr}" fill="${cc}"/>`;
+  if (r() < .45) s += `<circle cx="${cx + cr * .45}" cy="${cy - cr * .2}" r="${cr * .9}" fill="${s1}"/>`;
+  if (r() < .3) s += `<circle cx="${cx}" cy="${cy}" r="${cr + 8}" fill="none" stroke="${cc}" stroke-width=".8" opacity=".7"/>`;
+  const water = r() < .35, groundY = 190 + r() * 50;
+  for (let i = 0; i < 3; i++) { const y = groundY + i * 26 - 20 + r() * 20, c = LANDS[(i + Math.floor(r() * 6)) % 6];
+    s += `<path d="M0 ${y} Q ${50 + r() * 50} ${y - 30 - r() * 50} ${100 + r() * 20} ${y - r() * 10} T ${W} ${y - 10 + r() * 20} L${W} ${H} L0 ${H} Z" fill="${c}" opacity="${.85 + i * .05}"/>`; }
+  if (water) { s += `<rect x="0" y="${groundY + 30}" width="${W}" height="${H}" fill="${s1}" opacity=".85"/>`; for (let i = 0; i < 6; i++) s += `<path d="M${r() * 160} ${groundY + 45 + i * 9} h${15 + r() * 30}" stroke="#f6ead2" stroke-width=".8" opacity=".5"/>`; }
+  const things = [tree, house, door, bird, balloon, ladder, eye, spiral, stairs, island, key, fish, lamp, boat];
+  const n = 2 + Math.floor(r() * 2);
+  for (let i = 0; i < n; i++) s += pick(r, things)(r, 20 + r() * 160, groundY - 5 + r() * 25, .7 + r() * .8, water);
+  for (let i = 0; i < 90; i++) s += `<circle cx="${r() * W}" cy="${r() * H}" r=".6" fill="#000" opacity=".12"/>`;
+  s += '</svg>';
+  artCache.set(id, s); return s;
+}
+/* arte de verdade: lida direto de web/public (sirva a raiz do repo); se não carregar, volta pra pintura em SVG */
+const CARD_BASE = '../../web/public/dixit/cards/';
+const cardArt = (id) => `<img src="${CARD_BASE}${id}.webp" alt="" draggable="false" onerror="artFallback(this,'${id}')">`;
+function artFallback(img, id) { img.outerHTML = svgArt(id); }
+function tree(r, x, y, k) { const h = 50 * k; return `<path d="M${x} ${y} l${-14 * k} 0 l${14 * k} ${-h} l${14 * k} ${h} Z" fill="${SIL}"/><path d="M${x} ${y - h * .45} l${-11 * k} 0 l${11 * k} ${-h * .7} l${11 * k} ${h * .7} Z" fill="${SIL}"/><rect x="${x - 2}" y="${y}" width="4" height="${8 * k}" fill="${SIL}"/>`; }
+function house(r, x, y, k) { const w = 30 * k, h = 24 * k, lit = pick(r, ACC); return `<rect x="${x - w / 2}" y="${y - h}" width="${w}" height="${h}" fill="${SIL}"/><path d="M${x - w / 2 - 4} ${y - h} L${x} ${y - h - 18 * k} L${x + w / 2 + 4} ${y - h} Z" fill="${SIL}"/><rect x="${x - 4 * k}" y="${y - h + 6 * k}" width="${8 * k}" height="${8 * k}" fill="${lit}"/>`; }
+function door(r, x, y, k) { const w = 22 * k, h = 44 * k; return `<path d="M${x - w / 2} ${y} V${y - h + w / 2} A${w / 2} ${w / 2} 0 0 1 ${x + w / 2} ${y - h + w / 2} V${y} Z" fill="#f2a541"/><path d="M${x - w / 2 - 3} ${y} V${y - h + w / 2} A${w / 2 + 3} ${w / 2 + 3} 0 0 1 ${x + w / 2 + 3} ${y - h + w / 2} V${y}" fill="none" stroke="${SIL}" stroke-width="3"/>`; }
+function bird(r, x, y, k) { let s = ''; for (let i = 0; i < 3; i++) { const bx = x + (r() - .5) * 60, by = 60 + r() * 80; s += `<path d="M${bx - 7 * k} ${by} q${3.5 * k} ${-5 * k} ${7 * k} 0 q${3.5 * k} ${-5 * k} ${7 * k} 0" fill="none" stroke="${SIL}" stroke-width="1.6"/>`; } return s; }
+function balloon(r, x, y, k) { const by = 70 + r() * 70, c = pick(r, ACC); return `<path d="M${x} ${by + 16 * k} q${-6} 30 ${4} 60" stroke="${SIL}" stroke-width=".8" fill="none"/><ellipse cx="${x}" cy="${by}" rx="${11 * k}" ry="${14 * k}" fill="${c}"/>`; }
+function ladder(r, x, y, k) { const h = 120 * k; let s = `<path d="M${x - 7} ${y} L${x - 4} ${y - h} M${x + 7} ${y} L${x + 4} ${y - h}" stroke="${SIL}" stroke-width="2"/>`; for (let i = 1; i < 9; i++) s += `<path d="M${x - 6.5 + i * .35} ${y - i * h / 9} h${13 - i * .7}" stroke="${SIL}" stroke-width="1.6"/>`; return s; }
+function eye(r, x, y, k) { const ey = 60 + r() * 60; return `<path d="M${x - 22 * k} ${ey} Q${x} ${ey - 16 * k} ${x + 22 * k} ${ey} Q${x} ${ey + 16 * k} ${x - 22 * k} ${ey} Z" fill="#f6ead2" opacity=".9"/><circle cx="${x}" cy="${ey}" r="${6 * k}" fill="${SIL}"/>`; }
+function spiral(r, x, y, k) { const sy = 70 + r() * 80; let d = `M${x} ${sy}`; for (let a = 0; a < 18; a++) { const R = a * 1.6 * k, t = a * .7; d += ` L${x + Math.cos(t) * R} ${sy + Math.sin(t) * R}`; } return `<path d="${d}" fill="none" stroke="#f6ead2" stroke-width="1.2" opacity=".85"/>`; }
+function stairs(r, x, y, k) { let d = `M${x - 30 * k} ${y}`; for (let i = 0; i < 6; i++) d += ` v${-9 * k} h${10 * k}`; return `<path d="${d} V${y} Z" fill="${SIL}"/>`; }
+function island(r, x, y, k) { const iy = 80 + r() * 50; return `<path d="M${x - 26 * k} ${iy} h${52 * k} l${-14 * k} ${22 * k} l${-12 * k} ${10 * k} l${-12 * k} ${-12 * k} Z" fill="${SIL}"/>` + tree(r, x, iy, k * .45); }
+function key(r, x, y, k) { const ky = 70 + r() * 70; return `<circle cx="${x}" cy="${ky}" r="${7 * k}" fill="none" stroke="#f2a541" stroke-width="2.4"/><path d="M${x + 7 * k} ${ky} h${22 * k} v${6 * k} M${x + 22 * k} ${ky} v${5 * k}" stroke="#f2a541" stroke-width="2.4" fill="none"/>`; }
+function fish(r, x, y, k) { const fy = 60 + r() * 80, c = pick(r, ACC); return `<path d="M${x - 16 * k} ${fy} Q${x} ${fy - 10 * k} ${x + 14 * k} ${fy} Q${x} ${fy + 10 * k} ${x - 16 * k} ${fy} Z M${x + 14 * k} ${fy} l${8 * k} ${-6 * k} v${12 * k} Z" fill="${c}"/>`; }
+function lamp(r, x, y, k) { const h = 60 * k; return `<path d="M${x} ${y} V${y - h}" stroke="${SIL}" stroke-width="2.4"/><circle cx="${x}" cy="${y - h}" r="${5 * k}" fill="#f2a541"/><circle cx="${x}" cy="${y - h}" r="${14 * k}" fill="#f2a541" opacity=".18"/>`; }
+function boat(r, x, y, k, water) { const by = water ? y + 34 : y; return `<path d="M${x - 18 * k} ${by} h${36 * k} l${-7 * k} ${8 * k} h${-22 * k} Z" fill="${SIL}"/><path d="M${x} ${by} V${by - 26 * k} L${x + 14 * k} ${by - 4 * k} Z" fill="#f6ead2"/>`; }
+const BACK = `<svg viewBox="0 0 200 300"><rect width="200" height="300" fill="#1B2F2A"/><rect x="12" y="12" width="176" height="276" rx="6" fill="none" stroke="#F6EAD2" stroke-width=".8" opacity=".6"/>${[0, 1, 2, 3].map((k) => `<circle cx="100" cy="150" r="${58 - k * 13}" fill="none" stroke="${k % 2 ? '#2F5046' : '#F2A541'}" stroke-width="${k % 2 ? 6 : .9}" opacity="${k % 2 ? 1 : .55}" stroke-dasharray="90 40"/>`).join('')}<text x="100" y="158" text-anchor="middle" font-family="DM Serif Display, serif" font-size="22" fill="#F6EAD2">diquisti</text></svg>`;
+
+/* ---------- estado do protótipo ---------- */
+let N = 6, TARGET = 30, SPEED = 1;
+let ids = [], state = null, prevPhase = null, round = 0;
+let shown = {};            // placar que os peões mostram (anda na revelação)
+let sel = [];              // cartas da mão escolhidas (narrar/escolher)
+let revealing = false, revealDone = false;
+const timers = new Set();
+const ctx = () => ({ hostId: 'p0', active: ids, rng: Math.random });
+const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+const view = () => Dixit.dixitViewFor(state, 'p0');
+
+function act(pid, action, quiet) {
+  const res = Dixit.applyDixitAction(state, pid, action, ctx());
+  if (!res.ok) { if (!quiet) { toast(ERR[res.error] || res.error); play('error'); } return false; }
+  state = res.state; changed(); return true;
+}
+
+function newGame() {
+  for (const t of timers) clearTimeout(t); timers.clear();
+  ids = Array.from({ length: N }, (_, i) => `p${i}`); plannedFor.clear(); panelKey = ''; panelDraft = ''; spoken = false;
+  state = Dixit.initialDixitState(TARGET); prevPhase = null; round = 0; sel = []; handOrder = []; drag = null; revealing = false; revealDone = false;
+  shown = Object.fromEntries(ids.map((p) => [p, 0]));
+  felt.querySelectorAll('.tcard,.felt-msg').forEach((e) => e.remove()); tableEls.clear();
+  stopConfetti(); hideBoard(); buildTrack(); buildSeats();
+  act('p0', { type: 'start' });
+}
+
+function changed() {
+  const v = view();
+  if (v.phase !== prevPhase) {
+    if (v.phase === 'storytelling') { round++; sel = []; revealDone = false; clearTable(); hideBoard(); if (v.storyteller === 'p0') play('join'); }
+    if (v.phase === 'submitting' || v.phase === 'voting') sel = [];
+    if (v.phase === 'reveal') runReveal(v);
+    if (v.phase === 'gameover') { hideBoard(); launchConfetti(); play(v.winners.includes('p0') ? 'win' : 'lose'); }
+  }
+  const from = prevPhase; prevPhase = v.phase;
+  render(v, from); scheduleBots();
+}
+
+/* ---------- bots ---------- */
+const plannedFor = new Set();
+function scheduleBots() {
+  const st = state;
+  for (const p of st.inRound) {
+    if (p === 'p0') continue;
+    const key = `${round}:${st.phase}:${p}`;
+    if (plannedFor.has(key)) continue;
+    let fn = null, wait = 0;
+    if (st.phase === 'storytelling' && st.storyteller === p && !st.paused) { wait = between(2500, 5200); fn = () => botTell(p); }
+    if (st.phase === 'submitting' && p !== st.storyteller && !st.confirmed.includes(p)) { wait = between(1400, 5200); fn = () => botSubmit(p); }
+    if (st.phase === 'voting' && p !== st.storyteller && !st.confirmed.includes(p)) { wait = between(1800, 6200); fn = () => botVote(p); }
+    if (fn) { plannedFor.add(key); later(wait * SPEED, fn); }
+  }
+}
+function botTell(p) { const h = state.hands[p]; if (state.phase !== 'storytelling' || state.storyteller !== p) return;
+  act(p, { type: 'tell', cardId: pick(Math.random, h), clue: Math.random() < .15 ? '' : pick(Math.random, CLUES) }, true); }
+function botSubmit(p) { if (state.phase !== 'submitting') return; const h = [...state.hands[p]].sort(() => Math.random() - .5);
+  if (act(p, { type: 'submit', cardIds: h.slice(0, Dixit.dixitPicksPerPlayer(state.inRound.length)) }, true)) act(p, { type: 'confirm' }, true); }
+function botVote(p) { if (state.phase !== 'voting') return; const own = state.picks[p] || []; const opts = state.table.filter((c) => !own.includes(c));
+  // um pouco de "intuição": 40% acha a carta do narrador
+  const choice = Math.random() < .4 ? state.storyCard : pick(Math.random, opts);
+  if (act(p, { type: 'vote', cardId: choice }, true)) act(p, { type: 'confirm' }, true); }
+
+/* ---------- trilha de pontos (no feltro) ---------- */
+let cells = [];
+function trackPoints(n) {
+  const x0 = 34, y0 = 34, x1 = 966, y1 = 526, R = 40;
+  // perímetro de um retângulo arredondado, começando no canto de baixo à esquerda, subindo
+  const seg = []; const push = (fn, len) => seg.push({ fn, len });
+  const w = x1 - x0 - 2 * R, h = y1 - y0 - 2 * R, q = Math.PI * R / 2;
+  push((t) => [x0, y1 - R - t * h], h);
+  push((t) => [x0 + R - R * Math.cos(t * Math.PI / 2), y0 + R - R * Math.sin(t * Math.PI / 2)], q);
+  push((t) => [x0 + R + t * w, y0], w);
+  push((t) => [x1 - R + R * Math.sin(t * Math.PI / 2), y0 + R - R * Math.cos(t * Math.PI / 2)], q);
+  push((t) => [x1, y0 + R + t * h], h);
+  push((t) => [x1 - R + R * Math.cos(t * Math.PI / 2), y1 - R + R * Math.sin(t * Math.PI / 2)], q);
+  push((t) => [x1 - R - t * w, y1], w);
+  push((t) => [x0 + R - R * Math.sin(t * Math.PI / 2), y1 - R + R * Math.cos(t * Math.PI / 2)], q);
+  const total = seg.reduce((a, s) => a + s.len, 0), out = [];
+  for (let i = 0; i < n; i++) { let d = (i / n) * total + 18; for (const s of seg) { if (d <= s.len) { out.push(s.fn(d / s.len)); break; } d -= s.len; } }
+  return out;
+}
+function buildTrack() {
+  felt.querySelectorAll('.cell,.pawn').forEach((e) => e.remove());
+  cells = trackPoints(TARGET + 1);
+  cells.forEach(([x, y], i) => { const c = document.createElement('div');
+    c.className = 'cell' + (i % 5 === 0 ? ' five' : '') + (i === TARGET ? ' goal' : '');
+    c.style.left = x + 'px'; c.style.top = y + 'px'; c.textContent = i % 5 === 0 || i === TARGET ? i : ''; felt.appendChild(c); });
+  pawnEls.clear();
+}
+const pawnEls = new Map();
+function placePawns(animate) {
+  const byCell = {};
+  for (const p of ids) { const k = Math.min(shown[p] || 0, TARGET); (byCell[k] ||= []).push(p); }
+  for (const p of ids) {
+    let el = pawnEls.get(p);
+    if (!el) { el = document.createElement('div'); el.className = 'pawn'; el.innerHTML = critter(p); felt.appendChild(el); pawnEls.set(p, el); }
+    const k = Math.min(shown[p] || 0, TARGET), group = byCell[k], j = group.indexOf(p), m = group.length;
+    const [x, y] = cells[k]; const ang = (j / m) * Math.PI * 2, rad = m > 1 ? 13 + m : 0;
+    el.style.left = (x + Math.cos(ang) * rad) + 'px'; el.style.top = (y + 10 + Math.sin(ang) * rad * .5) + 'px';
+    el.style.zIndex = String(10 + Math.round(y));
+    el.title = `${nameOf(p)}: ${state.scores[p] ?? 0} pontos`;
+    if (!animate) el.style.transition = 'none', el.offsetWidth, el.style.transition = '';
+  }
+}
+function hop(p) { const el = pawnEls.get(p); if (!el) return;
+  el.animate([{ transform: 'translate(-50%,-100%) rotateX(calc(var(--tilt) * -1)) translateY(0)' }, { transform: 'translate(-50%,-100%) rotateX(calc(var(--tilt) * -1)) translateY(-16px)' }, { transform: 'translate(-50%,-100%) rotateX(calc(var(--tilt) * -1)) translateY(0)' }], { duration: 170, easing: 'ease-out' }); }
+
+/* ---------- assentos ---------- */
+const seatEls = new Map();
+function seatPos(i, k) {
+  const cx = APPW / 2, rx = 655 + (APPW - 1440) * 0.42;
+  if (k === 1) return [cx, 120];
+  const t0 = 168, t1 = 12, t = (t0 - (i / (k - 1)) * (t0 - t1)) * Math.PI / 180;
+  return [cx + rx * Math.cos(t), 392 - 272 * Math.sin(t)];
+}
+function buildSeats() {
+  $('#seats').innerHTML = ''; seatEls.clear();
+  const others = ids.slice(1);
+  others.forEach((p, i) => { const el = document.createElement('div'); el.className = 'seat';
+    el.innerHTML = `<div class="av">${critter(p)}</div><div class="nm">${nameOf(p)}</div><div class="minis"></div><div class="tag"></div>`;
+    $('#seats').appendChild(el); seatEls.set(p, el); });
+  layoutSeats();
+  $('#me').innerHTML = `<div class="av">${critter('p0')}</div><div><div class="nm">você</div><div class="sub" id="meSub"></div></div>`;
+  seatEls.set('p0', $('#me'));
+}
+function layoutSeats() {
+  const others = ids.slice(1);
+  others.forEach((p, i) => { const el = seatEls.get(p); if (!el) return; const [x, y] = seatPos(i, others.length); el.style.left = x + 'px'; el.style.top = y + 'px'; });
+}
+function statusOf(v, p) {
+  if (!v.inRound.includes(p)) return ['assistindo', ''];
+  const st = v.storyteller === p, ok = v.confirmed.includes(p);
+  switch (v.phase) {
+    case 'storytelling': return st ? ['narrando…', 'act'] : ['esperando', ''];
+    case 'submitting': return st ? ['contou ✓', 'ok'] : ok ? ['pronto ✓', 'ok'] : ['escolhendo…', 'act'];
+    case 'voting': return st ? ['esperando', ''] : ok ? ['votou ✓', 'ok'] : ['votando…', 'act'];
+    default: return ['', ''];
+  }
+}
+function renderSeats(v) {
+  for (const p of ids) { const el = seatEls.get(p); if (!el) continue;
+    const [txt, cls] = statusOf(v, p);
+    el.querySelector('.badge')?.remove();
+    if (v.storyteller === p && v.phase !== 'gameover') { const b = document.createElement('div'); b.className = 'badge'; b.textContent = '✎'; b.title = 'narrador'; el.querySelector('.av').appendChild(b); }
+    el.title = `${nameOf(p)}: ${v.scores[p] ?? 0} pontos`;
+    if (p === 'p0') { $('#meSub').textContent = `${v.scores.p0 ?? 0} pontos${txt && v.phase !== 'reveal' ? ' · ' + txt : ''}`; continue; }
+    const tag = el.querySelector('.tag'); tag.textContent = txt; tag.className = 'tag ' + cls; tag.style.visibility = txt ? 'visible' : 'hidden';
+    el.querySelector('.minis').innerHTML = '<i></i>'.repeat(Math.min(v.handCounts[p] ?? 0, 7));
+  }
+}
+function floatAt(p, text) { const el = seatEls.get(p); if (!el) return; const f = document.createElement('div'); f.className = 'float'; f.textContent = text;
+  (el.querySelector('.av') || el).appendChild(f); setTimeout(() => f.remove(), 1700); }
+
+/* ---------- mesa: cartas no feltro ---------- */
+const tableEls = new Map();
+function slots(n) {
+  const W = 118, G = 22, out = [];
+  const rows = n <= 5 ? [n] : [Math.ceil(n / 2), Math.floor(n / 2)];
+  const ys = rows.length === 1 ? [395] : [262, 478];
+  rows.forEach((cnt, ri) => { const tot = cnt * W + (cnt - 1) * G; for (let i = 0; i < cnt; i++) out.push([500 - tot / 2 + W / 2 + i * (W + G), ys[ri]]); });
+  return out;
+}
+function clearTable() { for (const el of tableEls.values()) { el.style.transition = 'opacity .35s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 360); } tableEls.clear(); spots.clear(); pileZ = 0; }
+/* fase de escolha: cada carta cai solta no feltro (a sua, onde você soltou; a dos outros, voando do lugar deles) */
+const spots = new Map();   // 'p3:0' → [x, y, giro]
+let pileZ = 0;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function feltPoint(sx, sy) { // ponto da tela → feltro (aproximado: ignora a perspectiva)
+  const r = felt.getBoundingClientRect();
+  return [(sx - r.left) / r.width * 1000, (sy - r.top) / r.height * 560];
+}
+function looseSpot(key) {
+  if (spots.has(key)) return spots.get(key);
+  const used = [...spots.values()]; let best = null, bestD = -1;
+  for (let t = 0; t < 14; t++) { const c = [between(250, 750), between(250, 480)];
+    const d = used.length ? Math.min(...used.map((u) => Math.hypot(u[0] - c[0], (u[1] - c[1]) * 1.4))) : 1;
+    if (d > bestD) { bestD = d; best = c; } }
+  const s = [best[0], best[1], between(-24, 24)]; spots.set(key, s); return s;
+}
+function landLoose(el, p, rz) {
+  let dx = 0, dy = 0, z = 70, spin = rz - 6;
+  const seat = p !== 'p0' && seatEls.get(p);
+  if (seat) { const r = seat.getBoundingClientRect(), [sx, sy] = feltPoint(r.left + r.width / 2, r.top + r.height / 2);
+    dx = clamp(sx, -120, 1120) - parseFloat(el.style.left); dy = clamp(sy, -120, 640) - parseFloat(el.style.top); z = 150; spin = rz - 30; }
+  el.animate([{ transform: `translate(-50%,-100%) translate(${dx}px,${dy}px) translateZ(${z}px) rotateZ(${spin}deg) rotateX(calc(var(--tilt) * -.6))`, opacity: seat ? 0 : 1, offset: 0 }, { opacity: 1, offset: .3 }],
+    { duration: seat ? 680 : 380, easing: 'cubic-bezier(.2,.9,.3,1)' });
+  later(seat ? 560 : 260, () => play('card', 0, .4));
+}
+/** põe no feltro a carta k do jogador p, virada e solta; devolve true se criou agora */
+function addLoose(v, p, k) {
+  const key = `back:${p}:${k}`; if (tableEls.has(key)) return false;
+  const el = makeTableCard(key, null, false), [x, y, rz] = looseSpot(`${p}:${k}`);
+  el.classList.add('loose'); el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.setProperty('--rz', rz + 'deg'); el.style.zIndex = 3 + ++pileZ;
+  if (p === 'p0' && p !== v.storyteller) el.addEventListener('click', () => onLooseClick(Number(el.dataset.k)));
+  el.dataset.k = k; landLoose(el, p, rz); return true;
+}
+function onLooseClick(k) { // devolve pra mão uma carta sua que ainda espera a outra (partida de 3)
+  const v = view(); if (v.phase !== 'submitting' || v.confirmed.includes('p0')) return;
+  sel = sel.filter((_, i) => i !== k);
+  const mine = [...tableEls.keys()].filter((key) => key.startsWith('back:p0:')).sort();
+  mine.forEach((key) => { const i = Number(key.split(':')[2]); const el = tableEls.get(key);
+    if (i === k) { el.remove(); tableEls.delete(key); spots.delete('p0:' + i); }
+    else if (i > k) { tableEls.delete(key); tableEls.set('back:p0:' + (i - 1), el); spots.set('p0:' + (i - 1), spots.get('p0:' + i)); spots.delete('p0:' + i); } });
+  play('card', 0, .5, true); render(v);
+}
+function feltMsg(text) { let m = felt.querySelector('.felt-msg'); if (!text) { m?.remove(); return; } if (!m) { m = document.createElement('div'); m.className = 'felt-msg'; felt.appendChild(m); } m.textContent = text; }
+function makeTableCard(key, cardId, faceUp) {
+  const el = document.createElement('div'); el.className = 'tcard'; if (cardId) el.dataset.id = cardId;
+  el.innerHTML = `<div class="flip"><div class="face"><div class="art">${cardId ? cardArt(cardId) : ''}</div></div><div class="backside"><div class="art">${BACK}</div></div></div>`;
+  if (!faceUp) el.querySelector('.flip').style.transform = 'rotateY(180deg)';
+  felt.appendChild(el); tableEls.set(key, el); return el;
+}
+function renderTable(v, from) {
+  if (v.phase === 'storytelling') { if (v.storyteller === 'p0') storyHint(); else feltMsg(`${nameOf(v.storyteller)} está escolhendo a carta…`); return; }
+  feltMsg('');
+  if (v.phase === 'submitting') {
+    const need = Dixit.dixitPicksPerPlayer(v.inRound.length), want = new Set();
+    for (const p of v.inRound) {
+      const n = p === v.storyteller ? 1 : v.confirmed.includes(p) ? need : p === 'p0' ? sel.length : 0;
+      for (let k = 0; k < n; k++) { want.add(`back:${p}:${k}`); addLoose(v, p, k); }
+    }
+    for (const [key, el] of tableEls) if (!want.has(key)) { el.remove(); tableEls.delete(key); }
+    for (const [key, el] of tableEls) el.dataset.k = key.split(':')[2];
+    return;
+  }
+  // votação, revelação, fim: cartas viradas para cima. Saindo da escolha, as soltas se arrumam (em ordem sorteada) e viram.
+  const pos = slots(v.table.length);
+  let hold = 0; // quem jogou por último já fecha a fase: a carta dele cai solta primeiro, e só depois tudo se arruma
+  if (from === 'submitting') { const need = Dixit.dixitPicksPerPlayer(v.inRound.length);
+    for (const p of v.inRound) for (let k = 0; k < (p === v.storyteller ? 1 : need); k++) if (addLoose(v, p, k)) hold = 750; }
+  const loose = from === 'submitting' ? [...tableEls].filter(([k]) => k.startsWith('back:')).sort(() => Math.random() - .5) : [];
+  for (const [k] of loose) tableEls.delete(k);
+  loose.slice(v.table.length).forEach(([, el]) => el.remove());
+  v.table.forEach((t, i) => {
+    let el = tableEls.get(t.cardId);
+    if (!el) {
+      const reuse = loose[i]?.[1];
+      if (reuse) { el = reuse; el.dataset.id = t.cardId; el.querySelector('.face .art').innerHTML = cardArt(t.cardId); tableEls.set(t.cardId, el);
+        const at = pos[i], card = el; // onLooseClick ignora fora da escolha
+        later(hold, () => { card.classList.remove('loose'); card.classList.add('gather'); card.style.setProperty('--rz', '0deg'); card.style.zIndex = '';
+          card.style.left = at[0] + 'px'; card.style.top = at[1] + 'px'; });
+      } else el = makeTableCard(t.cardId, t.cardId, from !== 'submitting');
+      if (from === 'submitting') { const d = hold + (reuse ? 820 : 0) + 120 * i;
+        later(hold + (reuse ? 800 : 0), () => el.classList.remove('gather'));
+        later(d, () => el.classList.add('flipping')); later(d + 300, () => play('flip', i)); later(d + 900, () => el.classList.remove('flipping'));
+        el.querySelector('.flip').animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(0)' }], { duration: 650, delay: d, easing: 'cubic-bezier(.34,1.4,.64,1)', fill: 'forwards' }); }
+      el.insertAdjacentHTML('beforeend', `<div class="roman">${ROMAN[i]}</div><button class="zoom" title="ampliar">⤢</button>`);
+      el.addEventListener('click', (e) => { if (e.target.closest('.zoom')) return openViewer('table', t.cardId); onTableClick(t.cardId); });
+      el.addEventListener('dblclick', () => openViewer('table', t.cardId)); }
+    if (!el.classList.contains('loose')) { el.style.left = pos[i][0] + 'px'; el.style.top = pos[i][1] + 'px'; }
+    el.classList.toggle('voted', v.phase === 'voting' && v.myVote === t.cardId);
+    let mt = el.querySelector('.mine-tag'); if (t.mine && !mt && !el.querySelector('.owner')) el.querySelector('.face').insertAdjacentHTML('beforeend', '<span class="mine-tag">sua</span>');
+  });
+}
+function onTableClick(cardId) {
+  const v = view();
+  if (v.phase !== 'voting') return openViewer('table', cardId);
+  if (v.storyteller === 'p0') return toast('Quem narra não vota.');
+  if (v.confirmed.includes('p0')) return toast('Você já confirmou o voto.');
+  if (act('p0', { type: 'vote', cardId })) play('card', 0, .7, true);
+}
+
+/* ---------- revelação ---------- */
+const who = (p) => (p === 'p0' ? 'você' : nameOf(p));
+const list = (ps) => ps.length <= 1 ? ps.map(who).join('') : ps.slice(0, -1).map(who).join(', ') + ' e ' + who(ps[ps.length - 1]);
+let skipReveal = false;
+function step(n, html) {
+  const el = $('#step'), set = () => { $('#stepN').textContent = n ? `${n} de 4` : ''; $('#stepT').innerHTML = html; };
+  if (!el.classList.contains('on')) { set(); el.classList.add('on'); return; }
+  // já aberta: a caixa fica parada e só o texto troca com fade
+  el.classList.add('swap'); clearTimeout(step.t);
+  step.t = setTimeout(() => { set(); el.classList.remove('swap'); }, 180);
+}
+/** Por que cada um fez os pontos da rodada (regra da caixa). */
+function reasons(R, p) {
+  const voters = Object.keys(R.votes), n = R.found.length, allOrNone = n === 0 || n === voters.length, out = [];
+  if (p === R.storyteller) out.push(allOrNone ? [0, n === 0 ? 'ninguém achou a carta: quem narra não pontua' : 'todo mundo achou a carta: quem narra não pontua'] : [3, 'alguém achou a carta, mas não todos']);
+  else if (R.votes[p] === undefined) out.push([0, 'não votou']);
+  else if (allOrNone) out.push([2, n === 0 ? 'ninguém achou: +2 pra quem votou' : 'todo mundo achou: +2 pra quem votou']);
+  else out.push(R.found.includes(p) ? [3, 'achou a carta do narrador'] : [0, 'não achou a carta do narrador']);
+  const bonus = Object.values(R.votes).filter((c) => R.owners[c] === p && p !== R.storyteller).length;
+  if (bonus) out.push([bonus, `enganou ${bonus} ${bonus === 1 ? 'pessoa' : 'pessoas'}`]);
+  return out;
+}
+function summaryLine(R, mark) {
+  const n = R.found.length, voters = Object.keys(R.votes).length, em = (t) => (mark ? `<em>${t}</em>` : t);
+  if (n === 0) return 'ninguém achou a carta do narrador';
+  if (n === voters) return 'todo mundo achou: a dica foi fácil demais';
+  return `${em(list(R.found))} ${n === 1 ? 'achou' : 'acharam'} a carta do narrador`;
+}
+function showBoard(R) {
+  const rows = [...state.inRound];
+  rows.sort((a, b) => (R.gained[b] || 0) - (R.gained[a] || 0) || (b === R.storyteller) - (a === R.storyteller));
+  const over = Object.values(state.scores).some((x) => x >= state.target);
+  $('#board').innerHTML = `<h3>placar da rodada</h3><p class="sum">${summaryLine(R, true)}.${R.clue ? ` A dica era <em>“${esc(R.clue)}”</em>.` : ''}</p>` +
+    rows.map((p) => {
+      const g = R.gained[p] || 0, why = reasons(R, p).map(([pts, t]) => `${pts ? '+' + pts + ' ' : ''}${t}`).join(' · ');
+      return `<div class="r ${p === R.storyteller ? 'st' : ''}">${critter(p)}<div><div class="nm">${who(p)}</div><div class="why">${why}</div></div><div class="g ${g ? '' : 'zero'}">+${g}</div><div class="tot">${state.scores[p] ?? 0} no total</div></div>`;
+    }).join('') +
+    `<div class="acts"><button class="btn ghost" id="hideBoard">ver a mesa</button><button class="btn" id="boardNext">${over ? 'ver quem venceu' : 'próxima rodada'}</button></div>`;
+  $('#board').classList.add('on'); $('#boardPill').classList.remove('on');
+  $('#hideBoard').onclick = () => { $('#board').classList.remove('on'); $('#boardPill').classList.add('on'); };
+  $('#boardNext').onclick = () => { hideBoard(); act('p0', { type: 'next' }); };
+}
+function hideBoard() { $('#board').classList.remove('on'); $('#boardPill').classList.remove('on'); $('#step').classList.remove('on'); }
+$('#boardPill').onclick = () => { $('#board').classList.add('on'); $('#boardPill').classList.remove('on'); };
+$('#skipBtn').onclick = () => { skipReveal = true; };
+
+/** Revelação narrada, um passo de cada vez, pra todo mundo entender a rodada. */
+async function runReveal(v) {
+  revealing = true; revealDone = false; skipReveal = false;
+  const R = v.result, wait = (ms) => (skipReveal ? Promise.resolve() : new Promise((r) => later(ms, r)));
+  await wait(400);
+  // 1 · a carta do narrador
+  const story = tableEls.get(R.storyCard);
+  for (const [k, el] of tableEls) if (k !== R.storyCard) el.classList.add('dim');
+  story?.classList.add('story', 'spot');
+  story?.insertAdjacentHTML('beforeend', '<div class="tag-story">carta do narrador</div>');
+  play('join');
+  step(1, `esta era a carta de <em>${who(R.storyteller)}</em>, que narrou${R.clue ? ` <em>“${esc(R.clue)}”</em>` : ''}`);
+  await wait(2600);
+  // 2 · os votos (a carta desce do holofote, mas continua em destaque)
+  story?.classList.remove('spot');
+  for (const el of tableEls.values()) el.classList.remove('dim');
+  step(2, 'os votos…');
+  let vi = 0;
+  for (const [voter, card] of Object.entries(R.votes)) {
+    const el = tableEls.get(card); if (!el) continue;
+    let tk = el.querySelector('.tokens');
+    if (!tk) { tk = document.createElement('div'); tk.className = 'tokens'; el.querySelector('.face').appendChild(tk); }
+    const sp = document.createElement('span'); sp.innerHTML = critter(voter); sp.title = who(voter); tk.appendChild(sp);
+    play('flip', vi++); await wait(260);
+  }
+  await wait(500);
+  step(2, summaryLine(R, true));
+  await wait(2600);
+  // 3 · de quem era cada carta
+  step(3, 'de quem era cada carta…');
+  for (const t of R.table) {
+    const el = tableEls.get(t), owner = R.owners[t];
+    if (!el || !owner || el.querySelector('.owner')) continue;
+    el.querySelector('.mine-tag')?.remove(); // o selo "você" já diz
+    el.querySelector('.face').insertAdjacentHTML('beforeend', `<div class="owner${owner === 'p0' ? ' me' : ''}">${critter(owner)}${who(owner)}</div>`);
+    play('slide'); await wait(200);
+  }
+  await wait(400);
+  const fooled = state.inRound.filter((p) => p !== R.storyteller)
+    .map((p) => [p, Object.values(R.votes).filter((c) => R.owners[c] === p).length])
+    .filter(([, k]) => k > 0).sort((a, b) => b[1] - a[1]);
+  step(3, fooled.length ? fooled.slice(0, 3).map(([p, k]) => `a carta de <em>${who(p)}</em> enganou ${k} ${k === 1 ? 'pessoa' : 'pessoas'}`).join(' · ') : 'nenhuma carta enganou ninguém');
+  await wait(2800);
+  // 4 · os pontos na trilha
+  step(4, 'os pontos da rodada…');
+  for (const p of ids) {
+    const g = R.gained[p] || 0; if (!g) continue;
+    floatAt(p, '+' + g);
+    if (skipReveal) { shown[p] = (shown[p] || 0) + g; continue; }
+    for (let i = 0; i < g; i++) { shown[p] = (shown[p] || 0) + 1; placePawns(true); hop(p); play('click'); await wait(190); }
+    await wait(250);
+  }
+  shown = { ...state.scores }; placePawns(true);
+  await wait(500);
+  $('#step').classList.remove('on');
+  revealing = false; revealDone = true; renderPanel(view()); showBoard(R);
+  if ((R.gained.p0 || 0) > 0) play('win');
+}
+
+/* ---------- mão ---------- */
+/* a ordem da mão é só sua (local): arrastar dentro da mão troca a posição; arrastar pro feltro joga a carta */
+let handOrder = [], drag = null;
+const canPickNow = (v) => (v.phase === 'storytelling' && v.storyteller === 'p0') || (v.phase === 'submitting' && v.storyteller !== 'p0' && !v.confirmed.includes('p0'));
+function orderedHand(v) {
+  handOrder = handOrder.filter((id) => v.hand.includes(id));
+  for (const id of v.hand) if (!handOrder.includes(id)) handOrder.push(id);
+  return handOrder;
+}
+const onTable = (v, id) => sel.includes(id) || (v.myPicks.includes(id) && v.confirmed.includes('p0'));
+const handList = (v) => orderedHand(v).filter((id) => !onTable(v, id));
+function renderHand(v) {
+  const el = $('#hand');
+  el.classList.toggle('off', !canPickNow(v));
+  const order = orderedHand(v), keep = new Set(order);
+  el.querySelectorAll('.hcard').forEach((c) => { if (!keep.has(c.dataset.id)) c.remove(); });
+  // durante o arrasto, as outras cartas abrem espaço onde a arrastada vai cair
+  let list = handList(v);
+  if (drag && list.includes(drag.id)) { list = list.filter((id) => id !== drag.id); list.splice(drag.over === 'hand' ? drag.idx : drag.from, 0, drag.id); }
+  const mid = (list.length - 1) / 2;
+  for (const id of order) {
+    let c = el.querySelector(`.hcard[data-id="${id}"]`);
+    if (!c) { c = document.createElement('div'); c.className = 'hcard'; c.dataset.id = id;
+      c.innerHTML = `<div class="art">${cardArt(id)}</div><button class="zoom" title="ampliar">⤢</button>`;
+      c.addEventListener('pointerdown', (e) => onHandDown(e, id, c));
+      c.addEventListener('mouseenter', () => c.style.setProperty('--h', '1')); c.addEventListener('mouseleave', () => c.style.setProperty('--h', '0'));
+      el.appendChild(c); }
+    c.classList.toggle('away', onTable(v, id));
+    if (drag?.id === id || onTable(v, id)) continue;
+    const i = list.indexOf(id), x = 420 + (i - mid) * 116, rot = (i - mid) * 2.6;
+    c.style.left = x + 'px';
+    c.style.transform = `translateY(calc(var(--h, 0) * -22px)) rotate(${rot}deg) scale(calc(1 + var(--h, 0) * .06))`;
+  }
+}
+const appScale = () => app.getBoundingClientRect().width / APPW;
+const overFelt = (x, y) => !!document.elementFromPoint(x, y)?.closest('#felt');
+function onHandDown(e, id, c) {
+  if (e.button !== 0) return;
+  if (e.target.closest('.zoom')) return openViewer('hand', id);
+  const v = view(), list = handList(v);
+  const st = { id, x0: e.clientX, y0: e.clientY, sc: appScale(), moved: false, from: list.indexOf(id), idx: list.indexOf(id), over: 'hand', can: canPickNow(v) };
+  const blocked = () => v.phase === 'storytelling' && v.storyteller === 'p0' && !clueReady();
+  c.setPointerCapture(e.pointerId);
+  const move = (ev) => {
+    const dx = (ev.clientX - st.x0) / st.sc, dy = (ev.clientY - st.y0) / st.sc;
+    if (!st.moved) { if (Math.hypot(dx, dy) < 6) return; st.moved = true; drag = st; c.classList.add('dragging'); play('card', 0, .6, true); $('#stage').classList.toggle('drop-ready', st.can && !blocked()); }
+    c.style.transform = `translate(${dx}px, ${dy}px) rotate(${clamp(dx / 25, -10, 10)}deg) scale(1.08)`;
+    const f = st.can && overFelt(ev.clientX, ev.clientY);
+    st.over = f ? 'felt' : 'hand'; $('#stage').classList.toggle('drop-over', f && !blocked()); $('#stage').classList.toggle('drop-no', f && blocked());
+    if (!f) { const r = $('#hand').getBoundingClientRect(), n = handList(view()).length;
+      st.idx = clamp(Math.round(((ev.clientX - r.left) / st.sc - 420) / 116 + (n - 1) / 2), 0, n - 1); }
+    renderHand(view());
+  };
+  const up = (ev) => { // pointerup solta; pointercancel/lostpointercapture só devolvem a carta pra mão
+    c.removeEventListener('pointermove', move); c.removeEventListener('pointerup', up); c.removeEventListener('pointercancel', up); c.removeEventListener('lostpointercapture', up);
+    $('#stage').classList.remove('drop-ready', 'drop-over', 'drop-no');
+    if (!st.moved) { if (ev.type === 'pointerup') openViewer('hand', id); return; } // clique simples amplia
+    drag = null; c.classList.remove('dragging');
+    if (st.over === 'felt' && ev.type === 'pointerup' && playFromHand(id, ev.clientX, ev.clientY)) return;
+    const rest = handList(view()).filter((x) => x !== id); rest.splice(st.over === 'hand' ? st.idx : st.from, 0, id);
+    handOrder = [...rest, ...handOrder.filter((x) => !rest.includes(x))];
+    play('card', 0, .3, true); renderHand(view());
+  };
+  c.addEventListener('pointermove', move); c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up); c.addEventListener('lostpointercapture', up);
+}
+/* soltou no feltro: narrador conta (só depois de escrever a dica ou marcar "vou falar na call"); os outros jogam a carta (em 3 jogadores, a 2ª fecha a jogada) */
+function playFromHand(id, sx, sy) {
+  const v = view(), [fx, fy] = feltPoint(sx, sy), spot = [clamp(fx, 130, 870), clamp(fy + 70, 210, 520), between(-14, 14)];
+  if (v.phase === 'storytelling' && v.storyteller === 'p0') {
+    if (!clueReady()) { needClue(); return false; } // a carta volta pra mão
+    spots.set('p0:0', spot);
+    if (act('p0', { type: 'tell', cardId: id, clue: spoken ? '' : panelDraft })) { panelDraft = ''; spoken = false; return true; }
+    spots.delete('p0:0'); return false;
+  }
+  if (!canPickNow(v)) return false;
+  const need = Dixit.dixitPicksPerPlayer(v.inRound.length);
+  spots.set(`p0:${sel.length}`, spot); sel = [...sel, id];
+  if (sel.length < need) { render(v); return true; }
+  if (act('p0', { type: 'submit', cardIds: sel })) act('p0', { type: 'confirm' });
+  return true;
+}
+
+/* ---------- painel ---------- */
+let panelKey = '';
+function renderPanel(v) {
+  const P = $('#panel'), meSt = v.storyteller === 'p0', conf = v.confirmed.includes('p0');
+  const others = v.inRound.filter((p) => p !== v.storyteller), done = others.filter((p) => v.confirmed.includes(p)).length;
+  // não redesenha à toa (o campo da dica perderia o foco)
+  const key = [round, v.phase, meSt, conf, done, revealDone, v.winners.join(), sel.length].join('|');
+  if (key === panelKey) return; panelKey = key;
+  let h = '';
+  if (v.phase === 'storytelling') {
+    if (meSt) h = `<h3>você narra</h3><p>Pense numa dica pra uma carta da mão (uma palavra, uma frase, um som…). <b>Primeiro a dica</b>: escreva aqui ou marque que vai falar na call. Depois <b>arraste a carta pra mesa</b>.</p>
+      <div class="clue-box" id="clueBox"><textarea id="clueIn" maxlength="80" placeholder="sua dica"${spoken ? ' disabled' : ''}>${esc(panelDraft)}</textarea><div class="cnt"><span id="cc">${panelDraft.length}</span>/80</div>
+      <label class="spoken"><input type="checkbox" id="spokenIn"${spoken ? ' checked' : ''}> vou falar a dica na call</label></div>
+      <div class="err" id="perr"></div>`;
+    else h = `<h3>${nameOf(v.storyteller)} narra</h3><p>Esperando a carta e a dica…</p>`;
+  } else if (v.phase === 'submitting') {
+    const need = Dixit.dixitPicksPerPlayer(v.inRound.length);
+    if (meSt) h = `<h3>dica dada ✓</h3><p>Os outros estão escolhendo cartas que combinem com a sua dica (${done}/${others.length}).</p>`;
+    else if (conf) h = `<h3>pronto ✓</h3><p>Sua carta está na mesa, virada. Esperando os outros (${done}/${others.length}).</p>`;
+    else h = `<h3>engane a mesa</h3><p>Arraste pra mesa ${need === 1 ? 'a carta' : 'as 2 cartas'} da sua mão que mais combina${need === 1 ? '' : 'm'} com a dica.${need > 1 && sel.length ? ` <b>${sel.length} de ${need}</b> na mesa (clique nela pra desfazer).` : ''}</p><div class="err" id="perr"></div>`;
+  } else if (v.phase === 'voting') {
+    if (meSt) h = `<h3>votação</h3><p>Todos estão tentando achar a sua carta (${done}/${others.length} votaram).</p>`;
+    else if (conf) h = `<h3>votou ✓</h3><p>Esperando os outros (${done}/${others.length}).</p>`;
+    else h = `<h3>qual é a do narrador?</h3><p>Clique na carta que você acha que é de ${nameOf(v.storyteller)}. Dá pra trocar até confirmar.</p>
+      <button class="btn" id="voteBtn">confirmar voto</button><div class="err" id="perr"></div>`;
+  } else if (v.phase === 'reveal') {
+    if (!revealDone) h = `<h3>revelando…</h3><p>Quem votou em quê e de quem é cada carta.</p>`;
+    else { const R = v.result, f = R.found, n = Object.keys(R.votes).length;
+      const line = f.length === 0 ? 'ninguém achou a carta do narrador!' : f.length === n ? 'todo mundo achou… a dica foi fácil demais!' : `${f.map((p) => p === 'p0' ? 'você' : nameOf(p)).join(', ')} ${f.length === 1 ? 'achou' : 'acharam'}!`;
+      const mine = R.gained.p0 || 0;
+      h = `<h3>${line}</h3><p>${mine ? `você fez +${mine}.` : 'você não pontuou nessa.'} ${R.storyteller === 'p0' ? '' : `A carta era de ${nameOf(R.storyteller)}.`}</p><button class="btn" id="nextBtn">próxima rodada</button>`; }
+  } else if (v.phase === 'gameover') {
+    const w = v.winners.map((p) => p === 'p0' ? 'você' : nameOf(p)).join(' e ');
+    h = `<h3>fim de jogo!</h3><p>${w} ${v.winners.length > 1 ? 'venceram' : (v.winners[0] === 'p0' ? 'venceu' : 'venceu')} com ${v.scores[v.winners[0]]} pontos.</p><button class="btn" id="againBtn">jogar de novo</button>`;
+  }
+  P.innerHTML = h;
+  const ci = $('#clueIn'); if (ci) { ci.addEventListener('input', () => { panelDraft = ci.value; $('#cc').textContent = ci.value.length; if (clueReady()) perr(''); storyHint(); }); }
+  const sp = $('#spokenIn'); if (sp) sp.addEventListener('change', () => { spoken = sp.checked; ci.disabled = spoken; if (clueReady()) perr(''); else ci.focus(); storyHint(); });
+  $('#voteBtn')?.addEventListener('click', () => { if (!view().myVote) return perr('Clique numa carta da mesa primeiro.'); act('p0', { type: 'confirm' }); });
+  $('#nextBtn')?.addEventListener('click', () => act('p0', { type: 'next' }));
+  $('#againBtn')?.addEventListener('click', () => { stopConfetti(); shown = Object.fromEntries(ids.map((p) => [p, 0])); placePawns(false); clearTable(); act('p0', { type: 'again' }); });
+}
+let panelDraft = '', spoken = false; // narrador: dica escrita ou "vou falar na call" (um dos dois é obrigatório antes de jogar a carta)
+const clueReady = () => spoken || panelDraft.trim().length > 0;
+function storyHint() { const v = view(); if (v.phase === 'storytelling' && v.storyteller === 'p0') feltMsg(clueReady() ? 'arraste pra cá a carta da sua dica' : 'primeiro a dica: escreva ou marque “vou falar na call”'); }
+function needClue() {
+  perr('Antes de jogar a carta, escreva a dica ou marque “vou falar na call”.'); play('error');
+  const b = $('#clueBox'); if (b) { b.classList.remove('need'); void b.offsetWidth; b.classList.add('need'); }
+  if (!spoken) $('#clueIn')?.focus();
+}
+function perr(t) { const e = $('#perr'); if (e) e.textContent = t; }
+function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+
+/* ---------- topo ---------- */
+function renderTop(v) {
+  const c = $('#clue'), st = v.storyteller;
+  if (v.phase === 'storytelling' || !st) c.innerHTML = `<span class="who">${st ? critter(st) : ''}</span><span class="txt muted">${st ? (st === 'p0' ? 'você narra esta rodada' : nameOf(st) + ' narra esta rodada') : ''}</span>`;
+  else if (v.phase === 'gameover') c.innerHTML = `<span class="txt muted">fim de jogo</span>`;
+  else c.innerHTML = `<span class="who">${critter(st)}</span>${v.clue ? `<span class="txt">“${esc(v.clue)}”</span>` : '<span class="txt muted">dica falada na call</span>'}`;
+  const others = v.inRound.filter((p) => p !== st), done = others.filter((p) => v.confirmed.includes(p)).length;
+  const label = { storytelling: 'narração', submitting: `escolha · ${done} de ${others.length}`, voting: `votação · ${done} de ${others.length}`, reveal: 'revelação', gameover: 'fim de jogo' }[v.phase] || '';
+  $('#phase').textContent = `rodada ${round} · ${label} · meta ${v.target}`;
+}
+
+function render(v = view(), from) {
+  renderTop(v); renderSeats(v); renderTable(v, from); renderHand(v); renderPanel(v);
+  if (!revealing) { if (!(v.phase === 'reveal' && !revealDone)) shown = { ...v.scores }; placePawns(false); }
+}
+
+/* ---------- visualizador ---------- */
+let vList = [], vIdx = 0, vKind = '';
+function openViewer(kind, id) {
+  const v = view(); vKind = kind; vList = kind === 'hand' ? orderedHand(v) : v.table.map((t) => t.cardId); vIdx = Math.max(0, vList.indexOf(id)); showViewer(); $('#viewer').classList.add('on');
+}
+function showViewer() { const id = vList[vIdx]; $('#vArt').innerHTML = cardArt(id);
+  const v = view(); const cap = vKind === 'hand' ? `sua mão · ${vIdx + 1} de ${vList.length}` : `carta ${ROMAN[vIdx]}`;
+  const owner = v.result && v.result.owners[id] ? ` · de ${v.result.owners[id] === 'p0' ? 'você' : nameOf(v.result.owners[id])}` : '';
+  $('#vCap').innerHTML = `<b>${cap}${owner}</b>setas ‹ › navegam · rodinha pra baixo, esc ou clique fora fecha`; }
+$('#viewer').addEventListener('click', (e) => { if (e.target.id === 'viewer') $('#viewer').classList.remove('on'); });
+$('#vPrev').addEventListener('click', () => { vIdx = (vIdx - 1 + vList.length) % vList.length; showViewer(); });
+$('#vNext').addEventListener('click', () => { vIdx = (vIdx + 1) % vList.length; showViewer(); });
+/* rodinha: pra cima em cima de uma carta amplia; pra baixo fecha */
+let wheelLock = 0;
+app.addEventListener('wheel', (e) => {
+  const open = $('#viewer').classList.contains('on');
+  if (open) { e.preventDefault(); if (performance.now() < wheelLock) return; if (e.deltaY > 0) $('#viewer').classList.remove('on'); return; }
+  const card = e.target.closest('.hcard[data-id], .tcard[data-id]'); if (!card) return;
+  e.preventDefault(); if (e.deltaY >= 0 || performance.now() < wheelLock) return;
+  wheelLock = performance.now() + 350; // ignora o resto do mesmo giro
+  openViewer(card.classList.contains('hcard') ? 'hand' : 'table', card.dataset.id);
+}, { passive: false });
+addEventListener('keydown', (e) => { if (!$('#viewer').classList.contains('on')) return; if (e.key === 'Escape') $('#viewer').classList.remove('on');
+  if (e.key === 'ArrowLeft') $('#vPrev').click(); if (e.key === 'ArrowRight') $('#vNext').click(); });
+
+/* ---------- confete ---------- */
+const cv = $('#confetti'), cx = cv.getContext('2d'); let bits = [], raf = 0;
+function launchConfetti() { cv.width = APPW; cv.height = 900; bits = Array.from({ length: 160 }, () => ({ x: APPW / 2 + (Math.random() - .5) * 300, y: 300, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, r: Math.random() * 6, c: pick(Math.random, ['#F2A541', '#F6EAD2', '#D1495B', '#00798C']), a: Math.random() * 6 }));
+  cancelAnimationFrame(raf); const tick = () => { cx.clearRect(0, 0, APPW, 900); let alive = 0;
+    for (const b of bits) { b.vy += .32; b.x += b.vx; b.y += b.vy; b.a += .1; if (b.y < 920) alive++; cx.save(); cx.translate(b.x, b.y); cx.rotate(b.a); cx.fillStyle = b.c; cx.fillRect(-4, -2, 8, 4); cx.restore(); }
+    if (alive) raf = requestAnimationFrame(tick); }; tick(); }
+function stopConfetti() { cancelAnimationFrame(raf); cx.clearRect(0, 0, cv.width, cv.height); }
+
+/* ---------- controles do protótipo ---------- */
+function opts(el, values, cur, label, set) { el.innerHTML = values.map((x) => `<button class="${x === cur ? 'on' : ''}" data-v="${x}">${label(x)}</button>`).join('');
+  el.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; set(b.dataset.v); }; }
+function renderDev() {
+  opts($('#optN'), [3, 4, 5, 6, 7, 8, 10], N, String, (x) => { N = Number(x); renderDev(); newGame(); });
+  opts($('#optT'), [15, 30], TARGET, String, (x) => { TARGET = Number(x); renderDev(); newGame(); });
+  opts($('#optS'), [1, .35], SPEED, (x) => x === 1 ? 'normal' : 'rápido', (x) => { SPEED = Number(x); renderDev(); });
+}
+$('#devBtn').onclick = () => $('#dev').classList.toggle('on');
+$('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
+$('#soundBtn').onclick = () => { soundOn = !soundOn; $('#soundBtn').textContent = `som: ${soundOn ? 'ligado' : 'desligado'}`; };
+let tiltOn = true;
+$('#tiltBtn').onclick = () => { tiltOn = !tiltOn; app.style.setProperty('--tilt', tiltOn ? '38deg' : '0deg'); $('#tiltBtn').textContent = `mesa 3D: ${tiltOn ? 'ligada' : 'desligada'}`; };
+
+fit(); renderDev(); newGame();
+</script>
+</body>
+</html>

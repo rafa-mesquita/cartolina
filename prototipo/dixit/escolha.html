@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dixit · escolher as cartas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#233D36; --sf:#2F5046; --cream:#F6EAD2; --must:#F2A541; --mu:#B7C7B0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--cream); font: 300 15px/1.4 Nunito, system-ui, sans-serif; }
+header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 24px; background: rgba(27,47,42,.97); border-bottom: .75px solid rgba(246,234,210,.3); }
+h1 { margin: 0; font: 400 28px/1 'DM Serif Display', serif; }
+.count { color: var(--must); font-weight: 600; }
+.hint { color: var(--mu); font-size: 13px; flex: 1; min-width: 240px; }
+button { font: inherit; color: var(--deep, #1B2F2A); background: var(--must); border: 0; border-radius: 999px; padding: 9px 16px; cursor: pointer; font-weight: 600; }
+button.ghost { background: none; color: var(--must); border: .75px solid var(--must); }
+main { padding: 18px 24px 80px; display: grid; gap: 18px; }
+.scene { display: grid; grid-template-columns: 170px 1fr; gap: 14px; align-items: start; padding: 12px; border: .75px solid rgba(246,234,210,.18); border-radius: 12px; background: rgba(47,80,70,.45); }
+.scene.drop { opacity: .45; }
+.label b { display: block; font: 400 21px/1.15 'DM Serif Display', serif; }
+.label span { color: var(--mu); font-size: 12px; }
+.label .n { color: var(--must); font-size: 12px; margin-top: 6px; }
+.opts { display: flex; gap: 10px; flex-wrap: wrap; }
+.opt { position: relative; width: 190px; aspect-ratio: 3 / 4; border-radius: 6px; overflow: hidden; cursor: pointer; border: 2px solid transparent; background: #1B2F2A; }
+.opt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* recorte 2:3 que a carta vai ter */
+.opt::after { content: ''; position: absolute; top: 0; bottom: 0; left: 5.6%; right: 5.6%; border-left: 1px dashed rgba(246,234,210,.45); border-right: 1px dashed rgba(246,234,210,.45); pointer-events: none; }
+.opt.on { border-color: var(--must); box-shadow: 0 0 0 3px rgba(242,165,65,.35); }
+.opt.on::before { content: '✓'; position: absolute; top: 6px; right: 8px; z-index: 2; width: 26px; height: 26px; border-radius: 50%; background: var(--must); color: #1B2F2A; display: grid; place-items: center; font-weight: 600; }
+.zoom { position: fixed; inset: 0; background: rgba(10,20,17,.9); display: none; align-items: center; justify-content: center; z-index: 20; }
+.zoom.on { display: flex; }
+.zoom img { max-height: 92vh; max-width: 92vw; border-radius: 6px; }
+textarea { width: 100%; height: 120px; background: #1B2F2A; color: var(--cream); border: .75px solid rgba(246,234,210,.4); border-radius: 8px; padding: 8px; font: 12px/1.3 monospace; }
+#out { display: none; padding: 0 24px 20px; }
+#out.on { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <h1>escolher as cartas</h1>
+  <span><span class="count" id="count">0</span> escolhidas</span>
+  <span class="hint">Clique pra marcar (pode marcar mais de uma por cena, se forem bem diferentes). Clique duplo amplia. As linhas tracejadas mostram o recorte da carta (2:3).</span>
+  <button class="ghost" id="clear">limpar</button>
+  <button id="done">gerar lista</button>
+</header>
+<div id="out"><p>Copie e me mande esta lista:</p><textarea id="list" readonly></textarea></div>
+<main id="grid"></main>
+<div class="zoom" id="zoom"><img id="zimg" alt=""></div>
+<script>
+// [índice inicial (ou lista de índices), quantidade, nome, observação]
+const idsOf = (start, n) => (Array.isArray(start) ? start : Array.from({ length: n }, (_, k) => start + k));
+const S = [
+ [364,4,'farol de relógios','teste'],[360,4,'escada do livro','teste'],[356,4,'porta no mar','teste'],
+ [[332,353,354,355],4,'pandemia',''],[349,4,'branca de neve e os 7 anões',''],[345,4,'expedição no gelo',''],[341,4,'cidade noturna',''],
+ [337,4,'planeta anão',''],[333,4,'amor',''],[328,4,'depressão',''],[320,4,'cassino',''],[316,4,'fábrica',''],
+ [312,4,'multidão',''],[324,4,'multidão','2ª geração'],[308,4,'aquático e vazio',''],[304,4,'aquático e cheio',''],
+ [300,4,'IA feliz',''],[296,4,'IA triste',''],[292,4,'números',''],[288,4,'indígena',''],[284,4,'europa',''],
+ [280,4,'escola',''],[276,4,'guerra',''],[272,4,'dinossauro',''],[268,4,'assassino',''],[264,4,'encapuzado',''],
+ [260,4,'lábia',''],[256,4,'lábios',''],[252,4,'festa',''],[248,4,'solidão',''],[244,4,'mapas',''],[240,4,'dinheiro',''],
+ [236,4,'desmatamento',''],[232,4,'reflorestamento',''],[228,4,'família',''],[224,4,'pets',''],[220,4,'crise',''],
+ [216,4,'pobre',''],[212,4,'luxúria',''],[208,4,'veículos voadores',''],[204,4,'baleia',''],[200,4,'galo de briga',''],
+ [196,4,'sufocado',''],[192,4,'livre',''],[188,4,'algemas',''],[184,4,'espinhos e joias',''],[180,4,'médium',''],
+ [176,4,'escavador',''],[172,4,'tiro ao alvo',''],[168,4,'mini gorila',''],[164,4,'espacial',''],[160,4,'esgoto',''],
+ [156,4,'faria lima',''],[152,4,'china',''],[128,4,'hamburgueria','refeita (o lugar)'],[148,4,'hamburgueria','gigante — você não gostou'],
+ [144,4,'religião',''],[140,4,'dragão com unha encravada',''],[136,4,'pá feita de jiló',''],[132,4,'alfabeto destruidor',''],
+ [124,4,'computador gerando as cartas',''],[120,4,'espelho apontando pra espelho',''],[116,4,'obesidade',''],
+ [112,4,'super-herói',''],[108,4,'moscas',''],[104,4,'super-vilão',''],[100,4,'abutre',''],[96,4,'creme',''],[92,4,'gula',''],
+ [88,4,'horizonte',''],[84,4,'paisagem',''],[80,4,'calmaria',''],[76,4,'cidade vista de cima',''],[72,4,'rebelde',''],
+ [68,4,'glamour',''],[64,4,'trabalho',''],[56,4,'miséria',''],[52,4,'esqueleto',''],[48,4,'guerra subterrânea',''],
+ [44,4,'louco',''],[40,4,'remédio',''],[20,4,'sopro',''],[16,4,'evaporando',''],[12,4,'desaparecendo',''],[8,4,'redemoinho',''],
+ [4,4,'estrela-do-mar de areia',''],[0,4,'música',''],
+ [60,4,'amplo: sonho de criança','você marcou a do cervo'],[36,4,'amplo: algo perdido',''],[32,4,'amplo: antes de uma decisão',''],
+ [28,4,'amplo: segredo à vista',''],[24,4,'amplo: fim do mundo em paz',''],
+];
+const KEY = 'dixit-escolha-v1';
+let sel;
+try { sel = new Set(JSON.parse(localStorage.getItem(KEY) || 'null') ?? [62]); } catch { sel = new Set([62]); }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify([...sel])); } catch {} document.getElementById('count').textContent = sel.size; };
+const pad = (n) => String(n).padStart(3, '0');
+const grid = document.getElementById('grid');
+for (const [start, n, name, note] of S) {
+  const row = document.createElement('section');
+  row.className = 'scene' + (/não gostou|descartar/.test(note) ? ' drop' : '');
+  const ids = idsOf(start, n);
+  row.innerHTML = `<div class="label"><b>${name}</b><span>${note}</span><div class="n">#${ids.join(", ")}</div></div><div class="opts"></div>`;
+  const opts = row.querySelector('.opts');
+  for (const i of ids) {
+    const o = document.createElement('div');
+    o.className = 'opt' + (sel.has(i) ? ' on' : '');
+    o.innerHTML = `<img loading="lazy" decoding="async" src="flow/${pad(i)}.jpg" alt="${name} ${i}">`;
+    o.onclick = () => { sel.has(i) ? sel.delete(i) : sel.add(i); o.classList.toggle('on', sel.has(i)); save(); };
+    o.ondblclick = (e) => { e.preventDefault(); document.getElementById('zimg').src = `flow/${pad(i)}.jpg`; document.getElementById('zoom').classList.add('on'); };
+    opts.appendChild(o);
+  }
+  grid.appendChild(row);
+}
+document.getElementById('zoom').onclick = () => document.getElementById('zoom').classList.remove('on');
+document.getElementById('clear').onclick = () => { if (confirm('Limpar todas as escolhas?')) { sel.clear(); document.querySelectorAll('.opt.on').forEach((o) => o.classList.remove('on')); save(); } };
+document.getElementById('done').onclick = () => {
+  const names = Object.fromEntries(S.flatMap(([s, n, name]) => idsOf(s, n).map((i) => [i, name])));
+  const list = [...sel].sort((a, b) => a - b).map((i) => `${i}:${names[i] ?? '?'}`);
+  document.getElementById('list').value = `escolhidas (${list.length}): ` + list.join(', ');
+  document.getElementById('out').classList.add('on');
+  document.getElementById('list').select();
+  window.scrollTo(0, 0);
+};
+save();
+</script>
+</body>
+</html>

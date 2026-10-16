@@ -38,6 +38,29 @@ describe('sons de arquivo (carta)', () => {
     expect(played().map((a) => a.volume)).toEqual([0.7, 1]);
   });
 
+  it('carta pousando na mesa (land) usa o mesmo arquivo, bem mais baixo', () => {
+    playSound('land', 0, 0);
+    expect(played()).toHaveLength(1);
+    expect(played()[0]!.volume).toBe(0.4);
+    expect(played()[0]!.src).toMatch(/sounds\/card\.mp3$/);
+  });
+
+  it('escolher (pick) nunca é engolido pelo intervalo mínimo', () => {
+    playSound('land', 0, 0);
+    playSound('pick', 0, 10);
+    expect(played().map((a) => a.volume)).toEqual([0.4, 0.7]);
+  });
+
+  it('sem ganho o volume do arquivo não muda (o DITU segue igual)', () => {
+    playSound('card', 0, 0);
+    expect(played()[0]!.volume).toBe(1);
+  });
+
+  it('o ganho opcional multiplica o volume do arquivo', () => {
+    playSound('card', 0, 0, 0.5);
+    expect(played()[0]!.volume).toBeCloseTo(0.5);
+  });
+
   it('mudo não toca nada', () => {
     saveSoundPref(false);
     playSound('card', 0, 0);
@@ -61,12 +84,21 @@ describe('sons sintetizados (revelação)', () => {
   /** AudioContext mínimo: conta osciladores e ruídos criados. */
   function fakeAudio(resume: () => Promise<void> = () => Promise.resolve()) {
     const param = () => ({ value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() });
-    const node = <T extends object>(extra: T) => ({ ...extra, connect: (x: unknown) => x, start: vi.fn(), stop: vi.fn() });
-    const made = { ctx: 0, osc: 0, noise: 0, freqs: [] as number[] };
+    const destination = {};
+    const made = { ctx: 0, osc: 0, noise: 0, freqs: [] as number[], gains: 0, gainValues: [] as number[], toDestination: 0 };
+    const node = <T extends object>(extra: T) => ({
+      ...extra,
+      connect: (x: unknown) => {
+        if (x === destination) made.toDestination++;
+        return x;
+      },
+      start: vi.fn(),
+      stop: vi.fn(),
+    });
     class FakeCtx {
       currentTime = 0;
       sampleRate = 8000;
-      destination = {};
+      destination = destination;
       resume = vi.fn(resume);
       constructor() {
         made.ctx++;
@@ -78,7 +110,11 @@ describe('sons sintetizados (revelação)', () => {
         return node({ type: '', frequency });
       }
       createGain() {
-        return node({ gain: param() });
+        made.gains++;
+        const gain = param();
+        // anota o que escreverem em gain.value (o ruído e o ganho geral usam)
+        Object.defineProperty(gain, 'value', { get: () => 0, set: (v: number) => made.gainValues.push(v) });
+        return node({ gain });
       }
       createBiquadFilter() {
         return node({ type: '', frequency: { value: 0 }, Q: { value: 0 } });
@@ -122,6 +158,25 @@ describe('sons sintetizados (revelação)', () => {
     made.freqs.length = 0;
     playSound('flip', 4);
     expect(made.freqs[0]!).toBeGreaterThan(first);
+  });
+
+  it('com ganho, tons e ruídos passam todos por um ganho geral antes da saída', () => {
+    const made = fakeAudio();
+    playSound('error', 0, 0, 0.5); // tom + ruído
+    expect(made.osc).toBe(1);
+    expect(made.noise).toBe(1);
+    expect(made.gainValues).toContain(0.5);
+    expect(made.toDestination).toBe(1); // só o ganho geral liga na saída
+  });
+
+  it('sem ganho (padrão, o DITU) nenhum ganho extra é criado e tudo liga direto na saída', () => {
+    const made = fakeAudio();
+    playSound('error');
+    const semGanho = made.gains;
+    expect(made.gainValues).not.toContain(0.5);
+    expect(made.toDestination).toBe(2); // o do tom e o do ruído
+    playSound('error', 0, 0, 0.5);
+    expect(made.gains - semGanho).toBe(semGanho + 1); // mesmos ganhos de antes + o geral
   });
 
   it('mudo não cria nem toca nada', () => {
