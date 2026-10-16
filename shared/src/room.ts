@@ -1,6 +1,7 @@
-import { ito } from './games/ito/rules';
-import type { ItoAction, ItoPhase, ItoState, ItoView } from './games/ito/types';
-import { MAX_PLAYERS, cleanName, isPlayerColor, type PlayerColor } from './players';
+import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
+import type { DixitView } from './games/dixit/types';
+import type { ItoState, ItoView } from './games/ito/types';
+import { cleanName, isPlayerColor, type PlayerColor } from './players';
 import type { Rng } from './rng';
 
 export const DISCONNECT_GRACE_MS = 30_000;
@@ -26,13 +27,15 @@ export interface Room {
   seats: Seat[];
   /** token secreto → playerId público. Nunca sai do servidor. */
   tokens: Record<string, string>;
-  game: ItoState;
+  /** Jogo da sala, fixo desde a criação. */
+  gameId: GameId;
+  game: GameState;
   lastActivity: number;
   /** Grupo dono da sala (histórico). `null` em salas avulsas. */
   group: RoomGroup | null;
-  /** Quando o host clicou "começar" (lobby → tema); identifica a campanha. */
+  /** Quando o host começou a partida (saiu do lobby); identifica a campanha do ITO. */
   runStartedAt: number | null;
-  /** Chave da última revelação já gravada no histórico (evita duplicar). */
+  /** Chave da última revelação do ITO já gravada no histórico (evita duplicar). */
   recordedRevealKey: string | null;
 }
 
@@ -43,17 +46,30 @@ export interface SeatView {
   connected: boolean;
 }
 
-export interface RoomView {
+export interface RoomView<G extends GameView = GameView> {
   code: string;
   hostId: string | null;
   you: string | null;
   seats: SeatView[];
-  game: ItoView;
+  gameId: GameId;
+  game: G;
   group: { slug: string; name: string } | null;
 }
 
+export type ItoRoomView = RoomView<ItoView> & { gameId: 'ito' };
+export type DixitRoomView = RoomView<DixitView> & { gameId: 'dixit' };
+
+export function isItoRoomView(view: RoomView): view is ItoRoomView {
+  return view.gameId === 'ito';
+}
+
+export function isDixitRoomView(view: RoomView): view is DixitRoomView {
+  return view.gameId === 'dixit';
+}
+
 export interface RoomSummary {
-  phase: ItoPhase;
+  game: GameId;
+  phase: GameState['phase'];
   seats: SeatView[];
 }
 
@@ -61,22 +77,42 @@ function seatView({ id, name, color, connected }: Seat): SeatView {
   return { id, name, color, connected };
 }
 
-/** Resumo público da sala para quem ainda não entrou: fase e assentos (cores ocupadas). */
+/** Estado do ITO, ou null se a sala é de outro jogo. */
+export function itoStateOf(room: Room): ItoState | null {
+  return room.gameId === 'ito' ? (room.game as ItoState) : null;
+}
+
+type StoredRoom = Omit<Room, 'gameId' | 'group' | 'runStartedAt' | 'recordedRevealKey'> &
+  Partial<Pick<Room, 'gameId' | 'group' | 'runStartedAt' | 'recordedRevealKey'>>;
+
+/** Sala lida do storage: salas antigas não têm `gameId` (eram todas ITO) nem os campos do histórico. */
+export function restoreRoom(stored: StoredRoom): Room {
+  return {
+    ...stored,
+    gameId: stored.gameId ?? 'ito',
+    group: stored.group ?? null,
+    runStartedAt: stored.runStartedAt ?? null,
+    recordedRevealKey: stored.recordedRevealKey ?? null,
+  };
+}
+
+/** Resumo público da sala para quem ainda não entrou: jogo, fase e assentos (cores ocupadas). */
 export function roomSummary(room: Room): RoomSummary {
-  return { phase: room.game.phase, seats: room.seats.map(seatView) };
+  return { game: room.gameId, phase: room.game.phase, seats: room.seats.map(seatView) };
 }
 
 export type JoinError = 'room_full' | 'bad_name' | 'bad_color' | 'color_taken';
 export type JoinResult = { ok: true; room: Room; playerId: string } | { ok: false; error: JoinError };
 export type RoomActionResult = { ok: true; room: Room } | { ok: false; error: string };
 
-export function createRoom(code: string, now: number, group: RoomGroup | null = null): Room {
+export function createRoom(code: string, now: number, group: RoomGroup | null = null, gameId: GameId = 'ito'): Room {
   return {
     code,
     hostId: null,
     seats: [],
     tokens: {},
-    game: ito.initialState(),
+    gameId,
+    game: GAMES[gameId].module.initialState(),
     lastActivity: now,
     group,
     runStartedAt: null,
@@ -109,7 +145,7 @@ export function joinRoom(
   let seats = room.seats;
   let tokens = room.tokens;
   const existing = seats.find((s) => s.id === id);
-  if (!existing && seats.length >= MAX_PLAYERS) {
+  if (!existing && seats.length >= GAMES[room.gameId].maxPlayers) {
     const ghost = seats.find((s) => !isActive(s, now) && !room.game.players.includes(s.id));
     if (!ghost) return { ok: false, error: 'room_full' };
     seats = seats.filter((s) => s.id !== ghost.id);
@@ -147,19 +183,23 @@ export function tick(room: Room, now: number, rng: Rng): Room {
     hostId =
       rotated.find((id) => connected.has(id)) ?? rotated.find((id) => active.includes(id)) ?? hostId;
   }
-  const game = ito.onPresenceChange(room.game, { hostId, active, rng });
+  const game = GAMES[room.gameId].module.onPresenceChange(room.game, { hostId, active, rng });
   return { ...room, hostId, game };
 }
 
-export function roomAction(room: Room, playerId: string, action: ItoAction, rng: Rng, now: number): RoomActionResult {
+/** `action` chega do WebSocket só com `type` garantido: aqui é validada pelo schema do jogo da sala. */
+export function roomAction(room: Room, playerId: string, action: unknown, rng: Rng, now: number): RoomActionResult {
   if (!room.seats.some((s) => s.id === playerId)) return { ok: false, error: 'not_member' };
-  const res = ito.applyAction(room.game, playerId, action, {
+  const entry = GAMES[room.gameId];
+  const parsed = entry.actionSchema.safeParse(action);
+  if (!parsed.success) return { ok: false, error: 'bad_action' };
+  const res = entry.module.applyAction(room.game, playerId, parsed.data as GameAction, {
     hostId: room.hostId,
     active: activePlayers(room, now),
     rng,
   });
   if (!res.ok) return res;
-  const startedRun = room.game.phase === 'lobby' && res.state.phase === 'theme';
+  const startedRun = room.game.phase === 'lobby' && res.state.phase !== 'lobby';
   return {
     ok: true,
     room: { ...room, game: res.state, lastActivity: now, runStartedAt: startedRun ? now : (room.runStartedAt ?? null) },
@@ -172,7 +212,8 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     hostId: room.hostId,
     you: viewerId,
     seats: room.seats.map(seatView),
-    game: ito.viewFor(room.game, viewerId),
+    gameId: room.gameId,
+    game: GAMES[room.gameId].module.viewFor(room.game, viewerId),
     group: room.group ? { slug: room.group.slug, name: room.group.name } : null,
   };
 }

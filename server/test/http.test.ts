@@ -1,6 +1,6 @@
 import { SELF, env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { newRoomCode } from './helpers';
+import { newGroup, newRoomCode } from './helpers';
 import { ROOM_ALPHABET } from '../src/codes';
 
 describe('HTTP', () => {
@@ -17,7 +17,45 @@ describe('HTTP', () => {
     const { code } = (await (await SELF.fetch('https://x/rooms', { method: 'POST' })).json()) as { code: string };
     const ok = await SELF.fetch(`https://x/rooms/${code.toLowerCase()}`);
     expect(ok.status).toBe(200);
-    expect(await ok.json()).toEqual({ exists: true, phase: 'lobby', seats: [] });
+    expect(await ok.json()).toEqual({ exists: true, game: 'ito', phase: 'lobby', seats: [] });
+  });
+
+  it('POST /rooms sem corpo cria sala de ITO', async () => {
+    const { code } = (await (await SELF.fetch('https://x/rooms', { method: 'POST' })).json()) as { code: string };
+    expect(await (await SELF.fetch(`https://x/rooms/${code}`)).json()).toMatchObject({ game: 'ito' });
+  });
+
+  it('POST /rooms { game: "dixit" } cria sala de Dixit', async () => {
+    const res = await SELF.fetch('https://x/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game: 'dixit' }),
+    });
+    expect(res.status).toBe(201);
+    const { code } = (await res.json()) as { code: string };
+    expect(await (await SELF.fetch(`https://x/rooms/${code}`)).json()).toMatchObject({ game: 'dixit', phase: 'lobby' });
+  });
+
+  it('jogo desconhecido dá 400', async () => {
+    const res = await SELF.fetch('https://x/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game: 'xadrez' }),
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'bad_game' });
+  });
+
+  it('sala de grupo também escolhe o jogo', async () => {
+    const slug = await newGroup();
+    const res = await SELF.fetch(`https://x/groups/${slug}/rooms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ game: 'dixit' }),
+    });
+    expect(res.status).toBe(201);
+    const { code } = (await res.json()) as { code: string };
+    expect(await (await SELF.fetch(`https://x/rooms/${code}`)).json()).toMatchObject({ game: 'dixit' });
   });
 
   it('sala inexistente ou código inválido dá 404', async () => {
@@ -30,6 +68,7 @@ describe('HTTP', () => {
     const res = await SELF.fetch('https://x/rooms', { method: 'OPTIONS', headers: { Origin: 'http://localhost:5173' } });
     expect(res.status).toBe(204);
     expect(res.headers.get('Access-Control-Allow-Methods')).toContain('POST');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
     expect(res.headers.get('Access-Control-Max-Age')).toBe('86400');
   });
 

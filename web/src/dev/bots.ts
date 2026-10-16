@@ -4,7 +4,7 @@
  * arrasta a carta até a fila com o cursor, solta e fica pronto. Nunca faz ações de host.
  * Este módulo só é importado via `import()` atrás de `import.meta.env.DEV` — não vai pro build de produção.
  */
-import { CLUE_MAX, PLAYER_COLORS, type CursorFx, type ItoView } from '@cartolina/shared';
+import { CLUE_MAX, PLAYER_COLORS, isItoRoomView, type CursorFx, type ItoView } from '@cartolina/shared';
 import { getRoomInfo, type RoomInfo } from '../net/api';
 import { wsUrl } from '../net/config';
 import { RoomConnection, type SocketLike } from '../net/connection';
@@ -203,7 +203,7 @@ export class BotPlayer {
 
   private game(): { me: string; g: ItoView } | null {
     const snap = this.conn?.getSnapshot();
-    if (!snap || snap.status !== 'joined' || !snap.playerId || !snap.view) return null;
+    if (!snap || snap.status !== 'joined' || !snap.playerId || !snap.view || !isItoRoomView(snap.view)) return null;
     return { me: snap.playerId, g: snap.view.game };
   }
 

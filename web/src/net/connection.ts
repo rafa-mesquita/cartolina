@@ -7,7 +7,7 @@ import {
   type Activity,
   type ClientMessage,
   type CursorFx,
-  type ItoAction,
+  type GameAction,
   type RoomView,
   type ServerMessage,
 } from '@cartolina/shared';
@@ -131,7 +131,7 @@ export class RoomConnection {
     };
   }
 
-  sendAction(action: ItoAction): void {
+  sendAction(action: GameAction): void {
     this.send({ t: 'action', action });
   }
 
@@ -279,7 +279,8 @@ export class RoomConnection {
         this.setSnap({ status: 'joined', playerId: msg.playerId, joinError: null });
         return;
       case 'state':
-        this.setSnap({ view: msg.room });
+        // Servidor antigo (rollback do Worker) não manda `gameId`: sala sem ele é de ITO.
+        this.setSnap({ view: msg.room.gameId ? msg.room : { ...msg.room, gameId: 'ito' } });
         return;
       case 'error':
         if (this.snap.status === 'joining' && JOIN_ERRORS.has(msg.code)) {

@@ -1,6 +1,6 @@
 # cartolina~
 
-Jogos de tabuleiro pra jogar com os amigos na call. Primeiro jogo: **DITU**, a nossa versão do ITO (no código o jogo continua com o id `ito`).
+Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), e **Diquisti**, a nossa versão do Dixit (id `dixit`; ainda sem mesa: regras e servidor prontos).
 
 ## Estrutura
 
@@ -34,15 +34,16 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 - Salas criadas na página do grupo gravam cada rodada revelada (tema, quem jogou, a fila com números e dicas, resultado) no banco **Cloudflare D1** `cartolina`.
 - A página do grupo mostra números (rodadas, % de vitórias no livre, campanhas zeradas, maior sequência sem erro), quem mais acerta a posição, os temas mais jogados e as partidas (clique pra ver a fila revelada).
 - Em desenvolvimento, `npm run dev:server` aplica as migrações no D1 local antes de subir (`npm run db:migrate -w server`).
-- API: `POST /groups { name }` → `{ slug, name }` · `GET /groups/:slug[?before=<ms>]` → grupo, 20 rodadas, estatísticas e cursor · `POST /groups/:slug/rooms` → `{ code }`.
+- API: `POST /groups { name }` → `{ slug, name }` · `GET /groups/:slug[?before=<ms>]` → grupo, 20 rodadas, estatísticas e cursor · `POST /groups/:slug/rooms [{ game }]` → `{ code }`. Só salas de ITO gravam histórico por enquanto.
 
 ## API do servidor
 
-- `POST /rooms` → `{ code }`
-- `GET /rooms/:code` → `{ exists, phase, seats }` (404 com `{ exists: false }` se não existir)
+- `POST /rooms [{ game: "ito" | "dixit" }]` → `{ code }` (sem corpo: ITO; jogo desconhecido: 400 `bad_game`)
+- `GET /rooms/:code` → `{ exists, game, phase, seats }` (404 com `{ exists: false }` se não existir)
 - `GET /rooms/:code/ws` → WebSocket; protocolo em `shared/src/protocol.ts`
 
 Design: `docs/superpowers/specs/2026-10-15-cartolina-ito-design.md`
+Dixit: `docs/superpowers/specs/2026-10-15-dixit-design.md` (regras em `shared/src/games/dixit/`; cada jogo se registra em `shared/src/games/registry.ts`).
 
 ## Online
 

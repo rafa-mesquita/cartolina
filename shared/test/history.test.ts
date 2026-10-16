@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ItoState } from '../src/games/ito/types';
 import {
   PLAYER_COLORS,
   cleanGroupName,
@@ -13,6 +14,7 @@ import {
   type Room,
   type RoundRecord,
 } from '../src/index';
+import { revealed } from './dixit-helpers';
 
 const GROUP = { id: 'g-1', slug: 'abcdefghjk', name: 'Galera' };
 
@@ -41,7 +43,7 @@ function revealedRoom(mode: 'livre' | 'campanha' = 'livre', group: typeof GROUP 
 /** Da fase de tema até a revelação, com as cartas em ordem crescente (sem erro) ou decrescente (com erro). */
 function dealAndReveal(room: Room, dir: 'asc' | 'desc'): Room {
   let r = play(room, 'p0', { type: 'beginRound' });
-  const cards = Object.values(r.game.cards).sort((a, b) => (dir === 'asc' ? a.value - b.value : b.value - a.value));
+  const cards = Object.values((r.game as ItoState).cards).sort((a, b) => (dir === 'asc' ? a.value - b.value : b.value - a.value));
   for (const [index, card] of cards.entries()) r = play(r, card.owner, { type: 'place', cardId: card.id, index });
   return play(r, 'p0', { type: 'forceReveal' });
 }
@@ -71,7 +73,7 @@ describe('pendingRecord', () => {
     expect(r.cards.map((c) => c.name)).toEqual(['Ana', 'Bia']);
     expect(r.cards[0]!.clue).toBe('Paris');
     expect(r.errors).toBe(r.cards.filter((c) => c.error).length);
-    expect(pending!.key).toBe(revealKey(room.game));
+    expect(pending!.key).toBe(revealKey(room.game as ItoState));
   });
 
   it('não grava de novo a mesma revelação', () => {
@@ -83,6 +85,13 @@ describe('pendingRecord', () => {
   it('sala avulsa ou fora da revelação não grava', () => {
     expect(pendingRecord(revealedRoom('livre', null), 1, 'r')).toBeNull();
     expect(pendingRecord(createRoom('ABCD', 0, GROUP), 1, 'r')).toBeNull();
+  });
+
+  it('sala de Dixit de grupo, mesmo na revelação, não grava histórico', () => {
+    const { state } = revealed(3, (s) => s.storyCard!);
+    expect(state.phase).toBe('reveal');
+    const room: Room = { ...createRoom('ABCD', 0, GROUP, 'dixit'), game: state };
+    expect(pendingRecord(room, 1, 'r')).toBeNull();
   });
 
   it('campanha usa o início da partida como id da campanha', () => {
@@ -109,7 +118,7 @@ describe('pendingRecord', () => {
 
   it('a chave inclui nível, vidas e tema', () => {
     const room = revealedRoom('campanha');
-    const g = room.game;
+    const g = room.game as ItoState;
     expect(revealKey(g)!.startsWith(`${g.level}|${g.lives}|${g.theme!.titulo}|`)).toBe(true);
   });
 
@@ -123,7 +132,7 @@ describe('pendingRecord', () => {
     room = play(room, 'p0', { type: 'setMode', mode: 'campanha' });
     room = play(room, 'p0', { type: 'start' }, 50);
     room = dealAndReveal(room, 'desc');
-    expect(room.game.outcome).toBe('level_failed');
+    expect((room.game as ItoState).outcome).toBe('level_failed');
     const first = pendingRecord(room, 1, 'a')!;
     expect(first.record.campaignId).toBe('ABCD-50');
     expect(first.record.errors).toBe(1);
@@ -150,7 +159,7 @@ describe('pendingRecord', () => {
     }
     room = play(room, 'p0', { type: 'start' }, 50);
     room = dealAndReveal(room, 'desc');
-    const wrong = room.game.reveal!.find((e) => e.error)!;
+    const wrong = (room.game as ItoState).reveal!.find((e) => e.error)!;
     const trimmed = { ...room, seats: room.seats.filter((s) => s.id !== wrong.owner) };
     const r = pendingRecord(trimmed, 1, 'r')!.record;
     expect(r.cards).toHaveLength(1);

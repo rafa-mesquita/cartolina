@@ -1,9 +1,9 @@
-import { CLUE_MAX, PLAYER_COLORS, type ClientMessage, type ItoAction, type Room } from '@cartolina/shared';
+import { CLUE_MAX, PLAYER_COLORS, type ClientMessage, type ItoAction } from '@cartolina/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BotPlayer, CLUE_BUCKETS, clueFor, curvePoint, targetIndex } from '../src/dev/bots';
 import type { SocketLike } from '../src/net/connection';
 import type { RoomInfo } from '../src/net/api';
-import { act, sortingRoom, viewOf } from './fixtures';
+import { act, sortingRoom, viewOf, type ItoRoom } from './fixtures';
 
 /** rng que devolve a sequência dada (e repete o último valor). */
 function seq(...values: number[]): () => number {
@@ -98,7 +98,7 @@ class FakeSocket implements SocketLike {
 }
 
 /** Servidor de mentira: o bot é p1 de uma rodada já distribuída; aplica as ações e devolve o estado. */
-function fakeServer(room: Room, opts: { rejectFirstJoin?: boolean } = {}) {
+function fakeServer(room: ItoRoom, opts: { rejectFirstJoin?: boolean } = {}) {
   const state = { room, socket: null as FakeSocket | null, joins: 0 };
   const push = () => state.socket!.receive({ t: 'state', room: viewOf(state.room, 'p1') });
   const createSocket = () => {
@@ -115,7 +115,7 @@ function fakeServer(room: Room, opts: { rejectFirstJoin?: boolean } = {}) {
         });
       } else if (msg.t === 'action') {
         queueMicrotask(() => {
-          state.room = act(state.room, 'p1', msg.action);
+          state.room = act(state.room, 'p1', msg.action as ItoAction);
           push();
         });
       }
@@ -125,6 +125,7 @@ function fakeServer(room: Room, opts: { rejectFirstJoin?: boolean } = {}) {
   };
   const info = async (): Promise<RoomInfo> => ({
     exists: true,
+    game: 'ito',
     phase: 'lobby',
     seats: [{ id: 'p0', name: 'P0', color: PLAYER_COLORS[0], connected: true }],
   });
@@ -132,7 +133,7 @@ function fakeServer(room: Room, opts: { rejectFirstJoin?: boolean } = {}) {
 }
 
 const actions = (s: FakeSocket): ItoAction[] =>
-  s.messages().flatMap((m) => (m.t === 'action' ? [m.action] : []));
+  s.messages().flatMap((m) => (m.t === 'action' ? [m.action as ItoAction] : []));
 
 describe('BotPlayer', () => {
   const bots: BotPlayer[] = [];

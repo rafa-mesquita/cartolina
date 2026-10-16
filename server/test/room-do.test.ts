@@ -1,6 +1,7 @@
 import { SELF, env, runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
 import type { Room } from '@cartolina/shared';
 import { describe, expect, it } from 'vitest';
+import { RoomDO } from '../src/room-do';
 import { COLORS, barrier, connect, joined, newRoomCode } from './helpers';
 
 describe('RoomDO: entrada', () => {
@@ -92,6 +93,26 @@ describe('RoomDO: entrada', () => {
       const room = await state.storage.get<Room>('room');
       expect(room?.seats).toHaveLength(2);
       expect(Object.keys(room?.tokens ?? {})).toHaveLength(2);
+    });
+  });
+});
+
+describe('RoomDO: salas gravadas antes do gameId', () => {
+  it('sala sem gameId volta como ITO depois que o DO reinicia', async () => {
+    const code = await newRoomCode();
+    await joined(code, 1);
+    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+    await runInDurableObject(stub, async (_instance, state) => {
+      // Formato de antes do gameId: tira o campo do que está gravado.
+      const { gameId: _gameId, ...legacy } = (await state.storage.get<Room>('room'))!;
+      await state.storage.put('room', legacy);
+      // Uma instância nova sobre o mesmo storage é o que o runtime faz ao reiniciar o DO.
+      const restarted = new RoomDO(state, env);
+      // O construtor carrega o storage dentro de blockConcurrencyWhile; chamar o fetch direto passa por cima desse portão,
+      // então espera o carregamento terminar antes (o callback vazio só roda depois do do construtor).
+      await state.blockConcurrencyWhile(async () => {});
+      const body = (await (await restarted.fetch(new Request('https://room/exists'))).json()) as { exists: boolean; game: string };
+      expect(body).toMatchObject({ exists: true, game: 'ito' });
     });
   });
 });

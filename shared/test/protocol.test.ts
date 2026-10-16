@@ -41,7 +41,7 @@ describe('parseClientMessage', () => {
     expect(parseClientMessage('não é json')).toBeNull();
     expect(parseClientMessage(42)).toBeNull();
     expect(parse({ t: 'hack' })).toBeNull();
-    expect(parse({ t: 'action', action: { type: 'place', cardId: 'a:0', index: -1 } })).toBeNull();
+    expect(parse({ t: 'action', action: { cardId: 'a:0', index: -1 } })).toBeNull();
     expect(parse({ t: 'join', token: 'curto', name: 'A', color: '#8EC5FF' })).toBeNull();
     expect(parse({ t: 'fx.ping', x: 50, y: 0 })).toBeNull();
   });

@@ -1,30 +1,11 @@
 import { z } from 'zod';
-import type { ItoAction } from './games/ito/types';
 import type { RoomView } from './room';
-
-const themeSchema = z.object({
-  titulo: z.string().max(200),
-  min: z.string().max(100),
-  max: z.string().max(100),
-});
 
 const cardId = z.string().min(1).max(64);
 const rowIndex = z.number().int().min(0).max(100);
 
-export const itoActionSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('setMode'), mode: z.enum(['livre', 'campanha']) }),
-  z.object({ type: z.literal('start') }),
-  z.object({ type: z.literal('rerollTheme') }),
-  z.object({ type: z.literal('customTheme'), theme: themeSchema }),
-  z.object({ type: z.literal('beginRound') }),
-  z.object({ type: z.literal('place'), cardId, index: rowIndex }),
-  z.object({ type: z.literal('return'), cardId }),
-  z.object({ type: z.literal('clue'), cardId, text: z.string().max(200) }),
-  z.object({ type: z.literal('ready'), ready: z.boolean() }),
-  z.object({ type: z.literal('forceReveal') }),
-  z.object({ type: z.literal('next') }),
-  z.object({ type: z.literal('lobby') }),
-]);
+/** Ação do jogo: o envelope só garante `type`; a sala valida com o schema do jogo dela (`roomAction`). */
+const actionEnvelope = z.object({ type: z.string().min(1).max(32) }).passthrough();
 
 /** Coordenadas normalizadas; uma pequena folga permite cursor um pouco fora do feltro. */
 const coord = z.number().min(-1).max(2);
@@ -34,7 +15,7 @@ export type Activity = (typeof ACTIVITIES)[number];
 
 export const clientMessageSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('join'), token: z.string().uuid(), name: z.string().max(100), color: z.string().max(16) }),
-  z.object({ t: z.literal('action'), action: itoActionSchema }),
+  z.object({ t: z.literal('action'), action: actionEnvelope }),
   z.object({
     t: z.literal('fx.cursor'),
     zone: z.enum(['table', 'hand']),
@@ -48,11 +29,6 @@ export const clientMessageSchema = z.discriminatedUnion('t', [
 
 export type ClientMessage = z.infer<typeof clientMessageSchema>;
 export type CursorFx = Omit<Extract<ClientMessage, { t: 'fx.cursor' }>, 't'>;
-
-/** Falha a compilação se o schema divergir do tipo ItoAction. */
-type Assert<T extends true> = T;
-export type ActionSchemaMatches = Assert<z.infer<typeof itoActionSchema> extends ItoAction ? true : false>;
-export type ActionTypeCovered = Assert<ItoAction extends z.infer<typeof itoActionSchema> ? true : false>;
 
 export type ServerMessage =
   | { t: 'welcome'; playerId: string; code: string }
@@ -92,6 +68,15 @@ export const ERROR_CODES = [
   'not_joined',
   'already_joined',
   'card_on_table',
+  'need_3_players',
+  'not_storyteller',
+  'is_storyteller',
+  'own_card',
+  'wrong_count',
+  'nothing_chosen',
+  'already_confirmed',
+  'paused',
+  'deck_too_small',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -106,7 +91,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   bad_theme: 'Tema inválido.',
   theme_random_only: 'No modo campanha o tema é sempre sorteado.',
   not_player: 'Você está assistindo esta rodada.',
-  bad_action: 'Ação desconhecida.',
+  bad_action: 'Ação inválida.',
   room_full: 'A sala está cheia (máx. 10).',
   bad_name: 'Escolha um nome de 1 a 16 letras.',
   bad_color: 'Personagem inválido.',
@@ -116,6 +101,15 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_joined: 'Entre na sala primeiro.',
   already_joined: 'Você já entrou nesta sala.',
   card_on_table: 'Tira a carta da mesa pra mudar a dica.',
+  need_3_players: 'Precisa de pelo menos 3 jogadores.',
+  not_storyteller: 'Só quem narra escolhe a carta da dica.',
+  is_storyteller: 'Quem narra só espera nesta etapa.',
+  own_card: 'Não dá pra votar na própria carta.',
+  wrong_count: 'Escolha o número certo de cartas.',
+  nothing_chosen: 'Escolha antes de confirmar.',
+  already_confirmed: 'Você já confirmou.',
+  paused: 'Esperando gente: precisa de 3 pessoas na mesa.',
+  deck_too_small: 'O baralho tem poucas cartas pra tanta gente.',
 };
 
 export function errorMessage(code: string): string {

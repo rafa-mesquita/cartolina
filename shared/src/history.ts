@@ -1,6 +1,6 @@
 import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
 import type { PlayerColor } from './players';
-import type { Room } from './room';
+import { itoStateOf, type Room } from './room';
 
 export const GROUP_NAME_MAX = 40;
 export const SHARPEST_MIN_CARDS = 3;
@@ -86,7 +86,9 @@ export function revealKey(game: ItoState): string | null {
 /** Registro a gravar se a sala é de um grupo e está numa revelação ainda não gravada. */
 export function pendingRecord(room: Room, now: number, id: string): { key: string; record: RoundRecord } | null {
   if (!room.group) return null;
-  const game = room.game;
+  // Só o ITO grava histórico por enquanto (o do Dixit vem num plano próprio).
+  const game = itoStateOf(room);
+  if (!game) return null;
   const key = revealKey(game);
   if (!key || key === room.recordedRevealKey || !game.outcome || !game.theme || !game.reveal) return null;
   const seatOf = (playerId: string) => room.seats.find((s) => s.id === playerId);

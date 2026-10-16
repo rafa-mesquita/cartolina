@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SoundName } from '../src/brand/sounds';
 import { TableEngine, type EngineDom } from '../src/table/engine';
-import { PLAYER_COLORS, joinRoom, type ItoOutcome, type Room } from '@cartolina/shared';
-import { act, sortingRoom, viewOf } from './fixtures';
+import { PLAYER_COLORS, joinRoom, type ItoOutcome } from '@cartolina/shared';
+import { act, sortingRoom, viewOf, type ItoRoom } from './fixtures';
 
 function dom(): EngineDom {
   const make = () => {
@@ -295,7 +295,7 @@ describe('TableEngine (qualquer participante move cartas da fila; só o dono tir
   const gapsShown = (d: EngineDom) => [...d.row.querySelectorAll<HTMLElement>('.gap')].filter((g) => g.style.display !== 'none').length;
 
   /** Fila do servidor [p0:0, p1:0]; homografia identidade (tela = feltro). */
-  function rowOfTwo(me = 'p0', tweak: (room: Room) => Room = (r) => r) {
+  function rowOfTwo(me = 'p0', tweak: (room: ItoRoom) => ItoRoom = (r) => r) {
     let room = sortingRoom(2);
     room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
     room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
@@ -461,7 +461,7 @@ describe('TableEngine (qualquer participante move cartas da fila; só o dono tir
     const { d, engine } = rowOfTwo('p9', (room) => {
       const res = joinRoom(room, { token: 't9', name: 'P9', color: PLAYER_COLORS[5]! }, 'p9', 0);
       if (!res.ok) throw new Error(res.error);
-      return res.room;
+      return res.room as ItoRoom;
     });
     dragTo(d, false, 450, 40);
     expect(engine.getSnapshot().inFlight.size).toBe(0);
@@ -521,7 +521,7 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
   }
 
   /** Motor com homografia identidade (tela = feltro) já mostrando `room` como `me`. */
-  function table(room: Room, me = 'p0') {
+  function table(room: ItoRoom, me = 'p0') {
     const d = dom();
     const corners = [
       [0, 0],
@@ -540,7 +540,7 @@ describe('TableEngine (revisão: robustez e custo por quadro)', () => {
   }
 
   /** Todos os participantes põem a própria carta, na ordem dos assentos. */
-  function fullRow(n: number): Room {
+  function fullRow(n: number): ItoRoom {
     let room = sortingRoom(n);
     for (let i = 0; i < n; i++) room = act(room, `p${i}`, { type: 'place', cardId: `p${i}:0`, index: i });
     return room;

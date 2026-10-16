@@ -1,5 +1,5 @@
 import { SELF } from 'cloudflare:test';
-import { HEARTBEAT_PONG, type ClientMessage, type RoomView, type ServerMessage } from '@cartolina/shared';
+import { HEARTBEAT_PONG, type ClientMessage, type ItoRoomView, type RoomView, type ServerMessage } from '@cartolina/shared';
 
 export async function newRoomCode(): Promise<string> {
   const res = await SELF.fetch('https://x/rooms', { method: 'POST' });
@@ -11,7 +11,8 @@ export interface TestClient {
   ws: WebSocket;
   send(msg: ClientMessage): void;
   next<T extends ServerMessage['t']>(t: T): Promise<Extract<ServerMessage, { t: T }>>;
-  state(pred: (room: RoomView) => boolean): Promise<RoomView>;
+  /** Padrão ITO (a maioria dos testes); salas de Dixit usam `state<DixitRoomView>(…)`. */
+  state<V extends RoomView = ItoRoomView>(pred: (room: V) => boolean): Promise<V>;
   inbox: ServerMessage[];
   /** Respostas de texto puro (ex.: "pong") que não são mensagens JSON do protocolo. */
   raw: string[];
@@ -78,10 +79,11 @@ export async function connect(code: string): Promise<TestClient> {
     closed,
     send: (msg) => ws.send(JSON.stringify(msg)),
     next: (t) => waitFor((m): m is Extract<ServerMessage, { t: typeof t }> => m.t === t, t),
-    async state(pred) {
+    async state<V extends RoomView = ItoRoomView>(pred: (room: V) => boolean): Promise<V> {
       for (;;) {
         const m = await waitFor((x): x is Extract<ServerMessage, { t: 'state' }> => x.t === 'state', 'state');
-        if (pred(m.room)) return m.room;
+        const room = m.room as V;
+        if (pred(room)) return room;
       }
     },
   };

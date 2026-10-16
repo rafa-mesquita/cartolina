@@ -1,9 +1,9 @@
-import { THEME_LIMITS, cleanTheme, type RoomView } from '@cartolina/shared';
+import { THEME_LIMITS, cleanTheme, type ItoRoomView } from '@cartolina/shared';
 import { useState, type FormEvent } from 'react';
 import { isHost } from '../game/derive';
 import type { GameConn } from '../net/connection';
 
-export function ThemePanel({ view, conn }: { view: RoomView; conn: GameConn }) {
+export function ThemePanel({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({ titulo: '', min: '', max: '' });
   const [error, setError] = useState<string | null>(null);

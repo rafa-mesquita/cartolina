@@ -1,4 +1,4 @@
-import type { Activity, CursorFx, ItoCardView, RevealEntry, RoomView } from '@cartolina/shared';
+import type { Activity, CursorFx, ItoCardView, RevealEntry, ItoRoomView } from '@cartolina/shared';
 import { CH, CW, FH, FW, HAND_S, PERSP, ROW_S, ROW_Y, TILT } from './constants';
 import { applyH, inv3Safe, solveHSafe, type Mat3 } from './homography';
 import {
@@ -160,7 +160,7 @@ function tiltFor(id: string): number {
 }
 
 export class TableEngine {
-  private view: RoomView | null = null;
+  private view: ItoRoomView | null = null;
   private serverRow: string[] = [];
   /** Minhas intenções ainda sem resposta, na ordem em que mandei (o servidor aplica nessa ordem). */
   private pending: Intent[] = [];
@@ -244,7 +244,7 @@ export class TableEngine {
 
   getSnapshot = (): EngineSnapshot => this.snap;
 
-  update(view: RoomView): void {
+  update(view: ItoRoomView): void {
     if (this.destroyed) return;
     const first = this.first;
     this.first = false;

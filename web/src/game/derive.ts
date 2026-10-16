@@ -1,4 +1,4 @@
-import type { Activity, ItoCardView, RoomView, SeatView } from '@cartolina/shared';
+import type { Activity, ItoCardView, ItoRoomView, SeatView } from '@cartolina/shared';
 
 export type CardPlace = 'hand' | 'row' | 'drag';
 
@@ -9,15 +9,15 @@ export interface HandCard {
 
 export type SeatStatus = 'desconectado' | 'assistindo' | 'pronto ✓' | 'escrevendo…' | 'arrastando…' | 'pensando';
 
-export function isHost(view: RoomView): boolean {
+export function isHost(view: ItoRoomView): boolean {
   return view.you !== null && view.hostId === view.you;
 }
 
-export function isPlaying(view: RoomView): boolean {
+export function isPlaying(view: ItoRoomView): boolean {
   return view.you !== null && view.game.players.includes(view.you);
 }
 
-export function cardsOf(view: RoomView, owner: string): ItoCardView[] {
+export function cardsOf(view: ItoRoomView, owner: string): ItoCardView[] {
   return Object.values(view.game.cards)
     .filter((c) => c.owner === owner)
     .sort((a, b) => a.id.localeCompare(b.id));
@@ -27,7 +27,7 @@ export function cardsOf(view: RoomView, owner: string): ItoCardView[] {
  * Lugar de cada carta minha. `dragging` = carta que EU arrasto (ou voltando pra minha mão).
  * Carta minha carregada por outra pessoa (em `inFlight`, mas não `dragging`) continua "na mesa".
  */
-export function handCards(view: RoomView, row: readonly string[], inFlight: ReadonlySet<string>, dragging: string | null): HandCard[] {
+export function handCards(view: ItoRoomView, row: readonly string[], inFlight: ReadonlySet<string>, dragging: string | null): HandCard[] {
   if (!view.you) return [];
   return cardsOf(view, view.you).map((card) => ({
     card,
@@ -36,11 +36,11 @@ export function handCards(view: RoomView, row: readonly string[], inFlight: Read
 }
 
 /** Uma entrada por carta do dono: `true` = ainda na mão (mostra costas), `false` = slot vazio. */
-export function backsOf(view: RoomView, owner: string, row: readonly string[], inFlight: ReadonlySet<string>): boolean[] {
+export function backsOf(view: ItoRoomView, owner: string, row: readonly string[], inFlight: ReadonlySet<string>): boolean[] {
   return cardsOf(view, owner).map((c) => !row.includes(c.id) && !inFlight.has(c.id));
 }
 
-export function seatStatus(view: RoomView, seat: SeatView, activity: Activity | undefined): SeatStatus {
+export function seatStatus(view: ItoRoomView, seat: SeatView, activity: Activity | undefined): SeatStatus {
   if (!seat.connected) return 'desconectado';
   const { phase, players, ready } = view.game;
   if (phase !== 'lobby' && !players.includes(seat.id)) return 'assistindo';
@@ -50,13 +50,13 @@ export function seatStatus(view: RoomView, seat: SeatView, activity: Activity | 
   return 'pensando';
 }
 
-export function readyCount(view: RoomView): { ready: number; total: number } {
+export function readyCount(view: ItoRoomView): { ready: number; total: number } {
   const connected = new Set(view.seats.filter((s) => s.connected).map((s) => s.id));
   const players = view.game.players.filter((p) => connected.has(p));
   return { ready: players.filter((p) => view.game.ready.includes(p)).length, total: players.length };
 }
 
-export function allMineInRow(view: RoomView, row: readonly string[]): boolean {
+export function allMineInRow(view: ItoRoomView, row: readonly string[]): boolean {
   const mine = view.you ? cardsOf(view, view.you) : [];
   return mine.length > 0 && mine.every((c) => row.includes(c.id));
 }
