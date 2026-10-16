@@ -1,14 +1,17 @@
-import { mulberry32 } from '@cartolina/shared';
+import { mulberry32, type Rng } from '@cartolina/shared';
 
 /** Arte de verdade em `web/public/dixit/cards/` (gerada por `npm run dixit:cartas`). `false` volta para as pinturas provisórias em SVG. */
 export const REAL_ART = true;
 
+const CARD_ID = /^d\d{3}$/;
+/** O id vem do servidor e entra em atributo SVG e em URL: só passa o formato `dNNN`. */
+const safeId = (id: string): string => (CARD_ID.test(id) ? id : 'd000');
+
 /** Relativo à base do site (funciona no GitHub Pages, em subpasta). */
 export function cardImageUrl(id: string): string {
-  return `${import.meta.env.BASE_URL}dixit/cards/${id}.webp`;
+  return `${import.meta.env.BASE_URL}dixit/cards/${safeId(id)}.webp`;
 }
 
-type Rng = () => number;
 const pick = <T>(r: Rng, arr: readonly T[]): T => arr[Math.floor(r() * arr.length)]!;
 const SKIES: readonly (readonly [string, string, boolean])[] = [
   ['#14241f', '#30638e', true], ['#d1495b', '#f2a541', false], ['#8fb8de', '#f6ead2', false], ['#00798c', '#bfe0d4', false],
@@ -39,7 +42,8 @@ const cache = new Map<string, string>();
 const n = (v: number) => Math.round(v * 10) / 10;
 
 /** Pequena "pintura" provisória (SVG 200×300, retrato 2:3) gerada a partir do id da carta. */
-export function cardArtSvg(id: string): string {
+export function cardArtSvg(rawId: string): string {
+  const id = safeId(rawId);
   const hit = cache.get(id);
   if (hit) return hit;
   const r = mulberry32(Number(id.replace(/\D/g, '')) * 7919 + 17);
@@ -54,7 +58,7 @@ export function cardArtSvg(id: string): string {
   if (r() < 0.3) s += `<circle cx="${n(cx)}" cy="${n(cy)}" r="${n(cr + 8)}" fill="none" stroke="${cc}" stroke-width=".8" opacity=".7"/>`;
   const water = r() < 0.35, groundY = 190 + r() * 50;
   for (let i = 0; i < 3; i++) {
-    const y = groundY + i * 26 - 20 + r() * 20, c = LANDS[(i + Math.floor(r() * 6)) % 6]!;
+    const y = groundY + i * 26 - 20 + r() * 20, c = LANDS[(i + Math.floor(r() * LANDS.length)) % LANDS.length]!;
     s += `<path d="M0 ${n(y)} Q ${n(50 + r() * 50)} ${n(y - 30 - r() * 50)} ${n(100 + r() * 20)} ${n(y - r() * 10)} T ${W} ${n(y - 10 + r() * 20)} L${W} ${H} L0 ${H} Z" fill="${c}" opacity="${n(0.85 + i * 0.05)}"/>`;
   }
   if (water) {
