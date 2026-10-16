@@ -1,5 +1,5 @@
 import { DIXIT_CLUE_MAX, type DixitRoomView } from '@cartolina/shared';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { captionText, summaryParts } from './reveal';
 
 /** Ações do painel. Jogar a carta é arrastar pro feltro (na mesa), então não tem botão aqui. */
@@ -36,18 +36,27 @@ const NEED_CLUE_MSG = 'Antes de jogar a carta, escreva a dica ou marque “vou f
 /** Canto inferior direito: o que fazer agora. */
 export function ActionPanel({ view, need, pending, revealDone, host, name, clue, onClue, spoken, onSpoken, needClueTick, actions }: Props) {
   const g = view.game, me = view.you;
-  const [err, setErr] = useState('');
+  const errId = useId();
+  /** Tentou confirmar o voto sem ter votado. */
+  const [tried, setTried] = useState(false);
+  /** Soltou a carta sem dica (zera quando a dica fica pronta ou a fase muda). */
   const [warned, setWarned] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const shakeTimer = useRef<number | undefined>(undefined);
   const lastTick = useRef(needClueTick);
+  const wasSpoken = useRef(spoken);
   const clueReady = spoken || clue.trim() !== '';
 
   useEffect(() => {
-    setErr('');
+    setTried(false);
     setWarned(false);
-  }, [g.phase, g.myVote]);
+  }, [g.phase]);
+
+  // Dica pronta: o aviso some de vez (só volta com um novo tique).
+  useEffect(() => {
+    if (clueReady) setWarned(false);
+  }, [clueReady]);
 
   // Soltou a carta sem dica: avisa, treme a caixa (reinicia a animação) e foca o campo.
   useEffect(() => {
@@ -63,8 +72,15 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
       window.clearTimeout(shakeTimer.current);
       shakeTimer.current = window.setTimeout(() => box.classList.remove('need'), SHAKE_MS);
     }
-    if (!spoken) fieldRef.current?.focus();
-  }, [needClueTick, clueReady, spoken]);
+    fieldRef.current?.focus();
+  }, [needClueTick, clueReady]);
+
+  // Desmarcou "vou falar na call" e ainda não tem dica: vai pro campo.
+  useEffect(() => {
+    const was = wasSpoken.current;
+    wasSpoken.current = spoken;
+    if (was && !spoken && !clueReady) fieldRef.current?.focus();
+  }, [spoken, clueReady]);
 
   useEffect(() => () => window.clearTimeout(shakeTimer.current), []);
 
@@ -75,7 +91,14 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
   const done = others.filter((p) => g.confirmed.includes(p)).length;
   const playing = me !== null && g.inRound.includes(me);
   const over = Object.values(g.scores).some((s) => s >= g.target);
-  const error = (text: string) => (text ? <div className="dx-err">{text}</div> : null);
+  const clueWarn = warned && !clueReady;
+  const voteWarn = tried && !g.myVote;
+  /** Contêiner fixo (só o texto muda) pro leitor de tela anunciar o aviso. */
+  const alertBox = (text: string) => (
+    <div className="dx-err" role="alert" id={errId}>
+      {text}
+    </div>
+  );
 
   let body: ReactNode;
   if (g.paused) {
@@ -113,6 +136,8 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
             placeholder="sua dica"
             value={clue}
             disabled={spoken}
+            aria-describedby={errId}
+            aria-invalid={clueWarn}
             onChange={(e) => onClue(e.target.value)}
           />
           <div className="dx-cnt">
@@ -122,7 +147,7 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
             <input type="checkbox" checked={spoken} onChange={(e) => onSpoken(e.target.checked)} /> vou falar a dica na call
           </label>
         </div>
-        {error(warned && !clueReady ? NEED_CLUE_MSG : '')}
+        {alertBox(clueWarn ? NEED_CLUE_MSG : '')}
       </>
     ) : (
       <>
@@ -177,13 +202,13 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
           className="dx-btn"
           type="button"
           onClick={() => {
-            if (!g.myVote) return setErr('Clique numa carta da mesa primeiro.');
+            if (!g.myVote) return setTried(true);
             actions.confirmVote();
           }}
         >
           confirmar voto
         </button>
-        {error(err)}
+        {alertBox(voteWarn ? 'Clique numa carta da mesa primeiro.' : '')}
       </>
     );
   } else if (g.phase === 'reveal') {

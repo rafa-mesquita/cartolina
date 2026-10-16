@@ -10,7 +10,7 @@ import { Seats } from '../src/games/dixit/Seats';
 import { tableSlots } from '../src/games/dixit/geometry';
 import { playDixitSound } from '../src/games/dixit/sounds';
 import { colorer, namer } from '../src/games/dixit/status';
-import { dixitView, othersOf, play, revealed, started, stateOf, told, voting } from './dixit-fixtures';
+import { dixitRoom, dixitView, othersOf, play, revealed, started, stateOf, told, voting } from './dixit-fixtures';
 
 vi.mock('../src/games/dixit/sounds', () => ({ playDixitSound: vi.fn() }));
 
@@ -570,9 +570,68 @@ describe('painel de ação', () => {
     // outra tentativa treme de novo
     rerender(<ActionPanel {...p} needClueTick={2} />);
     expect(container.querySelector('.dx-clue-box.need')).toBeTruthy();
-    // dica pronta: o aviso some
+    // dica pronta: o aviso some de vez, mesmo se ela for apagada depois
     rerender(<ActionPanel {...p} needClueTick={2} clue="luar" />);
     expect(screen.queryByText(msg)).toBeNull();
+    rerender(<ActionPanel {...p} needClueTick={2} clue="" />);
+    expect(screen.queryByText(msg)).toBeNull();
+    // só um novo tique faz avisar de novo
+    rerender(<ActionPanel {...p} needClueTick={3} clue="" />);
+    expect(screen.getByText(msg)).toBeTruthy();
+  });
+
+  it('o aviso fica num contêiner fixo (role=alert) ligado ao campo da dica', () => {
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    const p = panelProps(v);
+    const { rerender } = render(<ActionPanel {...p} />);
+    const field = screen.getByLabelText('sua dica');
+    const box = screen.getByRole('alert');
+    expect(box.textContent).toBe('');
+    expect(field.getAttribute('aria-describedby')).toBe(box.id);
+    expect(field.getAttribute('aria-invalid')).toBe('false');
+    rerender(<ActionPanel {...p} needClueTick={1} />);
+    expect(screen.getByRole('alert')).toBe(box);
+    expect(box.textContent).toContain('Antes de jogar a carta');
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('desmarcar "vou falar na call" sem dica foca o campo; com dica não mexe no foco', () => {
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    const p = panelProps(v);
+    const { rerender } = render(<ActionPanel {...p} spoken />);
+    const field = screen.getByLabelText('sua dica');
+    expect(document.activeElement).not.toBe(field);
+    rerender(<ActionPanel {...p} spoken={false} />);
+    expect(document.activeElement).toBe(field);
+    (field as HTMLElement).blur();
+    rerender(<ActionPanel {...p} spoken />);
+    rerender(<ActionPanel {...p} spoken={false} clue="luar" />);
+    expect(document.activeElement).not.toBe(field);
+  });
+
+  it('trocar de fase zera os avisos (da dica e do voto)', () => {
+    const room = told(4);
+    const teller = stateOf(room).storyteller!;
+    const other = othersOf(room)[0]!;
+    // dica: avisa na narração, passa pra escolha e volta pra narração (outra rodada)
+    const story = dixitView(started(4), stateOf(started(4)).storyteller!);
+    const p = panelProps(story);
+    const { rerender } = render(<ActionPanel {...p} needClueTick={0} />);
+    rerender(<ActionPanel {...p} needClueTick={1} />);
+    expect(screen.getByRole('alert').textContent).not.toBe('');
+    rerender(<ActionPanel {...panelProps(dixitView(room, teller))} needClueTick={1} />);
+    rerender(<ActionPanel {...p} needClueTick={1} />);
+    expect(screen.getByRole('alert').textContent).toBe('');
+    // voto: tenta confirmar sem votar, a fase muda e volta
+    const vote = dixitView(voting(4), other);
+    rerender(<ActionPanel {...panelProps(vote)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar voto' }));
+    expect(screen.getByRole('alert').textContent).toBe('Clique numa carta da mesa primeiro.');
+    rerender(<ActionPanel {...panelProps(dixitView(room, other))} />);
+    rerender(<ActionPanel {...panelProps(vote)} />);
+    expect(screen.getByRole('alert').textContent).toBe('');
   });
 
   it('o tique com a dica já pronta não avisa; o tique antigo ao abrir não dispara nada', () => {
@@ -580,14 +639,16 @@ describe('painel de ação', () => {
     const v = dixitView(room, stateOf(room).storyteller!);
     const p = panelProps(v);
     const { container, rerender } = render(<ActionPanel {...p} needClueTick={3} />);
-    expect(container.querySelector('.dx-err')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toBe('');
     rerender(<ActionPanel {...p} needClueTick={4} clue="luar" />);
-    expect(container.querySelector('.dx-err')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toBe('');
     expect(container.querySelector('.dx-clue-box.need')).toBeNull();
   });
 
-  it('desmontar no meio da tremida limpa o timer', () => {
+  it('desmontar no meio da tremida cancela o timer dela', () => {
     vi.useFakeTimers();
+    const set = vi.spyOn(window, 'setTimeout');
+    const clear = vi.spyOn(window, 'clearTimeout');
     const room = started(4);
     const v = dixitView(room, stateOf(room).storyteller!);
     const p = panelProps(v);
@@ -595,8 +656,12 @@ describe('painel de ação', () => {
     rerender(<ActionPanel {...p} needClueTick={1} />);
     const box = container.querySelector('.dx-clue-box')!;
     expect(box.classList.contains('need')).toBe(true);
+    const i = set.mock.calls.findIndex((c) => c[1] === 450);
+    expect(i).toBeGreaterThanOrEqual(0);
+    const id = set.mock.results[i]!.value;
     unmount();
-    // com o timer limpo, a caixa (solta do documento) não é mais mexida
+    expect(clear).toHaveBeenCalledWith(id);
+    // e, de fato, a caixa (solta do documento) não é mais mexida
     rtlAct(() => vi.advanceTimersByTime(1000));
     expect(box.classList.contains('need')).toBe(true);
   });
@@ -612,8 +677,8 @@ describe('painel de ação', () => {
   it('escolha: pede pra arrastar a carta, sem botão de jogar', () => {
     const room = told(4);
     const v = dixitView(room, othersOf(room)[0]!);
-    const { container } = render(<ActionPanel {...panelProps(v)} />);
-    expect(container.querySelector('p')!.textContent).toBe('Arraste pra mesa a carta da sua mão que mais combina com a dica.');
+    render(<ActionPanel {...panelProps(v)} />);
+    expect(screen.getByText(/Arraste pra mesa/).textContent).toBe('Arraste pra mesa a carta da sua mão que mais combina com a dica.');
     expect(screen.queryByRole('button', { name: /jogar essa/ })).toBeNull();
   });
 
@@ -621,11 +686,11 @@ describe('painel de ação', () => {
     const room = told(3);
     const v = dixitView(room, othersOf(room)[0]!);
     const p = panelProps(v);
-    const { container, rerender } = render(<ActionPanel {...p} need={2} />);
-    expect(container.querySelector('p')!.textContent).toBe('Arraste pra mesa as 2 cartas da sua mão que mais combinam com a dica.');
+    const { rerender } = render(<ActionPanel {...p} need={2} />);
+    expect(screen.getByText(/Arraste pra mesa/).textContent).toBe('Arraste pra mesa as 2 cartas da sua mão que mais combinam com a dica.');
     rerender(<ActionPanel {...p} need={2} pending={1} />);
     expect(screen.getByText('1 de 2').tagName).toBe('B');
-    expect(container.querySelector('p')!.textContent).toContain('1 de 2 na mesa (clique nela pra desfazer).');
+    expect(screen.getByText(/Arraste pra mesa/).textContent).toContain('1 de 2 na mesa (clique nela pra desfazer).');
   });
 
   it('votação: confirmar sem voto avisa', () => {
@@ -662,6 +727,18 @@ describe('painel de ação', () => {
 });
 
 describe('topo', () => {
+  it('sem narrador (lobby) o selo fica vazio; no fim de jogo diz fim de jogo', () => {
+    const lobby = dixitView(dixitRoom(4), 'p0');
+    const { container, rerender } = render(<DixitTopBar view={lobby} name={namer(lobby)} color={colorer(lobby)} tilt onTilt={vi.fn()} host={false} onForce={vi.fn()} />);
+    expect(container.querySelector('.dx-clue .txt')!.textContent).toBe('');
+    expect(container.querySelector('.dx-clue .who')).toBeNull();
+    let room = revealed(4);
+    room = { ...room, game: { ...room.game, phase: 'gameover' } as typeof room.game };
+    const over = dixitView(room, 'p0');
+    rerender(<DixitTopBar view={over} name={namer(over)} color={colorer(over)} tilt onTilt={vi.fn()} host={false} onForce={vi.fn()} />);
+    expect(container.querySelector('.dx-clue .txt')!.textContent).toBe('fim de jogo');
+  });
+
   it('mostra a dica, a fase e o destravar só pro host', () => {
     const room = told(4, 'luar');
     const onForce = vi.fn();

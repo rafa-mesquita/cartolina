@@ -47,8 +47,10 @@ export function DixitTopBar({ view, name, color, tilt, onTilt, host, onForce }: 
             <Critter color={color(st)} />
           </span>
         )}
-        {g.phase === 'gameover' || !st ? (
+        {g.phase === 'gameover' ? (
           <span className="txt muted">fim de jogo</span>
+        ) : !st ? (
+          <span className="txt muted" />
         ) : g.phase === 'storytelling' ? (
           <span className="txt muted">{st === view.you ? 'você narra esta rodada' : `${name(st)} narra esta rodada`}</span>
         ) : g.clue ? (
