@@ -1,11 +1,20 @@
+import { summarizeHistory, type GroupResponse } from '@cartolina/shared';
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App';
 import { PHONE_TEXT } from '../src/screens/PhoneNotice';
 import { PHONE_QUERY } from '../src/lib/device';
 import { Home } from '../src/screens/Home';
+import { GroupPage } from '../src/screens/GroupPage';
+import { getGroup } from '../src/net/api';
 
-vi.mock('../src/net/api', () => ({ getRoomInfo: vi.fn(() => new Promise(() => {})), createRoom: vi.fn(), createGroup: vi.fn() }));
+vi.mock('../src/net/api', () => ({
+  getRoomInfo: vi.fn(() => new Promise(() => {})),
+  createRoom: vi.fn(),
+  createGroup: vi.fn(),
+  getGroup: vi.fn(),
+  createGroupRoom: vi.fn(),
+}));
 
 function phone(matches: boolean) {
   vi.stubGlobal(
@@ -17,6 +26,10 @@ function phone(matches: boolean) {
       removeEventListener: vi.fn(),
     })),
   );
+}
+
+function groupResponse(): GroupResponse {
+  return { group: { slug: 'abcdefghjk', name: 'Galera', createdAt: 0 }, rounds: [], stats: summarizeHistory([]), nextBefore: null };
 }
 
 describe('aviso no celular', () => {
@@ -39,6 +52,24 @@ describe('aviso no celular', () => {
     expect(screen.queryByRole('button', { name: 'criar sala' })).toBeNull();
     expect(screen.getByText(PHONE_TEXT)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'criar grupo' })).toBeTruthy();
+  });
+
+  it('no celular, a página do grupo troca "criar sala do grupo" pelo aviso (histórico continua)', async () => {
+    phone(true);
+    vi.mocked(getGroup).mockResolvedValue(groupResponse());
+    render(<GroupPage slug="abcdefghjk" />);
+    expect(await screen.findByRole('heading', { name: 'Galera' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'criar sala do grupo' })).toBeNull();
+    expect(screen.getByText(PHONE_TEXT)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'copiar link do grupo' })).toBeTruthy();
+  });
+
+  it('no computador, a página do grupo mantém "criar sala do grupo"', async () => {
+    phone(false);
+    vi.mocked(getGroup).mockResolvedValue(groupResponse());
+    render(<GroupPage slug="abcdefghjk" />);
+    expect(await screen.findByRole('button', { name: 'criar sala do grupo' })).toBeTruthy();
+    expect(screen.queryByText(PHONE_TEXT)).toBeNull();
   });
 
   it('no computador, nada muda', () => {

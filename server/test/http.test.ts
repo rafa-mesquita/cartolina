@@ -1,4 +1,4 @@
-import { SELF } from 'cloudflare:test';
+import { SELF, env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
 import { newRoomCode } from './helpers';
 import { ROOM_ALPHABET } from '../src/codes';
@@ -86,7 +86,8 @@ describe('HTTP', () => {
     expect(await res.json()).toEqual({ error: 'too_large' });
   });
 
-  it('criar grupo: o 6º pedido do mesmo IP no minuto dá 429', async () => {
+  // Sem o bloco `ratelimits` no wrangler.jsonc (fallback do docs/deploy.md) não há limitador: pula.
+  it.skipIf(!('GROUP_LIMITER' in env))('criar grupo: o 6º pedido do mesmo IP no minuto dá 429', async () => {
     const ip = `test-${crypto.randomUUID()}`; // chave única: não depende do estado de outros testes
     const statuses: number[] = [];
     for (let i = 0; i < 6; i++) { // 5 é o limite do GROUP_LIMITER no wrangler.jsonc

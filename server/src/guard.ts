@@ -1,3 +1,4 @@
+// localhost é aceito em produção de propósito (dev e E2E); a proteção contra abuso de verdade é o limitador.
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 /**

@@ -23,7 +23,9 @@ sozinho (`.github/workflows/deploy.yml`); se um teste falhar, nada é publicado.
 4. **Token pro GitHub publicar.** No painel da Cloudflare: **My Profile → API
    Tokens → Create Token → modelo "Edit Cloudflare Workers"** e acrescente a
    permissão **Account → D1 → Edit**. Em **Account Resources**, escolha a sua
-   conta. Copie o token (ele só aparece uma vez).
+   conta. Se o modelo pedir **Zone Resources**, escolha "All zones from an account"
+   (conta nova pode não ter zonas; tudo bem). Copie o token (ele só aparece uma
+   vez).
 5. **Segredos no GitHub.** Em https://github.com/rafa-mesquita/cartolina →
    **Settings → Secrets and variables → Actions → New repository secret**:
    - `CLOUDFLARE_API_TOKEN` = o token do passo 4;
@@ -31,6 +33,9 @@ sozinho (`.github/workflows/deploy.yml`); se um teste falhar, nada é publicado.
      **Workers & Pages**, na lateral; `npx wrangler whoami` também mostra).
 6. **Pages.** **Settings → Pages → Build and deployment → Source: GitHub
    Actions**.
+> Antes de terminar a configuração, qualquer execução do workflow falha no job
+> `server`. É esperado: nada é publicado.
+
 7. **Primeira publicação.** Faça push no `main` (ou rode o workflow em
    **Actions → deploy → Run workflow**). O job `server` publica o Worker e
    mostra o endereço dele no log. O job `web` vai falhar pedindo a variável
@@ -48,6 +53,10 @@ Se o `wrangler deploy` reclamar de `ratelimits` (limitador não disponível no
 plano), apague o bloco `ratelimits` de `server/wrangler.jsonc`: o servidor
 funciona sem ele; faça commit e push.
 
+Se um dia o site passar a usar um domínio próprio, acrescente esse endereço em
+`ALLOWED_ORIGINS` (`server/wrangler.jsonc`, separado por vírgula); senão o site
+não consegue falar com o servidor.
+
 ## Conferir depois de publicar
 
 - Deve terminar com `ok`:
@@ -62,6 +71,8 @@ funciona sem ele; faça commit e push.
   **computador** (no celular aparece um aviso).
 - Do grupo, clique em **criar sala do grupo** e mande o link da sala. As
   rodadas jogadas ali entram no histórico sozinhas.
+- Não faça push no `main` durante a partida: cada publicação reinicia o
+  servidor e derruba as conexões por alguns segundos.
 - Travou alguma coisa? **Recarregue a página**: carta e assento são mantidos.
 - No dia seguinte, veja quanto da cota foi usado: painel da Cloudflare →
   **Workers & Pages → cartolina-server → Metrics** e **D1 → cartolina**. O

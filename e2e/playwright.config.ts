@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Sem @types/node no repositório: só o que a config usa.
+declare const process: { env: Record<string, string | undefined> };
+
 const CI = Boolean(process.env.CI);
 
 /**

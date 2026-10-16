@@ -1,10 +1,12 @@
 import type { GroupResponse, ItoOutcome, RoundCard, RoundRecord } from '@cartolina/shared';
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { critterSvg } from '../brand/critters';
+import { useIsPhone } from '../lib/device';
 import { goHome, goToRoom, groupLink } from '../lib/router';
 import { createGroupRoom, getGroup } from '../net/api';
 import { TOO_MANY_MESSAGE, isTooMany } from '../net/errors';
 import { rememberGroup } from '../net/identity';
+import { PHONE_TEXT } from './PhoneNotice';
 import './group.css';
 
 const OUTCOME: Record<ItoOutcome, { label: string; good: boolean }> = {
@@ -84,6 +86,7 @@ function RoundItem({ round, open, onToggle }: { round: RoundRecord; open: boolea
 }
 
 export function GroupPage({ slug }: { slug: string }) {
+  const phone = useIsPhone();
   const [data, setData] = useState<GroupResponse | null | undefined>(undefined);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -231,9 +234,11 @@ export function GroupPage({ slug }: { slug: string }) {
         <h2>{group.name}</h2>
         <p>grupo criado em {dayFmt.format(new Date(group.createdAt))}</p>
         <div className="row-inline">
-          <button className="btn" type="button" onClick={() => void newRoom()} disabled={creating}>
-            {creating ? 'criando…' : 'criar sala do grupo'}
-          </button>
+          {!phone && (
+            <button className="btn" type="button" onClick={() => void newRoom()} disabled={creating}>
+              {creating ? 'criando…' : 'criar sala do grupo'}
+            </button>
+          )}
           <button className="sbtn" type="button" onClick={() => void copyLink()}>
             copiar link do grupo
           </button>
@@ -246,6 +251,7 @@ export function GroupPage({ slug }: { slug: string }) {
             {roomError}
           </p>
         )}
+        {phone && <p className="hint">{PHONE_TEXT}</p>}
         <p className="hint">Quem tem o link do grupo vê o histórico. Partidas jogadas em salas criadas aqui entram sozinhas.</p>
       </section>
 
