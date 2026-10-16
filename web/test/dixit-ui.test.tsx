@@ -1,7 +1,9 @@
 import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ActionPanel, type PanelActions } from '../src/games/dixit/ActionPanel';
 import { CardArt } from '../src/games/dixit/CardArt';
 import { CardViewer } from '../src/games/dixit/CardViewer';
+import { DixitTopBar } from '../src/games/dixit/DixitTopBar';
 import { Felt } from '../src/games/dixit/Felt';
 import { Hand } from '../src/games/dixit/Hand';
 import { Seats } from '../src/games/dixit/Seats';
@@ -509,5 +511,169 @@ describe('assentos', () => {
     const v = dixitView(told(4), 'p0');
     const { container } = render(<Seats view={v} width={1440} name={namer(v)} gained={{}} floatKey="" />);
     expect([...container.querySelectorAll<HTMLElement>('[data-seat]')].map((e) => e.dataset.seat).sort()).toEqual(['p0', 'p1', 'p2', 'p3']);
+  });
+});
+
+const actions = (): PanelActions => ({ confirmVote: vi.fn(), next: vi.fn(), again: vi.fn(), lobby: vi.fn() });
+
+describe('painel de ação', () => {
+  const panelProps = (v: ReturnType<typeof dixitView>) => ({
+    view: v,
+    need: 1,
+    pending: 0,
+    revealDone: true,
+    host: false,
+    name: namer(v),
+    clue: '',
+    onClue: vi.fn(),
+    spoken: false,
+    onSpoken: vi.fn(),
+    needClueTick: 0,
+    actions: actions(),
+  });
+
+  it('quem narra: campo da dica e caixinha "vou falar na call"; sem botão de contar', () => {
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    const p = panelProps(v);
+    render(<ActionPanel {...p} />);
+    expect(screen.queryByRole('button', { name: 'contei' })).toBeNull();
+    fireEvent.change(screen.getByLabelText('sua dica'), { target: { value: 'luar' } });
+    expect(p.onClue).toHaveBeenCalledWith('luar');
+    fireEvent.click(screen.getByRole('checkbox', { name: /vou falar a dica na call/ }));
+    expect(p.onSpoken).toHaveBeenCalledWith(true);
+    expect(screen.getByText('arraste a carta pra mesa').tagName).toBe('B');
+  });
+
+  it('com "vou falar na call" marcado o campo fica desligado', () => {
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    render(<ActionPanel {...panelProps(v)} spoken />);
+    expect((screen.getByLabelText('sua dica') as HTMLTextAreaElement).disabled).toBe(true);
+    expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('soltou a carta sem dica: avisa, treme e foca o campo; o aviso some quando a dica fica pronta', () => {
+    vi.useFakeTimers();
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    const p = panelProps(v);
+    const { container, rerender } = render(<ActionPanel {...p} />);
+    const msg = 'Antes de jogar a carta, escreva a dica ou marque “vou falar na call”.';
+    expect(screen.queryByText(msg)).toBeNull();
+    rerender(<ActionPanel {...p} needClueTick={1} />);
+    expect(screen.getByText(msg)).toBeTruthy();
+    expect(container.querySelector('.dx-clue-box.need')).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByLabelText('sua dica'));
+    rtlAct(() => vi.advanceTimersByTime(500));
+    expect(container.querySelector('.dx-clue-box.need')).toBeNull();
+    // outra tentativa treme de novo
+    rerender(<ActionPanel {...p} needClueTick={2} />);
+    expect(container.querySelector('.dx-clue-box.need')).toBeTruthy();
+    // dica pronta: o aviso some
+    rerender(<ActionPanel {...p} needClueTick={2} clue="luar" />);
+    expect(screen.queryByText(msg)).toBeNull();
+  });
+
+  it('o tique com a dica já pronta não avisa; o tique antigo ao abrir não dispara nada', () => {
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    const p = panelProps(v);
+    const { container, rerender } = render(<ActionPanel {...p} needClueTick={3} />);
+    expect(container.querySelector('.dx-err')).toBeNull();
+    rerender(<ActionPanel {...p} needClueTick={4} clue="luar" />);
+    expect(container.querySelector('.dx-err')).toBeNull();
+    expect(container.querySelector('.dx-clue-box.need')).toBeNull();
+  });
+
+  it('desmontar no meio da tremida limpa o timer', () => {
+    vi.useFakeTimers();
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    const p = panelProps(v);
+    const { container, rerender, unmount } = render(<ActionPanel {...p} />);
+    rerender(<ActionPanel {...p} needClueTick={1} />);
+    const box = container.querySelector('.dx-clue-box')!;
+    expect(box.classList.contains('need')).toBe(true);
+    unmount();
+    // com o timer limpo, a caixa (solta do documento) não é mais mexida
+    rtlAct(() => vi.advanceTimersByTime(1000));
+    expect(box.classList.contains('need')).toBe(true);
+  });
+
+  it('quem espera vê quem narra', () => {
+    const room = started(4);
+    const v = dixitView(room, othersOf(room)[0]!);
+    render(<ActionPanel {...panelProps(v)} />);
+    expect(screen.getByText('Esperando a carta e a dica…')).toBeTruthy();
+    expect(screen.queryByLabelText('sua dica')).toBeNull();
+  });
+
+  it('escolha: pede pra arrastar a carta, sem botão de jogar', () => {
+    const room = told(4);
+    const v = dixitView(room, othersOf(room)[0]!);
+    const { container } = render(<ActionPanel {...panelProps(v)} />);
+    expect(container.querySelector('p')!.textContent).toBe('Arraste pra mesa a carta da sua mão que mais combina com a dica.');
+    expect(screen.queryByRole('button', { name: /jogar essa/ })).toBeNull();
+  });
+
+  it('escolha em 3 jogadores: 2 cartas e "1 de 2 na mesa"', () => {
+    const room = told(3);
+    const v = dixitView(room, othersOf(room)[0]!);
+    const p = panelProps(v);
+    const { container, rerender } = render(<ActionPanel {...p} need={2} />);
+    expect(container.querySelector('p')!.textContent).toBe('Arraste pra mesa as 2 cartas da sua mão que mais combinam com a dica.');
+    rerender(<ActionPanel {...p} need={2} pending={1} />);
+    expect(screen.getByText('1 de 2').tagName).toBe('B');
+    expect(container.querySelector('p')!.textContent).toContain('1 de 2 na mesa (clique nela pra desfazer).');
+  });
+
+  it('votação: confirmar sem voto avisa', () => {
+    const room = voting(4);
+    const v = dixitView(room, othersOf(room)[0]!);
+    const p = panelProps(v);
+    render(<ActionPanel {...p} />);
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar voto' }));
+    expect(p.actions.confirmVote).not.toHaveBeenCalled();
+    expect(screen.getByText('Clique numa carta da mesa primeiro.')).toBeTruthy();
+  });
+
+  it('votação: com voto, confirma', () => {
+    const room = voting(4);
+    const me = othersOf(room)[0]!;
+    const card = dixitView(room, me).game.table.find((t) => !t.mine)!.cardId;
+    const v = dixitView(play(room, me, { type: 'vote', cardId: card }), me);
+    const p = panelProps(v);
+    render(<ActionPanel {...p} />);
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar voto' }));
+    expect(p.actions.confirmVote).toHaveBeenCalledTimes(1);
+  });
+
+  it('revelação pronta: só o host avança', () => {
+    const room = revealed(4);
+    const v = dixitView(room, othersOf(room)[0]!);
+    const p = panelProps(v);
+    const { rerender } = render(<ActionPanel {...p} />);
+    expect(screen.getByText('esperando o host…')).toBeTruthy();
+    rerender(<ActionPanel {...p} host />);
+    fireEvent.click(screen.getByRole('button', { name: 'próxima rodada' }));
+    expect(p.actions.next).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('topo', () => {
+  it('mostra a dica, a fase e o destravar só pro host', () => {
+    const room = told(4, 'luar');
+    const onForce = vi.fn();
+    const v0 = dixitView(room, 'p0');
+    const { rerender } = render(<DixitTopBar view={v0} name={namer(v0)} color={colorer(v0)} tilt onTilt={vi.fn()} host onForce={onForce} />);
+    expect(screen.getByText('“luar”')).toBeTruthy();
+    expect(screen.getByText('escolha · 0 de 3 · meta 30')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('diquisti');
+    fireEvent.click(screen.getByRole('button', { name: 'destravar' }));
+    expect(onForce).toHaveBeenCalled();
+    const v1 = dixitView(room, 'p1');
+    rerender(<DixitTopBar view={v1} name={namer(v1)} color={colorer(v1)} tilt onTilt={vi.fn()} host={false} onForce={onForce} />);
+    expect(screen.queryByRole('button', { name: 'destravar' })).toBeNull();
   });
 });
