@@ -19,7 +19,7 @@
     {
       "binding": "DB",
       "database_name": "cartolina",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "6965fbf3-8bf8-4982-9538-bfd08c964cd5",
       "migrations_dir": "migrations"
     }
   ],
