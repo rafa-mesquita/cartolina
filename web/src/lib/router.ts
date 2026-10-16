@@ -10,7 +10,7 @@ export type Route =
 export function parseHash(hash: string): Route {
   const room = hash.match(/^#\/sala\/([A-Za-z0-9]{4})$/);
   if (room) return { name: 'room', code: room[1]!.toUpperCase() };
-  // Links antigos de grupo (#/g/<slug>): o histórico agora é do jogo.
+  // Links antigos (#/g/<slug>): o histórico agora é do jogo.
   if (/^#\/g\/[^/]+$/.test(hash)) return { name: 'game', game: 'ito', tab: 'historico', legacy: true };
   const game = hash.match(/^#\/([a-z]+)(\/historico)?$/);
   if (game && isGameId(game[1])) return { name: 'game', game: game[1], tab: game[2] ? 'historico' : 'jogar' };

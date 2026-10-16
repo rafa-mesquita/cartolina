@@ -284,6 +284,14 @@ describe('TopBar', () => {
     expect(screen.getByRole('img', { name: '3 vidas' })).toBeTruthy();
   });
 
+  it('mesa mostra o link do histórico embaixo do logo (fora das pílulas, que encostam nos assentos de cima)', () => {
+    const { container } = render(<TopBar view={viewOf(makeRoom(2), 'p0')} />);
+    const link = screen.getByRole('link', { name: '📜 histórico' });
+    expect(link.getAttribute('href')).toBe('#/ito/historico');
+    expect(link.closest('.pills')).toBeNull();
+    expect(container.querySelector('.brandcol')?.contains(link)).toBe(true);
+  });
+
   it('copiar o link dá retorno; sem clipboard não quebra', async () => {
     const writeText = vi.fn(async () => {});
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });

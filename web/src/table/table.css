@@ -9,8 +9,8 @@ body.grabbing, body.grabbing * { cursor: grabbing !important; }
 .pill.lives i.lost { color: transparent; -webkit-text-stroke: 1.5px var(--ink); opacity: 0.55; }
 .pill.code { cursor: pointer; }
 .brandcol { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-.grouplink { font: 600 13px/1.2 var(--font-ui); color: var(--ink); opacity: 0.75; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: underline dotted; text-underline-offset: 3px; }
-.grouplink:hover, .grouplink:focus-visible { opacity: 1; }
+.histlink { font: 600 13px/1.2 var(--font-ui); color: var(--ink); opacity: 0.75; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: underline dotted; text-underline-offset: 3px; }
+.histlink:hover, .histlink:focus-visible { opacity: 1; }
 
 /* assentos */
 .seat { position: absolute; display: flex; align-items: center; gap: 10px; z-index: 4; }

@@ -1,6 +1,7 @@
 import { CAMPAIGN_LIVES, type ItoRoomView } from '@cartolina/shared';
 import { useEffect, useRef, useState } from 'react';
-import { roomLink } from '../lib/router';
+import { catalogEntry } from '../games/catalog';
+import { gameHash, roomLink } from '../lib/router';
 
 const COPIED_MS = 2000;
 
@@ -31,9 +32,9 @@ export function TopBar({ view }: { view: ItoRoomView }) {
           cartolina<span>~</span>
         </div>
         {/* Embaixo do logo, e não nas pílulas: ali ele empurraria as pílulas por cima dos assentos de cima. */}
-        {view.group && (
-          <a className="grouplink" href={`#/g/${view.group.slug}`} target="_blank" rel="noopener" title="histórico do grupo">
-            📜 {view.group.name}
+        {catalogEntry(view.gameId)?.hasHistory && (
+          <a className="histlink" href={gameHash(view.gameId, 'historico')} target="_blank" rel="noopener" title="histórico do jogo">
+            📜 histórico
           </a>
         )}
       </div>
