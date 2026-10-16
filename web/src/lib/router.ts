@@ -1,13 +1,24 @@
+import { isGameId, type GameId } from '@cartolina/shared';
 import { useEffect, useState } from 'react';
 
-export type Route = { name: 'home' } | { name: 'room'; code: string } | { name: 'group'; slug: string };
+export type GameTab = 'jogar' | 'historico';
+export type Route =
+  | { name: 'home' }
+  | { name: 'room'; code: string }
+  | { name: 'game'; game: GameId; tab: GameTab; legacy?: true };
 
 export function parseHash(hash: string): Route {
   const room = hash.match(/^#\/sala\/([A-Za-z0-9]{4})$/);
   if (room) return { name: 'room', code: room[1]!.toUpperCase() };
-  const group = hash.match(/^#\/g\/([a-z0-9]{10})$/);
-  if (group) return { name: 'group', slug: group[1]! };
+  // Links antigos de grupo (#/g/<slug>): o histórico agora é do jogo.
+  if (/^#\/g\/[^/]+$/.test(hash)) return { name: 'game', game: 'ito', tab: 'historico', legacy: true };
+  const game = hash.match(/^#\/([a-z]+)(\/historico)?$/);
+  if (game && isGameId(game[1])) return { name: 'game', game: game[1], tab: game[2] ? 'historico' : 'jogar' };
   return { name: 'home' };
+}
+
+export function gameHash(game: GameId, tab: GameTab = 'jogar'): string {
+  return tab === 'historico' ? `#/${game}/historico` : `#/${game}`;
 }
 
 export function useHashRoute(): Route {
@@ -28,16 +39,11 @@ export function goHome(): void {
   window.location.hash = '#/';
 }
 
+export function goToGame(game: GameId, tab: GameTab = 'jogar'): void {
+  window.location.hash = gameHash(game, tab);
+}
+
 /** Link completo de uma sala (pra copiar e mandar pros amigos). */
 export function roomLink(code: string): string {
   return `${window.location.origin}${window.location.pathname}#/sala/${code}`;
-}
-
-export function goToGroup(slug: string): void {
-  window.location.hash = `#/g/${slug}`;
-}
-
-/** Link completo do grupo (é o segredo: quem tem vê o histórico). */
-export function groupLink(slug: string): string {
-  return `${window.location.origin}${window.location.pathname}#/g/${slug}`;
 }

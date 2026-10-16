@@ -43,12 +43,12 @@ describe('config', () => {
 describe('api', () => {
   it('createRoom devolve o código', async () => {
     const f = fakeFetch(201, { code: 'KXQ7' });
-    await expect(createRoom(f, 'http://s')).resolves.toBe('KXQ7');
-    expect(f).toHaveBeenCalledWith('http://s/rooms', { method: 'POST' });
+    await expect(createRoom('ito', f, 'http://s')).resolves.toBe('KXQ7');
+    expect(f).toHaveBeenCalledWith('http://s/rooms', expect.objectContaining({ method: 'POST', body: JSON.stringify({ game: 'ito' }) }));
   });
 
   it('createRoom falha com erro claro', async () => {
-    await expect(createRoom(fakeFetch(503, { error: 'no_code' }), 'http://s')).rejects.toThrow('create_failed_503');
+    await expect(createRoom('ito', fakeFetch(503, { error: 'no_code' }), 'http://s')).rejects.toThrow('create_failed_503');
   });
 
   it('getRoomInfo devolve resumo ou null quando não existe', async () => {

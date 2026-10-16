@@ -113,32 +113,3 @@ export function loadSoundPref(): boolean {
 export function saveSoundPref(on: boolean): void {
   safeSet(local, SOUND_KEY, on ? 'on' : 'off');
 }
-
-const GROUPS_KEY = 'cartolina.groups';
-const MAX_GROUPS = 8;
-
-export interface RememberedGroup {
-  slug: string;
-  name: string;
-}
-
-/** Grupos abertos ou criados neste navegador (mais recentes primeiro), pra listar no início. */
-export function loadGroups(): RememberedGroup[] {
-  try {
-    const raw = JSON.parse(safeGet(local, GROUPS_KEY) ?? '[]') as unknown;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .filter(
-        (g): g is RememberedGroup =>
-          !!g && typeof g === 'object' && typeof (g as RememberedGroup).name === 'string' && /^[a-z0-9]{10}$/.test(String((g as RememberedGroup).slug)),
-      )
-      .slice(0, MAX_GROUPS);
-  } catch {
-    return [];
-  }
-}
-
-export function rememberGroup(group: RememberedGroup): void {
-  const next = [group, ...loadGroups().filter((g) => g.slug !== group.slug)].slice(0, MAX_GROUPS);
-  safeSet(local, GROUPS_KEY, JSON.stringify(next));
-}
