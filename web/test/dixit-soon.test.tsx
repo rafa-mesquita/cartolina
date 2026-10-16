@@ -15,13 +15,13 @@ function fakeConn(): GameConn {
   };
 }
 
-describe('Game (sala de Dixit)', () => {
+describe('Game (sala de Diquisti)', () => {
   it('mostra "em breve" com o logo e um jeito de voltar pro início', () => {
     const view = roomView(createRoom('ABCD', 0, null, 'dixit'), null);
     const snap: ConnSnapshot = { status: 'joined', playerId: null, view, joinError: null };
     window.location.hash = '#/sala/ABCD';
     render(<Game conn={fakeConn()} snap={snap} view={view} />);
-    expect(screen.getByText('a mesa do Dixit está sendo montada')).toBeTruthy();
+    expect(screen.getByText('a mesa do Diquisti está sendo montada')).toBeTruthy();
     expect(document.querySelector('h1.logo')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'voltar pro início' }));
     expect(window.location.hash).toBe('#/');

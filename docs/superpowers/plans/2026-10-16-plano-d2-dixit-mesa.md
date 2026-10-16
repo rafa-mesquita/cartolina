@@ -1,14 +1,27 @@
-# Plano D2 — mesa do Dixit no site Implementation Plan
+# Plano D2 — mesa do Diquisti (id `dixit`) no site Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Levar a mesa do Dixit aprovada no protótipo (`prototipo/dixit/`) para o site de verdade (React, `web/src/games/dixit/`), ligada ao servidor, com lobby próprio, bots de desenvolvimento e, depois que a estante de jogos entrar no `main`, o Dixit jogável a partir da página do jogo.
 
-**Architecture:** A lógica que dá para testar sem tela fica em módulos puros: geometria da mesa (`geometry.ts`), cartas provisórias (`art.ts`), status e rótulos (`status.ts`) e a **linha do tempo da revelação** (`reveal.ts`, que diz o que aparece em cada instante). Os componentes React são finos e só desenham a `DixitView` que o servidor manda. O hook `useReveal` só faz o relógio andar e toca os sons. Não há motor imperativo nem arrasto: no Dixit tudo é clique, e o 3D é só CSS (`rotateX` no feltro e contra-rotação nas cartas).
+**Architecture:** A lógica que dá para testar sem tela fica em módulos puros: geometria da mesa (`geometry.ts`), cartas provisórias (`art.ts`), status e rótulos (`status.ts`) e a **linha do tempo da revelação** (`reveal.ts`, que diz o que aparece em cada instante). Os componentes React são finos e só desenham a `DixitView` que o servidor manda. O hook `useReveal` só faz o relógio andar e toca os sons. O 3D é só CSS (`rotateX` no feltro e contra-rotação nas cartas). A mão usa **arrastar e soltar** com pointer events (hook `useHandDrag`, ver "Atualização de 2026-10-16" abaixo); o resto é clique.
 
 **Tech Stack:** React 19 + TypeScript 5.9, Vite, Vitest 4 + Testing Library (jsdom), CSS puro; regras e tipos de `@cartolina/shared` (D1).
 
-**Spec:** `docs/superpowers/specs/2026-10-15-dixit-design.md` §5 e §6 (atualizadas com o protótipo em 2026-10-16) e `2026-10-16-estante-de-jogos-design.md` (da sessão do ITO, substitui a §4). Referência visual e de comportamento: `prototipo/dixit/index.html` (abra com o `launch.json` "prototipo-dixit", porta 5175).
+**Spec:** `docs/superpowers/specs/2026-10-15-dixit-design.md` §5 e §6 (atualizadas com o protótipo em 2026-10-16) e `2026-10-16-estante-de-jogos-design.md` (da sessão do ITO, substitui a §4). Referência visual e de comportamento: `prototipo/dixit/index.html` (abra com o `launch.json` "prototipo-dixit", porta 5176, em `/prototipo/dixit/`).
+
+---
+
+## Atualização de 2026-10-16 (vale por cima das tarefas abaixo)
+
+Depois que o plano foi escrito, o usuário testou o protótipo com a arte real e pediu mudanças. **O protótipo (`prototipo/dixit/index.html`) já tem tudo isso funcionando: é a referência de comportamento.** Onde o código de uma tarefa abaixo contradiz esta seção, vale esta seção (spec §5.1, §5.3 e §6 atualizadas).
+
+1. **Nome Diquisti.** Tudo que o jogador vê diz "Diquisti" (título da aba, lobby, mesa, verso da carta, catálogo, textos de teste). O id interno continua `dixit` (`gameId`, pastas, classes CSS, `web/public/dixit/`, nomes de função/tipo). Tarefa 3: o verso (`CARD_BACK_SVG`) escreve `diquisti` com `font-size="22"`. Tarefa 13: `title: 'Diquisti'` no catálogo e "Diquisti tá chegando" nos testes da página do jogo.
+2. **Arte real já existe** (90 cartas em `web/public/dixit/cards/d001…d090.webp`, 600×900): `REAL_ART = true` (Tarefa 3 já ajustada). `<img className="dx-art" … draggable={false}>` com `object-fit: cover`; se a imagem falhar (`onError`), mostra a pintura SVG.
+3. **Arrastar e soltar na mão (Tarefas 7, 8 e 10).** Novo módulo puro `web/src/games/dixit/hand.ts` com testes: `orderHand(prev: string[], hand: string[]): string[]` (mantém a ordem local, tira o que saiu, põe o que entrou no fim), `moveCard(order, id, toIndex)` e `insertIndex(x, count)` (`clamp(round((x - 420) / 116 + (count - 1) / 2), 0, count - 1)`, `x` em px do palco dentro da mão de 840 px). Hook `useHandDrag` (pointer events, `setPointerCapture`, limiar de 6 px, `pointercancel`/`lostpointercapture` devolvem a carta sem jogar; a escala do palco vem de `getBoundingClientRect().width / largura do palco`). Durante o arrasto: a carta segue o ponteiro (`translate` + leve giro, `scale(1.08)`, sem transição, `pointer-events: none`), as outras abrem espaço no índice de inserção, o feltro ganha a classe `drop-ready` (pode jogar) e `drop-over` (está em cima: `document.elementFromPoint(x, y)?.closest('.dx-felt')`). Soltar no feltro, se for a sua vez: narrador → `tell { cardId, clue }` com a dica do painel; escolha → `submit` + `confirm` (em 3 jogadores, a 1ª carta fica pendente no estado local e só a 2ª manda `submit` com as duas; clicar na pendente devolve). Soltar em qualquer outro lugar → reordena. Clique sem arrastar → amplia. A ordem da mão fica em estado do componente da mesa (some ao recarregar; tudo bem). **Sai** o botão "contei" e o "jogar essa(s)" do painel (Tarefa 8): o texto vira "arraste a carta pra mesa" (com "1 de 2 na mesa" em 3 jogadores). Os testes de painel/mesa que clicavam nesses botões passam a disparar `pointerdown/pointermove/pointerup` (Testing Library `fireEvent.pointerDown` etc., com `document.elementFromPoint` simulado com `vi.spyOn`).
+4. **Cartas soltas na fase de escolha (Tarefas 2, 7 e 10).** Em `geometry.ts`: `looseSpot(used: [number, number][], rng): [x, y, giro]` (14 sorteios em x 250–750, y 250–480, fica o mais longe das já usadas, giro de −24° a 24°; testes com `mulberry32`). Na fase `submitting`, a mesa desenha uma carta virada por jogada já feita: narrador (1) + cada jogador em `confirmed` (`dixitPicksPerPlayer` cartas) + suas pendentes; chave `${jogador}:${k}`; posição guardada num `useRef<Map>` até a fase acabar. A sua cai onde você soltou (ponto da tela → feltro, aproximado pelo retângulo do feltro), as dos outros voam do assento (`animate` com o deslocamento do centro do assento até o ponto, `translateZ(150px)`, 680 ms) e tocam `land`. `z-index` crescente: a pilha sobe. Ao passar pra `voting`: se faltar a carta de alguém (quem jogou por último já fecha a fase), ela cai solta primeiro e a arrumação espera 750 ms; depois as soltas vão pras posições de `slots(n)` (na ordem de `table`, que o servidor já sorteia) com `transition` de 750 ms em `left/top/transform` e giro voltando a 0, e viram uma a uma (atraso +820 ms). O `.tcard` ganha `rotateZ(var(--rz, 0deg))` logo depois do `translate(-50%,-100%)`.
+5. **Dono da carta na revelação (Tarefas 5 e 9).** O dono aparece num **selo no topo da carta** (`.dx-owner`: pílula com personagem de 28 px + nome em DM Serif 15 px, fundo `--bg`, fio creme; o seu com borda e texto mostarda e "você"), dentro da face, `top: -15px`. Quando o selo aparece, a etiqueta "sua" sai. O rótulo "carta do narrador" sobe (`margin-bottom: 26px`) pra não bater no selo. Os votos continuam na base da carta.
+6. **Sons mais suaves (Tarefa 1).** Em `web/src/games/dixit/sounds.ts` (ou onde a Tarefa 1 puser), volume geral menor que o do ITO: arquivo da carta a 45% do volume pedido (os testes da Tarefa 1 passam a esperar `0.4 * 0.45 = 0.18` e `0.7 * 0.45 = 0.315`, arredondando com `toBeCloseTo`), e os sintetizados do Dixit a metade (passar `vol` já multiplicado por 0,5, sem mexer no `sounds.ts` do ITO). "tunc" de erro e "tic" de virar ainda mais baixos (0,2/0,07 e 0,15/0,05 antes do fator).
 
 ---
 
@@ -28,7 +41,7 @@
 
 Criar em `web/src/games/dixit/`:
 - `geometry.ts`: palco, trilha de casas, peões, posições das cartas na mesa e arco dos assentos (puro).
-- `art.ts`: cartas provisórias em SVG geradas pelo id, verso, `REAL_ART` e `cardImageUrl` (puro).
+- `art.ts`: cartas provisórias em SVG geradas pelo id, verso, `REAL_ART` (ligado: as 90 cartas já existem) e `cardImageUrl` (puro).
 - `status.ts`: nomes e cores por id, ordem dos assentos, status do assento e rótulo da fase (puro).
 - `reveal.ts`: linha do tempo da revelação, quadro em cada instante, motivos dos pontos e frases-resumo (puro).
 - `useStageFit.ts` (escala do palco) e `useReveal.ts` (relógio e sons da revelação).
@@ -314,9 +327,9 @@ describe('cartas provisórias', () => {
   });
 
   it('verso e caminho da arte real', () => {
-    expect(CARD_BACK_SVG).toContain('dixit');
+    expect(CARD_BACK_SVG).toContain('diquisti');
     expect(cardImageUrl('d001')).toMatch(/dixit\/cards\/d001\.webp$/);
-    expect(REAL_ART).toBe(false);
+    expect(REAL_ART).toBe(true); // as 90 cartas já estão em web/public/dixit/cards
   });
 });
 ```
@@ -328,8 +341,8 @@ describe('cartas provisórias', () => {
 ```ts
 import { mulberry32 } from '@cartolina/shared';
 
-/** Liga quando a arte de verdade estiver em `web/public/dixit/cards/` (o script da arte vira isto pra `true`). */
-export const REAL_ART = false;
+/** Arte de verdade em `web/public/dixit/cards/` (gerada por `npm run dixit:cartas`). `false` volta para as pinturas provisórias em SVG. */
+export const REAL_ART = true;
 
 /** Relativo à base do site (funciona no GitHub Pages, em subpasta). */
 export function cardImageUrl(id: string): string {
@@ -401,7 +414,7 @@ const ring = (k: number) =>
   `<circle cx="100" cy="150" r="${58 - k * 13}" fill="none" stroke="${k % 2 ? '#2F5046' : '#F2A541'}" stroke-width="${k % 2 ? 6 : 0.9}" opacity="${k % 2 ? 1 : 0.55}" stroke-dasharray="90 40"/>`;
 
 /** Verso provisório: verde-floresta, espirais em mostarda e "dixit". */
-export const CARD_BACK_SVG = `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="300" fill="#1B2F2A"/><rect x="12" y="12" width="176" height="276" rx="6" fill="none" stroke="#F6EAD2" stroke-width=".8" opacity=".6"/>${[0, 1, 2, 3].map(ring).join('')}<text x="100" y="158" text-anchor="middle" font-family="DM Serif Display, serif" font-size="24" fill="#F6EAD2">dixit</text></svg>`;
+export const CARD_BACK_SVG = `<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="300" fill="#1B2F2A"/><rect x="12" y="12" width="176" height="276" rx="6" fill="none" stroke="#F6EAD2" stroke-width=".8" opacity=".6"/>${[0, 1, 2, 3].map(ring).join('')}<text x="100" y="158" text-anchor="middle" font-family="DM Serif Display, serif" font-size="22" fill="#F6EAD2">diquisti</text></svg>`;
 ```
 
 - [ ] **Step 4:** PASS. Rode também o typecheck do `web`.

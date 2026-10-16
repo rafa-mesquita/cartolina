@@ -4,8 +4,8 @@
     {
       "name": "prototipo-dixit",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "http-server", "prototipo/dixit", "-p", "5175", "-c-1", "--silent"],
-      "port": 5175
+      "runtimeArgs": ["--yes", "http-server", ".", "-p", "5176", "-c-1", "--silent"],
+      "port": 5176
     },
     {
       "name": "prototipo",

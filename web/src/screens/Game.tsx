@@ -5,7 +5,7 @@ import { Table } from '../table/Table';
 import { Lobby } from './Lobby';
 import { Toasts } from './Toasts';
 
-/** Sala de Dixit: a mesa chega no Plano D2. */
+/** Sala de Diquisti (id interno `dixit`): a mesa chega no Plano D2. */
 function DixitSoon() {
   return (
     <main className="screen">
@@ -13,8 +13,8 @@ function DixitSoon() {
         cartolina<span>~</span>
       </h1>
       <section className="panel">
-        <h2>a mesa do Dixit está sendo montada</h2>
-        <p>Essa sala é de Dixit: a mesa ainda está sendo montada.</p>
+        <h2>a mesa do Diquisti está sendo montada</h2>
+        <p>Essa sala é de Diquisti: a mesa ainda está sendo montada.</p>
         <button className="btn" type="button" onClick={goHome}>
           voltar pro início
         </button>

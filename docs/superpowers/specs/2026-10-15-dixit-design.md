@@ -1,9 +1,15 @@
-# cartolina~ — Dixit (design)
+# cartolina~ — Diquisti (design)
 
 Data: 2026-10-15. Segundo jogo do cartolina~, sobre a base descrita em
 `2026-10-15-cartolina-ito-design.md` (§3 arquitetura, §4 interface). Esta spec
 cobre a mecânica completa com **cartas provisórias**; a arte de verdade das
 cartas será feita pelo usuário depois e entra só como arquivos (§7).
+
+**Nome:** o jogo se chama **Diquisti** em tudo que o jogador vê (estante,
+lobby, mesa, verso da carta, título da aba) — decisão do usuário, 2026-10-16.
+O id interno continua `dixit` (`gameId`, pastas `games/dixit`, classes
+`.dixit`, `web/public/dixit/`), pra não mexer em servidor, banco e salas;
+"Dixit" no resto desta spec é esse id ou a referência ao jogo de tabuleiro.
 
 ## 1. Objetivo
 
@@ -128,7 +134,7 @@ diretas). Muda para:
   `lobby`.
 - `scoring.ts`: função pura `scoreRound(...)` → pontos por jogador e detalhes
   (quem acertou, votos por carta). Concentra a maior parte dos testes.
-- `deck.ts`: `DIXIT_DECK_SIZE` e ids `d001…dNNN`. Provisório: 84.
+- `deck.ts`: `DIXIT_DECK_SIZE` e ids `d001…dNNN`. 90 (a arte da §7).
 - `rules.ts`: implementa `GameModule`; `onPresenceChange` cuida de narrador
   inativo, jogadores inativos e pausa com < 3.
 
@@ -187,14 +193,31 @@ bots. O que o usuário aprovou e pediu durante o teste vale para a mesa do site.
   cursor passa ou quando estão em destaque. **Nenhuma carta pode afundar no
   feltro** em animação: a mola só passa do ponto subindo, a carta fica sempre
   2 px acima do feltro e levanta enquanto vira.
-- **Mão** embaixo, plana, em leque; a carta sobe ao passar o cursor; escolhida
-  ganha moldura mostarda.
+- **Mão** embaixo, plana, em leque; a carta sobe ao passar o cursor.
+- **Arrastar e soltar** (pedido do usuário, 2026-10-16): **arrastar uma carta
+  da mão pro feltro joga a carta** (sem botão "jogar"). O feltro ganha borda
+  mostarda enquanto você arrasta uma carta que pode ser jogada, e brilho quando
+  ela está em cima dele. Narrador: soltar no feltro já conta, com a dica que
+  estiver escrita no painel (a dica é opcional). Em 3 jogadores, a 1ª carta
+  fica na mesa esperando a 2ª (clicar nela devolve pra mão); a 2ª fecha a
+  jogada. **Arrastar dentro da mão troca a posição** das cartas (as outras
+  abrem espaço enquanto você arrasta); a ordem é só sua, guardada no
+  navegador, e vale mesmo fora da sua vez. **Clique simples** numa carta da mão
+  amplia. Funciona com mouse e toque (pointer events).
+- **Cartas soltas na fase de escolha** (pedido do usuário, 2026-10-16): cada
+  carta jogada cai **virada e solta** no feltro, com um giro aleatório, e a
+  pilha vai crescendo até todos jogarem: a sua cai onde você soltou; a de cada
+  outro jogador **voa do assento dele** pro feltro (dá pra ver quem acabou de
+  jogar). A do narrador cai primeiro. Quando a última carta pousa, elas se
+  **arrumam em fileira na ordem sorteada** pelo servidor e viram uma a uma.
+  Só a posição é visual: o servidor continua sem dizer de quem é cada carta.
 - **Topo:** dica do narrador num selo (personagem + dica em itálico, ou "dica
   falada na call"), e pílulas de rodada/fase/meta, som e mesa 3D.
 - **Painel de ação** (canto inferior direito): o que fazer agora em cada fase
-  (narrar com campo de dica até 80 letras + "contei"; "jogar essa(s)";
-  "confirmar voto"; esperas com contagem).
-- **Visualizador:** clique duplo, botão ⤢ ou **rodinha pra cima** sobre
+  (narrar: campo de dica até 80 letras + "arraste a carta pra mesa";
+  escolher: "arraste pra mesa…", com "1 de 2" em 3 jogadores; "confirmar
+  voto"; esperas com contagem).
+- **Visualizador:** clique (mão), clique duplo (mesa), botão ⤢ ou **rodinha pra cima** sobre
   qualquer carta (mão ou mesa) amplia; **rodinha pra baixo**, Esc ou clique fora
   fecha; setas navegam.
 - Nada de interface por cima dos personagens (placar, pílulas e avisos ficam no
@@ -218,8 +241,10 @@ e "pular ›":
 2. **Votos:** as fichas (personagens) aparecem uma a uma nas cartas; legenda
    final "**A e B** acharam a carta do narrador" / "ninguém achou…" / "todo
    mundo achou: a dica foi fácil demais".
-3. **De quem era cada carta:** o dono aparece embaixo de cada carta; legenda
-   "a carta de **X** enganou 2 pessoas" (até 3 destaques).
+3. **De quem era cada carta:** um **selo no topo de cada carta** (personagem +
+   nome em pílula; o seu em mostarda, "você", no lugar da etiqueta "sua") —
+   os votos ficam na base da carta, o dono no topo. Fica até o fim da rodada.
+   Legenda "a carta de **X** enganou 2 pessoas" (até 3 destaques).
 4. **Pontos:** os peões andam casa a casa, com "+n" sobre o assento.
 
 A legenda não pula: a caixa fica parada (largura mínima estável) e só o texto
@@ -234,14 +259,16 @@ Fim de jogo: vencedores, confete na paleta, "jogar de novo"/"voltar pro lobby"
 ### 5.4 Protótipo
 
 `prototipo/dixit/` fica no repositório como referência (`launch.json`
-"prototipo-dixit", porta 5175). Regras empacotadas de `shared/` em `rules.js`.
+"prototipo-dixit", porta 5176, servindo a raiz do repositório: abrir
+`/prototipo/dixit/`). Usa a arte real de `web/public/dixit/cards/` (pintura
+em SVG se a imagem faltar). Regras empacotadas de `shared/` em `rules.js`.
 
 ### 5.5 Cartas provisórias
 
 Pequenas "pinturas" geradas a partir do id (céu em degradê, sol/lua, colinas,
 objetos como árvore, casa, porta, escada, balão, peixe no céu…), na paleta da
-identidade; verso com espirais e "dixit". Quando a arte real existir
-(`REAL_ART` ligado pelo script da §7), a carta usa
+identidade; verso com espirais e "diquisti". Quando a arte real existir
+(`REAL_ART`, já ligado — §7), a carta usa
 `web/public/dixit/cards/<id>.webp`.
 
 ### 5.6 Bots (só em desenvolvimento)
@@ -274,15 +301,24 @@ raiz `.dixit` das telas do Dixit (lobby e mesa).
   dono aparecendo ("deslize"); peão andando (estalinho); você pontuou
   (vitória); fim de jogo (vitória/derrota); ação recusada ("tunc"); botões
   (clique). Mesmo botão de som do ITO.
+- **Volume (pedido do usuário, 2026-10-16): tudo mais suave que no ITO.**
+  Sons sintetizados passam por um ganho mestre de 0,5; o arquivo da carta toca
+  a 45% do volume pedido; o "tunc" de erro e o "tic" da carta virando ficaram
+  mais baixos ainda.
 
-## 7. Arte das cartas (entrega do usuário, depois)
+## 7. Arte das cartas
 
-- Formato retrato **2:3** (como a carta original, 80×120 mm); PNG/JPG em
-  qualquer tamanho.
-- `npm run dixit:cartas <pasta>`: converte para WebP 800×1200 (visualizador)
-  + miniatura, renomeia para `d001…`, grava em `web/public/dixit/cards/` e
-  atualiza `DIXIT_DECK_SIZE`.
-- O script também liga `REAL_ART` em `web/src/games/dixit/art.ts`.
+- **Feita:** 90 cartas pintadas no Google Flow (surrealismo em óleo; prompts
+  em `docs/dixit/cartas-prompts.md`), escolhidas pelo usuário entre 368.
+- Formato retrato **2:3** (como a carta original, 80×120 mm).
+- `npm run dixit:cartas -- <pasta | lista.json>`: recorta no centro para 2:3,
+  grava WebP 600×900 (~95 KB cada, ~8,6 MB o baralho) como `d001…` em
+  `web/public/dixit/cards/`, escreve `cartas.json` (id → tema → origem) e
+  atualiza `DIXIT_DECK_SIZE`. A lista é um JSON
+  `[{ "file": "...jpg", "tema": "..." }]` na ordem das cartas.
+- `REAL_ART` em `web/src/games/dixit/art.ts` já nasce `true`; as pinturas
+  provisórias em SVG ficam como reserva.
+- Novas cartas depois: gerar, pôr na lista e rodar o script de novo.
 - Verso, capa e sons também podem ser trocados por arquivos.
 
 ## 8. Erros e casos de borda
