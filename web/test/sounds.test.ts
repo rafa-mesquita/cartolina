@@ -61,10 +61,10 @@ describe('sons de arquivo (carta)', () => {
     expect(played()[0]!.volume).toBeCloseTo(0.5);
   });
 
-  it('hover (mouse numa capa) não engole o som do clique logo depois', () => {
+  it('hover (mouse numa capa) é outro som, não o arquivo da carta, e não engole o clique logo depois', () => {
     playSound('hover', 0, 0, 0.5);
     playSound('card', 0, 10);
-    expect(played().map((a) => a.volume)).toEqual([0.35, 1]);
+    expect(played().map((a) => a.volume)).toEqual([1]);
   });
 
   it('mudo não toca nada', () => {
@@ -85,7 +85,7 @@ describe('sons de arquivo (carta)', () => {
 });
 
 describe('sons sintetizados (revelação)', () => {
-  const SYNTH: SoundName[] = ['flip', 'error', 'win', 'lose', 'join', 'click'];
+  const SYNTH: SoundName[] = ['flip', 'error', 'win', 'lose', 'join', 'click', 'hover'];
 
   /** AudioContext mínimo: conta osciladores e ruídos criados. */
   function fakeAudio(resume: () => Promise<void> = () => Promise.resolve()) {
