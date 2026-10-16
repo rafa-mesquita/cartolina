@@ -38,6 +38,29 @@ describe('sons de arquivo (carta)', () => {
     expect(played().map((a) => a.volume)).toEqual([0.7, 1]);
   });
 
+  it('carta pousando na mesa (land) usa o mesmo arquivo, bem mais baixo', () => {
+    playSound('land', 0, 0);
+    expect(played()).toHaveLength(1);
+    expect(played()[0]!.volume).toBe(0.4);
+    expect(played()[0]!.src).toMatch(/sounds\/card\.mp3$/);
+  });
+
+  it('escolher (pick) nunca é engolido pelo intervalo mínimo', () => {
+    playSound('land', 0, 0);
+    playSound('pick', 0, 10);
+    expect(played().map((a) => a.volume)).toEqual([0.4, 0.7]);
+  });
+
+  it('sem ganho o volume do arquivo não muda (o DITU segue igual)', () => {
+    playSound('card', 0, 0);
+    expect(played()[0]!.volume).toBe(1);
+  });
+
+  it('o ganho opcional multiplica o volume do arquivo', () => {
+    playSound('card', 0, 0, 0.5);
+    expect(played()[0]!.volume).toBeCloseTo(0.5);
+  });
+
   it('mudo não toca nada', () => {
     saveSoundPref(false);
     playSound('card', 0, 0);
