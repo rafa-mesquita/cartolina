@@ -18,8 +18,8 @@ Execução da Parte A com subagentes (uma tarefa por vez; revisão de conformida
 | 5 Linha do tempo da revelação (`me` → "a sua carta") | aprovada | a86b4b3, 803fe69 |
 | 6 Identidade visual (CSS, CardArt, fundo, carta ampliada) | aprovada | 16d22eb, e7d6774 |
 | 7 Feltro, assentos e mão (+ `delta-7.md`; `hand.ts` virou `handOrder.ts`) | aprovada | 2e845e0, f41245a |
-| 8 Painel e topo (+ `delta-8.md`) | a fazer | |
-| 9 Revelação na tela (+ `delta-9.md`) | a fazer | |
+| 8 Painel e topo (+ `delta-8.md`) | aprovada | 2fd451f, 5050f85 |
+| 9 Revelação na tela (+ `delta-9.md`) | aprovada | 961785e, 43fa006 |
 | 10 Mesa inteira e `Game.tsx` (+ `delta-10.md`) | a fazer | |
 | 11 Lobby e bots | a fazer | |
 
