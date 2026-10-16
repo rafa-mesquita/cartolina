@@ -38,6 +38,8 @@ export interface ConnOptions {
   name: string;
   color: string;
   createSocket?: (url: string) => SocketLike;
+  /** Pergunta ao servidor se a sala ainda existe (usada depois de várias falhas seguidas de conexão). */
+  roomExists?: () => Promise<boolean>;
 }
 
 /** Erros que só acontecem ao entrar; com eles o socket fica aberto esperando nova tentativa. */
@@ -47,6 +49,7 @@ export const CURSOR_IDLE_INTERVAL_MS = 84;
 export const CURSOR_DRAG_INTERVAL_MS = 50;
 /** Parado, reenvia a última posição de tempos em tempos (os outros escondem cursor sem notícia há 6 s). */
 export const CURSOR_KEEPALIVE_MS = 2000;
+const GONE_CHECK_AFTER = 3;
 const OPEN = 1;
 const MAX_BACKOFF_MS = 10_000;
 /** Tempo que o servidor tem para responder ao ping de verificação feito ao voltar para a aba. */
@@ -80,6 +83,7 @@ export class RoomConnection {
   private pendingCursor: CursorFx | null = null;
   private cursorTimer: ReturnType<typeof setTimeout> | null = null;
   private lastCursor: CursorFx | null = null;
+  private checkingRoom = false;
   private keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private opts: ConnOptions) {}
@@ -296,6 +300,26 @@ export class RoomConnection {
       this.retryTimer = null;
       this.open();
     }, delay);
+    if (this.attempt >= GONE_CHECK_AFTER) this.checkRoomGone();
+  }
+
+  /** Sala que expirou dá 404 no upgrade (visto como 1006) para sempre: depois de algumas falhas, confere. */
+  private checkRoomGone(): void {
+    const check = this.opts.roomExists;
+    if (!check || this.checkingRoom) return;
+    this.checkingRoom = true;
+    check().then(
+      (exists) => {
+        this.checkingRoom = false;
+        if (exists || this.stopped || this.snap.status !== 'reconnecting') return;
+        if (this.retryTimer) clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+        this.setSnap({ status: 'gone' });
+      },
+      () => {
+        this.checkingRoom = false; // sem rede: segue tentando
+      },
+    );
   }
 
   private startHeartbeat(): void {

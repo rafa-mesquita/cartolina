@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RoomConnection, type SocketLike } from '../src/net/connection';
+import { RoomConnection, type ConnOptions, type SocketLike } from '../src/net/connection';
 
 class FakeSocket implements SocketLike {
   static all: FakeSocket[] = [];
@@ -38,13 +38,14 @@ const TOKEN = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b';
 const last = () => FakeSocket.all[FakeSocket.all.length - 1]!;
 const made: RoomConnection[] = [];
 
-function make() {
+function make(extra: Partial<ConnOptions> = {}) {
   const conn = new RoomConnection({
     url: 'ws://s/rooms/ABCD/ws',
     token: TOKEN,
     name: 'Ana',
     color: '#8EC5FF',
     createSocket: (url) => new FakeSocket(url),
+    ...extra,
   });
   made.push(conn);
   conn.start();
@@ -234,6 +235,51 @@ describe('RoomConnection', () => {
       vi.advanceTimersByTime(5000);
       expect(socket.messages().filter((m) => m.t === 'fx.cursor')).toHaveLength(1);
     });
+  });
+
+  /** Três falhas seguidas sem conseguir abrir (backoff 1 s, 2 s). */
+  function failThreeTimes() {
+    last().drop(1006);
+    vi.advanceTimersByTime(1000);
+    last().drop(1006);
+    vi.advanceTimersByTime(2000);
+    last().drop(1006);
+  }
+
+  it('3 falhas seguidas: pergunta se a sala existe; se não, para e vira gone', async () => {
+    const roomExists = vi.fn(async () => false);
+    const conn = make({ roomExists });
+    last().drop(1006);
+    vi.advanceTimersByTime(1000);
+    last().drop(1006);
+    expect(roomExists).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(2000);
+    last().drop(1006);
+    expect(roomExists).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(conn.getSnapshot().status).toBe('gone'));
+    const sockets = FakeSocket.all.length;
+    vi.advanceTimersByTime(60_000);
+    expect(FakeSocket.all).toHaveLength(sockets);
+  });
+
+  it('a sala existe: continua tentando', async () => {
+    const roomExists = vi.fn(async () => true);
+    const conn = make({ roomExists });
+    failThreeTimes();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(conn.getSnapshot().status).toBe('reconnecting');
+    const sockets = FakeSocket.all.length;
+    vi.advanceTimersByTime(4000);
+    expect(FakeSocket.all.length).toBe(sockets + 1);
+  });
+
+  it('erro de rede na checagem: continua tentando', async () => {
+    const conn = make({ roomExists: vi.fn(async () => Promise.reject(new Error('offline'))) });
+    failThreeTimes();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(conn.getSnapshot().status).toBe('reconnecting');
   });
 
   it('stop fecha e não reconecta; ações só saem com o socket aberto', () => {
