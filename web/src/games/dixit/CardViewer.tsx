@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type KeyboardEvent } from 'react';
 import { CardArt } from './CardArt';
 
 interface Props {
@@ -9,26 +9,34 @@ interface Props {
   onClose: () => void;
 }
 
-/** Carta ampliada: setas navegam; rodinha pra baixo, Esc ou clique fora fecham. */
+/** Carta ampliada: setas navegam; rodinha pra baixo, Esc ou clique fora fecham. O foco vai pro diálogo e volta ao fechar. */
 export function CardViewer({ ids, index, label, onIndex, onClose }: Props) {
   const opened = useRef(Date.now());
+  const dialog = useRef<HTMLDivElement>(null);
   const id = ids[index];
-  const go = (d: number) => onIndex((index + d + ids.length) % ids.length);
+  const go = (d: number) => {
+    if (ids.length > 0) onIndex((index + d + ids.length) % ids.length);
+  };
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft') onIndex((index - 1 + ids.length) % ids.length);
-      if (e.key === 'ArrowRight') onIndex((index + 1) % ids.length);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [ids.length, index, onClose, onIndex]);
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.current?.focus();
+    return () => before?.focus();
+  }, []);
   if (!id) return null;
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') onClose();
+    else if (e.key === 'ArrowLeft') go(-1);
+    else if (e.key === 'ArrowRight') go(1);
+  };
   return (
     <div
+      ref={dialog}
       className="dx-viewer"
       role="dialog"
-      aria-label="carta ampliada"
+      aria-modal="true"
+      aria-label={label(id, index)}
+      tabIndex={-1}
+      onKeyDown={onKeyDown}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

@@ -91,7 +91,8 @@ button.dx-pill:hover { border-color: var(--must); }
 .dx-owner.me { border-color: var(--must); color: var(--must); }
 .dx-mine { position: absolute; top: 7px; left: 7px; font: 400 10.5px/1 var(--ui); padding: 2px 6px; border: .5px solid var(--cream); background: var(--bg); border-radius: 6px; }
 .dx-zoom { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: .5px solid var(--cream); background: rgba(27,47,42,.85); display: none; place-items: center; font-size: 13px; z-index: 2; padding: 0; }
-.dx-tcard:hover .dx-zoom, .dx-hcard:hover .dx-zoom { display: grid; }
+.dx-tcard:hover .dx-zoom, .dx-hcard:hover .dx-zoom, .dx-tcard:focus-within .dx-zoom, .dx-hcard:focus-within .dx-zoom { display: grid; }
+@media (hover: none) { .dx-tcard .dx-zoom, .dx-hcard .dx-zoom { display: grid; } }
 @keyframes dxPop { 0% { transform: scale(.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 @keyframes dxPopX { 0% { transform: translateX(-50%) scale(.2); opacity: 0; } 100% { transform: translateX(-50%) scale(1); opacity: 1; } }
 
