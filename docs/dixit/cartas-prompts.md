@@ -159,3 +159,15 @@ A1. a dream you had as a child · A2. something lost that will never be found ag
 
 **Prompts amplos:** pausados a pedido do usuário depois do A5 (as 4 variações saem parecidas demais; de cada amplo fica 1 carta só).
 84. **Música:** in a smoky jazz club a saxophonist plays and golden ribbons of sound pour out and turn into koi fish swimming around the audience, the piano keys float in the air like stepping stones [jazz club at night; smoky blue, brass gold and burgundy].
+
+## Temas extras do usuário (85–89), 2026-10-16
+
+Gerados em **x2** (2 opções por tema); a pedido do usuário, o Claude escolheu a melhor de cada par.
+Mesmo começo e mesmo fim de óleo da seção acima, com "Setting:" e "Palette:" no lugar dos colchetes.
+Entraram como `d091`–`d095` (`npm run dixit:cartas`).
+
+85. **Natal** (escolhida: 376 → d091): inside a cozy living room on Christmas Eve, a family of snowmen sits around a crackling fireplace without melting, the Christmas tree is decorated with tiny glowing planets instead of ornaments, wrapped gifts unwrap themselves and turn into paper birds flying up the chimney, a reindeer peeks curiously through a frosted window [snowy village at night seen through the window; deep red, pine green and candlelight gold].
+86. **Resetar** (375 → d092): a woman in a long coat presses a giant brass button rising from a meadow, and the world around her rewinds: a shattered vase reassembles in midair, autumn leaves fly back up onto the branches, rain falls upward into the clouds, the hands of a distant clock tower spin backwards, everything around her made of slightly blurred motion trails [misty countryside at dawn; pale blue, silver and soft spring green].
+87. **Pele pintada** (372 → d093): a person seen from behind, wrapped in a simple linen cloth from the waist down, whose bare back and arms are covered with a living painted landscape: a river flows down the spine, tiny birds fly across the shoulders, a small village with lit windows sits between the shoulder blades, and a painter on a tall ladder gently adds a rising sun with a fine brush; tender and artistic, not sensual [sunlit artist studio with tall windows; ultramarine, ochre and terracotta].
+88. **Trem** (370 → d094): an old steam locomotive pulling lit passenger cars runs on rails laid across the surface of a calm sea at night, its white smoke rises and turns into the milky way, passengers lean out of the glowing windows holding paper lanterns, and the reflection of the train in the water travels in the opposite direction [moonlit open ocean; navy blue, steam white and warm amber window light].
+89. **Cubo de gelo** (369 → d095): a giant ice cube slowly melting on the grass of a summer garden, frozen inside it is a tiny cozy room where a man reads by a lamp, unaware; the drops that fall from the cube turn into little silver fish swimming in the puddle at its base, a curious child kneels to watch [hot summer garden at noon, sunflowers and a blue sky; icy cyan, lemon yellow and leaf green].
