@@ -333,6 +333,29 @@ describe('Dixit: presença', () => {
     expect(s.table).toHaveLength(3);
   });
 
+  it('narrador sai depois de narrar: a rodada segue e ele pontua', () => {
+    const start = told(4);
+    const st = start.state.storyteller!;
+    const ctx = ctxOf(ids(4).filter((p) => p !== st));
+    let state = dixitOnPresenceChange(start.state, ctx);
+    expect(state.phase).toBe('submitting');
+    expect(state.storyteller).toBe(st);
+    for (const p of others(state)) {
+      state = act(state, p, { type: 'submit', cardIds: [state.hands[p]![0]!] }, ctx);
+      state = act(state, p, { type: 'confirm' }, ctx);
+    }
+    expect(state.phase).toBe('voting');
+    const [a, b, c] = others(state);
+    for (const p of [a!, b!, c!]) {
+      const cardId = p === a ? state.storyCard! : state.picks[a!]![0]!;
+      state = act(state, p, { type: 'vote', cardId }, ctx);
+      state = act(state, p, { type: 'confirm' }, ctx);
+    }
+    expect(state.phase).toBe('reveal');
+    expect(state.scores[st]).toBe(3); // alguns acharam: o narrador pontua mesmo ausente
+    expect(state.scores[a!]).toBe(5);
+  });
+
   it('jogador sai na votação: revela sem ele', () => {
     const start = voting(4);
     let state = start.state;

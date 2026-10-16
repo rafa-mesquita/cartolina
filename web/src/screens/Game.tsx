@@ -14,7 +14,7 @@ function DixitSoon() {
       </h1>
       <section className="panel">
         <h2>a mesa do Dixit está sendo montada</h2>
-        <p>Já dá pra criar a sala, mas a mesa chega em breve.</p>
+        <p>Essa sala é de Dixit: a mesa ainda está sendo montada.</p>
         <button className="btn" type="button" onClick={goHome}>
           voltar pro início
         </button>

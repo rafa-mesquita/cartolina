@@ -14,6 +14,7 @@ import {
   type Room,
   type RoundRecord,
 } from '../src/index';
+import { revealed } from './dixit-helpers';
 
 const GROUP = { id: 'g-1', slug: 'abcdefghjk', name: 'Galera' };
 
@@ -84,6 +85,13 @@ describe('pendingRecord', () => {
   it('sala avulsa ou fora da revelação não grava', () => {
     expect(pendingRecord(revealedRoom('livre', null), 1, 'r')).toBeNull();
     expect(pendingRecord(createRoom('ABCD', 0, GROUP), 1, 'r')).toBeNull();
+  });
+
+  it('sala de Dixit de grupo, mesmo na revelação, não grava histórico', () => {
+    const { state } = revealed(3, (s) => s.storyCard!);
+    expect(state.phase).toBe('reveal');
+    const room: Room = { ...createRoom('ABCD', 0, GROUP, 'dixit'), game: state };
+    expect(pendingRecord(room, 1, 'r')).toBeNull();
   });
 
   it('campanha usa o início da partida como id da campanha', () => {

@@ -83,12 +83,20 @@ describe('RoomConnection', () => {
     conn.subscribe(spy);
     last().open();
     last().receive({ t: 'welcome', playerId: 'p1', code: 'ABCD' });
-    last().receive({ t: 'state', room: { code: 'ABCD', you: 'p1' } });
+    last().receive({ t: 'state', room: { code: 'ABCD', you: 'p1', gameId: 'ito' } });
     const snap = conn.getSnapshot();
     expect(snap.status).toBe('joined');
     expect(snap.playerId).toBe('p1');
-    expect(snap.view).toEqual({ code: 'ABCD', you: 'p1' });
+    expect(snap.view).toEqual({ code: 'ABCD', you: 'p1', gameId: 'ito' });
     expect(spy).toHaveBeenCalled();
+  });
+
+  it('state sem gameId (servidor antigo) vira sala de ITO', () => {
+    const conn = make();
+    last().open();
+    last().receive({ t: 'welcome', playerId: 'p1', code: 'ABCD' });
+    last().receive({ t: 'state', room: { code: 'ABCD', you: 'p1' } });
+    expect(conn.getSnapshot().view).toMatchObject({ code: 'ABCD', gameId: 'ito' });
   });
 
   it('erro de entrada vira join_failed e retryJoin tenta de novo no mesmo socket', () => {

@@ -68,6 +68,7 @@ describe('HTTP', () => {
     const res = await SELF.fetch('https://x/rooms', { method: 'OPTIONS', headers: { Origin: 'http://localhost:5173' } });
     expect(res.status).toBe(204);
     expect(res.headers.get('Access-Control-Allow-Methods')).toContain('POST');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('Content-Type');
     expect(res.headers.get('Access-Control-Max-Age')).toBe('86400');
   });
 
