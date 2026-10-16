@@ -542,7 +542,8 @@ export class TableEngine {
   private numHTML(card: ItoCardView): string {
     return (
       `<div class="band"></div><div class="badge">${this.critterOf(card.owner)}</div>` +
-      `<div class="bignum">${card.value ?? '?'}</div><div class="clue mini">${this.clueHTML(card)}</div>`
+      // `title`: a dica inteira ao passar o mouse, se ela não couber na carta.
+      `<div class="bignum">${card.value ?? '?'}</div><div class="clue mini" title="${esc(card.clue.trim())}">${this.clueHTML(card)}</div>`
     );
   }
 
