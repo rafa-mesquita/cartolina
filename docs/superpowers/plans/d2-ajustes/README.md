@@ -16,7 +16,7 @@ Execução da Parte A com subagentes (uma tarefa por vez; revisão de conformida
 | 3 Cartas provisórias e verso | aprovada | 7690133, de919eb |
 | 4 Status, rótulos e fixtures | aprovada | dc3588a, 08106d2 |
 | 5 Linha do tempo da revelação (`me` → "a sua carta") | aprovada | a86b4b3, 803fe69 |
-| 6 Identidade visual (CSS, CardArt, fundo, carta ampliada) | implementada; **falta revisar** (conformidade e qualidade) | 16d22eb |
+| 6 Identidade visual (CSS, CardArt, fundo, carta ampliada) | implementada; conformidade ✅; **falta a revisão de qualidade** | 16d22eb |
 | 7 Feltro, assentos e mão (+ `delta-7.md`) | a fazer | |
 | 8 Painel e topo (+ `delta-8.md`) | a fazer | |
 | 9 Revelação na tela (+ `delta-9.md`) | a fazer | |
