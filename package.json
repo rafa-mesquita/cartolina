@@ -12,6 +12,7 @@
     "dev:server": "npm run db:migrate -w server && npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w web",
+    "dixit:cartas": "node scripts/dixit-cartas.mjs",
     "smoke": "node scripts/smoke.mjs",
     "e2e": "playwright test -c e2e/playwright.config.ts"
   },
