@@ -207,8 +207,8 @@ bots. O que o usuário aprovou e pediu durante o teste vale para a mesa do site.
   marque “vou falar na call”". A marcação zera a cada rodada. Em 3 jogadores, a 1ª carta
   fica na mesa esperando a 2ª (clicar nela devolve pra mão); a 2ª fecha a
   jogada. **Arrastar dentro da mão troca a posição** das cartas (as outras
-  abrem espaço enquanto você arrasta); a ordem é só sua, guardada no
-  navegador, e vale mesmo fora da sua vez. **Clique simples** numa carta da mão
+  abrem espaço enquanto você arrasta); a ordem é só sua (fica na tela; some ao
+  recarregar a página) e vale mesmo fora da sua vez. **Clique simples** numa carta da mão
   amplia. Funciona com mouse e toque (pointer events).
 - **Cartas soltas na fase de escolha** (pedido do usuário, 2026-10-16): cada
   carta jogada cai **virada e solta** no feltro, com um giro aleatório, e a
@@ -281,7 +281,7 @@ identidade; verso com espirais e "diquisti". Quando a arte real existir
 ### 5.6 Bots (só em desenvolvimento)
 
 "🤖 adicionar bot" no lobby do Dixit: bots narram com dica aleatória (às vezes
-vazia), escolhem e votam com atrasos humanos (40% acham a carta do narrador).
+vazia), escolhem e votam com atrasos humanos (votam numa carta sorteada entre as que não são deles: o cliente não sabe qual é a do narrador).
 Não vão para o build de produção.
 
 ## 6. Identidade visual do Dixit — "conto ilustrado"

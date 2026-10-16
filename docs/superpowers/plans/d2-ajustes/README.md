@@ -21,7 +21,7 @@ Execução da Parte A com subagentes (uma tarefa por vez; revisão de conformida
 | 8 Painel e topo (+ `delta-8.md`) | aprovada | 2fd451f, 5050f85 |
 | 9 Revelação na tela (+ `delta-9.md`) | aprovada | 961785e, 43fa006 |
 | 10 Mesa inteira e `Game.tsx` (+ `delta-10.md`; jogadas em `usePlays.ts`) | aprovada | 0947190, bdf66a1, ba03915, 1919f32 |
-| 11 Lobby e bots | a fazer | |
+| 11 Lobby e bots (Step 5 manual trocado pelo teste no navegador do controlador) | aprovada | d7b7aeb, 2008741 |
 
 Lembretes para quem continuar:
 - Use `playDixitSound` (não `playSound`) em todo o código do Diquisti.
