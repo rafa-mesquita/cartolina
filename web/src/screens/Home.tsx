@@ -1,10 +1,14 @@
 import { GROUP_NAME_MAX, cleanGroupName } from '@cartolina/shared';
 import { useState, type FormEvent } from 'react';
+import { useIsPhone } from '../lib/device';
 import { goToGroup, goToRoom } from '../lib/router';
 import { createGroup, createRoom } from '../net/api';
+import { TOO_MANY_MESSAGE, isTooMany } from '../net/errors';
 import { loadGroups, rememberGroup } from '../net/identity';
+import { PHONE_TEXT } from './PhoneNotice';
 
 export function Home() {
+  const phone = useIsPhone();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,8 +22,8 @@ export function Home() {
     setError(null);
     try {
       goToRoom(await createRoom());
-    } catch {
-      setError('Não deu pra criar a sala. O servidor tá ligado?');
+    } catch (err) {
+      setError(isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra criar a sala. O servidor tá ligado?');
     } finally {
       setBusy(false);
     }
@@ -46,9 +50,9 @@ export function Home() {
       rememberGroup(group);
       goToGroup(group.slug);
     } catch (err) {
-      // 400: o servidor recusou o nome (ex.: só símbolos); o resto é falha de rede/servidor
+      // 400: o servidor recusou o nome (ex.: só símbolos); 429: pedidos demais; o resto é falha de rede/servidor
       const rejected = err instanceof Error && err.message.endsWith('_400');
-      setGroupError(rejected ? 'Nome inválido.' : 'Não deu pra criar o grupo. O servidor tá ligado?');
+      setGroupError(rejected ? 'Nome inválido.' : isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra criar o grupo. O servidor tá ligado?');
     } finally {
       setGroupBusy(false);
     }
@@ -63,22 +67,28 @@ export function Home() {
       <section className="panel">
         <h2>ITO</h2>
         <p>Cada um recebe um número secreto de 1 a 100. Sem dizer o número, use o tema pra dar dicas e coloquem as cartas em ordem juntos.</p>
-        <button className="btn" onClick={create} disabled={busy}>
-          {busy ? 'criando…' : 'criar sala'}
-        </button>
-        <form className="row-inline" onSubmit={enter}>
-          <input
-            className="text-in"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="KXQ7"
-            maxLength={4}
-            aria-label="código da sala"
-          />
-          <button className="sbtn solid" type="submit">
-            entrar na sala
-          </button>
-        </form>
+        {phone ? (
+          <p className="hint">{PHONE_TEXT}</p>
+        ) : (
+          <>
+            <button className="btn" onClick={create} disabled={busy}>
+              {busy ? 'criando…' : 'criar sala'}
+            </button>
+            <form className="row-inline" onSubmit={enter}>
+              <input
+                className="text-in"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="KXQ7"
+                maxLength={4}
+                aria-label="código da sala"
+              />
+              <button className="sbtn solid" type="submit">
+                entrar na sala
+              </button>
+            </form>
+          </>
+        )}
         {error && <p className="error" role="alert">{error}</p>}
       </section>
       <section className="panel">

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { goHome } from '../lib/router';
-import { getRoomInfo, type RoomInfo } from '../net/api';
+import type { RoomView } from '@cartolina/shared';
+import { goHome, goToRoom } from '../lib/router';
+import { createGroupRoom, createRoom, getRoomInfo, type RoomInfo } from '../net/api';
+import { TOO_MANY_MESSAGE, isTooMany } from '../net/errors';
 import { wsUrl } from '../net/config';
 import { RoomConnection, type ConnOptions } from '../net/connection';
 import { getToken, joinedProfile, loadProfile, markJoined, saveProfile, type Profile } from '../net/identity';
@@ -8,8 +10,18 @@ import { useConnSnapshot } from '../net/useConnSnapshot';
 import { Game } from './Game';
 import { JoinForm } from './JoinForm';
 
+/** `{ slug, name }` do grupo da sala, como vem na `RoomView`. */
+type RoomGroupView = NonNullable<RoomView['group']>;
+
 function connect(code: string, profile: Profile, createSocket?: ConnOptions['createSocket']): RoomConnection {
-  return new RoomConnection({ url: wsUrl(code), token: getToken(), name: profile.name, color: profile.color, createSocket });
+  return new RoomConnection({
+    url: wsUrl(code),
+    token: getToken(),
+    name: profile.name,
+    color: profile.color,
+    createSocket,
+    roomExists: () => getRoomInfo(code).then((info) => info !== null),
+  });
 }
 
 function Message({ title, text, action }: { title: string; text: string; action?: { label: string; onClick(): void } }) {
@@ -29,6 +41,50 @@ function Message({ title, text, action }: { title: string; text: string; action?
         <button className={action ? 'sbtn' : 'btn'} type="button" onClick={goHome}>
           voltar pro início
         </button>
+      </section>
+    </main>
+  );
+}
+
+/** A sala expirou ou fechou: oferece outra (do mesmo grupo, se era de grupo). */
+function RoomGone({ group }: { group: RoomGroupView | null }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function again() {
+    setBusy(true);
+    setError(null);
+    try {
+      goToRoom(group ? await createGroupRoom(group.slug) : await createRoom());
+    } catch (err) {
+      setError(isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra criar a sala. Tenta de novo.');
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <main className="screen">
+      <h1 className="logo">
+        cartolina<span>~</span>
+      </h1>
+      <section className="panel">
+        <h2>essa sala acabou</h2>
+        <p>Ela expirou ou foi fechada. Bora abrir outra?</p>
+        <button className="btn" type="button" disabled={busy} onClick={() => void again()}>
+          {busy ? 'criando…' : 'criar sala nova'}
+        </button>
+        {group && (
+          <a className="sbtn" href={`#/g/${group.slug}`}>
+            voltar pro grupo
+          </a>
+        )}
+        <button className="sbtn" type="button" onClick={goHome}>
+          voltar pro início
+        </button>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
       </section>
     </main>
   );
@@ -96,7 +152,8 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
     );
   }
   if (info === undefined) return <Message title="carregando…" text="procurando a sala" />;
-  if (info === null || status === 'gone') {
+  if (status === 'gone') return <RoomGone group={snap?.view?.group ?? null} />;
+  if (info === null) {
     return <Message title="sala não encontrada" text="Essa sala não existe ou expirou. Crie uma nova no início." />;
   }
   if (status === 'replaced') {

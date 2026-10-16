@@ -138,10 +138,13 @@ describe('BotPlayer', () => {
   const bots: BotPlayer[] = [];
   beforeEach(() => {
     vi.useFakeTimers();
+    // o cursor só é enviado com a janela em foco; o jsdom diz que nunca está
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true);
   });
   afterEach(() => {
     bots.splice(0).forEach((b) => b.stop());
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   async function boot(server: ReturnType<typeof fakeServer>, rng: () => number = () => 0.5) {
@@ -238,7 +241,9 @@ describe('BotPlayer', () => {
   it('parado: move o cursor de vez em quando pelo feltro', async () => {
     const room = sortingRoom(2);
     const server = fakeServer({ ...room, game: { ...room.game, phase: 'reveal' } });
-    await boot(server);
+    // rng que varia: com valor fixo o bot sempre vai ao mesmo ponto e o cursor repetido não é reenviado
+    let seed = 7;
+    await boot(server, () => ((seed = (seed * 16807) % 2147483647) / 2147483647));
     await vi.advanceTimersByTimeAsync(10_000);
     const cursors = server.state.socket!.messages().filter((m) => m.t === 'fx.cursor');
     expect(cursors.length).toBeGreaterThan(10);

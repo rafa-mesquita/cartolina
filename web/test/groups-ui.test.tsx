@@ -12,13 +12,14 @@ import { makeRoom, viewOf } from './fixtures';
 
 vi.mock('../src/net/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/net/api')>();
-  return { ...actual, createGroup: vi.fn(), getGroup: vi.fn(), createGroupRoom: vi.fn() };
+  return { ...actual, createGroup: vi.fn(), getGroup: vi.fn(), createGroupRoom: vi.fn(), createRoom: vi.fn() };
 });
 
 afterEach(() => {
   vi.mocked(api.createGroup).mockReset();
   vi.mocked(api.getGroup).mockReset();
   vi.mocked(api.createGroupRoom).mockReset();
+  vi.mocked(api.createRoom).mockReset();
   vi.restoreAllMocks();
   window.location.hash = '';
 });
@@ -263,5 +264,32 @@ describe('sala de grupo', () => {
   it('sala avulsa não mostra nada de grupo', () => {
     render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={conn()} />);
     expect(screen.queryByText(/histórico de/)).toBeNull();
+  });
+});
+
+describe('pedidos demais (429)', () => {
+  const CALMA = 'Calma! Tenta de novo em um minutinho.';
+
+  it('criar sala na tela inicial', async () => {
+    vi.mocked(api.createRoom).mockRejectedValue(new Error('create_failed_429'));
+    render(<Home />);
+    fireEvent.click(screen.getByRole('button', { name: 'criar sala' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(CALMA);
+  });
+
+  it('criar grupo', async () => {
+    vi.mocked(api.createGroup).mockRejectedValue(new Error('group_create_failed_429'));
+    render(<Home />);
+    fireEvent.change(screen.getByLabelText('nome do grupo'), { target: { value: 'Galera' } });
+    fireEvent.click(screen.getByRole('button', { name: 'criar grupo' }));
+    expect((await screen.findByRole('alert')).textContent).toBe(CALMA);
+  });
+
+  it('criar sala do grupo', async () => {
+    vi.mocked(api.getGroup).mockResolvedValue(response([], null));
+    vi.mocked(api.createGroupRoom).mockRejectedValue(new Error('create_failed_429'));
+    render(<GroupPage slug="abcdefghjk" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'criar sala do grupo' }));
+    expect(await screen.findByText(CALMA)).toBeTruthy();
   });
 });
