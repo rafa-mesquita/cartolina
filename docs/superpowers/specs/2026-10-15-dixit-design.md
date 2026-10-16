@@ -41,17 +41,18 @@ Decisões do usuário (2026-10-15):
    opcionalmente, escreve a dica (até 80 caracteres); confirma com "contei".
    A dica pode ficar vazia (dada na call: som, gesto, música).
 2. **Escolha** (`submitting`): cada outro jogador escolhe 1 carta da mão que
-   combine com a dica (com 3 jogadores, **2 cartas** cada). Pode trocar até
-   confirmar. Ninguém vê quem jogou o quê.
+   combine com a dica (com 3 jogadores, **2 cartas** cada; mesa de 5).
+   Pode trocar a escolha até confirmar; confirmado, não muda mais. Ninguém vê quem jogou o quê.
 3. **Votação** (`voting`): quando todos confirmaram, o servidor embaralha as
    cartas jogadas e mostra todas viradas para cima, numeradas (I, II, III…).
    Cada não-narrador vota em **uma** carta que não seja sua; pode trocar até
-   confirmar. Todos veem quem já votou, não em quê.
+   confirmar; confirmado, não muda mais. Todos veem quem já votou, não em quê.
 4. **Revelação** (`reveal`): mostra dono de cada carta, qual é a do narrador e
    os votos (personagens como fichas sobre as cartas); pontos aplicados.
 
 ### Pontuação (regra da caixa)
 
+- "Todos" e "ninguém" contam só quem votou.
 - **Todos** ou **ninguém** acharam a carta do narrador: narrador 0, cada outro
   jogador 2.
 - Caso contrário: narrador **3** e cada um que acertou **3**.
@@ -72,9 +73,10 @@ Decisões do usuário (2026-10-15):
 
 - Quem entra no meio assiste e recebe mão na próxima rodada.
 - Narrador inativo durante `storytelling` → a vez passa ao próximo jogador
-  ativo (a rodada recomeça com ele).
+  ativo e a rodada recomeça com esse novo narrador.
 - Jogador inativo em `submitting`/`voting` → a rodada segue sem ele (não
-  precisa confirmar; não pontua nesta rodada além de votos já recebidos).
+  precisa confirmar). Quem não votou não ganha pontos de acerto, mas ganha
+  o bônus dos votos que a carta dele recebeu.
   Se a carta dele já estava na mesa, continua valendo.
 - Menos de 3 ativos → partida pausa com "esperando gente"; host pode voltar
   ao lobby.
@@ -98,8 +100,9 @@ diretas). Muda para:
 - **Compatibilidade:** sala salva sem `gameId` carrega como `'ito'`. Testes
   atuais do ITO passam sem mudança de comportamento.
 - `RoomView` ganha `gameId`; `RoomSummary` também.
-- `GameContext` ganha a ordem dos assentos se o Dixit precisar além de
-  `active` (rotação do narrador).
+- A rotação do narrador usa `players` do estado do Dixit (ordem dos assentos
+  no início da partida; quem entra depois vai pro fim); `GameContext` não
+  muda.
 
 ### 3.2 Protocolo
 
@@ -120,7 +123,7 @@ diretas). Muda para:
   (cartas por jogador), `tableOrder` (ordem embaralhada na votação),
   `votes`, `confirmed`, `lastRound` (resultado para animar).
 - Ações: `setTarget`, `start`, `tell { cardId, clue }`, `submit { cardIds }`,
-  `vote { cardId }`, `confirm`/`unconfirm`, `forceNext`, `next`, `again`,
+  `vote { cardId }`, `confirm`, `forceNext`, `next`, `again`,
   `lobby`.
 - `scoring.ts`: função pura `scoreRound(...)` → pontos por jogador e detalhes
   (quem acertou, votos por carta). Concentra a maior parte dos testes.
