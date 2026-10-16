@@ -74,6 +74,13 @@ describe('GamePage', () => {
       expect(hist.hasAttribute('aria-current')).toBe(false);
     });
 
+    it('abas e "← jogos" pedem o som de clique (links só soam com data-sound)', () => {
+      render(<GamePage game="ito" tab="jogar" />);
+      for (const name of ['jogar', 'histórico', '← jogos']) {
+        expect(screen.getByRole('link', { name }).getAttribute('data-sound')).toBe('click');
+      }
+    });
+
     it('entrar com código vai pra sala', () => {
       render(<GamePage game="ito" tab="jogar" />);
       fireEvent.change(screen.getByLabelText('código da sala'), { target: { value: 'kxq7' } });

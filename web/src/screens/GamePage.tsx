@@ -70,7 +70,7 @@ export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: Gam
         cartolina<span>~</span>
       </h1>
       <header className="game-head">
-        <a className="back-link" href="#/">
+        <a className="back-link" href="#/" data-sound="click">
           ← jogos
         </a>
         <div className={`cover mini cover-${game}`} aria-hidden="true">
@@ -83,7 +83,7 @@ export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: Gam
       </header>
       <nav className="tabs" aria-label="seções do jogo">
         {(['jogar', 'historico'] as const).map((t) => (
-          <a key={t} aria-current={tab === t ? 'page' : undefined} className={`tab ${tab === t ? 'on' : ''}`} href={gameHash(game, t)}>
+          <a key={t} data-sound="click" aria-current={tab === t ? 'page' : undefined} className={`tab ${tab === t ? 'on' : ''}`} href={gameHash(game, t)}>
             {t === 'jogar' ? 'jogar' : 'histórico'}
           </a>
         ))}

@@ -1,3 +1,4 @@
+import { playHover } from '../brand/hoverSound';
 import { CATALOG } from '../games/catalog';
 import { useIsPhone } from '../lib/device';
 import { JoinByCode } from './JoinByCode';
@@ -13,7 +14,7 @@ export function Home() {
       <p className="tagline">jogos de tabuleiro pra jogar com a galera na call</p>
       <nav className="shelf" aria-label="jogos">
         {CATALOG.map((g) => (
-          <a key={g.id} className={`cover cover-${g.id}`} href={`#/${g.id}`}>
+          <a key={g.id} className={`cover cover-${g.id}`} href={`#/${g.id}`} data-sound="card" onPointerEnter={() => playHover()}>
             {!g.playable && <span className="cover-badge">em breve</span>}
             <b>{g.name}</b>
             <span>{g.tagline}</span>
