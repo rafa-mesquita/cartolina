@@ -8,7 +8,7 @@ precisa ser adaptado**. Referência de comportamento: `prototipo/dixit/index.htm
 ## Estado da mesa (`DixitTable`)
 - `handOrder` (string[]) → a mão mostrada é `orderHand(handOrder, g.hand)` (de `./handOrder`); `onReorder` guarda a nova ordem.
 - `pending` (string[]): suas cartas soltas esperando a 2ª (só partida de 3). Zera quando a fase muda.
-- `dropPoints` (Record<string, {x, y}>): onde você soltou cada carta, chave `${me}:${k}`. Zera quando a rodada/fase de escolha acaba.
+- `dropPoints` (Record<string, {x, y}>): onde você soltou cada carta, **chave = id da carta** (a Tarefa 7 guarda as suas cartas pelo id). Zera quando a rodada/fase de escolha acaba.
 - `clue` (string) e `spoken` (boolean): a dica do narrador e o "vou falar a dica na call". Zeram depois de narrar e quando muda o narrador.
 - `needClueTick` (number): sobe quando o narrador solta a carta sem dica.
 - `dropState` ('ready' | 'over' | 'no' | null): vem do `Hand` (`onDropState`) e vai pro `Felt`.
@@ -18,10 +18,10 @@ precisa ser adaptado**. Referência de comportamento: `prototipo/dixit/index.htm
 - `canPlay` como o `canPick` do texto (sua vez de narrar ou de escolher, sem pausa).
 - `away = [...pending, ...(confirmed ? g.myPicks : [])]`.
 - `onPlay(id, at)`:
-  - narrador: guarda `dropPoints[\`${me}:0\`] = at` (se `at`), manda `{ type: 'tell', cardId: id, clue: spoken ? '' : clue }`, zera `clue`/`spoken`;
-  - escolha: `k = pending.length`; guarda `dropPoints[\`${me}:${k}\`]`; se `need === 1` manda `submit { cardIds: [id] }` e `confirm`; senão acrescenta em `pending` e, quando `pending.length === need`, manda `submit` com as `need` cartas e `confirm`.
+  - narrador: guarda `dropPoints[id] = at` (se `at`), manda `{ type: 'tell', cardId: id, clue: spoken ? '' : clue }`, zera `clue`/`spoken`;
+  - escolha: guarda `dropPoints[id] = at` (se `at`); se `need === 1` manda `submit { cardIds: [id] }` e `confirm`; senão acrescenta em `pending` e, quando `pending.length === need`, manda `submit` com as `need` cartas e `confirm`.
 - `onBlocked`: `needClueTick + 1` e `playDixitSound('error')`.
-- `onUnpend(k)`: tira `pending[k]` e desloca as chaves de `dropPoints` acima de `k` (como `onLooseClick` do protótipo).
+- `onUnpend(cardId)`: tira a carta de `pending` e de `dropPoints` (pelo id; nada a deslocar).
 - `Felt` recebe `dropState`, `pending`, `dropPoints`, `clueReady`, `onUnpend`; `ActionPanel` recebe `need`, `pending={pending.length}`, `clue`, `onClue`, `spoken`, `onSpoken`, `needClueTick` (sem `sel`, sem `tell`/`submit`).
 
 ## Sons
