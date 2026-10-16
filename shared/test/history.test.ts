@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ItoState } from '../src/games/ito/types';
 import {
   PLAYER_COLORS,
-  cleanGroupName,
   createRoom,
   joinRoom,
   mulberry32,
@@ -16,16 +15,14 @@ import {
 } from '../src/index';
 import { revealed } from './dixit-helpers';
 
-const GROUP = { id: 'g-1', slug: 'abcdefghjk', name: 'Galera' };
-
 function play(room: Room, id: string, action: ItoAction, now = 100): Room {
   const res = roomAction(room, id, action, mulberry32(7), now);
   if (!res.ok) throw new Error(res.error);
   return res.room;
 }
 
-function revealedRoom(mode: 'livre' | 'campanha' = 'livre', group: typeof GROUP | null = GROUP): Room {
-  let room = createRoom('ABCD', 0, group);
+function revealedRoom(mode: 'livre' | 'campanha' = 'livre'): Room {
+  let room = createRoom('ABCD', 0);
   for (const [i, name] of ['Ana', 'Bia'].entries()) {
     const res = joinRoom(room, { token: `t${i}`, name, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
     if (!res.ok) throw new Error(res.error);
@@ -48,17 +45,8 @@ function dealAndReveal(room: Room, dir: 'asc' | 'desc'): Room {
   return play(r, 'p0', { type: 'forceReveal' });
 }
 
-describe('cleanGroupName', () => {
-  it('limpa espaços e limita a 40 caracteres', () => {
-    expect(cleanGroupName('  Galera   da call ')).toBe('Galera da call');
-    expect(cleanGroupName('   ')).toBeNull();
-    expect(cleanGroupName('x'.repeat(41))).toBeNull();
-    expect(cleanGroupName('😀'.repeat(40))).toBe('😀'.repeat(40));
-  });
-});
-
 describe('pendingRecord', () => {
-  it('monta o registro da rodada revelada de uma sala de grupo', () => {
+  it('monta o registro da rodada revelada de uma sala de ITO', () => {
     const room = revealedRoom();
     const pending = pendingRecord(room, 1234, 'r-1');
     expect(pending).not.toBeNull();
@@ -82,15 +70,14 @@ describe('pendingRecord', () => {
     expect(pendingRecord({ ...room, recordedRevealKey: key }, 2, 'r2')).toBeNull();
   });
 
-  it('sala avulsa ou fora da revelação não grava', () => {
-    expect(pendingRecord(revealedRoom('livre', null), 1, 'r')).toBeNull();
-    expect(pendingRecord(createRoom('ABCD', 0, GROUP), 1, 'r')).toBeNull();
+  it('sala fora da revelação não grava', () => {
+    expect(pendingRecord(createRoom('ABCD', 0), 1, 'r')).toBeNull();
   });
 
-  it('sala de Dixit de grupo, mesmo na revelação, não grava histórico', () => {
+  it('sala de Dixit, mesmo na revelação, não grava histórico', () => {
     const { state } = revealed(3, (s) => s.storyCard!);
     expect(state.phase).toBe('reveal');
-    const room: Room = { ...createRoom('ABCD', 0, GROUP, 'dixit'), game: state };
+    const room: Room = { ...createRoom('ABCD', 0, 'dixit'), game: state };
     expect(pendingRecord(room, 1, 'r')).toBeNull();
   });
 
@@ -123,7 +110,7 @@ describe('pendingRecord', () => {
   });
 
   it('o id da campanha sobrevive a repetir o nível; voltar ao lobby e começar gera outro', () => {
-    let room = createRoom('ABCD', 0, GROUP);
+    let room = createRoom('ABCD', 0);
     for (const [i, name] of ['Ana', 'Bia'].entries()) {
       const res = joinRoom(room, { token: `t${i}`, name, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
       if (!res.ok) throw new Error(res.error);
@@ -151,7 +138,7 @@ describe('pendingRecord', () => {
   });
 
   it('errors acompanha as cartas gravadas', () => {
-    let room = createRoom('ABCD', 0, GROUP);
+    let room = createRoom('ABCD', 0);
     for (const [i, name] of ['Ana', 'Bia'].entries()) {
       const res = joinRoom(room, { token: `t${i}`, name, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
       if (!res.ok) throw new Error(res.error);

@@ -15,12 +15,6 @@ export interface Seat {
   disconnectedAt: number | null;
 }
 
-export interface RoomGroup {
-  id: string;
-  slug: string;
-  name: string;
-}
-
 export interface Room {
   code: string;
   hostId: string | null;
@@ -31,8 +25,6 @@ export interface Room {
   gameId: GameId;
   game: GameState;
   lastActivity: number;
-  /** Grupo dono da sala (histórico). `null` em salas avulsas. */
-  group: RoomGroup | null;
   /** Quando o host começou a partida (saiu do lobby); identifica a campanha do ITO. */
   runStartedAt: number | null;
   /** Chave da última revelação do ITO já gravada no histórico (evita duplicar). */
@@ -53,7 +45,6 @@ export interface RoomView<G extends GameView = GameView> {
   seats: SeatView[];
   gameId: GameId;
   game: G;
-  group: { slug: string; name: string } | null;
 }
 
 export type ItoRoomView = RoomView<ItoView> & { gameId: 'ito' };
@@ -82,15 +73,19 @@ export function itoStateOf(room: Room): ItoState | null {
   return room.gameId === 'ito' ? (room.game as ItoState) : null;
 }
 
-type StoredRoom = Omit<Room, 'gameId' | 'group' | 'runStartedAt' | 'recordedRevealKey'> &
-  Partial<Pick<Room, 'gameId' | 'group' | 'runStartedAt' | 'recordedRevealKey'>>;
+type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &
+  Partial<Pick<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'>> & {
+    /** Salas gravadas antes da estante de jogos tinham grupo; o campo é ignorado. */
+    group?: unknown;
+  };
 
-/** Sala lida do storage: salas antigas não têm `gameId` (eram todas ITO) nem os campos do histórico. */
+/** Sala lida do storage: salas antigas não têm `gameId` (eram todas ITO) e podem ter `group` (ignorado). */
 export function restoreRoom(stored: StoredRoom): Room {
+  const { group: _legacyGroup, ...rest } = stored;
+  void _legacyGroup;
   return {
-    ...stored,
+    ...rest,
     gameId: stored.gameId ?? 'ito',
-    group: stored.group ?? null,
     runStartedAt: stored.runStartedAt ?? null,
     recordedRevealKey: stored.recordedRevealKey ?? null,
   };
@@ -105,7 +100,7 @@ export type JoinError = 'room_full' | 'bad_name' | 'bad_color' | 'color_taken';
 export type JoinResult = { ok: true; room: Room; playerId: string } | { ok: false; error: JoinError };
 export type RoomActionResult = { ok: true; room: Room } | { ok: false; error: string };
 
-export function createRoom(code: string, now: number, group: RoomGroup | null = null, gameId: GameId = 'ito'): Room {
+export function createRoom(code: string, now: number, gameId: GameId = 'ito'): Room {
   return {
     code,
     hostId: null,
@@ -114,7 +109,6 @@ export function createRoom(code: string, now: number, group: RoomGroup | null = 
     gameId,
     game: GAMES[gameId].module.initialState(),
     lastActivity: now,
-    group,
     runStartedAt: null,
     recordedRevealKey: null,
   };
@@ -214,7 +208,6 @@ export function roomView(room: Room, viewerId: string | null): RoomView {
     seats: room.seats.map(seatView),
     gameId: room.gameId,
     game: GAMES[room.gameId].module.viewFor(room.game, viewerId),
-    group: room.group ? { slug: room.group.slug, name: room.group.name } : null,
   };
 }
 
