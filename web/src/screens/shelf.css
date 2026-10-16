@@ -1,0 +1,30 @@
+/* Estante de jogos (início) e página do jogo. */
+.shelf { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; width: min(760px, 100%); }
+.cover {
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; min-height: 260px; padding: 18px;
+  border: 2px solid var(--ink); border-radius: var(--r); box-shadow: 4px 5px 0 var(--ink); color: var(--ink);
+  text-decoration: none; transition: transform 0.15s;
+}
+.cover:hover, .cover:focus-visible { transform: translateY(-4px) rotate(-1deg); }
+.cover b { font: 700 34px/1 var(--font-ui); }
+.cover span { font: 19px/1.15 var(--font-hand); }
+.cover-ito { background: var(--pink); }
+.cover-dixit { background: #2f5d50; color: #f4ecd8; }
+.cover.mini {
+  min-height: 0; width: 84px; height: 84px; padding: 6px; justify-content: center; align-items: center; text-align: center;
+  font: 700 14px/1 var(--font-ui); box-shadow: 2px 3px 0 var(--ink); flex: none;
+}
+.cover.mini:hover { transform: none; }
+.cover .cover-badge { align-self: flex-start; font: 500 13px/1 var(--font-ui); padding: 3px 8px; border: 2px solid currentColor; border-radius: 999px; }
+.game-page .panel, .game-head, .tabs { width: min(760px, 100%); }
+.game-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.game-head h2 { margin: 0; font: 700 30px/1 var(--font-ui); }
+.game-head .tagline { text-align: left; }
+.back-link { flex-basis: 100%; font: 500 16px/1 var(--font-ui); color: var(--ink); }
+.tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--ink); }
+.tab {
+  padding: 8px 16px; font: 600 17px/1 var(--font-ui); color: var(--ink); text-decoration: none;
+  border: 2px solid var(--ink); border-bottom: none; border-radius: 10px 10px 0 0; background: var(--kraft); margin-bottom: -2px;
+}
+.tab.on { background: var(--paper); }
+.rules { margin: 0; padding-left: 22px; font: 19px/1.35 var(--font-hand); }
