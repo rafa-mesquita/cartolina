@@ -28,12 +28,14 @@ interface Props {
   clueReady: boolean;
   onCard: (cardId: string) => void;
   onZoom: (cardId: string) => void;
+  /** Suas pendentes ainda podem voltar pra mão (falso depois de mandar a jogada, enquanto o servidor responde). */
+  canUnpend: boolean;
   /** Clicou numa carta sua que espera a 2ª: devolve pra mão. */
   onUnpend: (cardId: string) => void;
 }
 
 /** Feltro em perspectiva: trilha de casas, peões e as cartas da rodada (soltas na escolha, em fileira depois). */
-export function Felt({ view, name, color, frame, scores, dropState, pending, dropPoints, clueReady, onCard, onZoom, onUnpend }: Props) {
+export function Felt({ view, name, color, frame, scores, dropState, pending, dropPoints, clueReady, onCard, onZoom, canUnpend, onUnpend }: Props) {
   const g = view.game;
   const you = view.you;
   const feltRef = useRef<HTMLDivElement>(null);
@@ -61,7 +63,7 @@ export function Felt({ view, name, color, frame, scores, dropState, pending, dro
 
   let cards: ReactNode = null;
   if (g.phase === 'submitting') {
-    const canUndo = you !== null && you !== g.storyteller && !g.confirmed.includes(you);
+    const canUndo = canUnpend && you !== null && you !== g.storyteller && !g.confirmed.includes(you);
     // Só as que já têm lugar (a nova ganha o dela no efeito de layout, antes de pintar).
     cards = playedKeys(g, you, pending).map(({ key, player, cardId }) => {
       const loose = spots[key];

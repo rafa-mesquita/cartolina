@@ -17,7 +17,7 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
     return (
       <>
         {reconnecting}
-        {view.game.phase === 'lobby' ? <DixitLobby view={view} conn={conn} /> : <DixitTable view={view} conn={conn} />}
+        {view.game.phase === 'lobby' ? <DixitLobby view={view} conn={conn} /> : <DixitTable view={view} conn={conn} status={snap.status} />}
       </>
     );
   }

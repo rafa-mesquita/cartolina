@@ -41,10 +41,20 @@ describe('mesa do Diquisti: narrar', () => {
     fireEvent.change(screen.getByLabelText('sua dica'), { target: { value: 'luar' } });
     enter('sua carta 2');
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'tell', cardId: stateOf(room).hands[st]![1], clue: 'luar' });
-    // enquanto o servidor não responde, a carta já saiu da mão e não dá pra contar outra
-    expect(screen.queryByRole('button', { name: 'sua carta 6' })).toBeNull();
-    enter('sua carta 1');
-    expect(c.sendAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('o narrador não trava se o envio se perder (socket fechado): a carta fica na mão e dá pra jogar de novo', () => {
+    const room = started(4);
+    const st = stateOf(room).storyteller!;
+    const c = conn(); // sendAction não faz nada: como o socket fechado, que descarta em silêncio
+    const { container } = render(<DixitTable view={dixitView(room, st)} conn={c} />);
+    fireEvent.change(screen.getByLabelText('sua dica'), { target: { value: 'luar' } });
+    enter('sua carta 2');
+    expect(screen.getByRole('button', { name: 'sua carta 6' })).toBeTruthy();
+    expect(container.querySelector('.dx-hcard.away')).toBeNull();
+    enter('sua carta 2');
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'tell', cardId: stateOf(room).hands[st]![1], clue: 'luar' });
   });
 
   it('sem dica a carta não vai: nada é mandado, toca o erro e o painel avisa', () => {
@@ -96,6 +106,47 @@ describe('mesa do Diquisti: escolher', () => {
     expect(c.sendAction).toHaveBeenNthCalledWith(1, { type: 'submit', cardIds: [stateOf(room).hands[p]![0]] });
     expect(c.sendAction).toHaveBeenNthCalledWith(2, { type: 'confirm' });
     expect(screen.queryByRole('button', { name: 'sua carta 6' })).toBeNull();
+    // já mandada: a carta solta não volta mais pra mão enquanto o servidor responde
+    expect(screen.queryByRole('button', { name: 'devolver sua carta pra mão' })).toBeNull();
+  });
+
+  it('em 3 jogadores, depois de mandar as duas, nenhuma volta pra mão', () => {
+    const room = told(3);
+    const c = conn();
+    render(<DixitTable view={dixitView(room, othersOf(room)[0]!)} conn={c} />);
+    enter('sua carta 1');
+    expect(screen.getAllByRole('button', { name: 'devolver sua carta pra mão' })).toHaveLength(1);
+    enter('sua carta 1');
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('button', { name: 'devolver sua carta pra mão' })).toBeNull();
+  });
+
+  it('ao reconectar, as pendentes voltam pra mão (o servidor é a verdade)', () => {
+    const room = told(3);
+    const v = dixitView(room, othersOf(room)[0]!);
+    const c = conn();
+    const { rerender } = render(<DixitTable view={v} conn={c} status="joined" />);
+    enter('sua carta 1');
+    expect(screen.getByText('1 de 2')).toBeTruthy();
+    rerender(<DixitTable view={v} conn={c} status="reconnecting" />);
+    expect(screen.getByText('1 de 2')).toBeTruthy();
+    rerender(<DixitTable view={v} conn={c} status="joined" />);
+    expect(screen.queryByText('1 de 2')).toBeNull();
+    expect(screen.getByRole('button', { name: 'sua carta 7' })).toBeTruthy();
+  });
+
+  it('erro de outra ação (destravar recusado) não mexe nas pendentes', () => {
+    const room = told(3);
+    const p = othersOf(room)[0]!;
+    const c = conn();
+    render(<DixitTable view={{ ...dixitView(room, p), hostId: p }} conn={c} />);
+    enter('sua carta 1');
+    fireEvent.click(screen.getByRole('button', { name: 'destravar' }));
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'forceNext' });
+    rtlAct(() => c.onError.mock.calls[0]![0]('not_host', 'Só o host pode.'));
+    expect(screen.getByText('Só o host pode.')).toBeTruthy();
+    expect(screen.getByText('1 de 2')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'sua carta 7' })).toBeNull();
   });
 
   it('em 3 jogadores a 1ª carta espera a 2ª; clicar nela devolve; a 2ª manda as duas', () => {
@@ -136,7 +187,7 @@ describe('mesa do Diquisti: escolher', () => {
     expect(container.querySelectorAll(`.dx-tcard.loose[data-loose^="${p}:"]`)).toHaveLength(1);
   });
 
-  it('jogada recusada pelo servidor: avisa e a carta volta pra mão', () => {
+  it('jogada recusada pelo servidor: avisa e a carta volta pra mão (e pode ser jogada de novo)', () => {
     const room = told(4);
     const p = othersOf(room)[0]!;
     const c = conn();
@@ -150,6 +201,8 @@ describe('mesa do Diquisti: escolher', () => {
     expect(sounds()).toContain('error');
     rtlAct(() => vi.advanceTimersByTime(2300));
     expect(screen.queryByText('Agora não dá.')).toBeNull();
+    enter('sua carta 1');
+    expect(c.sendAction).toHaveBeenCalledTimes(4);
   });
 });
 

@@ -301,6 +301,7 @@ describe('feltro', () => {
     clueReady: false,
     onCard: vi.fn(),
     onZoom: vi.fn(),
+    canUnpend: true,
     onUnpend: vi.fn(),
   });
   const tellerOf = (room: ReturnType<typeof started>) => stateOf(room).storyteller!;
@@ -386,6 +387,16 @@ describe('feltro', () => {
     expect(p.onUnpend).toHaveBeenCalledWith('A');
     rerender(<Felt {...p} pending={['B']} dropPoints={{ B: dropPoints.B }} />);
     expect(mine().map((e) => [e.dataset.loose, e.style.left, e.style.top])).toEqual([[`${me}:B`, '600px', '370px']]);
+  });
+
+  it('pendente já mandada (canUnpend falso) não devolve', () => {
+    const room = told(3);
+    const p = props(dixitView(room, othersOf(room)[0]!));
+    const { container } = render(<Felt {...p} pending={['A', 'B']} canUnpend={false} />);
+    expect(container.querySelectorAll('.dx-tcard.loose.pending')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'devolver sua carta pra mão' })).toBeNull();
+    fireEvent.click(container.querySelector('[data-loose$=":A"]')!);
+    expect(p.onUnpend).not.toHaveBeenCalled();
   });
 
   it('pendente devolve pelo teclado (Enter e Espaço)', () => {
