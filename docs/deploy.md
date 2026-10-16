@@ -67,10 +67,10 @@ não consegue falar com o servidor.
 
 ## Primeira noite
 
-- Crie o grupo no site e mande o **link do grupo** no Discord. Cada um abre no
-  **computador** (no celular aparece um aviso).
-- Do grupo, clique em **criar sala do grupo** e mande o link da sala. As
-  rodadas jogadas ali entram no histórico sozinhas.
+- Mande o **link do site** no Discord. Cada um abre no **computador** (no
+  celular aparece um aviso), entra no **DITU** e clica em **criar sala** (ou
+  entra pelo código de uma sala que já existe). As rodadas jogadas entram no
+  histórico sozinhas, e ele fica em `#/ito/historico`, aberto a todos.
 - Não faça push no `main` durante a partida: cada publicação reinicia o
   servidor e derruba as conexões por alguns segundos.
 - Travou alguma coisa? **Recarregue a página**: carta e assento são mantidos.
