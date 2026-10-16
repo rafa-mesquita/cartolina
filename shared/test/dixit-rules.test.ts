@@ -254,13 +254,23 @@ describe('Dixit: fim da rodada e da partida', () => {
     const start = told(4);
     const ctx = start.ctx;
     let state = start.state;
-    expect(applyDixitAction(state, 'p0', { type: 'forceNext' }, ctx)).toEqual({ ok: false, error: 'nothing_chosen' });
     const a = others(state)[0]!;
     state = act(state, a, { type: 'submit', cardIds: [state.hands[a]![0]!] }, ctx);
     state = act(state, a, { type: 'confirm' }, ctx);
     const s = act(state, 'p0', { type: 'forceNext' }, ctx);
     expect(s.phase).toBe('voting');
     expect(s.table).toHaveLength(2);
+  });
+
+  it('destravar na escolha sem ninguém confirmado: próximo narrador, carta volta pra mão', () => {
+    const { state, ctx } = told(4);
+    const old = state.storyteller!;
+    const i = state.players.indexOf(old);
+    const s = act(state, 'p0', { type: 'forceNext' }, ctx);
+    expect(s.phase).toBe('storytelling');
+    expect(s.storyteller).toBe(state.players[(i + 1) % 4]);
+    expect(s.hands[old]).toHaveLength(6);
+    expect(s.hands[old]).toContain(state.storyCard);
   });
 
   it('destravar na votação: revela com os votos confirmados', () => {
@@ -362,5 +372,24 @@ describe('Dixit: presença', () => {
     const next = act(state, 'p0', { type: 'next' }, withNew);
     expect(next.inRound).toContain('p9');
     expect(next.hands.p9).toHaveLength(6);
+  });
+
+  it('pausada com gente nova suficiente: o host destrava e recomeça', () => {
+    const { state } = voting(3);
+    const a = others(state)[0]!;
+    const remaining = ids(3).filter((p) => p !== a);
+    const paused = dixitOnPresenceChange(state, ctxOf(remaining));
+    expect(paused.paused).toBe(true);
+    expect(applyDixitAction(paused, 'p0', { type: 'forceNext' }, ctxOf(remaining))).toEqual({ ok: false, error: 'paused' });
+    const ctx = ctxOf([...remaining, 'p9']);
+    const s = act(paused, 'p0', { type: 'forceNext' }, ctx);
+    expect(s.phase).toBe('storytelling');
+    expect(s.paused).toBe(false);
+    expect(s.inRound).toContain('p9');
+    expect(s.inRound).not.toContain(a);
+    for (const p of s.inRound) expect(s.hands[p]).toHaveLength(7);
+    const all = [...s.deck, ...s.discard, ...Object.values(s.hands).flat()];
+    expect(all).toHaveLength(DIXIT_DECK_SIZE);
+    expect(new Set(all).size).toBe(DIXIT_DECK_SIZE);
   });
 });

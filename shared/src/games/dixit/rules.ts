@@ -187,6 +187,19 @@ function afterReveal(state: DixitState, ctx: GameContext): DixitState {
   return beginRound(state, ctx, { after: state.storyteller });
 }
 
+/** Rodada parada sem volta: devolve as cartas jogadas às mãos e recomeça a narração com quem está aqui. */
+function restartRound(state: DixitState, ctx: GameContext): DixitState {
+  const hands = { ...state.hands };
+  const giveBack = (player: string, cards: readonly string[]) => {
+    const hand = hands[player] ?? [];
+    hands[player] = [...hand, ...cards.filter((c) => !hand.includes(c))];
+  };
+  if (state.storyteller !== null && state.storyCard !== null) giveBack(state.storyteller, [state.storyCard]);
+  // Na votação as escolhas já saíram das mãos; na escolha ainda estão nelas.
+  if (state.phase === 'voting') for (const [p, cards] of Object.entries(state.picks)) giveBack(p, cards);
+  return beginRound({ ...state, hands }, ctx, { after: state.storyteller });
+}
+
 export function applyDixitAction(
   state: DixitState,
   playerId: string,
@@ -250,10 +263,14 @@ export function applyDixitAction(
     }
     case 'forceNext': {
       if (!isHost) return fail('not_host');
-      if (state.paused) return fail('paused');
+      if (state.paused) {
+        // Pausada: só destrava se já tem gente suficiente (ex.: alguém saiu de vez e outro entrou).
+        if (ctx.active.length < DIXIT_MIN_PLAYERS) return fail('paused');
+        return ok(restartRound(state, ctx));
+      }
       if (state.phase === 'storytelling') return ok(beginRound(state, ctx, { after: state.storyteller }));
       if (state.phase === 'submitting') {
-        if (state.confirmed.length === 0) return fail('nothing_chosen');
+        if (state.confirmed.length === 0) return ok(restartRound(state, ctx));
         return ok(toVoting(state, ctx));
       }
       if (state.phase === 'voting') return ok(toReveal(state));
