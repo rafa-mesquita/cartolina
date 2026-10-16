@@ -2,6 +2,7 @@ import { GROUP_NAME_MAX, cleanGroupName } from '@cartolina/shared';
 import { useState, type FormEvent } from 'react';
 import { goToGroup, goToRoom } from '../lib/router';
 import { createGroup, createRoom } from '../net/api';
+import { TOO_MANY_MESSAGE, isTooMany } from '../net/errors';
 import { loadGroups, rememberGroup } from '../net/identity';
 
 export function Home() {
@@ -18,8 +19,8 @@ export function Home() {
     setError(null);
     try {
       goToRoom(await createRoom());
-    } catch {
-      setError('Não deu pra criar a sala. O servidor tá ligado?');
+    } catch (err) {
+      setError(isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra criar a sala. O servidor tá ligado?');
     } finally {
       setBusy(false);
     }
@@ -46,9 +47,9 @@ export function Home() {
       rememberGroup(group);
       goToGroup(group.slug);
     } catch (err) {
-      // 400: o servidor recusou o nome (ex.: só símbolos); o resto é falha de rede/servidor
+      // 400: o servidor recusou o nome (ex.: só símbolos); 429: pedidos demais; o resto é falha de rede/servidor
       const rejected = err instanceof Error && err.message.endsWith('_400');
-      setGroupError(rejected ? 'Nome inválido.' : 'Não deu pra criar o grupo. O servidor tá ligado?');
+      setGroupError(rejected ? 'Nome inválido.' : isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra criar o grupo. O servidor tá ligado?');
     } finally {
       setGroupBusy(false);
     }

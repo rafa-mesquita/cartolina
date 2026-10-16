@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } f
 import { critterSvg } from '../brand/critters';
 import { goHome, goToRoom, groupLink } from '../lib/router';
 import { createGroupRoom, getGroup } from '../net/api';
+import { TOO_MANY_MESSAGE, isTooMany } from '../net/errors';
 import { rememberGroup } from '../net/identity';
 import './group.css';
 
@@ -158,8 +159,8 @@ export function GroupPage({ slug }: { slug: string }) {
     setRoomError(null);
     try {
       goToRoom(await createGroupRoom(slug));
-    } catch {
-      setRoomError('Não deu pra criar a sala. Tenta de novo.');
+    } catch (err) {
+      setRoomError(isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra criar a sala. Tenta de novo.');
     } finally {
       setCreating(false);
     }
