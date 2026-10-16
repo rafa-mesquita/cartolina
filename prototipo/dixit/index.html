@@ -70,7 +70,7 @@ button.pill:hover{border-color:var(--must)}
 
 /* cartas na mesa */
 .tcard{position:absolute;width:118px;height:177px;transform-origin:50% 100%;--stand:.28;--z:2px;
-  transform:translate(-50%,-100%) rotateX(calc(var(--tilt) * -1 * var(--stand))) translateZ(var(--z));transition:transform .35s cubic-bezier(.2,.8,.25,1);cursor:pointer;z-index:3}
+  transform:translate(-50%,-100%) rotateX(calc(var(--tilt) * -1 * var(--stand))) translateZ(var(--z)) scale(var(--sc,1));transition:transform .35s cubic-bezier(.2,.8,.25,1);cursor:pointer;z-index:3}
 /* a mola só passa do ponto subindo; descendo, para em cima do feltro (senão a carta afunda nele por uns quadros) */
 .tcard:hover,.tcard.voted,.tcard.story,.tcard.flipping{transition:transform .45s var(--spring)}
 .tcard.flipping{--stand:.7;--z:70px}
@@ -81,11 +81,18 @@ button.pill:hover{border-color:var(--must)}
 .face .art,.backside .art,.hcard .art,.viewer .art{width:100%;height:100%;border-radius:2px;overflow:hidden;display:block}
 .art svg{width:100%;height:100%;display:block}
 .tcard.voted .face{outline:.75px solid var(--must);outline-offset:3px}
-.tcard.story .face{outline:1.5px solid var(--must);outline-offset:4px}
-.tcard.dim{opacity:.55}
+.tcard.story{--sc:1.16;--z:34px;z-index:8}
+.tcard.story .face{outline:1.5px solid var(--must);outline-offset:4px;box-shadow:0 0 22px 4px rgba(242,165,65,.35);animation:glow 1.8s ease-in-out infinite}
+/* holofote: o momento em que a carta do narrador é revelada */
+.tcard.story.spot{--sc:1.55;--z:90px;--stand:1;z-index:9;transition:transform .7s cubic-bezier(.3,1.7,.5,1)}
+.tcard.story.spot .face{outline-width:2px;outline-offset:6px;animation:glowBig 1.4s ease-in-out infinite}
+@keyframes glowBig{0%,100%{box-shadow:0 0 30px 8px rgba(242,165,65,.45)}50%{box-shadow:0 0 56px 18px rgba(242,165,65,.75)}}
+@keyframes glow{0%,100%{box-shadow:0 0 18px 3px rgba(242,165,65,.3)}50%{box-shadow:0 0 34px 9px rgba(242,165,65,.6)}}
+.tcard.dim{opacity:.32;filter:saturate(.35) brightness(.75)}
+.tcard.dim,.tcard.story{transition:transform .5s var(--spring),opacity .5s ease,filter .5s ease}
 .roman{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;font:400 19px/1 var(--serif);color:var(--cream)}
 .tcard.voted .roman{color:var(--must)}
-.tag-story{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:10px;font:italic 400 14px/1 var(--serif);color:var(--must);white-space:nowrap}
+.tag-story{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:12px;font:italic 400 17px/1 var(--serif);color:var(--must);white-space:nowrap;text-shadow:0 1px 8px rgba(27,47,42,.9);animation:popOwner .5s var(--spring)}
 .tokens{position:absolute;left:4px;right:4px;bottom:8px;display:flex;flex-wrap:wrap;gap:2px;justify-content:center}
 .tokens span{width:26px;height:26px;animation:pop .45s var(--spring)}
 .tokens span svg{width:100%;height:100%}
@@ -574,12 +581,13 @@ async function runReveal(v) {
   // 1 · a carta do narrador
   const story = tableEls.get(R.storyCard);
   for (const [k, el] of tableEls) if (k !== R.storyCard) el.classList.add('dim');
-  story?.classList.add('story');
+  story?.classList.add('story', 'spot');
   story?.insertAdjacentHTML('beforeend', '<div class="tag-story">carta do narrador</div>');
   play('join');
   step(1, `esta era a carta de <em>${who(R.storyteller)}</em>, que narrou${R.clue ? ` <em>“${esc(R.clue)}”</em>` : ''}`);
   await wait(2600);
-  // 2 · os votos
+  // 2 · os votos (a carta desce do holofote, mas continua em destaque)
+  story?.classList.remove('spot');
   for (const el of tableEls.values()) el.classList.remove('dim');
   step(2, 'os votos…');
   let vi = 0;
