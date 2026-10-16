@@ -13,3 +13,34 @@ export function allowedOrigin(origin: string | null, allowed: string): string | 
     .filter(Boolean);
   return list.includes(origin) ? origin : null;
 }
+
+/** Maior corpo aceito num POST (o maior uso real é `{ "name": "<até 40 letras>" }`). */
+export const MAX_BODY_BYTES = 1024;
+export const TOO_LARGE = Symbol('too_large');
+
+/** Lê um corpo JSON pequeno. Maior que o limite → `TOO_LARGE`; JSON inválido → null. */
+export async function readSmallJson(request: Request, max = MAX_BODY_BYTES): Promise<unknown> {
+  const declared = Number(request.headers.get('Content-Length') ?? '0');
+  if (declared > max) return TOO_LARGE;
+  const text = await request.text();
+  if (new TextEncoder().encode(text).length > max) return TOO_LARGE;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+/** O que usamos do binding de Rate Limiting da Cloudflare. */
+export interface Limiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
+/**
+ * true = pode seguir. Sem binding (ambiente sem o limitador) ou sem IP (testes, scripts): segue.
+ * Em produção a Cloudflare sempre manda `CF-Connecting-IP`.
+ */
+export async function underLimit(limiter: Limiter | undefined, ip: string | null): Promise<boolean> {
+  if (!limiter || !ip) return true;
+  return (await limiter.limit({ key: ip })).success;
+}

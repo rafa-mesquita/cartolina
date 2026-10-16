@@ -1,6 +1,6 @@
 import { cleanGroupName, summarizeHistory, type GroupResponse, type RoomGroup } from '@cartolina/shared';
 import { CODE_RE, SLUG_RE, randomCode } from './codes';
-import { allowedOrigin } from './guard';
+import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
 import { allRounds, createGroup, findGroup, listRounds, type GroupRow } from './history-db';
 import { RoomDO } from './room-do';
 
@@ -56,15 +56,33 @@ async function getGroupPage(env: Env, group: GroupRow, before: number | null): P
   };
 }
 
+/** O binding pode não existir (removido do wrangler.jsonc se o plano não tiver): lê sem depender do tipo gerado. */
+function limiterOf(env: Env, name: 'ROOM_LIMITER' | 'GROUP_LIMITER'): Limiter | undefined {
+  return (env as unknown as Partial<Record<typeof name, Limiter>>)[name];
+}
+
+const tooMany = () => json({ error: 'too_many' }, 429);
+
 async function handle(request: Request, env: Env, rawOrigin: string | null, origin: string | null): Promise<Response> {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
 
-  if (request.method === 'POST' && url.pathname === '/rooms') return createRoomFor(env, null);
+  const ip = request.headers.get('CF-Connecting-IP');
+  if (request.method === 'POST' && Number(request.headers.get('Content-Length') ?? '0') > MAX_BODY_BYTES) {
+    return json({ error: 'too_large' }, 413);
+  }
+
+  if (request.method === 'POST' && url.pathname === '/rooms') {
+    if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
+    return createRoomFor(env, null);
+  }
 
   if (request.method === 'POST' && url.pathname === '/groups') {
-    const body = (await request.json().catch(() => null)) as { name?: unknown } | null;
-    const name = typeof body?.name === 'string' ? cleanGroupName(body.name) : null;
+    if (!(await underLimit(limiterOf(env, 'GROUP_LIMITER'), ip))) return tooMany();
+    const body = await readSmallJson(request);
+    if (body === TOO_LARGE) return json({ error: 'too_large' }, 413);
+    const raw = (body as { name?: unknown } | null)?.name;
+    const name = typeof raw === 'string' ? cleanGroupName(raw) : null;
     if (!name) return json({ error: 'bad_group_name' }, 400);
     const group = await createGroup(env.DB, name, Date.now());
     return json({ slug: group.slug, name: group.name }, 201);
@@ -80,7 +98,10 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
     if (before === undefined) return json({ error: 'bad_before' }, 400);
     const group = await findGroup(env.DB, slug);
     if (!group) return json({ error: 'not_found' }, 404);
-    if (wantsRoom) return createRoomFor(env, { id: group.id, slug: group.slug, name: group.name });
+    if (wantsRoom) {
+      if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
+      return createRoomFor(env, { id: group.id, slug: group.slug, name: group.name });
+    }
     return json(await getGroupPage(env, group, before));
   }
 

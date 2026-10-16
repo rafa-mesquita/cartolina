@@ -61,4 +61,27 @@ describe('HTTP', () => {
     local.webSocket?.accept();
     local.webSocket?.close();
   });
+  it('corpo grande demais dá 413', async () => {
+    const res = await SELF.fetch('https://x/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'x'.repeat(2000) }),
+    });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: 'too_large' });
+  });
+
+  it('criar grupo: o 6º pedido do mesmo IP no minuto dá 429', async () => {
+    const ip = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const res = await SELF.fetch('https://x/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },
+        body: JSON.stringify({ name: `Galera ${i}` }),
+      });
+      statuses.push(res.status);
+    }
+    expect(statuses).toEqual([201, 201, 201, 201, 201, 429]);
+  });
 });
