@@ -12,9 +12,11 @@
     "dev:server": "npm run db:migrate -w server && npm run dev -w server",
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w web",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "typescript": "~5.9.0",
     "vitest": "^4.1.12"
   }

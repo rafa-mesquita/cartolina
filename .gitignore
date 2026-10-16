@@ -4,3 +4,5 @@ dist/
 .dev.vars
 *.log
 web/dist/
+test-results/
+playwright-report/
