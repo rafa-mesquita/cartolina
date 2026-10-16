@@ -6,3 +6,6 @@ dist/
 web/dist/
 test-results/
 playwright-report/
+
+# imagens brutas do Flow (seleção das cartas do Dixit)
+prototipo/dixit/flow/
