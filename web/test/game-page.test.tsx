@@ -255,4 +255,12 @@ describe('GamePage', () => {
     expect(screen.getByText(/grupos acabaram/)).toBeTruthy();
     expect(await screen.findByText(/Nenhuma partida ainda/)).toBeTruthy();
   });
+
+  it('pedidos demais (429) no histórico: "Calma!", e não "não deu pra falar com o servidor"', async () => {
+    vi.mocked(api.getHistory).mockRejectedValue(new Error('history_failed_429'));
+    render(<GamePage game="ito" tab="historico" />);
+    expect(await screen.findByText('Calma! Tenta de novo em um minutinho.')).toBeTruthy();
+    expect(screen.queryByText('não deu pra falar com o servidor')).toBeNull();
+    expect(screen.getByRole('button', { name: 'tentar de novo' })).toBeTruthy();
+  });
 });

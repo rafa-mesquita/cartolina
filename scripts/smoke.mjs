@@ -1,7 +1,9 @@
-// Fumaça: cria sala, dois jogadores entram, jogam uma rodada livre até a revelação.
+// Fumaça: cria sala, dois jogadores entram, jogam uma rodada livre até a revelação (em produção, para antes de revelar).
 // Uso: com `npm run dev:server` rodando, `npm run smoke`.
 const BASE = process.env.SERVER_URL ?? 'http://127.0.0.1:8787';
 const WS = BASE.replace(/^http/, 'ws');
+/** Servidor local: dá pra ir até a revelação (o histórico é só de teste). */
+const LOCAL = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(BASE);
 
 function client(code, name, color) {
   const ws = new WebSocket(`${WS}/rooms/${code}/ws`);
@@ -56,10 +58,15 @@ a.send({ type: 'place', cardId: ca.id, index: 0 });
 await b.state((r) => r.game.row.length === 1, 'row 1');
 b.send({ type: 'place', cardId: cb.id, index: 1 });
 await a.state((r) => r.game.row.length === 2, 'row 2');
-a.send({ type: 'ready', ready: true });
-b.send({ type: 'ready', ready: true });
-const done = await a.state((r) => r.game.phase === 'reveal', 'reveal');
-console.log('revelação', done.game.reveal.map((e) => e.value).join(' → '), done.game.outcome);
+if (LOCAL) {
+  a.send({ type: 'ready', ready: true });
+  b.send({ type: 'ready', ready: true });
+  const done = await a.state((r) => r.game.phase === 'reveal', 'reveal');
+  console.log('revelação', done.game.reveal.map((e) => e.value).join(' → '), done.game.outcome);
+} else {
+  // Em produção toda rodada de DITU revelada entra no histórico público: o teste para com a fila montada.
+  console.log('fila montada com as duas cartas (sem revelar, pra não sujar o histórico da galera)');
+}
 a.ws.close();
 b.ws.close();
 console.log('ok');

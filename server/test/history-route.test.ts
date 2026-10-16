@@ -87,10 +87,10 @@ describe('GET /history/:game', () => {
     expect(await xyz.json()).toEqual({ error: 'not_found' });
   });
 
-  it('resposta de sucesso tem cache curto (primeira página e seguintes)', async () => {
+  it('resposta de sucesso não fica em cache (primeira página e seguintes)', async () => {
     for (const res of [await history('ito'), await history('ito', Date.now() + 1)]) {
       expect(res.status).toBe(200);
-      expect(res.headers.get('Cache-Control')).toBe('public, max-age=15');
+      expect(res.headers.get('Cache-Control')).toBe('no-cache');
     }
   });
 

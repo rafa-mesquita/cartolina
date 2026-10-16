@@ -62,6 +62,7 @@ não consegue falar com o servidor.
 - Deve terminar com `ok`:
   - bash: `SERVER_URL=https://cartolina-server.<subdominio>.workers.dev npm run smoke`
   - PowerShell: `$env:SERVER_URL = "https://cartolina-server.<subdominio>.workers.dev"; npm run smoke`
+  - Contra o servidor de produção o teste para com a fila montada, **sem revelar**: toda rodada de DITU revelada entra no histórico público, e a do teste sujaria os números da galera. Contra o servidor local ele joga até a revelação.
 - Abrir o site, criar uma sala e jogar uma rodada com alguém (ou com uma aba
   anônima).
 

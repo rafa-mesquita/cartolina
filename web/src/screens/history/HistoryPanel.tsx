@@ -2,12 +2,15 @@ import type { GameId, HistoryResponse } from '@cartolina/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gameHash } from '../../lib/router';
 import { getHistory } from '../../net/api';
+import { TOO_MANY_MESSAGE, isTooMany } from '../../net/errors';
 import { CritterIcon, RoundItem, Stat } from './RoundItem';
 import './history.css';
 
 export function HistoryPanel({ game }: { game: GameId }) {
   const [data, setData] = useState<HistoryResponse | null | undefined>(undefined);
-  const [loadFailed, setLoadFailed] = useState(false);
+  /** Falha da primeira carga: 	oo_many (429, pedidos demais) ou 
+et (servidor fora/rede). */
+  const [loadFailed, setLoadFailed] = useState<false | 'net' | 'too_many'>(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreError, setMoreError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -21,8 +24,8 @@ export function HistoryPanel({ game }: { game: GameId }) {
       .then((d) => {
         if (gen === generation.current) setData(d);
       })
-      .catch(() => {
-        if (gen === generation.current) setLoadFailed(true);
+      .catch((err: unknown) => {
+        if (gen === generation.current) setLoadFailed(isTooMany(err) ? 'too_many' : 'net');
       });
   }, [game]);
 
@@ -57,8 +60,8 @@ export function HistoryPanel({ game }: { game: GameId }) {
           stats: prev.stats ?? more.stats,
         };
       });
-    } catch {
-      if (gen === generation.current) setMoreError('Não deu pra carregar mais partidas. Tenta de novo.');
+    } catch (err) {
+      if (gen === generation.current) setMoreError(isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra carregar mais partidas. Tenta de novo.');
     } finally {
       if (gen === generation.current) setLoadingMore(false);
     }
@@ -67,7 +70,7 @@ export function HistoryPanel({ game }: { game: GameId }) {
   if (data === undefined && loadFailed) {
     return (
       <section className="panel">
-        <h2>não deu pra falar com o servidor</h2>
+        <h2>{loadFailed === 'too_many' ? TOO_MANY_MESSAGE : 'não deu pra falar com o servidor'}</h2>
         <button className="btn" type="button" onClick={load}>
           tentar de novo
         </button>

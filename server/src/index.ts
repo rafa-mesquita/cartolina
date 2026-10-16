@@ -105,9 +105,9 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
     if (!GAMES[game].recordsHistory) return json({ error: 'no_history' }, 404);
     const before = parseBefore(url.searchParams.get('before'));
     if (before === undefined) return json({ error: 'bad_before' }, 400);
-    // Público e caro na primeira página (lê até 5000 rodadas): limite por IP e cache curto.
+    // Público e caro na primeira página (lê até 5000 rodadas): limite por IP. Sem cache: a rodada recém-jogada tem que aparecer.
     if (!(await underLimit(limiterOf(env, 'HISTORY_LIMITER'), ip))) return tooMany();
-    return json(await getHistoryPage(env, game, before), 200, { 'Cache-Control': 'public, max-age=15' });
+    return json(await getHistoryPage(env, game, before), 200, { 'Cache-Control': 'no-cache' });
   }
 
   const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)(\/ws)?$/);

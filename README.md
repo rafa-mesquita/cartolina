@@ -36,7 +36,7 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 - A aba mostra números (rodadas, % de vitórias no livre, campanhas zeradas, maior sequência sem erro), quem mais acerta a posição, os temas mais jogados e as partidas (clique pra ver a fila revelada).
 - Não existem mais grupos: `#/g/<slug>` e as rotas `/groups*` saíram. Os links antigos caem no histórico do ITO, com um aviso.
 - Em desenvolvimento, `npm run dev:server` aplica as migrações no D1 local antes de subir (`npm run db:migrate -w server`).
-- API: `GET /history/:game[?before=<ms>]` → 20 rodadas, estatísticas (`stats`, só na primeira página) e cursor (`nextBefore`). Jogo desconhecido: 404 `not_found`; jogo sem histórico: 404 `no_history`. Limite de 60 pedidos por minuto por IP e `Cache-Control: public, max-age=15`.
+- API: `GET /history/:game[?before=<ms>]` → 20 rodadas, estatísticas (`stats`, só na primeira página) e cursor (`nextBefore`). Jogo desconhecido: 404 `not_found`; jogo sem histórico: 404 `no_history`. Limite de 60 pedidos por minuto por IP e `Cache-Control: no-cache` (a rodada recém-jogada aparece na hora).
 
 ## API do servidor
 
