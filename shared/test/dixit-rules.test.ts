@@ -179,3 +179,98 @@ describe('Dixit: narração, escolha e votação', () => {
     expect(state.result!.owners[state.storyCard!]).toBe(state.storyteller);
   });
 });
+
+describe('Dixit: fim da rodada e da partida', () => {
+  it('próxima rodada: narrador seguinte na ordem e mãos cheias', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const i = state.players.indexOf(state.storyteller!);
+    const s = act(state, 'p0', { type: 'next' }, ctx);
+    expect(s.phase).toBe('storytelling');
+    expect(s.storyteller).toBe(state.players[(i + 1) % 4]);
+    for (const p of ids(4)) expect(s.hands[p]).toHaveLength(6);
+    expect(s).toMatchObject({ clue: '', storyCard: null, table: [], result: null, picks: {}, votes: {}, confirmed: [] });
+    expect(s.scores).toEqual(state.scores);
+  });
+
+  it('só o host passa pra próxima, e só na revelação', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    expect(applyDixitAction(state, 'p1', { type: 'next' }, ctx)).toEqual({ ok: false, error: 'not_host' });
+    expect(applyDixitAction(voting(4).state, 'p0', { type: 'next' }, ctx)).toEqual({ ok: false, error: 'bad_phase' });
+  });
+
+  it('baralho vazio: o descarte é embaralhado e vira baralho', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const s = act({ ...state, deck: [] }, 'p0', { type: 'next' }, ctx);
+    for (const p of ids(4)) expect(s.hands[p]).toHaveLength(6);
+    expect(s.discard).toEqual([]);
+    expect(s.deck).toEqual([]);
+  });
+
+  it('alguém chegou na meta: fim de jogo com vencedor', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const s = act({ ...state, scores: { ...state.scores, p2: 30 } }, 'p0', { type: 'next' }, ctx);
+    expect(s.phase).toBe('gameover');
+    expect(s.winners).toEqual(['p2']);
+  });
+
+  it('empate no topo: todos os empatados vencem', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const s = act({ ...state, scores: { p0: 3, p1: 31, p2: 12, p3: 31 } }, 'p0', { type: 'next' }, ctx);
+    expect(s.winners).toEqual(['p1', 'p3']);
+  });
+
+  it('meta curta: 15 pontos', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const s = act({ ...state, target: 15, scores: { ...state.scores, p1: 15 } }, 'p0', { type: 'next' }, ctx);
+    expect(s.phase).toBe('gameover');
+  });
+
+  it('jogar de novo: placar zerado e mãos novas', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const over = act({ ...state, scores: { ...state.scores, p2: 30 } }, 'p0', { type: 'next' }, ctx);
+    expect(applyDixitAction(state, 'p0', { type: 'again' }, ctx)).toEqual({ ok: false, error: 'bad_phase' });
+    const s = act(over, 'p0', { type: 'again' }, ctx);
+    expect(s.phase).toBe('storytelling');
+    expect(s.scores).toEqual({ p0: 0, p1: 0, p2: 0, p3: 0 });
+    expect(s.winners).toEqual([]);
+    for (const p of ids(4)) expect(s.hands[p]).toHaveLength(6);
+  });
+
+  it('destravar na narração: a vez passa pro próximo', () => {
+    const { state, ctx } = started(4);
+    const i = state.players.indexOf(state.storyteller!);
+    const s = act(state, 'p0', { type: 'forceNext' }, ctx);
+    expect(s.phase).toBe('storytelling');
+    expect(s.storyteller).toBe(state.players[(i + 1) % 4]);
+  });
+
+  it('destravar na escolha: segue só com quem confirmou', () => {
+    const start = told(4);
+    const ctx = start.ctx;
+    let state = start.state;
+    expect(applyDixitAction(state, 'p0', { type: 'forceNext' }, ctx)).toEqual({ ok: false, error: 'nothing_chosen' });
+    const a = others(state)[0]!;
+    state = act(state, a, { type: 'submit', cardIds: [state.hands[a]![0]!] }, ctx);
+    state = act(state, a, { type: 'confirm' }, ctx);
+    const s = act(state, 'p0', { type: 'forceNext' }, ctx);
+    expect(s.phase).toBe('voting');
+    expect(s.table).toHaveLength(2);
+  });
+
+  it('destravar na votação: revela com os votos confirmados', () => {
+    const start = voting(4);
+    const ctx = start.ctx;
+    let state = start.state;
+    const a = others(state)[0]!;
+    state = act(state, a, { type: 'vote', cardId: state.storyCard! }, ctx);
+    state = act(state, a, { type: 'confirm' }, ctx);
+    const s = act(state, 'p0', { type: 'forceNext' }, ctx);
+    expect(s.phase).toBe('reveal');
+    expect(Object.keys(s.result!.votes)).toEqual([a]);
+  });
+
+  it('só o host destrava', () => {
+    const { state, ctx } = started(4);
+    expect(applyDixitAction(state, 'p1', { type: 'forceNext' }, ctx)).toEqual({ ok: false, error: 'not_host' });
+  });
+});

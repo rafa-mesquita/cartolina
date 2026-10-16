@@ -178,6 +178,15 @@ function maybeAdvance(state: DixitState, ctx: GameContext): DixitState {
   return state;
 }
 
+/** Depois da revelação: fim de jogo se alguém chegou na meta, senão a próxima narração. */
+function afterReveal(state: DixitState, ctx: GameContext): DixitState {
+  const top = Math.max(...state.players.map((p) => state.scores[p] ?? 0));
+  if (top >= state.target) {
+    return { ...state, phase: 'gameover', winners: state.players.filter((p) => (state.scores[p] ?? 0) === top) };
+  }
+  return beginRound(state, ctx, { after: state.storyteller });
+}
+
 export function applyDixitAction(
   state: DixitState,
   playerId: string,
@@ -239,6 +248,25 @@ export function applyDixitAction(
       if (!chosen) return fail('nothing_chosen');
       return ok(maybeAdvance({ ...state, confirmed: [...state.confirmed, playerId] }, ctx));
     }
+    case 'forceNext': {
+      if (!isHost) return fail('not_host');
+      if (state.paused) return fail('paused');
+      if (state.phase === 'storytelling') return ok(beginRound(state, ctx, { after: state.storyteller }));
+      if (state.phase === 'submitting') {
+        if (state.confirmed.length === 0) return fail('nothing_chosen');
+        return ok(toVoting(state, ctx));
+      }
+      if (state.phase === 'voting') return ok(toReveal(state));
+      return fail('bad_phase');
+    }
+    case 'next':
+      if (!isHost) return fail('not_host');
+      if (state.phase !== 'reveal') return fail('bad_phase');
+      return ok(afterReveal(state, ctx));
+    case 'again':
+      if (!isHost) return fail('not_host');
+      if (state.phase !== 'gameover') return fail('bad_phase');
+      return startMatch(state, ctx);
     default:
       return fail('bad_action');
   }
