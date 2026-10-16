@@ -20,7 +20,7 @@ Execução da Parte A com subagentes (uma tarefa por vez; revisão de conformida
 | 7 Feltro, assentos e mão (+ `delta-7.md`; `hand.ts` virou `handOrder.ts`) | aprovada | 2e845e0, f41245a |
 | 8 Painel e topo (+ `delta-8.md`) | aprovada | 2fd451f, 5050f85 |
 | 9 Revelação na tela (+ `delta-9.md`) | aprovada | 961785e, 43fa006 |
-| 10 Mesa inteira e `Game.tsx` (+ `delta-10.md`) | a fazer | |
+| 10 Mesa inteira e `Game.tsx` (+ `delta-10.md`; jogadas em `usePlays.ts`) | aprovada | 0947190, bdf66a1, ba03915, 1919f32 |
 | 11 Lobby e bots | a fazer | |
 
 Lembretes para quem continuar:
