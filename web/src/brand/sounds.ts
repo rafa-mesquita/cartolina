@@ -8,7 +8,7 @@ import { loadSoundPref } from '../net/identity';
 export type SoundName = 'card' | 'pick' | 'land' | 'slide' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
 
 /**
- * Sons de arquivo. `pick` (escolher personagem) usa o mesmo arquivo e os mesmos elementos da carta.
+ * Sons de arquivo. `pick` (escolher personagem, carta ou voto) usa o mesmo arquivo e os mesmos elementos da carta.
  * Os outros dos menus são sintetizados: `join` ("plim-plim" ao entrar) e `click` (estalinho dos botões).
  */
 type FileSound = 'card' | 'pick' | 'land';
@@ -58,6 +58,7 @@ function poolOf(sound: FileSound): Pool {
 function playFile(name: FileSound, now: number, gain: number): void {
   // `pick` é escolha da pessoa (personagem, carta, voto): sempre toca, mesmo colado em outro som de arquivo.
   if (name !== 'pick' && now - lastFile < FILE_GAP_MS) return;
+  // O `pick` também marca `lastFile` de propósito: a escolha já soou, e um `card`/`land` colado nela é engolido.
   lastFile = now;
   const pool = poolOf(name);
   const audio = pool.list[pool.next]!;
