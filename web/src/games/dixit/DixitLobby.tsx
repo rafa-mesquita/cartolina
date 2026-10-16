@@ -76,7 +76,7 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
       <Brushes width={1440} />
       <main className="dx-lobby">
         <h1 className="dx-logo">
-          diquisti<small>sala {view.code} · cartolina~</small>
+          diquisti <small>sala {view.code} · cartolina~</small>
         </h1>
         <section className="dx-sheet">
           <h2>na mesa</h2>
@@ -104,13 +104,13 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
           <div className="dx-targets">
             {DIXIT_TARGETS.map((t) => (
               <button key={t} type="button" aria-pressed={view.game.target === t} disabled={!host} onClick={() => conn.sendAction({ type: 'setTarget', target: t })}>
-                <b>{t}</b>
-                {t === 30 ? 'normal (como a caixa)' : 'curta'}
+                <b>{t}</b> <span>{t === 30 ? 'normal (como a caixa)' : 'curta'}</span>
               </button>
             ))}
           </div>
           {host ? (
-            <button className="dx-btn" type="button" onClick={start}>
+            // sem o clique: com gente faltando só toca o erro
+            <button className="dx-btn" type="button" data-sound={connected < DIXIT_MIN_PLAYERS ? 'none' : undefined} onClick={start}>
               começar
             </button>
           ) : (
@@ -127,11 +127,13 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
           </Suspense>
         )}
       </main>
-      {toast && (
-        <div key={toast.id} className="dx-toast dx-toast-lobby" role="status">
-          {toast.text}
-        </div>
-      )}
+      <div role="status" aria-live="polite">
+        {toast && (
+          <div key={toast.id} className="dx-toast dx-toast-lobby">
+            {toast.text}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

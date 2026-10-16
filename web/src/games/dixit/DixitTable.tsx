@@ -234,11 +234,13 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
               onHide={() => setBoardHidden(true)}
             />
           ))}
-        {toast && (
-          <div key={toast.id} className="dx-toast" role="status">
-            {toast.text}
-          </div>
-        )}
+        <div role="status" aria-live="polite">
+          {toast && (
+            <div key={toast.id} className="dx-toast">
+              {toast.text}
+            </div>
+          )}
+        </div>
         {viewer && (
           <CardViewer
             ids={viewer.ids}

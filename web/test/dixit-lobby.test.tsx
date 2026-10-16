@@ -49,6 +49,35 @@ describe('lobby do Diquisti', () => {
     expect(screen.getByText('P1')).toBeTruthy();
   });
 
+  it('o botão das metas e o título têm nome legível (sem palavras coladas)', () => {
+    render(<DixitLobby view={dixitView(dixitRoom(3), 'p0')} conn={conn()} />);
+    expect(screen.getByRole('button', { name: '15 curta' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^diquisti sala ABCD/);
+  });
+
+  it('com gente faltando, "começar" não toca o clique (só o erro)', () => {
+    const { rerender } = render(<DixitLobby view={dixitView(dixitRoom(2), 'p0')} conn={conn()} />);
+    expect(screen.getByRole('button', { name: 'começar' }).getAttribute('data-sound')).toBe('none');
+    rerender(<DixitLobby view={dixitView(dixitRoom(3), 'p0')} conn={conn()} />);
+    expect(screen.getByRole('button', { name: 'começar' }).getAttribute('data-sound')).toBeNull();
+  });
+
+  it('a região de avisos fica sempre montada e só troca o texto', () => {
+    let notify: (code: string, message: string) => void = () => {};
+    const c = conn();
+    c.onError = vi.fn<GameConn['onError']>((fn) => {
+      notify = fn;
+      return () => {};
+    });
+    render(<DixitLobby view={dixitView(dixitRoom(3), 'p0')} conn={c} />);
+    const live = screen.getByRole('status');
+    expect(live.getAttribute('aria-live')).toBe('polite');
+    expect(live.textContent).toBe('');
+    act(() => notify('not_host', 'Só o host pode.'));
+    expect(screen.getByRole('status')).toBe(live);
+    expect(live.textContent).toBe('Só o host pode.');
+  });
+
   it('dá um jeito de voltar pro início', () => {
     window.location.hash = '#/sala/ABCD';
     render(<DixitLobby view={dixitView(dixitRoom(3), 'p1')} conn={conn()} />);

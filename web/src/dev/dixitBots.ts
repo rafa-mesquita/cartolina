@@ -7,8 +7,8 @@ import { PLAYER_COLORS, dixitPicksPerPlayer, isDixitRoomView, type DixitRoomView
 import { getRoomInfo } from '../net/api';
 import { wsUrl } from '../net/config';
 import { RoomConnection } from '../net/connection';
+import { BOT_NAMES } from './bots';
 
-const NAMES = ['Bot Bia', 'Bot Caio', 'Bot Duda', 'Bot Enzo', 'Bot Lia', 'Bot Téo', 'Bot Nina', 'Bot Gui', 'Bot Malu'];
 const CLUES = ['saudade', 'um sonho que esqueci', 'silêncio', 'voltar pra casa', 'o primeiro dia', 'coragem', 'quase', 'segredo', 'domingo à tarde', 'a última página', 'eco', 'infância', 'maré', 'promessa', 'longe demais', 'antes de dormir'];
 /** Quanto esperar, depois de agir, antes de achar que a ação se perdeu e tentar de novo. */
 const RETRY_MS = 4000;
@@ -73,7 +73,7 @@ class DixitBot {
         const seats = info?.seats ?? [];
         const other = this.taken();
         const names = new Set([...other.names, ...seats.map((s) => s.name)]);
-        this.name = NAMES.find((n) => !names.has(n)) ?? `Bot ${1 + Math.floor(Math.random() * 99)}`;
+        this.name = BOT_NAMES.find((n) => !names.has(n)) ?? `Bot ${1 + Math.floor(Math.random() * 99)}`;
         [...other.colors, ...seats.map((s) => s.color)].forEach((c) => this.tried.add(c));
         this.color = this.nextColor();
         this.conn = new RoomConnection({ url: wsUrl(this.code), token: crypto.randomUUID(), name: this.name, color: this.color });
@@ -116,7 +116,7 @@ class DixitBot {
     this.later(100 + Math.random() * 300, () => {
       this.retrying = false;
       this.color = this.nextColor();
-      this.conn?.retryJoin(this.name ?? NAMES[0]!, this.color);
+      this.conn?.retryJoin(this.name ?? BOT_NAMES[0]!, this.color);
     });
   }
 
@@ -137,7 +137,8 @@ class DixitBot {
       if (!now || !isDixitRoomView(now)) return;
       // decide de novo com a visão atual (a etapa pode ter mudado enquanto esperava)
       const again = decideDixit(now, Math.random);
-      if (again?.key === d.key) again.actions.forEach((a) => this.conn?.sendAction(a));
+      if (again?.key !== d.key) return;
+      again.actions.forEach((a) => this.conn?.sendAction(a));
       // se a ação se perdeu e a etapa não andou, tenta de novo
       this.later(RETRY_MS, () => {
         if (this.planned !== d.key) return;

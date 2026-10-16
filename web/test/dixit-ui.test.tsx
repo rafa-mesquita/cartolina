@@ -179,6 +179,18 @@ describe('mão', () => {
     expect(p.onZoom).not.toHaveBeenCalled();
   });
 
+  it('o arrasto segue mesmo se o navegador recusar a captura do ponteiro', () => {
+    const p = handProps();
+    pointAt(fakeFelt());
+    render(<Hand {...p} />);
+    const card = screen.getByRole('button', { name: 'sua carta 1' });
+    card.setPointerCapture = () => {
+      throw new DOMException('ponteiro inativo', 'NotFoundError');
+    };
+    drag(card, [300, 800], [320, 400]);
+    expect(p.onPlay).toHaveBeenCalledWith('d001', { x: 320, y: 400 });
+  });
+
   it('sem a dica, o feltro fica vermelho e a carta volta (avisa em vez de jogar)', () => {
     const p = handProps();
     pointAt(fakeFelt());

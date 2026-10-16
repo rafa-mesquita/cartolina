@@ -345,6 +345,14 @@ describe('Game com sala de Diquisti', () => {
     expect(document.querySelector('.dixit')).toBeTruthy();
   });
 
+  it('a região de avisos da mesa existe desde o começo, vazia', () => {
+    const view = dixitView(started(4), 'p1');
+    render(<Game conn={conn()} snap={snap(view)} view={view} />);
+    const live = screen.getByRole('status');
+    expect(live.getAttribute('aria-live')).toBe('polite');
+    expect(live.textContent).toBe('');
+  });
+
   it('no lobby não mostra a mesa nem o lobby do DITU', () => {
     const view = dixitView(dixitRoom(2), 'p0');
     render(<Game conn={conn()} snap={snap(view)} view={view} />);

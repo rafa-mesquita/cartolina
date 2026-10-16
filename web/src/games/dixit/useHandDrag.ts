@@ -104,7 +104,11 @@ export function useHandDrag(handRef: RefObject<HTMLElement | null>, o: HandDragO
     if (from < 0) return;
     const width = handRef.current?.getBoundingClientRect().width ?? 0;
     track.current = { id, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, scale: width / HAND_W || 1, from, at: from, over: false, moved: false };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {
+      // ponteiro já inativo (NotFoundError): o arrasto segue sem a captura
+    }
   };
 
   const onPointerMove = (e: PointerEvent<HTMLElement>) => {
