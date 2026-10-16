@@ -48,10 +48,11 @@ textarea { width: 100%; height: 120px; background: #1B2F2A; color: var(--cream);
 <main id="grid"></main>
 <div class="zoom" id="zoom"><img id="zimg" alt=""></div>
 <script>
-// [índice inicial, quantidade, nome, observação]
+// [índice inicial (ou lista de índices), quantidade, nome, observação]
+const idsOf = (start, n) => (Array.isArray(start) ? start : Array.from({ length: n }, (_, k) => start + k));
 const S = [
  [364,4,'farol de relógios','teste'],[360,4,'escada do livro','teste'],[356,4,'porta no mar','teste'],
- [332,1,'pandemia',''],[353,3,'pandemia',''],[349,4,'branca de neve e os 7 anões',''],[345,4,'expedição no gelo',''],[341,4,'cidade noturna',''],
+ [[332,353,354,355],4,'pandemia',''],[349,4,'branca de neve e os 7 anões',''],[345,4,'expedição no gelo',''],[341,4,'cidade noturna',''],
  [337,4,'planeta anão',''],[333,4,'amor',''],[328,4,'depressão',''],[320,4,'cassino',''],[316,4,'fábrica',''],
  [312,4,'multidão',''],[324,4,'multidão','2ª geração'],[308,4,'aquático e vazio',''],[304,4,'aquático e cheio',''],
  [300,4,'IA feliz',''],[296,4,'IA triste',''],[292,4,'números',''],[288,4,'indígena',''],[284,4,'europa',''],
@@ -81,9 +82,10 @@ const grid = document.getElementById('grid');
 for (const [start, n, name, note] of S) {
   const row = document.createElement('section');
   row.className = 'scene' + (/não gostou|descartar/.test(note) ? ' drop' : '');
-  row.innerHTML = `<div class="label"><b>${name}</b><span>${note}</span><div class="n">#${start}–${start + n - 1}</div></div><div class="opts"></div>`;
+  const ids = idsOf(start, n);
+  row.innerHTML = `<div class="label"><b>${name}</b><span>${note}</span><div class="n">#${ids.join(", ")}</div></div><div class="opts"></div>`;
   const opts = row.querySelector('.opts');
-  for (let i = start; i < start + n; i++) {
+  for (const i of ids) {
     const o = document.createElement('div');
     o.className = 'opt' + (sel.has(i) ? ' on' : '');
     o.innerHTML = `<img loading="lazy" decoding="async" src="flow/${pad(i)}.jpg" alt="${name} ${i}">`;
@@ -96,7 +98,7 @@ for (const [start, n, name, note] of S) {
 document.getElementById('zoom').onclick = () => document.getElementById('zoom').classList.remove('on');
 document.getElementById('clear').onclick = () => { if (confirm('Limpar todas as escolhas?')) { sel.clear(); document.querySelectorAll('.opt.on').forEach((o) => o.classList.remove('on')); save(); } };
 document.getElementById('done').onclick = () => {
-  const names = Object.fromEntries(S.flatMap(([s, n, name]) => Array.from({ length: n }, (_, k) => [s + k, name])));
+  const names = Object.fromEntries(S.flatMap(([s, n, name]) => idsOf(s, n).map((i) => [i, name])));
   const list = [...sel].sort((a, b) => a - b).map((i) => `${i}:${names[i] ?? '?'}`);
   document.getElementById('list').value = `escolhidas (${list.length}): ` + list.join(', ');
   document.getElementById('out').classList.add('on');
