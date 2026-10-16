@@ -271,3 +271,29 @@ export function applyDixitAction(
       return fail('bad_action');
   }
 }
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((x, i) => x === b[i]);
+}
+
+/**
+ * Reavaliado quando alguém entra, sai ou expira a tolerância de desconexão.
+ * Devolve o MESMO objeto quando nada muda (o servidor compara referência).
+ */
+export function dixitOnPresenceChange(state: DixitState, ctx: GameContext): DixitState {
+  if (state.phase === 'storytelling') {
+    // Nada foi jogado ainda: dá pra refazer a rodada com quem está aqui agora.
+    const st = state.storyteller;
+    const next = beginRound(state, ctx, st !== null && ctx.active.includes(st) ? { keep: st } : { after: st });
+    const same =
+      next.storyteller === state.storyteller &&
+      next.paused === state.paused &&
+      sameList(next.players, state.players) &&
+      sameList(next.inRound, state.inRound);
+    return same ? state : next;
+  }
+  if (state.phase !== 'submitting' && state.phase !== 'voting') return state;
+  const paused = state.inRound.filter((p) => ctx.active.includes(p)).length < DIXIT_MIN_PLAYERS;
+  const next = paused === state.paused ? state : { ...state, paused };
+  return paused ? next : maybeAdvance(next, ctx);
+}

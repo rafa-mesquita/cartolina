@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { DIXIT_DECK_SIZE } from '../src/games/dixit/deck';
-import { applyDixitAction, cleanDixitClue, dixitDeckTooSmall, initialDixitState } from '../src/games/dixit/rules';
+import {
+  applyDixitAction,
+  cleanDixitClue,
+  dixitDeckTooSmall,
+  dixitOnPresenceChange,
+  initialDixitState,
+} from '../src/games/dixit/rules';
 import { act, ctxOf, ids, others, revealed, started, told, voting } from './dixit-helpers';
 
 describe('Dixit: lobby e início', () => {
@@ -272,5 +278,89 @@ describe('Dixit: fim da rodada e da partida', () => {
   it('só o host destrava', () => {
     const { state, ctx } = started(4);
     expect(applyDixitAction(state, 'p1', { type: 'forceNext' }, ctx)).toEqual({ ok: false, error: 'not_host' });
+  });
+});
+
+describe('Dixit: presença', () => {
+  it('nada mudou: devolve o mesmo objeto', () => {
+    for (const { state, ctx } of [started(4), told(4), voting(4), revealed(4, (s) => s.storyCard!)]) {
+      expect(dixitOnPresenceChange(state, ctx)).toBe(state);
+    }
+    const lobby = initialDixitState();
+    expect(dixitOnPresenceChange(lobby, ctxOf(ids(4)))).toBe(lobby);
+  });
+
+  it('narrador saiu antes de narrar: a vez passa pro próximo', () => {
+    const { state } = started(4);
+    const st = state.storyteller!;
+    const i = state.players.indexOf(st);
+    const s = dixitOnPresenceChange(state, ctxOf(ids(4).filter((p) => p !== st)));
+    expect(s.storyteller).toBe(state.players[(i + 1) % 4]);
+    expect(s.inRound).not.toContain(st);
+  });
+
+  it('quem entra durante a narração já recebe mão', () => {
+    const { state } = started(4);
+    const s = dixitOnPresenceChange(state, ctxOf([...ids(4), 'p9']));
+    expect(s.players).toEqual([...ids(4), 'p9']);
+    expect(s.inRound).toContain('p9');
+    expect(s.hands.p9).toHaveLength(6);
+    expect(s.scores.p9).toBe(0);
+    expect(s.storyteller).toBe(state.storyteller);
+  });
+
+  it('jogador sai na escolha: a rodada segue sem ele', () => {
+    const start = told(4);
+    let state = start.state;
+    const [a, b, c] = others(state);
+    for (const p of [a!, b!]) {
+      state = act(state, p, { type: 'submit', cardIds: [state.hands[p]![0]!] }, start.ctx);
+      state = act(state, p, { type: 'confirm' }, start.ctx);
+    }
+    expect(state.phase).toBe('submitting');
+    const s = dixitOnPresenceChange(state, ctxOf(ids(4).filter((p) => p !== c)));
+    expect(s.phase).toBe('voting');
+    expect(s.table).toHaveLength(3);
+  });
+
+  it('jogador sai na votação: revela sem ele', () => {
+    const start = voting(4);
+    let state = start.state;
+    const [a, b, c] = others(state);
+    for (const p of [a!, b!]) {
+      state = act(state, p, { type: 'vote', cardId: state.storyCard! }, start.ctx);
+      state = act(state, p, { type: 'confirm' }, start.ctx);
+    }
+    const s = dixitOnPresenceChange(state, ctxOf(ids(4).filter((p) => p !== c)));
+    expect(s.phase).toBe('reveal');
+    expect(Object.keys(s.result!.votes).sort()).toEqual([a, b].sort());
+  });
+
+  it('menos de 3 ativos: pausa, e volta sozinho quando a pessoa volta', () => {
+    const start = told(3);
+    const [a, b] = others(start.state);
+    const paused = dixitOnPresenceChange(start.state, ctxOf(ids(3).filter((p) => p !== a)));
+    expect(paused.paused).toBe(true);
+    expect(applyDixitAction(paused, b!, { type: 'submit', cardIds: paused.hands[b!]!.slice(0, 2) }, start.ctx)).toEqual({
+      ok: false,
+      error: 'paused',
+    });
+    const back = dixitOnPresenceChange(paused, ctxOf(ids(3)));
+    expect(back.paused).toBe(false);
+    expect(back.phase).toBe('submitting');
+  });
+
+  it('quem entra na votação espera e joga a próxima rodada', () => {
+    const start = voting(4);
+    const withNew = ctxOf([...ids(4), 'p9']);
+    let state = dixitOnPresenceChange(start.state, withNew);
+    expect(state.inRound).not.toContain('p9');
+    for (const p of others(state)) {
+      state = act(state, p, { type: 'vote', cardId: state.storyCard! }, withNew);
+      state = act(state, p, { type: 'confirm' }, withNew);
+    }
+    const next = act(state, 'p0', { type: 'next' }, withNew);
+    expect(next.inRound).toContain('p9');
+    expect(next.hands.p9).toHaveLength(6);
   });
 });
