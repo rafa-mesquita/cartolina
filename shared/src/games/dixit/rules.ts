@@ -1,11 +1,13 @@
 import type { ActionResult, GameContext } from '../../game';
 import { randomInt, shuffle, type Rng } from '../../rng';
 import { DIXIT_DECK_SIZE, dixitCardIds } from './deck';
+import { scoreRound } from './scoring';
 import {
   DIXIT_CLUE_MAX,
   DIXIT_DEFAULT_TARGET,
   DIXIT_MIN_PLAYERS,
   type DixitAction,
+  type DixitPhase,
   type DixitState,
   type DixitTarget,
 } from './types';
@@ -117,6 +119,65 @@ function startMatch(state: DixitState, ctx: GameContext): ActionResult<DixitStat
   return ok(beginRound(fresh, ctx, { keep: first }));
 }
 
+/** Não-narradores da rodada que estão ativos: são eles que precisam confirmar. */
+function mustAct(state: DixitState, ctx: GameContext): string[] {
+  return state.inRound.filter((p) => p !== state.storyteller && ctx.active.includes(p));
+}
+
+/** Por que `playerId` não pode agir nesta etapa (ou null se pode). */
+function actorError(state: DixitState, playerId: string, phase: DixitPhase): string | null {
+  if (state.phase !== phase) return 'bad_phase';
+  if (state.paused) return 'paused';
+  if (!state.inRound.includes(playerId)) return 'not_player';
+  if (playerId === state.storyteller) return 'is_storyteller';
+  if (state.confirmed.includes(playerId)) return 'already_confirmed';
+  return null;
+}
+
+/** Só as escolhas confirmadas vão pra mesa, embaralhadas junto com a do narrador. */
+function toVoting(state: DixitState, ctx: GameContext): DixitState {
+  const picks: Record<string, string[]> = Object.fromEntries(state.confirmed.map((p) => [p, state.picks[p] ?? []]));
+  const played = Object.values(picks).flat();
+  const hands = { ...state.hands };
+  for (const [p, cards] of Object.entries(picks)) hands[p] = (hands[p] ?? []).filter((c) => !cards.includes(c));
+  const table = shuffle(ctx.rng, [state.storyCard!, ...played]);
+  return { ...state, phase: 'voting', picks, hands, table, votes: {}, confirmed: [] };
+}
+
+/** Só votos confirmados contam. Cartas da mesa vão pro descarte. */
+function toReveal(state: DixitState): DixitState {
+  const storyteller = state.storyteller!;
+  const storyCard = state.storyCard!;
+  const votes: Record<string, string> = {};
+  for (const p of state.confirmed) {
+    const v = state.votes[p];
+    if (v !== undefined) votes[p] = v;
+  }
+  const owners: Record<string, string> = { [storyCard]: storyteller };
+  for (const [p, cards] of Object.entries(state.picks)) for (const c of cards) owners[c] = p;
+  const { gained, found } = scoreRound({ storyteller, storyCard, inRound: state.inRound, owners, votes });
+  const scores = { ...state.scores };
+  for (const [p, n] of Object.entries(gained)) scores[p] = (scores[p] ?? 0) + n;
+  return {
+    ...state,
+    phase: 'reveal',
+    scores,
+    votes,
+    discard: [...state.discard, ...state.table],
+    result: { storyteller, storyCard, clue: state.clue, table: state.table, owners, votes, gained, found },
+  };
+}
+
+/** Avança a etapa quando todos os ativos que precisam confirmar confirmaram. */
+function maybeAdvance(state: DixitState, ctx: GameContext): DixitState {
+  if (state.paused) return state;
+  const need = mustAct(state, ctx);
+  if (need.length === 0 || !need.every((p) => state.confirmed.includes(p))) return state;
+  if (state.phase === 'submitting') return toVoting(state, ctx);
+  if (state.phase === 'voting') return toReveal(state);
+  return state;
+}
+
 export function applyDixitAction(
   state: DixitState,
   playerId: string,
@@ -137,6 +198,47 @@ export function applyDixitAction(
       if (!isHost) return fail('not_host');
       if (state.phase === 'lobby') return fail('bad_phase');
       return ok(initialDixitState(state.target));
+    case 'tell': {
+      if (state.phase !== 'storytelling') return fail('bad_phase');
+      if (state.paused) return fail('paused');
+      if (playerId !== state.storyteller) return fail('not_storyteller');
+      const hand = state.hands[playerId] ?? [];
+      if (!hand.includes(action.cardId)) return fail('unknown_card');
+      return ok({
+        ...state,
+        phase: 'submitting',
+        storyCard: action.cardId,
+        clue: cleanDixitClue(action.clue),
+        hands: { ...state.hands, [playerId]: hand.filter((c) => c !== action.cardId) },
+        picks: {},
+        confirmed: [],
+      });
+    }
+    case 'submit': {
+      const e = actorError(state, playerId, 'submitting');
+      if (e) return fail(e);
+      const hand = state.hands[playerId] ?? [];
+      const cards = action.cardIds;
+      if (cards.length !== dixitPicksPerPlayer(state.inRound.length)) return fail('wrong_count');
+      if (new Set(cards).size !== cards.length || !cards.every((c) => hand.includes(c))) return fail('unknown_card');
+      return ok({ ...state, picks: { ...state.picks, [playerId]: [...cards] } });
+    }
+    case 'vote': {
+      const e = actorError(state, playerId, 'voting');
+      if (e) return fail(e);
+      if (!state.table.includes(action.cardId)) return fail('unknown_card');
+      if ((state.picks[playerId] ?? []).includes(action.cardId)) return fail('own_card');
+      return ok({ ...state, votes: { ...state.votes, [playerId]: action.cardId } });
+    }
+    case 'confirm': {
+      if (state.phase !== 'submitting' && state.phase !== 'voting') return fail('bad_phase');
+      const e = actorError(state, playerId, state.phase);
+      if (e) return fail(e);
+      const chosen =
+        state.phase === 'submitting' ? (state.picks[playerId]?.length ?? 0) > 0 : Object.hasOwn(state.votes, playerId);
+      if (!chosen) return fail('nothing_chosen');
+      return ok(maybeAdvance({ ...state, confirmed: [...state.confirmed, playerId] }, ctx));
+    }
     default:
       return fail('bad_action');
   }
