@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import { itoActionSchema } from './games/ito/schema';
 import type { RoomView } from './room';
 
 const cardId = z.string().min(1).max(64);
 const rowIndex = z.number().int().min(0).max(100);
+
+/** Ação do jogo: o envelope só garante `type`; a sala valida com o schema do jogo dela (`roomAction`). */
+const actionEnvelope = z.object({ type: z.string().min(1).max(32) }).passthrough();
 
 /** Coordenadas normalizadas; uma pequena folga permite cursor um pouco fora do feltro. */
 const coord = z.number().min(-1).max(2);
@@ -13,7 +15,7 @@ export type Activity = (typeof ACTIVITIES)[number];
 
 export const clientMessageSchema = z.discriminatedUnion('t', [
   z.object({ t: z.literal('join'), token: z.string().uuid(), name: z.string().max(100), color: z.string().max(16) }),
-  z.object({ t: z.literal('action'), action: itoActionSchema }),
+  z.object({ t: z.literal('action'), action: actionEnvelope }),
   z.object({
     t: z.literal('fx.cursor'),
     zone: z.enum(['table', 'hand']),

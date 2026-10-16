@@ -23,3 +23,4 @@ export {
 } from './games/dixit/rules';
 export { dixit, dixitViewFor } from './games/dixit/view';
 export { dixitActionSchema } from './games/dixit/schema';
+export * from './games/registry';

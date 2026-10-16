@@ -234,6 +234,7 @@ describe('roomSummary', () => {
   it('expõe fase e assentos públicos, sem tokens', () => {
     const summary = roomSummary(roomWith(2));
     expect(summary).toEqual({
+      game: 'ito',
       phase: 'lobby',
       seats: [
         { id: 'id-tok0', name: 'P0', color: PLAYER_COLORS[0], connected: true },
