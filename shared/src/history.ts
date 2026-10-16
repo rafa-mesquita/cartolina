@@ -1,15 +1,9 @@
+import { GAMES, type GameId } from './games/registry';
 import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
 import type { PlayerColor } from './players';
 import { itoStateOf, type Room } from './room';
 
-export const GROUP_NAME_MAX = 40;
 export const SHARPEST_MIN_CARDS = 3;
-
-export function cleanGroupName(raw: string): string | null {
-  const name = raw.trim().replace(/\s+/g, ' ');
-  const length = Array.from(name).length;
-  return length >= 1 && length <= GROUP_NAME_MAX ? name : null;
-}
 
 export interface RoundPlayer {
   name: string;
@@ -24,7 +18,7 @@ export interface RoundCard {
   error: boolean;
 }
 
-/** Uma rodada revelada, como fica gravada no histórico do grupo. */
+/** Uma rodada revelada, como fica gravada no histórico do jogo. */
 export interface RoundRecord {
   id: string;
   roomCode: string;
@@ -61,15 +55,9 @@ export interface HistoryStats {
   topThemes: { titulo: string; count: number }[];
 }
 
-export interface GroupInfo {
-  slug: string;
-  name: string;
-  createdAt: number;
-}
-
-/** Resposta de `GET /groups/:slug`. */
-export interface GroupResponse {
-  group: GroupInfo;
+/** Resposta de `GET /history/:game`. */
+export interface HistoryResponse {
+  game: GameId;
   rounds: RoundRecord[];
   /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
   stats: HistoryStats | null;
@@ -83,10 +71,10 @@ export function revealKey(game: ItoState): string | null {
   return head + game.reveal.map((e) => `${e.cardId}=${e.value}`).join('|');
 }
 
-/** Registro a gravar se a sala é de um grupo e está numa revelação ainda não gravada. */
+/** Registro a gravar se o jogo da sala grava histórico e ela está numa revelação ainda não gravada. */
 export function pendingRecord(room: Room, now: number, id: string): { key: string; record: RoundRecord } | null {
-  if (!room.group) return null;
-  // Só o ITO grava histórico por enquanto (o do Dixit vem num plano próprio).
+  // Só jogos que gravam histórico (hoje, o ITO).
+  if (!GAMES[room.gameId].recordsHistory) return null;
   const game = itoStateOf(room);
   if (!game) return null;
   const key = revealKey(game);

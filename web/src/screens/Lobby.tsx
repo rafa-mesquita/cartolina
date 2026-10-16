@@ -1,7 +1,8 @@
 import { MIN_PLAYERS, type ItoMode, type ItoRoomView } from '@cartolina/shared';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { isHost } from '../game/derive';
-import { roomLink } from '../lib/router';
+import { catalogEntry } from '../games/catalog';
+import { gameHash, roomLink } from '../lib/router';
 import type { GameConn } from '../net/connection';
 import { Avatar } from './Avatar';
 import { SoundToggle } from './SoundToggle';
@@ -15,6 +16,7 @@ const MODES: { mode: ItoMode; title: string; text: string }[] = [
 ];
 
 export function Lobby({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
+  const history = catalogEntry(view.gameId);
   const host = isHost(view);
   const connected = view.seats.filter((s) => s.connected).length;
   const [copied, setCopied] = useState(false);
@@ -78,9 +80,9 @@ export function Lobby({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
             ref={linkInput}
           />
         )}
-        {view.group && (
-          <a className="sbtn" href={`#/g/${view.group.slug}`} target="_blank" rel="noopener">
-            📜 histórico de {view.group.name}
+        {history?.hasHistory && (
+          <a className="sbtn" href={gameHash(view.gameId, 'historico')} target="_blank" rel="noopener">
+            📜 histórico do {history.name}
           </a>
         )}
       </section>

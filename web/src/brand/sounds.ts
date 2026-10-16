@@ -5,7 +5,7 @@ import { loadSoundPref } from '../net/identity';
  * sintetizados na hora com Web Audio (opção "A" de `prototipo/sons.html`): um "tic" de madeira por
  * carta que vira, subindo de tom; um "tunc" grave em cada erro; arpejo feliz ou "uó-uó" no fim.
  */
-export type SoundName = 'card' | 'pick' | 'land' | 'slide' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
+export type SoundName = 'card' | 'pick' | 'hover' | 'land' | 'slide' | 'flip' | 'error' | 'win' | 'lose' | 'join' | 'click';
 
 /**
  * Sons de arquivo. `pick` (escolher personagem, carta ou voto) usa o mesmo arquivo e os mesmos elementos da carta.
@@ -163,6 +163,11 @@ const SYNTH: Record<Exclude<SoundName, FileSound>, (c: AudioContext, index: numb
     tone(c, { f: NOTE(84), dur: 0.25, type: 'triangle', vol: 0.18, partial: 2, out });
     tone(c, { f: NOTE(91), t: 0.15, dur: 0.35, type: 'triangle', vol: 0.18, partial: 2, out });
   },
+  /**
+   * Mouse passando numa capa da estante: um "fff" curtinho de papel, bem baixo e diferente da carta pousando
+   * (que é o som do clique). Sintetizado de propósito: não passa pela trava dos sons de arquivo.
+   */
+  hover: (c, _i, out) => noise(c, { dur: 0.07, vol: 0.035, freq: 2600, q: 0.6, out }),
   /** Estalinho curto e baixinho dos botões. */
   click: (c, _i, out) => tone(c, { f: 880, dur: 0.06, type: 'triangle', vol: 0.06, attack: 0.003, out }),
   /** Outra pessoa mexeu na fila: carta deslizando no papel + toquinho de madeira, mais baixo que o da sua carta. */

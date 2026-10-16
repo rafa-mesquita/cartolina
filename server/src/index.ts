@@ -1,15 +1,15 @@
-import { cleanGroupName, isGameId, summarizeHistory, type GameId, type GroupResponse, type RoomGroup } from '@cartolina/shared';
-import { CODE_RE, SLUG_RE, randomCode } from './codes';
+import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse } from '@cartolina/shared';
+import { CODE_RE, randomCode } from './codes';
 import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
-import { allRounds, createGroup, findGroup, listRounds, type GroupRow } from './history-db';
+import { allRounds, listRounds } from './history-db';
 import { RoomDO } from './room-do';
 
 export { RoomDO };
 
 const PAGE_SIZE = 20;
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
 }
 
 /** CORS só para origens permitidas. 101 (upgrade de WebSocket) passa intacto: os headers dele são imutáveis. */
@@ -25,11 +25,11 @@ function withCors(res: Response, origin: string | null): Response {
   return out;
 }
 
-async function createRoomFor(env: Env, group: RoomGroup | null, game: GameId): Promise<Response> {
+async function createRoomFor(env: Env, game: GameId): Promise<Response> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = randomCode();
     const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-    const res = await stub.fetch(`https://room/init?code=${code}`, { method: 'POST', body: JSON.stringify({ group, game }) });
+    const res = await stub.fetch(`https://room/init?code=${code}`, { method: 'POST', body: JSON.stringify({ game }) });
     if (res.status === 201) return json({ code }, 201);
   }
   return json({ error: 'no_code' }, 503);
@@ -45,11 +45,11 @@ async function requestedGame(request: Request): Promise<GameId | null | typeof T
 }
 
 /** Cria a sala com o jogo pedido, ou responde 413/400. */
-async function createRequestedRoom(request: Request, env: Env, group: RoomGroup | null): Promise<Response> {
+async function createRequestedRoom(request: Request, env: Env): Promise<Response> {
   const game = await requestedGame(request);
   if (game === TOO_LARGE) return json({ error: 'too_large' }, 413);
   if (game === null) return json({ error: 'bad_game' }, 400);
-  return createRoomFor(env, group, game);
+  return createRoomFor(env, game);
 }
 
 /** Lê o cursor `before`: ausente → null (primeira página); inválido → undefined. */
@@ -60,21 +60,21 @@ function parseBefore(raw: string | null): number | null | undefined {
   return Number.isSafeInteger(n) ? n : undefined;
 }
 
-async function getGroupPage(env: Env, group: GroupRow, before: number | null): Promise<GroupResponse> {
+async function getHistoryPage(env: Env, game: GameId, before: number | null): Promise<HistoryResponse> {
   // Uma a mais que a página só para saber se existe próxima.
-  const fetched = await listRounds(env.DB, group.id, before, PAGE_SIZE + 1);
+  const fetched = await listRounds(env.DB, game, before, PAGE_SIZE + 1);
   const rounds = fetched.slice(0, PAGE_SIZE);
   return {
-    group: { slug: group.slug, name: group.name, createdAt: group.created_at },
+    game,
     rounds,
     // Estatísticas só na primeira página: leem até STATS_ROUNDS_CAP rodadas, caro demais para repetir a cada "ver mais".
-    stats: before === null ? summarizeHistory(await allRounds(env.DB, group.id)) : null,
+    stats: before === null ? summarizeHistory(await allRounds(env.DB, game)) : null,
     nextBefore: fetched.length > PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
   };
 }
 
 /** O binding pode não existir (removido do wrangler.jsonc se o plano não tiver): lê sem depender do tipo gerado. */
-function limiterOf(env: Env, name: 'ROOM_LIMITER' | 'GROUP_LIMITER'): Limiter | undefined {
+function limiterOf(env: Env, name: 'ROOM_LIMITER' | 'HISTORY_LIMITER'): Limiter | undefined {
   return (env as unknown as Partial<Record<typeof name, Limiter>>)[name];
 }
 
@@ -95,35 +95,19 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
 
   if (request.method === 'POST' && url.pathname === '/rooms') {
     if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
-    return createRequestedRoom(request, env, null);
+    return createRequestedRoom(request, env);
   }
 
-  if (request.method === 'POST' && url.pathname === '/groups') {
-    if (!(await underLimit(limiterOf(env, 'GROUP_LIMITER'), ip))) return tooMany();
-    const body = await readSmallJson(request);
-    if (body === TOO_LARGE) return json({ error: 'too_large' }, 413);
-    const raw = (body as { name?: unknown } | null)?.name;
-    const name = typeof raw === 'string' ? cleanGroupName(raw) : null;
-    if (!name) return json({ error: 'bad_group_name' }, 400);
-    const group = await createGroup(env.DB, name, Date.now());
-    return json({ slug: group.slug, name: group.name }, 201);
-  }
-
-  const groupMatch = url.pathname.match(/^\/groups\/([^/]+)(\/rooms)?$/);
-  if (groupMatch) {
-    const slug = groupMatch[1]!;
-    const wantsRoom = Boolean(groupMatch[2]);
-    if (request.method !== (wantsRoom ? 'POST' : 'GET')) return json({ error: 'not_found' }, 404);
-    if (!SLUG_RE.test(slug)) return json({ error: 'not_found' }, 404);
-    const before = wantsRoom ? null : parseBefore(url.searchParams.get('before'));
+  const historyMatch = url.pathname.match(/^\/history\/([^/]+)$/);
+  if (historyMatch && request.method === 'GET') {
+    const game = historyMatch[1]!;
+    if (!isGameId(game)) return json({ error: 'not_found' }, 404);
+    if (!GAMES[game].recordsHistory) return json({ error: 'no_history' }, 404);
+    const before = parseBefore(url.searchParams.get('before'));
     if (before === undefined) return json({ error: 'bad_before' }, 400);
-    const group = await findGroup(env.DB, slug);
-    if (!group) return json({ error: 'not_found' }, 404);
-    if (wantsRoom) {
-      if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
-      return createRequestedRoom(request, env, { id: group.id, slug: group.slug, name: group.name });
-    }
-    return json(await getGroupPage(env, group, before));
+    // Público e caro na primeira página (lê até 5000 rodadas): limite por IP. Sem cache: a rodada recém-jogada tem que aparecer.
+    if (!(await underLimit(limiterOf(env, 'HISTORY_LIMITER'), ip))) return tooMany();
+    return json(await getHistoryPage(env, game, before), 200, { 'Cache-Control': 'no-cache' });
   }
 
   const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)(\/ws)?$/);

@@ -1,6 +1,6 @@
 import { SELF, env } from 'cloudflare:test';
 import { describe, expect, it } from 'vitest';
-import { newGroup, newRoomCode } from './helpers';
+import { newRoomCode } from './helpers';
 import { ROOM_ALPHABET } from '../src/codes';
 
 describe('HTTP', () => {
@@ -44,18 +44,6 @@ describe('HTTP', () => {
     });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'bad_game' });
-  });
-
-  it('sala de grupo também escolhe o jogo', async () => {
-    const slug = await newGroup();
-    const res = await SELF.fetch(`https://x/groups/${slug}/rooms`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ game: 'dixit' }),
-    });
-    expect(res.status).toBe(201);
-    const { code } = (await res.json()) as { code: string };
-    expect(await (await SELF.fetch(`https://x/rooms/${code}`)).json()).toMatchObject({ game: 'dixit' });
   });
 
   it('sala inexistente ou código inválido dá 404', async () => {
@@ -116,27 +104,27 @@ describe('HTTP', () => {
   });
 
   it('corpo grande demais dá 413', async () => {
-    const res = await SELF.fetch('https://x/groups', {
+    const res = await SELF.fetch('https://x/rooms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'x'.repeat(2000) }),
+      body: JSON.stringify({ game: 'x'.repeat(2000) }),
     });
     expect(res.status).toBe(413);
     expect(await res.json()).toEqual({ error: 'too_large' });
   });
 
   // Sem o bloco `ratelimits` no wrangler.jsonc (fallback do docs/deploy.md) não há limitador: pula.
-  it.skipIf(!('GROUP_LIMITER' in env))('criar grupo: o 6º pedido do mesmo IP no minuto dá 429', async () => {
+  it.skipIf(!('ROOM_LIMITER' in env))('criar sala: o 11º pedido do mesmo IP no minuto dá 429', async () => {
     const ip = `test-${crypto.randomUUID()}`; // chave única: não depende do estado de outros testes
     const statuses: number[] = [];
-    for (let i = 0; i < 6; i++) { // 5 é o limite do GROUP_LIMITER no wrangler.jsonc
-      const res = await SELF.fetch('https://x/groups', {
+    for (let i = 0; i < 11; i++) { // 10 é o limite do ROOM_LIMITER no wrangler.jsonc
+      const res = await SELF.fetch('https://x/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },
-        body: JSON.stringify({ name: `Galera ${i}` }),
+        body: JSON.stringify({ game: 'ito' }),
       });
       statuses.push(res.status);
     }
-    expect(statuses).toEqual([201, 201, 201, 201, 201, 429]);
+    expect(statuses).toEqual([...Array<number>(10).fill(201), 429]);
   });
 });

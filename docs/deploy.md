@@ -62,15 +62,16 @@ não consegue falar com o servidor.
 - Deve terminar com `ok`:
   - bash: `SERVER_URL=https://cartolina-server.<subdominio>.workers.dev npm run smoke`
   - PowerShell: `$env:SERVER_URL = "https://cartolina-server.<subdominio>.workers.dev"; npm run smoke`
+  - Contra o servidor de produção o teste para com a fila montada, **sem revelar**: toda rodada de DITU revelada entra no histórico público, e a do teste sujaria os números da galera. Contra o servidor local ele joga até a revelação.
 - Abrir o site, criar uma sala e jogar uma rodada com alguém (ou com uma aba
   anônima).
 
 ## Primeira noite
 
-- Crie o grupo no site e mande o **link do grupo** no Discord. Cada um abre no
-  **computador** (no celular aparece um aviso).
-- Do grupo, clique em **criar sala do grupo** e mande o link da sala. As
-  rodadas jogadas ali entram no histórico sozinhas.
+- Mande o **link do site** no Discord. Cada um abre no **computador** (no
+  celular aparece um aviso), entra no **DITU** e clica em **criar sala** (ou
+  entra pelo código de uma sala que já existe). As rodadas jogadas entram no
+  histórico sozinhas, e ele fica em `#/ito/historico`, aberto a todos.
 - Não faça push no `main` durante a partida: cada publicação reinicia o
   servidor e derruba as conexões por alguns segundos.
 - Travou alguma coisa? **Recarregue a página**: carta e assento são mantidos.

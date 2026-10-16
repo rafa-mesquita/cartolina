@@ -109,9 +109,3 @@ button, input, textarea { font: inherit; color: inherit; }
 .toggle.on { background: var(--pink); }
 .knob { position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink); transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1); }
 .toggle.on .knob { transform: translateX(20px); }
-.group-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.group-list a {
-  display: inline-block; font: 500 16px/1 var(--font-ui); color: var(--ink); text-decoration: none; padding: 8px 12px 7px;
-  border: 2px solid var(--ink); border-radius: 999px 990px 999px 980px; background: var(--kraft);
-}
-.group-list a:hover { background: var(--pink); }

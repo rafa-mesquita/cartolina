@@ -148,6 +148,13 @@ describe('Lobby', () => {
     expect((screen.getByRole('button', { name: 'começar' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('mostra o link do histórico do jogo', () => {
+    render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={fakeConn()} />);
+    const link = screen.getByRole('link', { name: '📜 histórico do DITU' });
+    expect(link.getAttribute('href')).toBe('#/ito/historico');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
   it('quem não é host espera', () => {
     render(<Lobby view={viewOf(makeRoom(2), 'p1')} conn={fakeConn()} />);
     expect(screen.queryByRole('button', { name: 'começar' })).toBeNull();

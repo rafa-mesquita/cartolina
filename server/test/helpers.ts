@@ -103,21 +103,15 @@ export async function joined(code: string, n: number): Promise<{ client: TestCli
   return out;
 }
 
-export async function newGroup(name = 'Galera'): Promise<string> {
-  const res = await SELF.fetch('https://x/groups', {
+/** Cria sala do jogo pedido (padrão ITO). */
+export async function newGameRoom(game: 'ito' | 'dixit' = 'ito'): Promise<string> {
+  const res = await SELF.fetch('https://x/rooms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ game }),
   });
-  if (res.status !== 201) throw new Error(`criar grupo falhou: ${res.status}`);
-  return ((await res.json()) as { slug: string }).slug;
-}
-
-export async function newGroupRoom(name = 'Galera'): Promise<{ slug: string; code: string }> {
-  const slug = await newGroup(name);
-  const res = await SELF.fetch(`https://x/groups/${slug}/rooms`, { method: 'POST' });
-  if (res.status !== 201) throw new Error(`criar sala do grupo falhou: ${res.status}`);
-  return { slug, code: ((await res.json()) as { code: string }).code };
+  if (res.status !== 201) throw new Error(`criar sala falhou: ${res.status}`);
+  return ((await res.json()) as { code: string }).code;
 }
 
 /** Dois jogadores jogam uma rodada livre até a revelação (host força a revelação). */

@@ -20,7 +20,7 @@ import {
 const rng = mulberry32(3);
 
 function dixitRoom(n: number): Room {
-  let room = createRoom('ABCD', 0, null, 'dixit');
+  let room = createRoom('ABCD', 0, 'dixit');
   for (let i = 0; i < n; i++) {
     const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
     if (!res.ok) throw new Error(res.error);
@@ -50,7 +50,7 @@ describe('sala com jogo', () => {
   });
 
   it('sala de Dixit começa no lobby do Dixit', () => {
-    const room = createRoom('ABCD', 0, null, 'dixit');
+    const room = createRoom('ABCD', 0, 'dixit');
     expect(room.gameId).toBe('dixit');
     expect(room.game.phase).toBe('lobby');
     expect(itoStateOf(room)).toBeNull();
@@ -99,16 +99,22 @@ describe('sala com jogo', () => {
 
 describe('restoreRoom', () => {
   it('sala antiga sem gameId (e sem campos do histórico) abre como ITO', () => {
-    const { gameId: _g, group: _gr, runStartedAt: _r, recordedRevealKey: _k, ...old } = createRoom('ABCD', 0);
+    const { gameId: _g, runStartedAt: _r, recordedRevealKey: _k, ...old } = createRoom('ABCD', 0);
     const room = restoreRoom(old);
     expect(room.gameId).toBe('ito');
-    expect(room.group).toBeNull();
     expect(room.runStartedAt).toBeNull();
     expect(room.recordedRevealKey).toBeNull();
   });
 
+  it('sala gravada com grupo (formato antigo) volta sem o campo group', () => {
+    const stored = { ...createRoom('ABCD', 0), group: { id: 'g', slug: 'abcdefghjk', name: 'X' } };
+    const restored = restoreRoom(stored);
+    expect('group' in restored).toBe(false);
+    expect(restored.gameId).toBe('ito');
+  });
+
   it('mantém o que já existe', () => {
-    const room = createRoom('ABCD', 0, null, 'dixit');
+    const room = createRoom('ABCD', 0, 'dixit');
     expect(restoreRoom(room)).toEqual(room);
   });
 });

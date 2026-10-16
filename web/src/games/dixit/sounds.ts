@@ -8,6 +8,8 @@ import { playSound, type SoundName } from '../../brand/sounds';
 const GAIN: Record<SoundName, number> = {
   card: 0.45,
   pick: 0.45,
+  // Hover é da estante (fora da mesa); se a mesa um dia usar, fica no volume baixo do Diquisti.
+  hover: 0.45,
   land: 0.45,
   error: 0.3,
   flip: 0.35,

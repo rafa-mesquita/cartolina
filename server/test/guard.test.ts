@@ -52,7 +52,7 @@ describe('underLimit', () => {
 
 describe('readSmallJson', () => {
   const req = (body: string, headers: Record<string, string> = {}) =>
-    new Request('https://x/groups', { method: 'POST', body, headers });
+    new Request('https://x/rooms', { method: 'POST', body, headers });
 
   it('lê JSON pequeno; JSON inválido vira null', async () => {
     expect(await readSmallJson(req('{"name":"Galera"}'))).toEqual({ name: 'Galera' });

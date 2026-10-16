@@ -320,6 +320,8 @@ vão para o build de produção.)
 
 ## 11. Histórico do grupo (adicionado em 2026-10-15, Plano 3)
 
+**Substituída** por `2026-10-16-estante-de-jogos-design.md` (sem grupos; histórico por jogo).
+
 Pedido do usuário depois do design inicial: guardar o histórico das partidas
 da galera, de forma permanente e compartilhada.
 

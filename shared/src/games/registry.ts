@@ -23,6 +23,8 @@ export interface GameEntry {
   maxPlayers: number;
   /** Cursores e ping ao vivo. No Dixit, cursor em cima de uma carta entregaria o voto. */
   liveCursors: boolean;
+  /** Rodadas reveladas vão para o histórico do jogo (`GET /history/:game`). */
+  recordsHistory: boolean;
 }
 
 /** Amarra regras e schema do MESMO jogo (o compilador recusa par trocado) e apaga os tipos uma vez só. */
@@ -33,6 +35,7 @@ function defineGame<S extends GameState, A extends GameAction, V extends GameVie
   minPlayers: number;
   maxPlayers: number;
   liveCursors: boolean;
+  recordsHistory: boolean;
 }): GameEntry {
   return entry as unknown as GameEntry;
 }
@@ -45,6 +48,7 @@ export const GAMES: Record<GameId, GameEntry> = {
     minPlayers: MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
     liveCursors: true,
+    recordsHistory: true,
   }),
   dixit: defineGame({
     id: 'dixit',
@@ -53,6 +57,7 @@ export const GAMES: Record<GameId, GameEntry> = {
     minPlayers: DIXIT_MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
     liveCursors: false,
+    recordsHistory: false,
   }),
 };
 

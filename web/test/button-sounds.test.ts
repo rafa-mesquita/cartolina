@@ -13,6 +13,16 @@ function button(attrs: { sound?: string; disabled?: boolean; html?: string } = {
   return b;
 }
 
+function link(attrs: { sound?: string; html?: string } = {}) {
+  const a = document.createElement('a');
+  a.href = '#/ito';
+  if (attrs.sound) a.dataset.sound = attrs.sound;
+  a.innerHTML = attrs.html ?? 'ir';
+  document.body.appendChild(a);
+  // jsdom não navega, mas o clique ainda chega nos listeners
+  return a;
+}
+
 describe('sons dos botões (um listener delegado)', () => {
   let uninstall: () => void = () => {};
   afterEach(() => {
@@ -48,6 +58,38 @@ describe('sons dos botões (um listener delegado)', () => {
       document.body.appendChild(div);
       div.click();
       expect(play.mock.calls).toEqual([['pick']]);
+    });
+
+    it('link só soa com data-sound explícito; sem atributo fica quieto', () => {
+      link().click();
+      link({ sound: 'card' }).click();
+      link({ sound: 'click' }).click();
+      expect(play.mock.calls).toEqual([['card'], ['click']]);
+    });
+
+    it('link com data-sound="none" silencia; valor desconhecido cai em "click"', () => {
+      link({ sound: 'none' }).click();
+      link({ sound: 'trombone' }).click();
+      expect(play.mock.calls).toEqual([['click']]);
+    });
+
+    it('clique num filho de link com data-sound conta; filho de link sem atributo, não', () => {
+      const withSound = link({ sound: 'card', html: '<b>DITU</b>' });
+      withSound.querySelector('b')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const plain = link({ html: '<b>texto</b>' });
+      plain.querySelector('b')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      expect(play.mock.calls).toEqual([['card']]);
+    });
+
+    it('link dentro de uma área com sons próprios (data-button-sounds) não soa no listener do documento', () => {
+      const area = document.createElement('div');
+      area.dataset.buttonSounds = '';
+      document.body.appendChild(area);
+      const inside = document.createElement('a');
+      inside.dataset.sound = 'pick';
+      area.appendChild(inside);
+      inside.click();
+      expect(play).not.toHaveBeenCalled();
     });
 
     it('botão desabilitado não soa', () => {

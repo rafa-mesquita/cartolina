@@ -6,6 +6,8 @@ test.afterEach(closePlayers);
 test('build de produção não tem bots', async ({ browser }) => {
   const a = await newPlayer(browser);
   await a.goto('/');
+  await a.getByRole('link', { name: /DITU/ }).click();
+  await expect(a).toHaveURL(/#\/ito$/);
   await a.getByRole('button', { name: 'criar sala' }).click();
   await expect(a).toHaveURL(/#\/sala\/[A-Z0-9]{4}$/);
   await join(a, 'Ana', 0);
@@ -17,6 +19,8 @@ test('rodada livre com dois navegadores', async ({ browser }) => {
   const a = await newPlayer(browser);
   const b = await newPlayer(browser);
   await a.goto('/');
+  await a.getByRole('link', { name: /DITU/ }).click();
+  await expect(a).toHaveURL(/#\/ito$/);
   await a.getByRole('button', { name: 'criar sala' }).click();
   await expect(a).toHaveURL(/#\/sala\/[A-Z0-9]{4}$/);
   await join(a, 'Ana', 0);
@@ -41,15 +45,11 @@ test('rodada livre com dois navegadores', async ({ browser }) => {
   await expect(a.locator('.row .rcard', { hasText: 'neve' })).toHaveCount(1);
 });
 
-test('rodada numa sala de grupo aparece no histórico', async ({ browser }) => {
+test('rodada aparece no histórico do ITO', async ({ browser }) => {
   const a = await newPlayer(browser);
   const b = await newPlayer(browser);
-  await a.goto('/');
-  await a.getByLabel('nome do grupo').fill('Galera E2E');
-  await a.getByRole('button', { name: 'criar grupo' }).click();
-  await expect(a).toHaveURL(/#\/g\/[a-z0-9]{10}$/);
-  const groupUrl = a.url();
-  await a.getByRole('button', { name: 'criar sala do grupo' }).click();
+  await a.goto('/#/ito');
+  await a.getByRole('button', { name: 'criar sala' }).click();
   await expect(a).toHaveURL(/#\/sala\/[A-Z0-9]{4}$/);
   await join(a, 'Ana', 0);
   await b.goto(a.url());
@@ -57,12 +57,12 @@ test('rodada numa sala de grupo aparece no histórico', async ({ browser }) => {
 
   await playRound(a, b, 'Bia', ['farol', 'iglu']);
 
-  await a.goto(groupUrl);
-  // A gravação no D1 acontece logo depois da revelação: recarrega até aparecer.
+  await a.goto('/#/ito/historico');
+  // A gravação no D1 acontece logo depois da revelação: recarrega até aparecer. A partida mais recente é a primeira
+  // (o histórico do ITO é um só e acumula as rodadas de outras execuções).
   await expect(async () => {
     await a.reload();
-    await expect(a.locator('[aria-controls]')).toHaveCount(1, { timeout: 1000 });
+    await a.locator('.round-head').first().click();
+    await expect(a.getByText('farol')).toBeVisible({ timeout: 1000 });
   }).toPass({ timeout: 15_000 });
-  await a.locator('[aria-controls]').first().click();
-  await expect(a.getByText('farol')).toBeVisible();
 });

@@ -15,7 +15,7 @@ import {
 
 /** Sala de Diquisti com `n` jogadores p0…: único lugar das fixtures do Diquisti que chama `createRoom` (a estante muda a assinatura). */
 export function dixitRoom(n: number): Room {
-  let room = createRoom('ABCD', 0, null, 'dixit');
+  let room = createRoom('ABCD', 0, 'dixit');
   for (let i = 0; i < n; i++) {
     const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
     if (!res.ok) throw new Error(res.error);
