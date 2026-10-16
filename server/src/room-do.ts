@@ -83,7 +83,7 @@ export class RoomDO extends DurableObject<Env> {
 
     if (url.pathname === '/init') {
       if (this.room) return new Response('taken', { status: 409 });
-      const body = (await request.json().catch(() => ({}))) as { group?: RoomGroup | null; game?: unknown };
+      const body = ((await request.json().catch(() => null)) ?? {}) as { group?: RoomGroup | null; game?: unknown };
       const game = isGameId(body.game) ? body.game : 'ito';
       this.room = createRoom(url.searchParams.get('code') ?? '', Date.now(), body.group ?? null, game);
       await this.commit();

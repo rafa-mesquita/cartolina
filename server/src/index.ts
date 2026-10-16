@@ -1,4 +1,4 @@
-import { cleanGroupName, summarizeHistory, type GroupResponse, type RoomGroup } from '@cartolina/shared';
+import { cleanGroupName, isGameId, summarizeHistory, type GameId, type GroupResponse, type RoomGroup } from '@cartolina/shared';
 import { CODE_RE, SLUG_RE, randomCode } from './codes';
 import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
 import { allRounds, createGroup, findGroup, listRounds, type GroupRow } from './history-db';
@@ -25,14 +25,31 @@ function withCors(res: Response, origin: string | null): Response {
   return out;
 }
 
-async function createRoomFor(env: Env, group: RoomGroup | null): Promise<Response> {
+async function createRoomFor(env: Env, group: RoomGroup | null, game: GameId): Promise<Response> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = randomCode();
     const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-    const res = await stub.fetch(`https://room/init?code=${code}`, { method: 'POST', body: JSON.stringify({ group }) });
+    const res = await stub.fetch(`https://room/init?code=${code}`, { method: 'POST', body: JSON.stringify({ group, game }) });
     if (res.status === 201) return json({ code }, 201);
   }
   return json({ error: 'no_code' }, 503);
+}
+
+/** Jogo pedido no corpo `{ game }`. Sem corpo (ou sem `game`) → ITO; jogo desconhecido → null. */
+async function requestedGame(request: Request): Promise<GameId | null | typeof TOO_LARGE> {
+  const body = await readSmallJson(request);
+  if (body === TOO_LARGE) return TOO_LARGE;
+  const game = (body as { game?: unknown } | null)?.game;
+  if (game === undefined) return 'ito';
+  return isGameId(game) ? game : null;
+}
+
+/** Cria a sala com o jogo pedido, ou responde 413/400. */
+async function createRequestedRoom(request: Request, env: Env, group: RoomGroup | null): Promise<Response> {
+  const game = await requestedGame(request);
+  if (game === TOO_LARGE) return json({ error: 'too_large' }, 413);
+  if (game === null) return json({ error: 'bad_game' }, 400);
+  return createRoomFor(env, group, game);
 }
 
 /** Lê o cursor `before`: ausente → null (primeira página); inválido → undefined. */
@@ -78,7 +95,7 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
 
   if (request.method === 'POST' && url.pathname === '/rooms') {
     if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
-    return createRoomFor(env, null);
+    return createRequestedRoom(request, env, null);
   }
 
   if (request.method === 'POST' && url.pathname === '/groups') {
@@ -104,7 +121,7 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
     if (!group) return json({ error: 'not_found' }, 404);
     if (wantsRoom) {
       if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
-      return createRoomFor(env, { id: group.id, slug: group.slug, name: group.name });
+      return createRequestedRoom(request, env, { id: group.id, slug: group.slug, name: group.name });
     }
     return json(await getGroupPage(env, group, before));
   }

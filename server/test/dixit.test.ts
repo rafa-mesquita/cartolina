@@ -1,18 +1,16 @@
-import { SELF, env } from 'cloudflare:test';
+import { SELF } from 'cloudflare:test';
 import type { DixitRoomView } from '@cartolina/shared';
 import { describe, expect, it } from 'vitest';
-import { randomCode } from '../src/codes';
 import { joined, type TestClient } from './helpers';
 
 async function newDixitRoom(): Promise<string> {
-  const code = randomCode();
-  const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-  const res = await stub.fetch(`https://room/init?code=${code}`, {
+  const res = await SELF.fetch('https://x/rooms', {
     method: 'POST',
-    body: JSON.stringify({ group: null, game: 'dixit' }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ game: 'dixit' }),
   });
   expect(res.status).toBe(201);
-  return code;
+  return ((await res.json()) as { code: string }).code;
 }
 
 /** Barreira sem fx.ping (o Dixit não repassa ping): uma ação inválida volta como erro, em ordem. */
@@ -40,10 +38,13 @@ describe('Dixit no servidor', () => {
     const [a, b] = await joined(code, 2);
     a!.client.send({ t: 'fx.ping', x: 0.5, y: 0.5 });
     a!.client.send({ t: 'fx.cursor', zone: 'table', x: 0.5, y: 0.5, drag: null });
+    a!.client.send({ t: 'fx.activity', activity: 'thinking' });
     await errorBarrier(a!.client);
     await errorBarrier(b!.client);
     expect(b!.client.inbox.some((m) => m.t === 'fx.ping' || m.t === 'fx.cursor')).toBe(false);
     expect(a!.client.inbox.some((m) => m.t === 'fx.ping')).toBe(false);
+    // status continua sendo repassado no Dixit
+    expect(b!.client.inbox.some((m) => m.t === 'fx.activity')).toBe(true);
   });
 
   it('joga uma rodada com 3 pessoas até a revelação', async () => {
