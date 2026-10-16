@@ -91,7 +91,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   bad_theme: 'Tema inválido.',
   theme_random_only: 'No modo campanha o tema é sempre sorteado.',
   not_player: 'Você está assistindo esta rodada.',
-  bad_action: 'Ação desconhecida.',
+  bad_action: 'Ação inválida.',
   room_full: 'A sala está cheia (máx. 10).',
   bad_name: 'Escolha um nome de 1 a 16 letras.',
   bad_color: 'Personagem inválido.',

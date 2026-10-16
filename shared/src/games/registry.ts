@@ -25,16 +25,35 @@ export interface GameEntry {
   liveCursors: boolean;
 }
 
+/** Amarra regras e schema do MESMO jogo (o compilador recusa par trocado) e apaga os tipos uma vez só. */
+function defineGame<S extends GameState, A extends GameAction, V extends GameView>(entry: {
+  id: GameId;
+  module: GameModule<S, A, V>;
+  actionSchema: z.ZodType<A, z.ZodTypeDef, unknown>;
+  minPlayers: number;
+  maxPlayers: number;
+  liveCursors: boolean;
+}): GameEntry {
+  return entry as unknown as GameEntry;
+}
+
 export const GAMES: Record<GameId, GameEntry> = {
-  ito: { id: 'ito', module: ito, actionSchema: itoActionSchema, minPlayers: MIN_PLAYERS, maxPlayers: MAX_PLAYERS, liveCursors: true },
-  dixit: {
+  ito: defineGame({
+    id: 'ito',
+    module: ito,
+    actionSchema: itoActionSchema,
+    minPlayers: MIN_PLAYERS,
+    maxPlayers: MAX_PLAYERS,
+    liveCursors: true,
+  }),
+  dixit: defineGame({
     id: 'dixit',
     module: dixit,
     actionSchema: dixitActionSchema,
     minPlayers: DIXIT_MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
     liveCursors: false,
-  },
+  }),
 };
 
 export function isGameId(value: unknown): value is GameId {

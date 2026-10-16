@@ -92,7 +92,8 @@ diretas). Muda para:
 
 - `shared/src/games/registry.ts`: `GAMES = { ito, dixit }`, `GameId`. Cada
   entrada traz módulo de regras (`GameModule`), schema zod das ações,
-  `minPlayers`/`maxPlayers` e se grava histórico.
+  `minPlayers`/`maxPlayers` e `liveCursors` (cursores/ping ao vivo). Por
+  enquanto só o ITO grava histórico: `pendingRecord` filtra com `itoStateOf`.
 - `Room` ganha `gameId: GameId`; `game` passa a ser o estado do jogo daquela
   sala. `roomAction`, `tick`, `roomView` e `roomSummary` delegam ao registro.
 - O que é só do ITO fica explícito como tal: detecção de início de campanha
