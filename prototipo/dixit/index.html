@@ -80,6 +80,7 @@ button.pill:hover{border-color:var(--must)}
 .tcard.gather{transition:left .75s cubic-bezier(.5,0,.2,1),top .75s cubic-bezier(.5,0,.2,1),transform .75s cubic-bezier(.5,0,.2,1)}
 #felt{transition:transform .7s var(--spring),box-shadow .25s,border-color .25s}
 #stage.drop-ready #felt{border-color:rgba(242,165,65,.7)}
+#stage.drop-no #felt{border-color:#D1495B;box-shadow:inset 0 0 0 9px var(--sf),inset 0 0 0 9.75px rgba(209,73,91,.5),0 0 40px 6px rgba(209,73,91,.25)}
 #stage.drop-over #felt{border-color:var(--must);box-shadow:inset 0 0 0 9px var(--sf),inset 0 0 0 9.75px rgba(242,165,65,.6),0 0 46px 8px rgba(242,165,65,.32)}
 .tcard .flip{position:absolute;inset:0;transform-style:preserve-3d}
 .face,.backside{position:absolute;inset:0;backface-visibility:hidden;border-radius:4px;padding:3px;border:.75px solid var(--cream);background:var(--bg)}
@@ -136,7 +137,13 @@ button.pill:hover{border-color:var(--must)}
 #panel p{margin:0 0 10px;color:var(--mu);font-size:13.5px;line-height:1.45}
 #panel textarea{width:100%;height:58px;resize:none;border:.75px solid rgba(246,234,210,.4);border-radius:10px;background:rgba(35,61,54,.9);color:var(--cream);font:italic 400 17px/1.25 var(--serif);padding:8px 10px;outline:none}
 #panel textarea:focus{border-color:var(--must)}
-#panel .cnt{font-size:11px;color:var(--mu);text-align:right;margin:3px 0 8px}
+#panel .cnt{font-size:11px;color:var(--mu);text-align:right;margin:3px 0 4px}
+#panel textarea:disabled{opacity:.4}
+#panel .spoken{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin:2px 0 4px;user-select:none}
+#panel .spoken input{width:16px;height:16px;accent-color:var(--must);cursor:pointer;margin:0}
+#panel .clue-box{border-radius:12px;transition:box-shadow .2s}
+#panel .clue-box.need{animation:need .45s;box-shadow:0 0 0 2px rgba(209,73,91,.7)}
+@keyframes need{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
 .btn{display:block;width:100%;padding:10px 12px;border:.75px solid var(--must);border-radius:999px;background:var(--must);color:var(--deep);font:600 14px/1 var(--ui);transition:transform .2s var(--spring)}
 .btn:hover{transform:translateY(-1px)}
 .btn.ghost{background:none;color:var(--must);margin-top:8px}
@@ -358,7 +365,7 @@ function act(pid, action, quiet) {
 
 function newGame() {
   for (const t of timers) clearTimeout(t); timers.clear();
-  ids = Array.from({ length: N }, (_, i) => `p${i}`); plannedFor.clear(); panelKey = ''; panelDraft = '';
+  ids = Array.from({ length: N }, (_, i) => `p${i}`); plannedFor.clear(); panelKey = ''; panelDraft = ''; spoken = false;
   state = Dixit.initialDixitState(TARGET); prevPhase = null; round = 0; sel = []; handOrder = []; drag = null; revealing = false; revealDone = false;
   shown = Object.fromEntries(ids.map((p) => [p, 0]));
   felt.querySelectorAll('.tcard,.felt-msg').forEach((e) => e.remove()); tableEls.clear();
@@ -553,7 +560,7 @@ function makeTableCard(key, cardId, faceUp) {
   felt.appendChild(el); tableEls.set(key, el); return el;
 }
 function renderTable(v, from) {
-  if (v.phase === 'storytelling') { feltMsg(v.storyteller === 'p0' ? 'arraste pra cá a carta da sua dica' : `${nameOf(v.storyteller)} está escolhendo a carta…`); return; }
+  if (v.phase === 'storytelling') { if (v.storyteller === 'p0') storyHint(); else feltMsg(`${nameOf(v.storyteller)} está escolhendo a carta…`); return; }
   feltMsg('');
   if (v.phase === 'submitting') {
     const need = Dixit.dixitPicksPerPlayer(v.inRound.length), want = new Set();
@@ -748,20 +755,21 @@ function onHandDown(e, id, c) {
   if (e.target.closest('.zoom')) return openViewer('hand', id);
   const v = view(), list = handList(v);
   const st = { id, x0: e.clientX, y0: e.clientY, sc: appScale(), moved: false, from: list.indexOf(id), idx: list.indexOf(id), over: 'hand', can: canPickNow(v) };
+  const blocked = () => v.phase === 'storytelling' && v.storyteller === 'p0' && !clueReady();
   c.setPointerCapture(e.pointerId);
   const move = (ev) => {
     const dx = (ev.clientX - st.x0) / st.sc, dy = (ev.clientY - st.y0) / st.sc;
-    if (!st.moved) { if (Math.hypot(dx, dy) < 6) return; st.moved = true; drag = st; c.classList.add('dragging'); play('card', 0, .6, true); $('#stage').classList.toggle('drop-ready', st.can); }
+    if (!st.moved) { if (Math.hypot(dx, dy) < 6) return; st.moved = true; drag = st; c.classList.add('dragging'); play('card', 0, .6, true); $('#stage').classList.toggle('drop-ready', st.can && !blocked()); }
     c.style.transform = `translate(${dx}px, ${dy}px) rotate(${clamp(dx / 25, -10, 10)}deg) scale(1.08)`;
     const f = st.can && overFelt(ev.clientX, ev.clientY);
-    st.over = f ? 'felt' : 'hand'; $('#stage').classList.toggle('drop-over', f);
+    st.over = f ? 'felt' : 'hand'; $('#stage').classList.toggle('drop-over', f && !blocked()); $('#stage').classList.toggle('drop-no', f && blocked());
     if (!f) { const r = $('#hand').getBoundingClientRect(), n = handList(view()).length;
       st.idx = clamp(Math.round(((ev.clientX - r.left) / st.sc - 420) / 116 + (n - 1) / 2), 0, n - 1); }
     renderHand(view());
   };
   const up = (ev) => { // pointerup solta; pointercancel/lostpointercapture só devolvem a carta pra mão
     c.removeEventListener('pointermove', move); c.removeEventListener('pointerup', up); c.removeEventListener('pointercancel', up); c.removeEventListener('lostpointercapture', up);
-    $('#stage').classList.remove('drop-ready', 'drop-over');
+    $('#stage').classList.remove('drop-ready', 'drop-over', 'drop-no');
     if (!st.moved) { if (ev.type === 'pointerup') openViewer('hand', id); return; } // clique simples amplia
     drag = null; c.classList.remove('dragging');
     if (st.over === 'felt' && ev.type === 'pointerup' && playFromHand(id, ev.clientX, ev.clientY)) return;
@@ -771,12 +779,13 @@ function onHandDown(e, id, c) {
   };
   c.addEventListener('pointermove', move); c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up); c.addEventListener('lostpointercapture', up);
 }
-/* soltou no feltro: narrador conta (com a dica escrita, se tiver); os outros jogam a carta (em 3 jogadores, a 2ª fecha a jogada) */
+/* soltou no feltro: narrador conta (só depois de escrever a dica ou marcar "vou falar na call"); os outros jogam a carta (em 3 jogadores, a 2ª fecha a jogada) */
 function playFromHand(id, sx, sy) {
   const v = view(), [fx, fy] = feltPoint(sx, sy), spot = [clamp(fx, 130, 870), clamp(fy + 70, 210, 520), between(-14, 14)];
   if (v.phase === 'storytelling' && v.storyteller === 'p0') {
+    if (!clueReady()) { needClue(); return false; } // a carta volta pra mão
     spots.set('p0:0', spot);
-    if (act('p0', { type: 'tell', cardId: id, clue: panelDraft })) { panelDraft = ''; return true; }
+    if (act('p0', { type: 'tell', cardId: id, clue: spoken ? '' : panelDraft })) { panelDraft = ''; spoken = false; return true; }
     spots.delete('p0:0'); return false;
   }
   if (!canPickNow(v)) return false;
@@ -797,8 +806,9 @@ function renderPanel(v) {
   if (key === panelKey) return; panelKey = key;
   let h = '';
   if (v.phase === 'storytelling') {
-    if (meSt) h = `<h3>você narra</h3><p>Pense numa dica pra uma carta da mão: uma palavra, uma frase, um som… Escreva aqui (opcional) ou fale na call, e <b>arraste a carta pra mesa</b>.</p>
-      <textarea id="clueIn" maxlength="80" placeholder="sua dica (opcional)">${esc(panelDraft)}</textarea><div class="cnt"><span id="cc">${panelDraft.length}</span>/80</div>
+    if (meSt) h = `<h3>você narra</h3><p>Pense numa dica pra uma carta da mão (uma palavra, uma frase, um som…). <b>Primeiro a dica</b>: escreva aqui ou marque que vai falar na call. Depois <b>arraste a carta pra mesa</b>.</p>
+      <div class="clue-box" id="clueBox"><textarea id="clueIn" maxlength="80" placeholder="sua dica"${spoken ? ' disabled' : ''}>${esc(panelDraft)}</textarea><div class="cnt"><span id="cc">${panelDraft.length}</span>/80</div>
+      <label class="spoken"><input type="checkbox" id="spokenIn"${spoken ? ' checked' : ''}> vou falar a dica na call</label></div>
       <div class="err" id="perr"></div>`;
     else h = `<h3>${nameOf(v.storyteller)} narra</h3><p>Esperando a carta e a dica…</p>`;
   } else if (v.phase === 'submitting') {
@@ -822,12 +832,20 @@ function renderPanel(v) {
     h = `<h3>fim de jogo!</h3><p>${w} ${v.winners.length > 1 ? 'venceram' : (v.winners[0] === 'p0' ? 'venceu' : 'venceu')} com ${v.scores[v.winners[0]]} pontos.</p><button class="btn" id="againBtn">jogar de novo</button>`;
   }
   P.innerHTML = h;
-  const ci = $('#clueIn'); if (ci) { ci.addEventListener('input', () => { panelDraft = ci.value; $('#cc').textContent = ci.value.length; }); }
+  const ci = $('#clueIn'); if (ci) { ci.addEventListener('input', () => { panelDraft = ci.value; $('#cc').textContent = ci.value.length; if (clueReady()) perr(''); storyHint(); }); }
+  const sp = $('#spokenIn'); if (sp) sp.addEventListener('change', () => { spoken = sp.checked; ci.disabled = spoken; if (clueReady()) perr(''); else ci.focus(); storyHint(); });
   $('#voteBtn')?.addEventListener('click', () => { if (!view().myVote) return perr('Clique numa carta da mesa primeiro.'); act('p0', { type: 'confirm' }); });
   $('#nextBtn')?.addEventListener('click', () => act('p0', { type: 'next' }));
   $('#againBtn')?.addEventListener('click', () => { stopConfetti(); shown = Object.fromEntries(ids.map((p) => [p, 0])); placePawns(false); clearTable(); act('p0', { type: 'again' }); });
 }
-let panelDraft = '';
+let panelDraft = '', spoken = false; // narrador: dica escrita ou "vou falar na call" (um dos dois é obrigatório antes de jogar a carta)
+const clueReady = () => spoken || panelDraft.trim().length > 0;
+function storyHint() { const v = view(); if (v.phase === 'storytelling' && v.storyteller === 'p0') feltMsg(clueReady() ? 'arraste pra cá a carta da sua dica' : 'primeiro a dica: escreva ou marque “vou falar na call”'); }
+function needClue() {
+  perr('Antes de jogar a carta, escreva a dica ou marque “vou falar na call”.'); play('error');
+  const b = $('#clueBox'); if (b) { b.classList.remove('need'); void b.offsetWidth; b.classList.add('need'); }
+  if (!spoken) $('#clueIn')?.focus();
+}
 function perr(t) { const e = $('#perr'); if (e) e.textContent = t; }
 function esc(s) { return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 

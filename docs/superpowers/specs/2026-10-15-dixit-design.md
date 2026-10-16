@@ -24,7 +24,8 @@ Decisões do usuário (2026-10-15):
   sala de Dixit (lobby, mesa, resultado) tem cara própria (§6).
 - **3 a 10 jogadores.**
 - Fim por **pontos, host escolhe**; padrão **30** (como a caixa).
-- Dica do narrador **escrita opcional**.
+- Dica do narrador **escrita opcional**, mas o narrador precisa escrever **ou**
+  marcar "vou falar a dica na call" antes de jogar a carta (2026-10-16).
 - **Sem histórico do grupo** nesta versão (vem num plano próprio).
 - Página inicial vira **estante de jogos** com capa por jogo; o jogo é
   escolhido ao criar a sala.
@@ -197,8 +198,13 @@ bots. O que o usuário aprovou e pediu durante o teste vale para a mesa do site.
 - **Arrastar e soltar** (pedido do usuário, 2026-10-16): **arrastar uma carta
   da mão pro feltro joga a carta** (sem botão "jogar"). O feltro ganha borda
   mostarda enquanto você arrasta uma carta que pode ser jogada, e brilho quando
-  ela está em cima dele. Narrador: soltar no feltro já conta, com a dica que
-  estiver escrita no painel (a dica é opcional). Em 3 jogadores, a 1ª carta
+  ela está em cima dele. Narrador: soltar no feltro já conta, mas **só depois
+  da dica** (pedido do usuário, 2026-10-16, pra ninguém jogar a carta antes de
+  dar a dica): escrever a dica **ou** marcar "vou falar a dica na call" (o que
+  desliga o campo e manda a dica vazia). Sem um dos dois, o feltro fica
+  vermelho enquanto a carta passa por cima, a carta volta pra mão, o painel
+  treme e diz o que falta, e o feltro mostra "primeiro a dica: escreva ou
+  marque “vou falar na call”". A marcação zera a cada rodada. Em 3 jogadores, a 1ª carta
   fica na mesa esperando a 2ª (clicar nela devolve pra mão); a 2ª fecha a
   jogada. **Arrastar dentro da mão troca a posição** das cartas (as outras
   abrem espaço enquanto você arrasta); a ordem é só sua, guardada no
@@ -214,7 +220,8 @@ bots. O que o usuário aprovou e pediu durante o teste vale para a mesa do site.
 - **Topo:** dica do narrador num selo (personagem + dica em itálico, ou "dica
   falada na call"), e pílulas de rodada/fase/meta, som e mesa 3D.
 - **Painel de ação** (canto inferior direito): o que fazer agora em cada fase
-  (narrar: campo de dica até 80 letras + "arraste a carta pra mesa";
+  (narrar: campo de dica até 80 letras ou "vou falar a dica na call", depois
+  "arraste a carta pra mesa";
   escolher: "arraste pra mesa…", com "1 de 2" em 3 jogadores; "confirmar
   voto"; esperas com contagem).
 - **Visualizador:** clique (mão), clique duplo (mesa), botão ⤢ ou **rodinha pra cima** sobre
