@@ -32,6 +32,12 @@ function deferred<T>() {
 }
 
 describe('Home: grupos', () => {
+  it('o jogo aparece como DITU, a nossa versão do ITO', () => {
+    render(<Home />);
+    expect(screen.getByRole('heading', { name: 'DITU' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'ITO' })).toBeNull();
+  });
+
   it('cria grupo, lembra dele e vai para a página do grupo', async () => {
     const spy = vi.mocked(api.createGroup).mockResolvedValue({ slug: 'abcdefghjk', name: 'Galera' });
     render(<Home />);

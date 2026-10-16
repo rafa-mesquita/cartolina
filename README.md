@@ -1,6 +1,6 @@
 # cartolina~
 
-Jogos de tabuleiro pra jogar com os amigos na call. Primeiro jogo: **ITO**.
+Jogos de tabuleiro pra jogar com os amigos na call. Primeiro jogo: **DITU**, a nossa versão do ITO (no código o jogo continua com o id `ito`).
 
 ## Estrutura
 
