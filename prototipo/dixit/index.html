@@ -133,14 +133,18 @@ button.pill:hover{border-color:var(--must)}
 .viewer .cap{position:absolute;bottom:40px;left:0;right:0;text-align:center;color:var(--mu);font-size:13px}
 .viewer .cap b{font:400 22px/1 var(--serif);color:var(--cream);display:block;margin-bottom:6px;font-weight:400}
 #confetti{position:absolute;inset:0;pointer-events:none;z-index:45}
-#step{position:absolute;left:50%;bottom:196px;transform:translateX(-50%);display:none;align-items:center;gap:14px;padding:12px 16px 12px 22px;border:.75px solid rgba(242,165,65,.75);border-radius:16px;background:rgba(27,47,42,.95);z-index:9;max-width:820px}
-#step.on{display:flex;animation:pop .35s var(--spring)}
+#step{position:absolute;left:50%;bottom:196px;transform:translateX(-50%);display:none;align-items:center;gap:14px;padding:12px 16px 12px 22px;border:.75px solid rgba(242,165,65,.75);border-radius:16px;background:rgba(27,47,42,.95);z-index:9;min-width:640px;max-width:860px}
+#step .t{flex:1}
+#step.on{display:flex;animation:centerIn .4s var(--spring)}
+#step .t,#step .n{transition:opacity .18s ease}
+#step.swap .t,#step.swap .n{opacity:0}
+@keyframes centerIn{0%{opacity:0;transform:translateX(-50%) translateY(10px) scale(.96)}100%{opacity:1;transform:translateX(-50%)}}
 #step .n{font:400 13px/1 var(--ui);color:var(--must);letter-spacing:1px;white-space:nowrap}
 #step .t{font:400 24px/1.2 var(--serif)}
 #step .t em{color:var(--must);font-style:italic}
 #step button{border:.75px solid rgba(246,234,210,.4);border-radius:999px;background:none;padding:6px 12px;font-size:12px;color:var(--mu);white-space:nowrap}
 #board{position:absolute;left:50%;top:196px;transform:translateX(-50%);width:560px;max-height:660px;overflow:auto;padding:20px 22px 18px;border:.75px solid rgba(246,234,210,.5);border-radius:16px;background:rgba(27,47,42,.97);z-index:20;display:none}
-#board.on{display:block;animation:pop .35s var(--spring)}
+#board.on{display:block;animation:centerIn .4s var(--spring)}
 #board h3{margin:0 0 4px;font:400 28px/1.1 var(--serif)}
 #board .sum{margin:0 0 14px;color:var(--mu);font-size:14px}
 #board .sum em{color:var(--cream)}
@@ -521,9 +525,11 @@ const who = (p) => (p === 'p0' ? 'você' : nameOf(p));
 const list = (ps) => ps.length <= 1 ? ps.map(who).join('') : ps.slice(0, -1).map(who).join(', ') + ' e ' + who(ps[ps.length - 1]);
 let skipReveal = false;
 function step(n, html) {
-  $('#stepN').textContent = n ? `${n} de 4` : '';
-  $('#stepT').innerHTML = html;
-  const el = $('#step'); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+  const el = $('#step'), set = () => { $('#stepN').textContent = n ? `${n} de 4` : ''; $('#stepT').innerHTML = html; };
+  if (!el.classList.contains('on')) { set(); el.classList.add('on'); return; }
+  // já aberta: a caixa fica parada e só o texto troca com fade
+  el.classList.add('swap'); clearTimeout(step.t);
+  step.t = setTimeout(() => { set(); el.classList.remove('swap'); }, 180);
 }
 /** Por que cada um fez os pontos da rodada (regra da caixa). */
 function reasons(R, p) {
