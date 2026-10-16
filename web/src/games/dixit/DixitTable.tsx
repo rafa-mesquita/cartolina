@@ -1,7 +1,7 @@
-import { dixitPicksPerPlayer, type DixitRoomView, type GameAction } from '@cartolina/shared';
+import { dixitPicksPerPlayer, type DixitRoomView } from '@cartolina/shared';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react';
 import { installButtonSounds } from '../../brand/buttonSounds';
-import { JOIN_ERRORS, type ConnStatus, type GameConn } from '../../net/connection';
+import type { ConnStatus, GameConn } from '../../net/connection';
 import { loadTiltPref, saveTiltPref } from '../../net/identity';
 import { confetti } from '../../table/confetti';
 import { ActionPanel, type PanelActions } from './ActionPanel';
@@ -19,14 +19,13 @@ import { Seats } from './Seats';
 import { playDixitSound } from './sounds';
 import { colorer, namer } from './status';
 import type { DropState } from './useHandDrag';
+import { usePlays } from './usePlays';
 import { useReveal } from './useReveal';
 import { useStageFit } from './useStageFit';
 import './dixit.css';
 
 const CONFETTI = ['#F2A541', '#F6EAD2', '#D1495B', '#00798C'];
 const TOAST_MS = 2200;
-
-type Point = { x: number; y: number };
 
 /**
  * A mesa do Diquisti: junta topo, feltro, assentos, mão, painel, revelação e carta ampliada, e manda as
@@ -41,17 +40,6 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
   const [tilt, setTilt] = useState(loadTiltPref);
   /** Ordem da mão que a pessoa arrumou (local; some ao recarregar). */
   const [handOrder, setHandOrder] = useState<string[]>([]);
-  /**
-   * Suas cartas já soltas no feltro na escolha: as que esperam a 2ª (partida de 3) e as que já foram mandadas
-   * e esperam o servidor. (O narrador não usa: a carta dele fica na mão até o servidor responder.)
-   */
-  const [pending, setPending] = useState<string[]>([]);
-  /** As pendentes já foram mandadas (`submit` + `confirm`): não dá mais pra devolver. */
-  const [sent, setSent] = useState(false);
-  /** A última ação mandada foi a jogada de carta da escolha: um erro agora é dela (e devolve as pendentes). */
-  const cardActionLast = useRef(false);
-  /** Onde você soltou cada carta (ponto da tela), pelo id da carta: o feltro põe a carta ali. */
-  const [dropPoints, setDropPoints] = useState<Record<string, Point>>({});
   const [clue, setClue] = useState('');
   const [spoken, setSpoken] = useState(false);
   const [needClueTick, setNeedClueTick] = useState(0);
@@ -59,31 +47,30 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
   const [viewer, setViewer] = useState<{ kind: 'hand' | 'table'; ids: string[]; index: number } | null>(null);
   const [boardHidden, setBoardHidden] = useState(false);
   const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
+  const toastSeq = useRef(0);
   const name = useMemo(() => namer(view), [view]);
   const color = useMemo(() => colorer(view), [view]);
 
-  // Fase ou narrador novos: zera o que era da fase (no próprio render, sem efeito e sem render a mais pintado).
-  // Os pontos de soltura valem até a rodada acabar: o feltro ainda lê o do narrador quando a fase vira escolha.
+  const say = (text: string) => setToast({ text, id: ++toastSeq.current });
+  const plays = usePlays({
+    view,
+    conn,
+    status,
+    onError: (message) => {
+      say(message);
+      playDixitSound('error');
+    },
+  });
+
+  // Fase ou narrador novos: zera o que era da fase na tela (no próprio render, sem efeito).
   const phaseKey = `${g.phase}|${g.storyteller ?? ''}`;
   const [seenKey, setSeenKey] = useState(phaseKey);
   if (seenKey !== phaseKey) {
     setSeenKey(phaseKey);
-    setPending([]);
-    setSent(false);
     setClue('');
     setSpoken(false);
     setBoardHidden(false);
-    if (g.phase === 'storytelling' || g.phase === 'lobby') setDropPoints({});
-  }
-  // Reconectou: o que estava indo pra mesa pode ter se perdido (o socket fechado descarta o envio). O servidor
-  // é a verdade: as pendentes voltam pra mão e a view nova diz o que de fato foi jogado.
-  const [seenStatus, setSeenStatus] = useState(status);
-  if (seenStatus !== status) {
-    setSeenStatus(status);
-    if (status === 'joined') {
-      setPending([]);
-      setSent(false);
-    }
+    setViewer(null);
   }
 
   const revealKey = g.phase === 'reveal' && g.result ? `${g.result.storyCard}:${g.result.table.join(',')}` : '';
@@ -97,10 +84,8 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
   const playing = me !== null && g.inRound.includes(me);
   const need = dixitPicksPerPlayer(g.inRound.length);
   const clueReady = spoken || clue.trim() !== '';
-  const telling = !g.paused && playing && g.phase === 'storytelling' && iAmTeller;
-  const canPlay = telling || (!g.paused && playing && g.phase === 'submitting' && !iAmTeller && !confirmed && pending.length < need);
-  const blocked = telling && !clueReady;
-  const away = [...new Set([...pending, ...(confirmed ? g.myPicks : [])])];
+  const blocked = plays.telling && !clueReady;
+  const away = plays.away;
   const hand = orderHand(handOrder, g.hand);
 
   // Botões da mesa com o clique mais baixo do Diquisti (o listener do documento fica quieto aqui dentro).
@@ -122,36 +107,14 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
       return confetti(confettiRef.current, CONFETTI);
     }
     return undefined;
-    // Só na troca de fase: `iAmTeller` e `won` são os do render em que a fase mudou.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- omit handle, see ZZ Hub gotchas
+    // Só na troca de fase: `iAmTeller` e `won` são os do render em que a fase mudou (de propósito fora da lista).
   }, [g.phase]);
 
-  // Ação recusada: avisa; se foi a jogada de carta, as cartas que estavam indo pra mesa voltam pra mão.
-  useEffect(
-    () =>
-      conn.onError((code, message) => {
-        if (JOIN_ERRORS.has(code)) return;
-        setToast({ text: message, id: Date.now() });
-        if (cardActionLast.current) {
-          cardActionLast.current = false;
-          setPending([]);
-          setSent(false);
-        }
-        playDixitSound('error');
-      }),
-    [conn],
-  );
-  /** Manda uma ação que não é a jogada de carta (um erro depois dela não mexe nas pendentes). */
-  const send = (action: GameAction) => {
-    cardActionLast.current = false;
-    conn.sendAction(action);
-  };
   useEffect(() => {
     if (!toast) return undefined;
     const t = setTimeout(() => setToast(null), TOAST_MS);
     return () => clearTimeout(t);
   }, [toast]);
-  const say = (text: string) => setToast({ text, id: Date.now() });
 
   function openViewer(kind: 'hand' | 'table', id: string) {
     const ids = kind === 'hand' ? hand.filter((c) => !away.includes(c)) : g.table.map((t) => t.cardId);
@@ -159,28 +122,8 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
     if (index >= 0) setViewer({ kind, ids, index });
   }
 
-  /** Soltou uma carta no feltro (ou Enter nela) na sua vez. O ponto e a pendente mudam juntos (o feltro lê os dois). */
-  function playCard(id: string, at: Point | null) {
-    if (!canPlay || pending.includes(id)) return;
-    if (at) setDropPoints((d) => ({ ...d, [id]: at }));
-    if (telling) {
-      // A carta fica na mão até o servidor responder: se o envio se perder, dá pra jogar de novo.
-      send({ type: 'tell', cardId: id, clue: spoken ? '' : clue });
-      return;
-    }
-    const next = [...pending, id];
-    setPending(next);
-    if (next.length === need) {
-      setSent(true);
-      conn.sendAction({ type: 'submit', cardIds: next });
-      conn.sendAction({ type: 'confirm' });
-      cardActionLast.current = true;
-    }
-  }
-
   function unpend(cardId: string) {
-    setPending((p) => p.filter((c) => c !== cardId));
-    setDropPoints(({ [cardId]: _, ...rest }) => rest);
+    plays.unpend(cardId);
     playDixitSound('card');
   }
 
@@ -191,7 +134,7 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
     if (confirmed) return say('Você já confirmou o voto.');
     if (g.table.find((t) => t.cardId === cardId)?.mine) return say('Não dá pra votar na própria carta.');
     playDixitSound('pick');
-    send({ type: 'vote', cardId });
+    conn.sendAction({ type: 'vote', cardId });
   }
 
   // Rodinha pra cima numa carta (da mão ou da mesa, virada pra cima) amplia; pra baixo, a própria carta ampliada fecha.
@@ -203,10 +146,10 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
   }
 
   const actions: PanelActions = {
-    confirmVote: () => send({ type: 'confirm' }),
-    next: () => send({ type: 'next' }),
-    again: () => send({ type: 'again' }),
-    lobby: () => send({ type: 'lobby' }),
+    confirmVote: () => conn.sendAction({ type: 'confirm' }),
+    next: () => conn.sendAction({ type: 'next' }),
+    again: () => conn.sendAction({ type: 'again' }),
+    lobby: () => conn.sendAction({ type: 'lobby' }),
   };
 
   const stageStyle = { width, transform: `translate(-50%, -50%) scale(${scale})`, '--tilt': tilt ? '38deg' : '0deg' } as CSSProperties;
@@ -224,7 +167,7 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
             setTilt(!tilt);
           }}
           host={host}
-          onForce={() => send({ type: 'forceNext' })}
+          onForce={() => conn.sendAction({ type: 'forceNext' })}
         />
         <Felt
           view={view}
@@ -233,21 +176,21 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
           frame={frame}
           scores={scores}
           dropState={dropState}
-          pending={pending}
-          dropPoints={dropPoints}
+          pending={plays.pending}
+          dropPoints={plays.dropPoints}
           clueReady={clueReady}
           onCard={clickTable}
           onZoom={(id) => openViewer('table', id)}
-          canUnpend={!sent}
+          canUnpend={!plays.sent}
           onUnpend={unpend}
         />
         <Seats view={view} width={width} name={name} gained={gained} floatKey={revealKey} />
         <Hand
           ids={hand}
           away={away}
-          canPlay={canPlay}
+          canPlay={plays.canPlay}
           blocked={blocked}
-          onPlay={playCard}
+          onPlay={(id, at) => plays.play(id, at, spoken ? '' : clue)}
           onBlocked={() => {
             setNeedClueTick((t) => t + 1);
             playDixitSound('error');
@@ -259,7 +202,7 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
         <ActionPanel
           view={view}
           need={need}
-          pending={pending.length}
+          pending={plays.pending.length}
           revealDone={revealDone}
           host={host}
           name={name}
