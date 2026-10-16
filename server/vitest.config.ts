@@ -6,7 +6,11 @@ export default defineConfig({
   plugins: [
     cloudflareTest(async () => ({
       wrangler: { configPath: './wrangler.jsonc' },
-      miniflare: { bindings: { TEST_MIGRATIONS: await readD1Migrations('./migrations') } },
+      miniflare: {
+        bindings: { TEST_MIGRATIONS: await readD1Migrations('./migrations') },
+        // Banco vazio para testar a migração 0002 sobre dados no formato antigo.
+        d1Databases: ['MIGRATION_DB'],
+      },
     })),
   ],
   test: { setupFiles: ['./test/apply-migrations.ts'] },
