@@ -6,14 +6,17 @@ import {
   createRoom,
   disconnect,
   errorMessage,
+  GAMES,
   HEARTBEAT_PING,
   HEARTBEAT_PONG,
   isExpired,
+  isGameId,
   joinRoom,
   nextAlarmAt,
   parseClientMessage,
   pendingRecord,
   reconcilePresence,
+  restoreRoom,
   roomAction,
   roomSummary,
   roomView,
@@ -59,13 +62,8 @@ export class RoomDO extends DurableObject<Env> {
     ctx.blockConcurrencyWhile(async () => {
       const stored = (await ctx.storage.get<Room>('room')) ?? null;
       if (!stored) return;
-      // Salas gravadas antes do histórico do grupo não têm estes campos.
-      this.room = {
-        ...stored,
-        group: stored.group ?? null,
-        runStartedAt: stored.runStartedAt ?? null,
-        recordedRevealKey: stored.recordedRevealKey ?? null,
-      };
+      // Salas antigas não têm gameId (eram todas ITO) nem os campos do histórico.
+      this.room = restoreRoom(stored);
       // Após um restart, `connected` pode estar obsoleto: quem não tem socket vivo está desconectado.
       const live = new Set(
         ctx.getWebSockets().map((s) => this.attachment(s).playerId).filter((id): id is string => id !== null),
@@ -85,8 +83,9 @@ export class RoomDO extends DurableObject<Env> {
 
     if (url.pathname === '/init') {
       if (this.room) return new Response('taken', { status: 409 });
-      const body = (await request.json().catch(() => ({}))) as { group?: RoomGroup | null };
-      this.room = createRoom(url.searchParams.get('code') ?? '', Date.now(), body.group ?? null);
+      const body = (await request.json().catch(() => ({}))) as { group?: RoomGroup | null; game?: unknown };
+      const game = isGameId(body.game) ? body.game : 'ito';
+      this.room = createRoom(url.searchParams.get('code') ?? '', Date.now(), body.group ?? null, game);
       await this.commit();
       return new Response('ok', { status: 201 });
     }
@@ -148,6 +147,7 @@ export class RoomDO extends DurableObject<Env> {
         return;
       }
       case 'fx.cursor': {
+        if (!GAMES[this.room.gameId].liveCursors) return;
         if (now - (this.lastCursor.get(playerId) ?? 0) < CURSOR_MIN_INTERVAL_MS) return;
         this.lastCursor.set(playerId, now);
         const { t: _t, ...cursor } = msg;
@@ -158,6 +158,7 @@ export class RoomDO extends DurableObject<Env> {
         this.broadcastFx({ t: 'fx.activity', from: playerId, activity: msg.activity }, playerId);
         return;
       case 'fx.ping':
+        if (!GAMES[this.room.gameId].liveCursors) return;
         this.broadcastFx({ t: 'fx.ping', from: playerId, x: msg.x, y: msg.y }, null);
         return;
     }

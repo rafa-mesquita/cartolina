@@ -17,7 +17,7 @@ describe('HTTP', () => {
     const { code } = (await (await SELF.fetch('https://x/rooms', { method: 'POST' })).json()) as { code: string };
     const ok = await SELF.fetch(`https://x/rooms/${code.toLowerCase()}`);
     expect(ok.status).toBe(200);
-    expect(await ok.json()).toEqual({ exists: true, phase: 'lobby', seats: [] });
+    expect(await ok.json()).toEqual({ exists: true, game: 'ito', phase: 'lobby', seats: [] });
   });
 
   it('sala inexistente ou código inválido dá 404', async () => {
