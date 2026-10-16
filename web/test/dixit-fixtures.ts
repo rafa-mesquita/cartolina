@@ -1,6 +1,7 @@
 import {
   PLAYER_COLORS,
   createRoom,
+  dixitPicksPerPlayer,
   isDixitRoomView,
   joinRoom,
   mulberry32,
@@ -12,7 +13,7 @@ import {
   type Room,
 } from '@cartolina/shared';
 
-/** Sala de Diquisti com `n` jogadores p0…: único lugar que chama `createRoom` (a estante muda a assinatura). */
+/** Sala de Diquisti com `n` jogadores p0…: único lugar das fixtures do Diquisti que chama `createRoom` (a estante muda a assinatura). */
 export function dixitRoom(n: number): Room {
   let room = createRoom('ABCD', 0, null, 'dixit');
   for (let i = 0; i < n; i++) {
@@ -29,7 +30,10 @@ export function play(room: Room, id: string, action: GameAction, seed = 1): Room
   return res.room;
 }
 
-export const stateOf = (room: Room): DixitState => room.game as DixitState;
+export function stateOf(room: Room): DixitState {
+  if (room.gameId !== 'dixit') throw new Error('esperava sala de Diquisti');
+  return room.game as DixitState;
+}
 
 export function dixitView(room: Room, id: string | null): DixitRoomView {
   const v = roomView(room, id);
@@ -45,11 +49,14 @@ export function told(n = 4, clue = 'saudade'): Room {
   return play(room, st, { type: 'tell', cardId: stateOf(room).hands[st]![0]!, clue });
 }
 
-export const othersOf = (room: Room): string[] => stateOf(room).inRound.filter((p) => p !== stateOf(room).storyteller);
+export function othersOf(room: Room): string[] {
+  const st = stateOf(room);
+  return st.inRound.filter((p) => p !== st.storyteller);
+}
 
 export function voting(n = 4): Room {
   let room = told(n);
-  const per = n === 3 ? 2 : 1;
+  const per = dixitPicksPerPlayer(stateOf(room).inRound.length);
   for (const p of othersOf(room)) {
     room = play(room, p, { type: 'submit', cardIds: stateOf(room).hands[p]!.slice(0, per) });
     room = play(room, p, { type: 'confirm' });

@@ -1,4 +1,4 @@
-import type { DixitView, RoomView } from '@cartolina/shared';
+import type { DixitPhase, DixitView, RoomView } from '@cartolina/shared';
 
 /** Nome por id: quem está vendo é "você". */
 export function namer(view: RoomView): (id: string) => string {
@@ -35,17 +35,17 @@ export function seatStatus(g: DixitView, id: string): { text: string; tone: Tone
   }
 }
 
-/** Pílula do topo: fase (com contagem de quem já confirmou) e meta. */
+/** Pílula do topo: fase e meta. A contagem usa `inRound`: a view não diz quem está ativo (a regra só espera os ativos). */
 export function phaseLabel(g: DixitView): string {
   const others = g.inRound.filter((p) => p !== g.storyteller);
   const done = others.filter((p) => g.confirmed.includes(p)).length;
-  const phase = {
+  const phase = ({
     lobby: 'lobby',
     storytelling: 'narração',
     submitting: `escolha · ${done} de ${others.length}`,
     voting: `votação · ${done} de ${others.length}`,
     reveal: 'revelação',
     gameover: 'fim de jogo',
-  }[g.phase];
+  } satisfies Record<DixitPhase, string>)[g.phase];
   return `${phase} · meta ${g.target}`;
 }
