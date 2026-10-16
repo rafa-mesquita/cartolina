@@ -219,6 +219,65 @@ describe('mão', () => {
     expect(screen.getByRole('button', { name: 'sua carta 2' }).getAttribute('data-card-id')).toBe('d003');
     expect(container.querySelector('.dx-hand.off')).toBeTruthy();
   });
+
+  it('Espaço também joga', () => {
+    const p = handProps();
+    render(<Hand {...p} />);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'sua carta 3' }), { key: ' ' });
+    expect(p.onPlay).toHaveBeenCalledWith('d003', null);
+  });
+
+  it('andar menos de 6 px ainda é clique (amplia)', () => {
+    const p = handProps();
+    pointAt(fakeFelt());
+    render(<Hand {...p} />);
+    const card = screen.getByRole('button', { name: 'sua carta 1' });
+    drag(card, [300, 800], [303, 797]);
+    expect(card.classList.contains('dragging')).toBe(false);
+    fireEvent.click(card);
+    expect(p.onZoom).toHaveBeenCalledWith('d001');
+    expect(p.onPlay).not.toHaveBeenCalled();
+    expect(p.onDropState).not.toHaveBeenCalled();
+  });
+
+  it('outro ponteiro (outro dedo) é ignorado', () => {
+    const p = handProps();
+    pointAt(fakeFelt());
+    render(<Hand {...p} />);
+    const card = screen.getByRole('button', { name: 'sua carta 1' });
+    fireEvent.pointerDown(card, { pointerId: 1, button: 0, clientX: 300, clientY: 800 });
+    fireEvent.pointerMove(card, { pointerId: 2, clientX: 320, clientY: 400 });
+    expect(card.classList.contains('dragging')).toBe(false);
+    fireEvent.pointerUp(card, { pointerId: 2, clientX: 320, clientY: 400 });
+    expect(p.onPlay).not.toHaveBeenCalled();
+  });
+
+  it('desmontar no meio do arrasto apaga o feltro', () => {
+    const p = handProps();
+    pointAt(fakeFelt());
+    const { unmount } = render(<Hand {...p} />);
+    const card = screen.getByRole('button', { name: 'sua carta 1' });
+    fireEvent.pointerDown(card, { pointerId: 1, button: 0, clientX: 300, clientY: 800 });
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 320, clientY: 400 });
+    expect(p.onDropState).toHaveBeenLastCalledWith('over');
+    unmount();
+    expect(p.onDropState).toHaveBeenLastCalledWith(null);
+  });
+
+  it('carta que sai da mão no meio do arrasto: o arrasto acaba e soltar não joga', () => {
+    const p = handProps();
+    pointAt(fakeFelt());
+    const { rerender } = render(<Hand {...p} />);
+    const card = screen.getByRole('button', { name: 'sua carta 1' });
+    fireEvent.pointerDown(card, { pointerId: 1, button: 0, clientX: 300, clientY: 800 });
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 320, clientY: 400 });
+    rerender(<Hand {...p} away={['d001']} />);
+    expect(p.onDropState).toHaveBeenLastCalledWith(null);
+    expect(card.classList.contains('dragging')).toBe(false);
+    fireEvent.pointerUp(card, { pointerId: 1, clientX: 320, clientY: 400 });
+    expect(p.onPlay).not.toHaveBeenCalled();
+    expect(p.onReorder).not.toHaveBeenCalled();
+  });
 });
 
 describe('feltro', () => {
@@ -243,6 +302,7 @@ describe('feltro', () => {
     const { container } = render(<Felt {...props(v)} />);
     expect(container.querySelectorAll('.dx-cell')).toHaveLength(31);
     expect(container.querySelectorAll('.dx-pawn')).toHaveLength(4);
+    expect(screen.getAllByRole('img', { name: /pontos$/ })).toHaveLength(4);
   });
 
   it('quem narra vê primeiro o pedido da dica, depois o de arrastar a carta; os outros esperam', () => {
@@ -275,7 +335,7 @@ describe('feltro', () => {
     rerender(<Felt {...p} pending={['x']} />);
     expect(container.querySelectorAll('.dx-tcard.loose')).toHaveLength(3);
     fireEvent.click(screen.getByRole('button', { name: 'devolver sua carta pra mão' }));
-    expect(p.onUnpend).toHaveBeenCalledWith(0);
+    expect(p.onUnpend).toHaveBeenCalledWith('x');
     rerender(<Felt {...p} pending={[]} />);
     expect(container.querySelectorAll('.dx-tcard.loose')).toHaveLength(2);
   });
@@ -294,11 +354,40 @@ describe('feltro', () => {
     const me = tellerOf(room);
     const { container, rerender } = render(<Felt {...props(dixitView(room, me))} />);
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 1000, height: 560, right: 1000, bottom: 560, x: 0, y: 0, toJSON: () => ({}) });
-    const after = dixitView(play(room, me, { type: 'tell', cardId: stateOf(room).hands[me]![0]!, clue: 'x' }), me);
-    rerender(<Felt {...props(after)} dropPoints={{ [`${me}:0`]: { x: 400, y: 300 } }} />);
+    const cardId = stateOf(room).hands[me]![0]!;
+    const after = dixitView(play(room, me, { type: 'tell', cardId, clue: 'x' }), me);
+    rerender(<Felt {...props(after)} dropPoints={{ [cardId]: { x: 400, y: 300 } }} />);
     const card = container.querySelector<HTMLElement>('.dx-tcard.loose')!;
     expect(card.style.left).toBe('400px');
     expect(card.style.top).toBe('370px');
+  });
+
+  it('devolver a 1ª de 2 pendentes tira essa e deixa a outra no ponto dela', () => {
+    const room = told(3);
+    const me = othersOf(room)[0]!;
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 1000, height: 560, right: 1000, bottom: 560, x: 0, y: 0, toJSON: () => ({}) });
+    const p = props(dixitView(room, me));
+    const dropPoints = { A: { x: 200, y: 200 }, B: { x: 600, y: 300 } };
+    const { container, rerender } = render(<Felt {...p} pending={['A', 'B']} dropPoints={dropPoints} />);
+    const mine = () => [...container.querySelectorAll<HTMLElement>(`[data-loose^="${me}:"]`)];
+    expect(mine().map((e) => [e.dataset.loose, e.style.left])).toEqual([
+      [`${me}:A`, '200px'],
+      [`${me}:B`, '600px'],
+    ]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'devolver sua carta pra mão' })[0]!);
+    expect(p.onUnpend).toHaveBeenCalledWith('A');
+    rerender(<Felt {...p} pending={['B']} dropPoints={{ B: dropPoints.B }} />);
+    expect(mine().map((e) => [e.dataset.loose, e.style.left, e.style.top])).toEqual([[`${me}:B`, '600px', '370px']]);
+  });
+
+  it('pendente devolve pelo teclado (Enter e Espaço)', () => {
+    const room = told(3);
+    const p = props(dixitView(room, othersOf(room)[0]!));
+    render(<Felt {...p} pending={['A']} />);
+    const card = screen.getByRole('button', { name: 'devolver sua carta pra mão' });
+    fireEvent.keyDown(card, { key: 'Enter' });
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(p.onUnpend.mock.calls).toEqual([['A'], ['A']]);
   });
 
   it('ao fechar a escolha, as soltas se arrumam nas casas da votação e viram', () => {
@@ -312,8 +401,12 @@ describe('feltro', () => {
     // faltavam cartas (a última jogada fecha a fase): todas soltas e viradas primeiro
     expect(container.querySelectorAll('.dx-tcard.loose')).toHaveLength(4);
     expect(container.querySelectorAll('.dx-tcard.down')).toHaveLength(4);
-    fireEvent.click(screen.getByRole('button', { name: 'carta II' }));
+    const second = screen.getByRole('button', { name: 'carta II' });
+    fireEvent.click(second);
+    fireEvent.keyDown(second, { key: 'Enter' });
     expect(p.onCard).not.toHaveBeenCalled();
+    expect(second.tabIndex).toBe(-1);
+    expect(second.getAttribute('aria-disabled')).toBe('true');
     rtlAct(() => vi.advanceTimersByTime(750));
     expect(container.querySelectorAll('.dx-tcard.loose')).toHaveLength(0);
     expect(container.querySelectorAll('.dx-tcard.gather')).toHaveLength(4);
@@ -327,12 +420,27 @@ describe('feltro', () => {
     rtlAct(() => vi.advanceTimersByTime(820));
     expect(container.querySelectorAll('.dx-tcard.down')).toHaveLength(0);
     expect(container.querySelectorAll('.dx-tcard.flip-in')).toHaveLength(4);
+    expect(screen.getByRole('button', { name: 'carta II' }).tabIndex).toBe(0);
     fireEvent.click(screen.getByRole('button', { name: 'carta II' }));
     expect(p.onCard).toHaveBeenCalledWith(v.game.table[1]!.cardId);
-    rtlAct(() => vi.advanceTimersByTime(1000));
+    rtlAct(() => vi.advanceTimersByTime(1500));
+    // a arrumação acabou: as cartas continuam no lugar, viradas pra cima
+    expect(container.querySelectorAll('.dx-tcard.flip-in')).toHaveLength(4);
+    expect(container.querySelectorAll('.dx-tcard.down, .dx-tcard.gather')).toHaveLength(0);
     // as 3 que faltavam pousaram; as 4 viraram
     expect(sounds().filter((s) => s === 'land')).toHaveLength(3);
     expect(sounds().filter((s) => s === 'flip')).toHaveLength(4);
+  });
+
+  it('desmontar no meio da arrumação não toca mais nada', () => {
+    vi.useFakeTimers();
+    const before = told(4);
+    const viewer = othersOf(before)[0]!;
+    const { rerender, unmount } = render(<Felt {...props(dixitView(before, viewer))} />);
+    rerender(<Felt {...props(dixitView(voting(4), viewer))} />);
+    unmount();
+    rtlAct(() => vi.advanceTimersByTime(5000));
+    expect(sounds()).toEqual([]);
   });
 
   it('a carta dos outros voa do assento; a sua só assenta', () => {
@@ -369,6 +477,9 @@ describe('feltro', () => {
     expect(screen.getByRole('button', { name: 'carta I' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'carta II' }));
     expect(p.onCard).toHaveBeenCalledWith(v.game.table[1]!.cardId);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'carta III' }), { key: 'Enter' });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'carta IV' }), { key: ' ' });
+    expect(p.onCard.mock.calls.slice(1)).toEqual([[v.game.table[2]!.cardId], [v.game.table[3]!.cardId]]);
   });
 
   it('no fim de jogo mostra a carta do narrador, votos e donos (selo dentro da carta)', () => {

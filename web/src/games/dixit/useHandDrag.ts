@@ -48,15 +48,16 @@ const overFelt = (x: number, y: number): boolean => !!document.elementFromPoint?
 
 /**
  * Arrastar e soltar da mão (pointer events): arrastar dentro da mão troca a ordem; soltar no feltro joga a
- * carta (ou avisa que falta a dica); clique sem arrastar amplia; `Enter` joga (ou amplia fora da vez).
+ * carta (ou avisa que falta a dica); clique sem arrastar amplia; Enter/Espaço jogam (ou ampliam fora da vez).
  * `pointercancel`/`lostpointercapture` devolvem a carta pro lugar sem jogar.
  */
 export function useHandDrag(handRef: RefObject<HTMLElement | null>, o: HandDragOptions) {
   const [drag, setDrag] = useState<HandDrag | null>(null);
   const track = useRef<Track | null>(null);
   const dropRef = useRef<DropState>(null);
-  /** O `click` que vem depois de um arrasto não amplia a carta. */
+  /** O `click` que vem logo depois de um arrasto não amplia a carta (zera no próximo ciclo). */
   const swallowClick = useRef(false);
+  const swallowTimer = useRef<number | undefined>(undefined);
   const onDropStateRef = useRef(o.onDropState);
   useEffect(() => {
     onDropStateRef.current = o.onDropState;
@@ -64,6 +65,7 @@ export function useHandDrag(handRef: RefObject<HTMLElement | null>, o: HandDragO
   // Mão sumiu no meio do arrasto: o feltro não pode ficar aceso.
   useEffect(
     () => () => {
+      clearTimeout(swallowTimer.current);
       if (dropRef.current) onDropStateRef.current(null);
     },
     [],
@@ -72,17 +74,34 @@ export function useHandDrag(handRef: RefObject<HTMLElement | null>, o: HandDragO
   const setDrop = (s: DropState) => {
     if (dropRef.current === s) return;
     dropRef.current = s;
-    o.onDropState(s);
+    onDropStateRef.current(s);
+  };
+  const swallowNextClick = () => {
+    swallowClick.current = true;
+    clearTimeout(swallowTimer.current);
+    swallowTimer.current = window.setTimeout(() => {
+      swallowClick.current = false;
+    }, 0);
   };
   const awaySet = new Set(o.away);
   const visible = o.ids.filter((id) => !awaySet.has(id));
   const idle: DropState = o.canPlay && !o.blocked ? 'ready' : null;
 
+  // A carta arrastada saiu da mão (o servidor tirou, ou foi pra mesa): o arrasto acaba sem fazer nada.
+  const gone = drag !== null && !visible.includes(drag.id);
+  useEffect(() => {
+    if (!gone) return;
+    track.current = null;
+    swallowNextClick();
+    setDrag(null);
+    setDrop(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só quando a carta sai; as funções usam refs
+  }, [gone]);
+
   const onPointerDown = (e: PointerEvent<HTMLElement>, id: string) => {
     if (e.button !== 0 || (e.target as Element).closest('.dx-zoom')) return;
     const from = visible.indexOf(id);
     if (from < 0) return;
-    swallowClick.current = false;
     const width = handRef.current?.getBoundingClientRect().width ?? 0;
     track.current = { id, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, scale: width / HAND_W || 1, from, at: from, over: false, moved: false };
     e.currentTarget.setPointerCapture?.(e.pointerId);
@@ -113,13 +132,13 @@ export function useHandDrag(handRef: RefObject<HTMLElement | null>, o: HandDragO
     if (!t || e.pointerId !== t.pointerId) return;
     track.current = null;
     if (!t.moved) return; // clique simples: o `click` amplia
-    swallowClick.current = true;
+    swallowNextClick();
     setDrag(null);
     setDrop(null);
-    if (cancel) return;
+    if (cancel || !visible.includes(t.id)) return;
     if (t.over) {
       if (o.blocked) o.onBlocked();
-      else o.onPlay(t.id, { x: e.clientX, y: e.clientY });
+      else if (o.canPlay) o.onPlay(t.id, { x: e.clientX, y: e.clientY });
       return;
     }
     const next = dropInHand(o.ids, o.away, t.id, t.at);
@@ -136,7 +155,7 @@ export function useHandDrag(handRef: RefObject<HTMLElement | null>, o: HandDragO
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLElement>, id: string) => {
-    if (e.key !== 'Enter' || e.target !== e.currentTarget) return;
+    if ((e.key !== 'Enter' && e.key !== ' ') || e.target !== e.currentTarget) return;
     e.preventDefault();
     if (o.blocked) o.onBlocked();
     else if (o.canPlay) o.onPlay(id, null);
@@ -144,7 +163,8 @@ export function useHandDrag(handRef: RefObject<HTMLElement | null>, o: HandDragO
   };
 
   return {
-    drag,
+    /** Arrasto em andamento (null se a carta saiu da mão no meio). */
+    drag: gone ? null : drag,
     /** Props de ponteiro, clique e teclado de cada carta da mão. */
     cardProps: (id: string) => ({
       onPointerDown: (e: PointerEvent<HTMLElement>) => onPointerDown(e, id),
