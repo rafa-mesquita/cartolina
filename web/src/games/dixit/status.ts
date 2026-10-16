@@ -1,5 +1,10 @@
 import type { DixitPhase, DixitView, RoomView } from '@cartolina/shared';
 
+/** Alguém chegou na meta (a próxima rodada vira "ver quem venceu"). */
+export function isOver(scores: Readonly<Record<string, number>>, target: number): boolean {
+  return Object.values(scores).some((s) => s >= target);
+}
+
 /** Nome por id: quem está vendo é "você". */
 export function namer(view: RoomView): (id: string) => string {
   return (id) => (id === view.you ? 'você' : (view.seats.find((s) => s.id === id)?.name ?? 'alguém'));

@@ -1,4 +1,4 @@
-import { dixitPicksPerPlayer, type DixitView, type Rng } from '@cartolina/shared';
+import { dixitPicksPerPlayer, shuffle, type DixitView, type Rng } from '@cartolina/shared';
 
 /**
  * Carta virada na mesa na fase de escolha. As suas têm a chave `${você}:${cardId}` (você sabe quais são);
@@ -56,14 +56,11 @@ export function assignLoose(keys: readonly string[], table: readonly { cardId: s
     if (cardId !== null && table.some((t) => t.cardId === cardId && t.mine) && !out.has(cardId)) out.set(cardId, k);
     else pool.push(k);
   }
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
-  }
+  const others = shuffle(rng, pool);
   let r = 0;
   for (const t of table) {
     if (out.has(t.cardId)) continue;
-    const k = pool[r++];
+    const k = others[r++];
     if (k === undefined) break;
     out.set(t.cardId, k);
   }

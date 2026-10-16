@@ -1,6 +1,5 @@
-import { dixitPicksPerPlayer, type DixitRoomView } from '@cartolina/shared';
+import { dixitPicksPerPlayer, type DixitPhase, type DixitRoomView } from '@cartolina/shared';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type WheelEvent } from 'react';
-import { installButtonSounds } from '../../brand/buttonSounds';
 import type { ConnStatus, GameConn } from '../../net/connection';
 import { loadTiltPref, saveTiltPref } from '../../net/identity';
 import { confetti } from '../../table/confetti';
@@ -19,9 +18,11 @@ import { Seats } from './Seats';
 import { playDixitSound } from './sounds';
 import { colorer, namer } from './status';
 import type { DropState } from './useHandDrag';
+import { useDixitButtonSounds } from './useButtonSounds';
 import { usePlays } from './usePlays';
 import { useReveal } from './useReveal';
 import { useStageFit } from './useStageFit';
+import { useToast } from './useToast';
 import './dixit.css';
 
 const CONFETTI = ['#F2A541', '#F6EAD2', '#D1495B', '#00798C'];
@@ -31,7 +32,18 @@ const TOAST_MS = 2200;
  * A mesa do Diquisti: junta topo, feltro, assentos, mão, painel, revelação e carta ampliada, e manda as
  * jogadas pro servidor. Jogar é arrastar a carta da mão pro feltro (ou Enter numa carta focada).
  */
-export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomView; conn: GameConn; status?: ConnStatus }) {
+interface Props {
+  view: DixitRoomView;
+  conn: GameConn;
+  status?: ConnStatus;
+  /**
+   * Fase em que a sala estava antes de a mesa aparecer (ex.: `lobby`, que é outra tela). Sem ela, a mesa só
+   * toca os sons de fase nas trocas que vê acontecer (abrir no meio da partida não toca nada).
+   */
+  fromPhase?: DixitPhase;
+}
+
+export function DixitTable({ view, conn, status = 'joined', fromPhase }: Props) {
   const g = view.game, me = view.you;
   const host = view.hostId !== null && view.hostId === me;
   const { scale, width } = useStageFit();
@@ -46,12 +58,10 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
   const [dropState, setDropState] = useState<DropState>(null);
   const [viewer, setViewer] = useState<{ kind: 'hand' | 'table'; ids: string[]; index: number } | null>(null);
   const [boardHidden, setBoardHidden] = useState(false);
-  const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
-  const toastSeq = useRef(0);
+  const { toast, say } = useToast(TOAST_MS);
   const name = useMemo(() => namer(view), [view]);
   const color = useMemo(() => colorer(view), [view]);
 
-  const say = (text: string) => setToast({ text, id: ++toastSeq.current });
   const plays = usePlays({
     view,
     conn,
@@ -89,13 +99,10 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
   const hand = orderHand(handOrder, g.hand);
 
   // Botões da mesa com o clique mais baixo do Diquisti (o listener do documento fica quieto aqui dentro).
-  useEffect(() => {
-    const root = rootRef.current;
-    return root ? installButtonSounds(root, (s) => playDixitSound(s)) : undefined;
-  }, []);
+  useDixitButtonSounds(rootRef);
 
-  // Sons e confete de fase (só nas trocas; ao abrir a mesa no meio da partida, nada).
-  const prevPhase = useRef(g.phase);
+  // Sons e confete de fase (só nas trocas; ao abrir a mesa no meio da partida, nada; vindo do lobby, o "plim").
+  const prevPhase = useRef(fromPhase ?? g.phase);
   const won = me !== null && g.winners.includes(me);
   useEffect(() => {
     const from = prevPhase.current;
@@ -109,12 +116,6 @@ export function DixitTable({ view, conn, status = 'joined' }: { view: DixitRoomV
     return undefined;
     // Só na troca de fase: `iAmTeller` e `won` são os do render em que a fase mudou (de propósito fora da lista).
   }, [g.phase]);
-
-  useEffect(() => {
-    if (!toast) return undefined;
-    const t = setTimeout(() => setToast(null), TOAST_MS);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   function openViewer(kind: 'hand' | 'table', id: string) {
     const ids = kind === 'hand' ? hand.filter((c) => !away.includes(c)) : g.table.map((t) => t.cardId);

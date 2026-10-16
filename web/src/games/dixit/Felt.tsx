@@ -115,7 +115,8 @@ export function Felt({ view, name, color, frame, scores, dropState, pending, dro
         {g.players.map((p) => {
           const at = pawns[p];
           if (!at) return null;
-          const label = `${name(p)}: ${g.scores[p] ?? 0} pontos`;
+          // o placar animado (o mesmo da posição do peão): não adianta o resultado durante a revelação
+          const label = `${name(p)}: ${scores[p] ?? 0} pontos`;
           return (
             <div key={p} className="dx-pawn" role="img" style={{ left: at[0], top: at[1], zIndex: 10 + Math.round(at[1]) }} title={label} aria-label={label}>
               <Critter color={color(p)} />

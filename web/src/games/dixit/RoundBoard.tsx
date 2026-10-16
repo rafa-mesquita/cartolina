@@ -2,6 +2,7 @@ import type { DixitRoundResult } from '@cartolina/shared';
 import { useId } from 'react';
 import { Critter } from '../../screens/Critter';
 import { reasons, summaryParts } from './reveal';
+import { isOver } from './status';
 
 interface Props {
   result: DixitRoundResult;
@@ -19,7 +20,7 @@ interface Props {
 export function RoundBoard({ result: r, players, scores, target, name, color, host, onNext, onHide }: Props) {
   const rows = [...players].sort((a, b) => (r.gained[b] ?? 0) - (r.gained[a] ?? 0) || Number(b === r.storyteller) - Number(a === r.storyteller));
   const titleId = useId();
-  const over = Object.values(scores).some((s) => s >= target);
+  const over = isOver(scores, target);
   return (
     <section className="dx-board" aria-labelledby={titleId}>
       <h3 id={titleId}>placar da rodada</h3>

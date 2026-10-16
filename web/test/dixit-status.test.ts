@@ -1,9 +1,17 @@
 import { DIXIT_DEFAULT_TARGET } from '@cartolina/shared';
 import { describe, expect, it } from 'vitest';
-import { colorer, namer, othersAfter, phaseLabel, seatStatus } from '../src/games/dixit/status';
+import { colorer, isOver, namer, othersAfter, phaseLabel, seatStatus } from '../src/games/dixit/status';
 import { dixitRoom, dixitView, othersOf, play, revealed, started, stateOf, told, voting } from './dixit-fixtures';
 
 const META = `meta ${DIXIT_DEFAULT_TARGET}`;
+
+describe('fim de jogo', () => {
+  it('isOver: alguém chegou na meta', () => {
+    expect(isOver({ a: 29, b: 3 }, 30)).toBe(false);
+    expect(isOver({ a: 30, b: 3 }, 30)).toBe(true);
+    expect(isOver({}, 30)).toBe(false);
+  });
+});
 
 describe('pessoas', () => {
   it('nome de quem vê é "você"; os outros pelo assento', () => {

@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
-import { feltPoint } from './geometry';
+import { clamp, feltPoint } from './geometry';
 import { playDixitSound } from './sounds';
 import type { Loose } from './useLooseSpots';
 
 /** Tempos (ms) aprovados no protótipo. */
 const ARRIVAL_MS = { seatFly: 680, settle: 380, seatSound: 560, settleSound: 260 };
 
-const clamp = (v: number, a: number, b: number): number => Math.min(Math.max(v, a), b);
 
 /** `setTimeout` que some da lista quando dispara e é cancelado ao desmontar. */
 function useTimers() {

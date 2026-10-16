@@ -1,4 +1,5 @@
-import { isDixitRoomView, isItoRoomView, type RoomView } from '@cartolina/shared';
+import { isDixitRoomView, isItoRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
+import { useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
 import type { ConnSnapshot, GameConn } from '../net/connection';
@@ -7,6 +8,13 @@ import { Lobby } from './Lobby';
 import { Toasts } from './Toasts';
 
 export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot; view: RoomView }) {
+  // Fase do Diquisti no último render: a mesa monta já na 1ª rodada (o lobby é outra tela) e precisa saber
+  // que veio do lobby pra tocar o "plim" de quem narra.
+  const dixitPhase = isDixitRoomView(view) ? view.game.phase : undefined;
+  const lastDixitPhase = useRef<DixitPhase | undefined>(dixitPhase);
+  useEffect(() => {
+    lastDixitPhase.current = dixitPhase;
+  });
   const reconnecting = snap.status === 'reconnecting' && (
     <div className="banner-reconnect" role="status">
       reconectando…
@@ -17,7 +25,7 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
     return (
       <>
         {reconnecting}
-        {view.game.phase === 'lobby' ? <DixitLobby view={view} conn={conn} /> : <DixitTable view={view} conn={conn} status={snap.status} />}
+        {view.game.phase === 'lobby' ? <DixitLobby view={view} conn={conn} /> : <DixitTable view={view} conn={conn} status={snap.status} fromPhase={lastDixitPhase.current} />}
       </>
     );
   }

@@ -7,7 +7,6 @@ export const STAGE_H = 900;
 export const FELT_W = 1000;
 export const FELT_H = 560;
 export const CARD_W = 118;
-export const CARD_H = 177;
 export const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
 export type Pt = readonly [number, number];
@@ -143,7 +142,8 @@ export function feltPoint(rect: ScreenRect, x: number, y: number): Pt | null {
   return [((x - rect.left) / rect.width) * FELT_W, ((y - rect.top) / rect.height) * FELT_H];
 }
 
-const clamp = (v: number, a: number, b: number): number => Math.min(Math.max(v, a), b);
+/** `v` preso entre `a` e `b`. */
+export const clamp = (v: number, a: number, b: number): number => Math.min(Math.max(v, a), b);
 /** Giro máximo, em graus, da carta que você soltou. */
 const DROP_TILT = 14;
 

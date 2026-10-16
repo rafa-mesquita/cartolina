@@ -3,7 +3,7 @@
  * Cada bot abre o próprio WebSocket e joga como uma pessoa: narra, escolhe e vota com atrasos humanos.
  * Nunca faz ações de host (começar, próxima rodada): isso fica com a pessoa que está testando.
  */
-import { PLAYER_COLORS, dixitPicksPerPlayer, isDixitRoomView, type DixitRoomView, type GameAction } from '@cartolina/shared';
+import { PLAYER_COLORS, dixitPicksPerPlayer, isDixitRoomView, shuffle, type DixitRoomView, type GameAction } from '@cartolina/shared';
 import { getRoomInfo } from '../net/api';
 import { wsUrl } from '../net/config';
 import { RoomConnection } from '../net/connection';
@@ -15,14 +15,6 @@ const RETRY_MS = 4000;
 
 type Rng = () => number;
 const pickOne = <T>(rng: Rng, arr: readonly T[]): T => arr[Math.min(arr.length - 1, Math.floor(rng() * arr.length))]!;
-function shuffled<T>(rng: Rng, arr: readonly T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j]!, a[i]!];
-  }
-  return a;
-}
 
 /**
  * O que o bot faz agora (ou null). `key` identifica a etapa, pra não agir duas vezes nela.
@@ -37,7 +29,7 @@ export function decideDixit(view: DixitRoomView, rng: Rng): { key: string; delay
     return { key, delay: 2500 + rng() * 2700, actions: [{ type: 'tell', cardId: pickOne(rng, g.hand), clue }] };
   }
   if (g.phase === 'submitting' && g.storyteller !== me && !g.confirmed.includes(me)) {
-    const cardIds = shuffled(rng, g.hand).slice(0, dixitPicksPerPlayer(g.inRound.length));
+    const cardIds = shuffle(rng, g.hand).slice(0, dixitPicksPerPlayer(g.inRound.length));
     return { key, delay: 1400 + rng() * 3800, actions: [{ type: 'submit', cardIds }, { type: 'confirm' }] };
   }
   if (g.phase === 'voting' && g.storyteller !== me && !g.confirmed.includes(me)) {

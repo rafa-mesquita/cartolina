@@ -50,7 +50,7 @@ export function usePlays({ view, conn, status, onError }: Options): Plays {
   const [tellSent, setTellSent] = useState(false);
   /** Ações da jogada de carta (`submit` + `confirm`) que ainda podem voltar recusadas. */
   const inFlight = useRef(0);
-  /** A jogada em voo já foi devolvida por uma recusa: o `nothing_chosen` do `confirm` que vem atrás é eco. */
+  /** A jogada em voo já foi devolvida por uma recusa: a do `confirm` que vem atrás é eco (avisa uma vez só). */
   const returned = useRef(false);
   const sentRef = useRef(sent);
   const onErrorRef = useRef(onError);
@@ -87,6 +87,11 @@ export function usePlays({ view, conn, status, onError }: Options): Plays {
     inFlight.current = 0;
     returned.current = false;
   }, [phaseKey, joined, confirmed]);
+  // O servidor aceitou o `submit` (as escolhas apareceram): só o `confirm` ainda pode voltar recusado.
+  const picksKey = g.myPicks.join(',');
+  useLayoutEffect(() => {
+    if (picksKey && inFlight.current === 2) inFlight.current = 1;
+  }, [picksKey]);
 
   useEffect(
     () =>
@@ -95,7 +100,7 @@ export function usePlays({ view, conn, status, onError }: Options): Plays {
         setTellSent(false);
         const ofPlay = inFlight.current > 0;
         if (ofPlay) inFlight.current--;
-        if (ofPlay && returned.current && code === 'nothing_chosen') return;
+        if (ofPlay && returned.current) return; // a mesma jogada recusada de novo: um aviso (e um "tunc") só
         if (ofPlay || (sentRef.current && PLAY_ERRORS.has(code))) {
           returned.current = true;
           setPending([]);

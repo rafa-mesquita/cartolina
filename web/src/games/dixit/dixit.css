@@ -57,8 +57,6 @@ button.dx-pill:hover { border-color: var(--must); }
   transform: translate(-50%, -100%) rotateZ(var(--rz, 0deg)) rotateX(calc(var(--tilt) * -1 * var(--stand))) translateZ(var(--z)) scale(var(--sc));
   transition: transform .35s cubic-bezier(.2, .8, .25, 1), opacity .5s ease, filter .5s ease; cursor: pointer; z-index: 3; }
 .dx-tcard:hover, .dx-tcard.voted { --stand: 1; --z: 18px; z-index: 5; transition: transform .45s var(--spring), opacity .5s ease, filter .5s ease; }
-.dx-tcard.back { cursor: default; animation: dxDrop .52s cubic-bezier(.2, .9, .3, 1); }
-@keyframes dxDrop { from { opacity: 0; transform: translate(-50%, -100%) translateZ(160px) rotateZ(-8deg); } }
 /* fase de escolha: cartas viradas soltas no feltro, cada uma num canto e meio torta */
 .dx-tcard.loose { cursor: default; }
 .dx-tcard.loose:hover { --stand: .28; --z: 2px; }
@@ -102,8 +100,8 @@ button.dx-pill:hover { border-color: var(--must); }
 
 /* mão: o pai põe `left` (e `--rot`); arrastar troca o transform inline */
 .dx-hand { position: absolute; left: calc(50% - 420px); width: 840px; bottom: 0; height: 230px; z-index: 6; }
-.dx-hcard { position: absolute; bottom: 20px; width: 124px; height: 186px; margin-left: -62px; transform-origin: 50% 120%; --hov: 0px; --hs: 1; --lift: 0px; --rot: 0deg;
-  transform: translateY(calc(var(--lift) + var(--hov))) rotate(var(--rot)) scale(var(--hs)); transition: transform .35s var(--spring), left .35s var(--spring), opacity .3s; cursor: grab; touch-action: none; border-radius: 4px; padding: 3px; border: .75px solid var(--cream); background: var(--bg); }
+.dx-hcard { position: absolute; bottom: 20px; width: 124px; height: 186px; margin-left: -62px; transform-origin: 50% 120%; --hov: 0px; --hs: 1; --rot: 0deg;
+  transform: translateY(var(--hov)) rotate(var(--rot)) scale(var(--hs)); transition: transform .35s var(--spring), left .35s var(--spring), opacity .3s; cursor: grab; touch-action: none; border-radius: 4px; padding: 3px; border: .75px solid var(--cream); background: var(--bg); }
 .dx-hcard:hover { --hov: -22px; --hs: 1.06; z-index: 5; }
 .dx-hcard.dragging { transition: none; z-index: 30; pointer-events: none; cursor: grabbing; box-shadow: 0 18px 40px rgba(0,0,0,.45); }
 /* carta que já foi pra mesa some na hora (o "mão apagada" não pode deixá-la meio transparente) */

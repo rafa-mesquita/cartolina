@@ -1,12 +1,13 @@
 import { DIXIT_MIN_PLAYERS, DIXIT_TARGETS, type DixitRoomView } from '@cartolina/shared';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { installButtonSounds } from '../../brand/buttonSounds';
 import { goHome, roomLink } from '../../lib/router';
 import { JOIN_ERRORS, type GameConn } from '../../net/connection';
 import { Critter } from '../../screens/Critter';
 import { Brushes } from './Brushes';
 import { SoundPill } from './DixitTopBar';
 import { playDixitSound } from './sounds';
+import { useDixitButtonSounds } from './useButtonSounds';
+import { useToast } from './useToast';
 import './dixit.css';
 
 /** Bots para testar sozinho: só existe em dev; em produção o import some e o código não vai pro bundle. */
@@ -22,8 +23,7 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
   const [showLink, setShowLink] = useState(false);
   /** Tentou começar: o aviso de gente faltando aparece (e some sozinho quando a mesa completa). */
   const [tried, setTried] = useState(false);
-  const [toast, setToast] = useState<{ text: string; id: number } | null>(null);
-  const toastSeq = useRef(0);
+  const { toast, say } = useToast(TOAST_MS);
   const rootRef = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
@@ -31,26 +31,18 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
   const missing = tried && connected < DIXIT_MIN_PLAYERS;
 
   // Botões do lobby com o clique mais baixo do Diquisti (o listener do documento fica quieto aqui dentro).
-  useEffect(() => {
-    const root = rootRef.current;
-    return root ? installButtonSounds(root, (s) => playDixitSound(s)) : undefined;
-  }, []);
+  useDixitButtonSounds(rootRef);
 
   // Recusas do servidor (que não são de entrada na sala) viram aviso na tela, como na mesa.
   useEffect(
     () =>
       conn.onError((code, message) => {
         if (JOIN_ERRORS.has(code)) return;
-        setToast({ text: message, id: ++toastSeq.current });
+        say(message);
         playDixitSound('error');
       }),
-    [conn],
+    [conn, say],
   );
-  useEffect(() => {
-    if (!toast) return undefined;
-    const t = setTimeout(() => setToast(null), TOAST_MS);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   async function copy() {
     try {

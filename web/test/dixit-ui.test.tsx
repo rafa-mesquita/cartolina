@@ -326,6 +326,12 @@ describe('feltro', () => {
     expect(screen.getAllByRole('img', { name: /pontos$/ })).toHaveLength(4);
   });
 
+  it('o rótulo do peão usa o placar animado (não adianta o resultado na revelação)', () => {
+    const v = dixitView(started(4), 'p0');
+    render(<Felt {...props(v)} scores={{ ...v.game.scores, p1: 7 }} />);
+    expect(screen.getByRole('img', { name: 'P1: 7 pontos' })).toBeTruthy();
+  });
+
   it('quem narra vê primeiro o pedido da dica, depois o de arrastar a carta; os outros esperam', () => {
     const room = started(4);
     const v = dixitView(room, tellerOf(room));

@@ -1,6 +1,7 @@
 import { DIXIT_CLUE_MAX, type DixitRoomView } from '@cartolina/shared';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { captionText, summaryParts } from './reveal';
+import { isOver } from './status';
 
 /** Ações do painel. Jogar a carta é arrastar pro feltro (na mesa), então não tem botão aqui. */
 export interface PanelActions {
@@ -90,7 +91,7 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
   const others = g.inRound.filter((p) => p !== teller);
   const done = others.filter((p) => g.confirmed.includes(p)).length;
   const playing = me !== null && g.inRound.includes(me);
-  const over = Object.values(g.scores).some((s) => s >= g.target);
+  const over = isOver(g.scores, g.target);
   const clueWarn = warned && !clueReady;
   const voteWarn = tried && !g.myVote;
   /** Contêiner fixo (só o texto muda) pro leitor de tela anunciar o aviso. */

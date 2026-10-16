@@ -338,6 +338,24 @@ describe('mesa do Diquisti: carta ampliada e sons', () => {
 describe('Game com sala de Diquisti', () => {
   const snap = (view: RoomView): ConnSnapshot => ({ status: 'joined', playerId: view.you, view, joinError: null });
 
+  it('vindo do lobby, quem narra a 1ª rodada ouve o "plim"', () => {
+    const room = started(4);
+    const st = stateOf(room).storyteller!;
+    const lobby = dixitView(dixitRoom(4), st);
+    const c = conn();
+    const { rerender } = render(<Game conn={c} snap={snap(lobby)} view={lobby} />);
+    const v = dixitView(room, st);
+    rerender(<Game conn={c} snap={snap(v)} view={v} />);
+    expect(sounds()).toEqual(['join']);
+  });
+
+  it('abrindo a sala já no meio da rodada, quem narra não ouve o "plim" de novo', () => {
+    const room = started(4);
+    const v = dixitView(room, stateOf(room).storyteller!);
+    render(<Game conn={conn()} snap={snap(v)} view={v} />);
+    expect(sounds()).not.toContain('join');
+  });
+
   it('partida em andamento abre a mesa', () => {
     const view = dixitView(started(4), 'p1');
     render(<Game conn={conn()} snap={snap(view)} view={view} />);

@@ -3,7 +3,7 @@ import type { DixitRoomView } from '@cartolina/shared';
 import { describe, expect, it, vi, type Mock } from 'vitest';
 import { usePlays } from '../src/games/dixit/usePlays';
 import type { ConnStatus, GameConn } from '../src/net/connection';
-import { dixitView, othersOf, started, stateOf, told, voting } from './dixit-fixtures';
+import { dixitView, othersOf, play, started, stateOf, told, voting } from './dixit-fixtures';
 
 type Conn = GameConn & { sendAction: Mock<GameConn['sendAction']>; onError: Mock<GameConn['onError']> };
 const conn = (): Conn => ({
@@ -75,6 +75,30 @@ describe('jogadas da mesa (usePlays)', () => {
     expect(hook.result.current.pending).toEqual([]);
     expect(hook.result.current.sent).toBe(false);
     expect(onError).toHaveBeenCalledTimes(2);
+  });
+
+  it('submit e confirm recusados com o mesmo código: um aviso só', () => {
+    const room = told(4);
+    const p = othersOf(room)[0]!;
+    const { hook, fail, onError } = setup(dixitView(room, p));
+    act(() => hook.result.current.play(stateOf(room).hands[p]![0]!, null, ''));
+    fail('bad_phase', 'agora não');
+    fail('bad_phase', 'agora não');
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(hook.result.current.pending).toEqual([]);
+  });
+
+  it('submit aceito e só o confirm recusado: devolve, e a recusa seguinte (de outra coisa) avisa', () => {
+    const room = told(4);
+    const p = othersOf(room)[0]!;
+    const card = stateOf(room).hands[p]![0]!;
+    const { hook, fail, onError } = setup(dixitView(room, p));
+    act(() => hook.result.current.play(card, null, ''));
+    hook.rerender({ view: dixitView(play(room, p, { type: 'submit', cardIds: [card] }), p), status: 'joined' });
+    fail('paused', 'pausado');
+    expect(hook.result.current.pending).toEqual([]);
+    fail('not_host', 'só o host');
+    expect(onError.mock.calls).toEqual([['pausado'], ['só o host']]);
   });
 
   it('erro de outra ação com 1 pendente na partida de 3 não mexe nela', () => {
