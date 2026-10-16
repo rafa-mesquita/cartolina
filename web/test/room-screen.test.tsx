@@ -2,11 +2,11 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocketLike } from '../src/net/connection';
 import { RoomScreen } from '../src/screens/RoomScreen';
-import { getRoomInfo, type RoomInfo } from '../src/net/api';
+import { createGroupRoom, createRoom, getRoomInfo, type RoomInfo } from '../src/net/api';
 import { markJoined, saveProfile } from '../src/net/identity';
 import { makeRoom, viewOf } from './fixtures';
 
-vi.mock('../src/net/api', () => ({ getRoomInfo: vi.fn(), createRoom: vi.fn() }));
+vi.mock('../src/net/api', () => ({ getRoomInfo: vi.fn(), createRoom: vi.fn(), createGroupRoom: vi.fn() }));
 
 class FakeSocket implements SocketLike {
   static all: FakeSocket[] = [];
@@ -58,6 +58,9 @@ describe('RoomScreen', () => {
   beforeEach(() => {
     FakeSocket.all = [];
     mocked.mockReset();
+    vi.mocked(createRoom).mockReset();
+    vi.mocked(createGroupRoom).mockReset();
+    window.location.hash = '';
   });
 
   it('carrega e depois diz que a sala não existe', async () => {
@@ -164,5 +167,37 @@ describe('RoomScreen', () => {
     const input = (await screen.findByLabelText('seu nome')) as HTMLInputElement;
     expect(input.value).toBe('Outra aba');
     expect(FakeSocket.all.length).toBe(0);
+  });
+
+  it('sala que acabou: oferece criar outra', async () => {
+    mocked.mockResolvedValue(info());
+    vi.mocked(createRoom).mockResolvedValue('WXYZ');
+    markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
+    renderRoom();
+    await waitFor(() => expect(FakeSocket.all).toHaveLength(1));
+    act(() => last().drop(4004));
+    expect(await screen.findByText('essa sala acabou')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'voltar pro grupo' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'criar sala nova' }));
+    await waitFor(() => expect(window.location.hash).toBe('#/sala/WXYZ'));
+  });
+
+  it('sala de grupo que acabou: cria outra sala do grupo e mostra o link do grupo', async () => {
+    mocked.mockResolvedValue(info());
+    vi.mocked(createGroupRoom).mockResolvedValue('QRST');
+    markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
+    renderRoom();
+    await waitFor(() => expect(FakeSocket.all).toHaveLength(1));
+    act(() => {
+      last().open();
+      last().receive({ t: 'welcome', playerId: 'p0', code: 'ABCD' });
+      last().receive({ t: 'state', room: { ...viewOf(makeRoom(2), 'p0'), group: { slug: 'abcdefghjk', name: 'Galera' } } });
+    });
+    act(() => last().drop(4004));
+    expect(await screen.findByText('essa sala acabou')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'voltar pro grupo' }).getAttribute('href')).toBe('#/g/abcdefghjk');
+    fireEvent.click(screen.getByRole('button', { name: 'criar sala nova' }));
+    await waitFor(() => expect(createGroupRoom).toHaveBeenCalledWith('abcdefghjk'));
+    await waitFor(() => expect(window.location.hash).toBe('#/sala/QRST'));
   });
 });

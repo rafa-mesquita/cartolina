@@ -1,19 +1,28 @@
 import { cleanGroupName, summarizeHistory, type GroupResponse, type RoomGroup } from '@cartolina/shared';
 import { CODE_RE, SLUG_RE, randomCode } from './codes';
+import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
 import { allRounds, createGroup, findGroup, listRounds, type GroupRow } from './history-db';
 import { RoomDO } from './room-do';
 
 export { RoomDO };
 
-const CORS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
 const PAGE_SIZE = 20;
 
 function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+}
+
+/** CORS só para origens permitidas. 101 (upgrade de WebSocket) passa intacto: os headers dele são imutáveis. */
+function withCors(res: Response, origin: string | null): Response {
+  if (res.status === 101) return res;
+  const out = new Response(res.body, res);
+  out.headers.append('Vary', 'Origin');
+  if (origin) {
+    out.headers.set('Access-Control-Allow-Origin', origin);
+    out.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    out.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+  }
+  return out;
 }
 
 async function createRoomFor(env: Env, group: RoomGroup | null): Promise<Response> {
@@ -47,15 +56,37 @@ async function getGroupPage(env: Env, group: GroupRow, before: number | null): P
   };
 }
 
-async function handle(request: Request, env: Env): Promise<Response> {
-  const url = new URL(request.url);
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+/** O binding pode não existir (removido do wrangler.jsonc se o plano não tiver): lê sem depender do tipo gerado. */
+function limiterOf(env: Env, name: 'ROOM_LIMITER' | 'GROUP_LIMITER'): Limiter | undefined {
+  return (env as unknown as Partial<Record<typeof name, Limiter>>)[name];
+}
 
-  if (request.method === 'POST' && url.pathname === '/rooms') return createRoomFor(env, null);
+const tooMany = () => json({ error: 'too_many' }, 429);
+
+async function handle(request: Request, env: Env, rawOrigin: string | null, origin: string | null): Promise<Response> {
+  const url = new URL(request.url);
+  // Preflight com cache de 1 dia no navegador.
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Max-Age': '86400' } });
+  // CORS só esconde a resposta: POST "simples" de outro site ainda executaria. Recusa antes de criar qualquer coisa.
+  if (request.method === 'POST' && rawOrigin && !origin) return json({ error: 'forbidden_origin' }, 403);
+
+  const ip = request.headers.get('CF-Connecting-IP');
+  // Vale para todo POST; o `readSmallJson` cobre corpos sem Content-Length (chunked).
+  if (request.method === 'POST' && Number(request.headers.get('Content-Length') ?? '0') > MAX_BODY_BYTES) {
+    return json({ error: 'too_large' }, 413);
+  }
+
+  if (request.method === 'POST' && url.pathname === '/rooms') {
+    if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
+    return createRoomFor(env, null);
+  }
 
   if (request.method === 'POST' && url.pathname === '/groups') {
-    const body = (await request.json().catch(() => null)) as { name?: unknown } | null;
-    const name = typeof body?.name === 'string' ? cleanGroupName(body.name) : null;
+    if (!(await underLimit(limiterOf(env, 'GROUP_LIMITER'), ip))) return tooMany();
+    const body = await readSmallJson(request);
+    if (body === TOO_LARGE) return json({ error: 'too_large' }, 413);
+    const raw = (body as { name?: unknown } | null)?.name;
+    const name = typeof raw === 'string' ? cleanGroupName(raw) : null;
     if (!name) return json({ error: 'bad_group_name' }, 400);
     const group = await createGroup(env.DB, name, Date.now());
     return json({ slug: group.slug, name: group.name }, 201);
@@ -71,7 +102,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (before === undefined) return json({ error: 'bad_before' }, 400);
     const group = await findGroup(env.DB, slug);
     if (!group) return json({ error: 'not_found' }, 404);
-    if (wantsRoom) return createRoomFor(env, { id: group.id, slug: group.slug, name: group.name });
+    if (wantsRoom) {
+      if (!(await underLimit(limiterOf(env, 'ROOM_LIMITER'), ip))) return tooMany();
+      return createRoomFor(env, { id: group.id, slug: group.slug, name: group.name });
+    }
     return json(await getGroupPage(env, group, before));
   }
 
@@ -80,7 +114,11 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const code = roomMatch[1]!.toUpperCase();
     if (!CODE_RE.test(code)) return json({ error: 'not_found' }, 404);
     const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-    if (roomMatch[2]) return stub.fetch(request);
+    if (roomMatch[2]) {
+      // Navegador de outro site tentando abrir o WebSocket: recusa. Sem Origin (scripts, testes) segue.
+      if (rawOrigin && !origin) return json({ error: 'forbidden_origin' }, 403);
+      return stub.fetch(request);
+    }
     const res = await stub.fetch('https://room/exists');
     return json(await res.json(), res.status);
   }
@@ -90,11 +128,13 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request, env): Promise<Response> {
+    const rawOrigin = request.headers.get('Origin');
+    const origin = allowedOrigin(rawOrigin, env.ALLOWED_ORIGINS);
     try {
-      return await handle(request, env);
+      return withCors(await handle(request, env, rawOrigin, origin), origin);
     } catch (err) {
       console.error('erro no Worker', err);
-      return json({ error: 'internal' }, 500);
+      return withCors(json({ error: 'internal' }, 500), origin);
     }
   },
 } satisfies ExportedHandler<Env>;

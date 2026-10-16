@@ -43,3 +43,13 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 - `GET /rooms/:code/ws` → WebSocket; protocolo em `shared/src/protocol.ts`
 
 Design: `docs/superpowers/specs/2026-10-15-cartolina-ito-design.md`
+
+## Online
+
+O site e o servidor são publicados sozinhos a cada push no `main`, se os testes
+passarem. Configuração, conferência e roteiro da primeira noite em
+[docs/deploy.md](docs/deploy.md).
+
+Testes de ponta a ponta (sobem servidor e site e jogam com o Chromium):
+
+    npm run e2e

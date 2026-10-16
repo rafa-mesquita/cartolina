@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RoomConnection, type SocketLike } from '../src/net/connection';
+import { RoomConnection, type ConnOptions, type SocketLike } from '../src/net/connection';
 
 class FakeSocket implements SocketLike {
   static all: FakeSocket[] = [];
@@ -38,13 +38,14 @@ const TOKEN = '3f2b8c1e-9a4d-4e6f-8b2a-1c3d5e7f9a0b';
 const last = () => FakeSocket.all[FakeSocket.all.length - 1]!;
 const made: RoomConnection[] = [];
 
-function make() {
+function make(extra: Partial<ConnOptions> = {}) {
   const conn = new RoomConnection({
     url: 'ws://s/rooms/ABCD/ws',
     token: TOKEN,
     name: 'Ana',
     color: '#8EC5FF',
     createSocket: (url) => new FakeSocket(url),
+    ...extra,
   });
   made.push(conn);
   conn.start();
@@ -165,16 +166,160 @@ describe('RoomConnection', () => {
     expect(last().sent.filter((s) => s === 'ping')).toHaveLength(2);
   });
 
-  it('cursor: o primeiro sai na hora, os seguintes no máximo a ~30 Hz com o valor mais recente', () => {
-    const conn = make();
-    last().open();
-    const cursor = (x: number) => ({ zone: 'table' as const, x, y: 0.5, drag: null });
-    conn.sendCursor(cursor(0.1));
-    conn.sendCursor(cursor(0.2));
-    conn.sendCursor(cursor(0.3));
-    expect(last().messages().filter((m) => m.t === 'fx.cursor').map((m) => m.x)).toEqual([0.1]);
-    vi.advanceTimersByTime(34);
-    expect(last().messages().filter((m) => m.t === 'fx.cursor').map((m) => m.x)).toEqual([0.1, 0.3]);
+  describe('cursor', () => {
+    const hover = (x: number) => ({ zone: 'table' as const, x, y: 0.5, drag: null });
+    const dragging = (x: number) => ({ zone: 'table' as const, x, y: 0.5, drag: { cardId: 'p0:0', index: null } });
+    const sentXs = () => last().messages().filter((m) => m.t === 'fx.cursor').map((m) => m.x);
+
+    beforeEach(() => {
+      vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it('solto: o primeiro sai na hora, depois no máximo a cada 84 ms com o valor mais recente', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.1));
+      conn.sendCursor(hover(0.2));
+      conn.sendCursor(hover(0.3));
+      expect(sentXs()).toEqual([0.1]);
+      vi.advanceTimersByTime(83);
+      expect(sentXs()).toEqual([0.1]);
+      vi.advanceTimersByTime(1);
+      expect(sentXs()).toEqual([0.1, 0.3]);
+    });
+
+    it('arrastando: até 20 por segundo (50 ms)', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(dragging(0.1));
+      conn.sendCursor(dragging(0.2));
+      vi.advanceTimersByTime(50);
+      expect(sentXs()).toEqual([0.1, 0.2]);
+    });
+
+    it('posição repetida não sai de novo; parado, reenvia a cada 2 s', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.4));
+      vi.advanceTimersByTime(100);
+      conn.sendCursor(hover(0.4));
+      vi.advanceTimersByTime(100);
+      expect(sentXs()).toEqual([0.4]);
+      vi.advanceTimersByTime(2000);
+      expect(sentXs()).toEqual([0.4, 0.4]);
+      vi.advanceTimersByTime(2000);
+      expect(sentXs()).toEqual([0.4, 0.4, 0.4]);
+    });
+
+    it('janela sem foco: cursor solto e reenvio não saem; soltar a carta sai', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(dragging(0.5));
+      vi.mocked(document.hasFocus).mockReturnValue(false);
+      vi.advanceTimersByTime(100);
+      conn.sendCursor(hover(0.6)); // soltou a carta: muda o arrasto, sai mesmo sem foco
+      vi.advanceTimersByTime(100);
+      conn.sendCursor(hover(0.7)); // solto e sem foco: não sai
+      vi.advanceTimersByTime(5000); // nem o reenvio
+      expect(sentXs()).toEqual([0.5, 0.6]);
+    });
+
+    it('o reenvio volta quando o foco volta', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.4));
+      vi.mocked(document.hasFocus).mockReturnValue(false);
+      vi.advanceTimersByTime(5000);
+      expect(sentXs()).toEqual([0.4]);
+      vi.mocked(document.hasFocus).mockReturnValue(true);
+      vi.advanceTimersByTime(2000);
+      expect(sentXs()).toEqual([0.4, 0.4]);
+    });
+
+    it('voltar à posição já enviada antes do intervalo acabar não reenvia', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.1));
+      conn.sendCursor(hover(0.2));
+      conn.sendCursor(hover(0.1));
+      vi.advanceTimersByTime(100);
+      expect(sentXs()).toEqual([0.1]);
+    });
+
+    it('stop cancela o reenvio', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.1));
+      const socket = last();
+      conn.stop();
+      vi.advanceTimersByTime(5000);
+      expect(socket.messages().filter((m) => m.t === 'fx.cursor')).toHaveLength(1);
+    });
+  });
+
+  /** Três falhas seguidas sem conseguir abrir (backoff 1 s, 2 s). */
+  function failThreeTimes() {
+    last().drop(1006);
+    vi.advanceTimersByTime(1000);
+    last().drop(1006);
+    vi.advanceTimersByTime(2000);
+    last().drop(1006);
+  }
+
+  it('3 falhas seguidas: pergunta se a sala existe; se não, para e vira gone', async () => {
+    const roomExists = vi.fn(async () => false);
+    const conn = make({ roomExists });
+    last().drop(1006);
+    vi.advanceTimersByTime(1000);
+    last().drop(1006);
+    expect(roomExists).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(2000);
+    last().drop(1006);
+    expect(roomExists).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(conn.getSnapshot().status).toBe('gone'));
+    const sockets = FakeSocket.all.length;
+    vi.advanceTimersByTime(60_000);
+    expect(FakeSocket.all).toHaveLength(sockets);
+  });
+
+  it('gone é final: a checagem que chega depois da nova tentativa fecha o socket órfão', async () => {
+    let answer!: (exists: boolean) => void;
+    const roomExists = vi.fn(() => new Promise<boolean>((resolve) => (answer = resolve)));
+    const conn = make({ roomExists });
+    failThreeTimes();
+    vi.advanceTimersByTime(4000); // a nova tentativa abre outro socket antes da resposta
+    const orphan = last();
+    expect(FakeSocket.all).toHaveLength(4);
+    answer(false);
+    await vi.waitFor(() => expect(conn.getSnapshot().status).toBe('gone'));
+    expect(orphan.closedWith).toBe(1000);
+    orphan.drop(1006);
+    expect(conn.getSnapshot().status).toBe('gone');
+    vi.advanceTimersByTime(60_000);
+    expect(FakeSocket.all).toHaveLength(4);
+    expect(conn.getSnapshot().status).toBe('gone');
+  });
+
+  it('a sala existe: continua tentando', async () => {
+    const roomExists = vi.fn(async () => true);
+    const conn = make({ roomExists });
+    failThreeTimes();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(conn.getSnapshot().status).toBe('reconnecting');
+    const sockets = FakeSocket.all.length;
+    vi.advanceTimersByTime(4000);
+    expect(FakeSocket.all.length).toBe(sockets + 1);
+  });
+
+  it('erro de rede na checagem: continua tentando', async () => {
+    const conn = make({ roomExists: vi.fn(async () => Promise.reject(new Error('offline'))) });
+    failThreeTimes();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(conn.getSnapshot().status).toBe('reconnecting');
   });
 
   it('stop fecha e não reconecta; ações só saem com o socket aberto', () => {

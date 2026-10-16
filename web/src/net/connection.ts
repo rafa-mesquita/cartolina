@@ -38,11 +38,18 @@ export interface ConnOptions {
   name: string;
   color: string;
   createSocket?: (url: string) => SocketLike;
+  /** Pergunta ao servidor se a sala ainda existe (usada depois de várias falhas seguidas de conexão). */
+  roomExists?: () => Promise<boolean>;
 }
 
 /** Erros que só acontecem ao entrar; com eles o socket fica aberto esperando nova tentativa. */
 export const JOIN_ERRORS: ReadonlySet<string> = new Set(['room_full', 'bad_name', 'bad_color', 'color_taken']);
-export const CURSOR_INTERVAL_MS = 34;
+/** Cota grátis da Cloudflare: cada ~20 mensagens recebidas contam 1 requisição. Cursor solto ~12/s, arrastando 20/s. */
+export const CURSOR_IDLE_INTERVAL_MS = 84;
+export const CURSOR_DRAG_INTERVAL_MS = 50;
+/** Parado, reenvia a última posição de tempos em tempos (os outros escondem cursor sem notícia há 6 s). */
+export const CURSOR_KEEPALIVE_MS = 2000;
+const GONE_CHECK_AFTER = 3;
 const OPEN = 1;
 const MAX_BACKOFF_MS = 10_000;
 /** Tempo que o servidor tem para responder ao ping de verificação feito ao voltar para a aba. */
@@ -50,6 +57,13 @@ const PONG_DEADLINE_MS = 5_000;
 
 /** O que a mesa precisa da conexão (facilita testar componentes com um objeto falso). */
 export type GameConn = Pick<RoomConnection, 'sendAction' | 'sendActivity' | 'sendCursor' | 'sendPing' | 'onFx' | 'onError'>;
+
+const sameCursor = (a: CursorFx, b: CursorFx): boolean =>
+  a.zone === b.zone && a.x === b.x && a.y === b.y && a.drag?.cardId === b.drag?.cardId && a.drag?.index === b.drag?.index;
+
+/** Aba visível e janela com foco (sem `document`, como em testes de Node, conta como ativa). */
+const windowActive = (): boolean =>
+  typeof document === 'undefined' || (document.visibilityState !== 'hidden' && document.hasFocus());
 
 const defaultSocket = (url: string): SocketLike => new WebSocket(url) as unknown as SocketLike;
 
@@ -68,6 +82,9 @@ export class RoomConnection {
   private lastCursorAt = -Infinity;
   private pendingCursor: CursorFx | null = null;
   private cursorTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastCursor: CursorFx | null = null;
+  private checkingRoom = false;
+  private keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private opts: ConnOptions) {}
 
@@ -126,13 +143,19 @@ export class RoomConnection {
     this.send({ t: 'fx.ping', x, y });
   }
 
-  /** Limita a ~30 Hz; se chegar no meio do intervalo, envia o mais recente quando o intervalo acabar. */
+  /**
+   * Cursor com ritmo: ~12/s solto, 20/s arrastando, com o valor mais recente no fim do intervalo.
+   * Posição repetida não sai; parado, `keepalive` reenvia. Sem foco, só sai cursor com carta (ou soltando).
+   */
   sendCursor(cursor: CursorFx): void {
-    const now = Date.now();
-    const wait = this.lastCursorAt + CURSOR_INTERVAL_MS - now;
+    const latest = this.pendingCursor ?? this.lastCursor;
+    if (latest && sameCursor(cursor, latest)) return;
+    const dragChanged = Boolean(cursor.drag) !== Boolean(this.lastCursor?.drag);
+    if (!dragChanged && !cursor.drag && !windowActive()) return;
+    const interval = cursor.drag ? CURSOR_DRAG_INTERVAL_MS : CURSOR_IDLE_INTERVAL_MS;
+    const wait = this.lastCursorAt + interval - Date.now();
     if (wait <= 0 && !this.cursorTimer) {
-      this.lastCursorAt = now;
-      this.send({ t: 'fx.cursor', ...cursor });
+      this.flushCursor(cursor);
       return;
     }
     this.pendingCursor = cursor;
@@ -141,11 +164,27 @@ export class RoomConnection {
       this.cursorTimer = null;
       const next = this.pendingCursor;
       this.pendingCursor = null;
-      if (next) {
-        this.lastCursorAt = Date.now();
-        this.send({ t: 'fx.cursor', ...next });
-      }
+      if (next && !(this.lastCursor && sameCursor(next, this.lastCursor))) this.flushCursor(next);
     }, Math.max(0, wait));
+  }
+
+  private flushCursor(cursor: CursorFx): void {
+    this.lastCursorAt = Date.now();
+    this.lastCursor = cursor;
+    this.send({ t: 'fx.cursor', ...cursor });
+    this.armKeepalive();
+  }
+
+  /** Sem foco não reenvia, mas rearma: o reenvio volta sozinho quando o foco volta. */
+  private armKeepalive(): void {
+    if (this.keepaliveTimer) clearTimeout(this.keepaliveTimer);
+    this.keepaliveTimer = setTimeout(() => {
+      this.keepaliveTimer = null;
+      const c = this.lastCursor;
+      if (!c || this.stopped) return;
+      if (windowActive()) this.flushCursor(c);
+      else this.armKeepalive();
+    }, CURSOR_KEEPALIVE_MS);
   }
 
   retryJoin(name: string, color: string): void {
@@ -198,7 +237,7 @@ export class RoomConnection {
   }
 
   private open(): void {
-    if (this.stopped) return;
+    if (this.stopped || this.snap.status === 'gone') return;
     this.clearPongDeadline();
     const old = this.ws;
     this.ws = null;
@@ -258,7 +297,7 @@ export class RoomConnection {
     this.stopHeartbeat();
     this.clearPongDeadline();
     this.ws = null;
-    if (this.stopped) return;
+    if (this.stopped || this.snap.status === 'gone') return;
     if (code === CLOSE_REPLACED) return this.setSnap({ status: 'replaced' });
     if (code === CLOSE_GONE) return this.setSnap({ status: 'gone' });
     const delay = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** this.attempt);
@@ -268,6 +307,30 @@ export class RoomConnection {
       this.retryTimer = null;
       this.open();
     }, delay);
+    if (this.attempt >= GONE_CHECK_AFTER) this.checkRoomGone();
+  }
+
+  /** Sala que expirou dá 404 no upgrade (visto como 1006) para sempre: depois de algumas falhas, confere. */
+  private checkRoomGone(): void {
+    const check = this.opts.roomExists;
+    if (!check || this.checkingRoom) return;
+    this.checkingRoom = true;
+    check().then(
+      (exists) => {
+        this.checkingRoom = false;
+        // Só vale se ainda estamos sem socket aberto: 'joining'/'joined' (um socket abriu no meio) ou
+        // 'replaced' ficam como estão. 'gone' é final: sem timers e sem o socket de uma tentativa em andamento.
+        if (exists || this.stopped || this.snap.status !== 'reconnecting') return;
+        this.clearTimers();
+        const ws = this.ws;
+        this.ws = null;
+        ws?.close(1000);
+        this.setSnap({ status: 'gone' });
+      },
+      () => {
+        this.checkingRoom = false; // sem rede: segue tentando
+      },
+    );
   }
 
   private startHeartbeat(): void {
@@ -287,6 +350,8 @@ export class RoomConnection {
     this.clearPongDeadline();
     if (this.retryTimer) clearTimeout(this.retryTimer);
     if (this.cursorTimer) clearTimeout(this.cursorTimer);
+    if (this.keepaliveTimer) clearTimeout(this.keepaliveTimer);
+    this.keepaliveTimer = null;
     this.retryTimer = null;
     this.cursorTimer = null;
   }
