@@ -20,6 +20,10 @@ com grupos") no que diz respeito à tela inicial e aos grupos.
 - **Dados:** histórico por jogo de verdade (abordagem A). Uma migração do D1
   guarda todas as rodadas existentes como rodadas do ITO e apaga a tabela de
   grupos.
+- **Nome na tela:** o ITO aparece como **DITU** ("a nossa versão do ITO"), pedido
+  do usuário em 2026-10-16. Por dentro, o id continua `ito` em rotas (`#/ito`),
+  banco (`game = 'ito'`), registro e código, para não mexer em dados nem em
+  links. Onde este documento diz "ITO" na interface, leia "DITU".
 - **Ordem:** a implementação começa **depois que o D1 do Dixit** (sala genérica
   com `gameId`, registro `GAMES` em `shared/src/games/registry.ts`) estiver no
   `main`, e usa esse registro. O D2 do Dixit (estante) segue este documento.

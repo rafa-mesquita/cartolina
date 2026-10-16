@@ -700,7 +700,7 @@ describe('catálogo de jogos do site', () => {
     for (const g of CATALOG) expect(g.hasHistory).toBe(GAMES[g.id].recordsHistory);
   });
 
-  it('ITO jogável; Dixit ainda não', () => {
+  it('DITU jogável; Dixit ainda não', () => {
     expect(catalogEntry('ito')?.playable).toBe(true);
     expect(catalogEntry('dixit')?.playable).toBe(false);
     expect(catalogEntry('xyz')).toBeNull();
@@ -776,7 +776,7 @@ export interface CatalogEntry {
 
 const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory'>> = {
   ito: {
-    name: 'ITO',
+    name: 'DITU',
     tagline: 'adivinhem a ordem sem dizer o número',
     players: '2 a 10 pessoas',
     rules: [
@@ -950,7 +950,7 @@ describe('GamePage', () => {
   it('aba jogar: criar sala do jogo, como jogar e voltar pros jogos', async () => {
     vi.mocked(api.createRoom).mockResolvedValue('KXQ7');
     render(<GamePage game="ito" tab="jogar" />);
-    expect(screen.getByRole('heading', { name: 'ITO' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'DITU' })).toBeTruthy();
     expect(screen.getByText(/número secreto de 1 a 100/)).toBeTruthy();
     expect(screen.getByRole('link', { name: '← jogos' }).getAttribute('href')).toBe('#/');
     fireEvent.click(screen.getByRole('button', { name: 'criar sala' }));
@@ -1388,7 +1388,7 @@ describe('estante de jogos', () => {
 
   it('uma capa por jogo, que leva pra página do jogo', () => {
     render(<Home />);
-    expect(screen.getByRole('link', { name: /ITO/ }).getAttribute('href')).toBe('#/ito');
+    expect(screen.getByRole('link', { name: /DITU/ }).getAttribute('href')).toBe('#/ito');
     expect(screen.getByRole('link', { name: /Dixit/ }).getAttribute('href')).toBe('#/dixit');
     expect(screen.getByText('em breve')).toBeTruthy(); // selo na capa do Dixit
     expect(screen.queryByText(/grupo/i)).toBeNull();
@@ -1401,10 +1401,10 @@ describe('estante de jogos', () => {
     expect(window.location.hash).toBe('#/sala/KXQ7');
   });
 
-  it('App: #/ito abre a página do ITO; #/g/... abre o histórico do ITO com aviso', () => {
+  it('App: #/ito abre a página do DITU; #/g/... abre o histórico do ITO com aviso', () => {
     window.location.hash = '#/ito';
     const { unmount } = render(<App />);
-    expect(screen.getByRole('heading', { name: 'ITO' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'DITU' })).toBeTruthy();
     unmount();
     window.location.hash = '#/g/d3jj53e9xj';
     render(<App />);
@@ -1515,7 +1515,7 @@ Onde hoje se testa "lobby mostra o link do histórico do grupo" e "mesa mostra o
 ```tsx
   it('lobby mostra o link do histórico do jogo', () => {
     render(<Lobby view={viewOf(makeRoom(2), 'p0')} conn={conn()} />);
-    expect(screen.getByRole('link', { name: '📜 histórico do ITO' }).getAttribute('href')).toBe('#/ito/historico');
+    expect(screen.getByRole('link', { name: '📜 histórico do DITU' }).getAttribute('href')).toBe('#/ito/historico');
   });
 
   it('mesa mostra o link do histórico embaixo do logo', () => {
@@ -1669,7 +1669,7 @@ git commit -m "feat(web): lobby, mesa e sala que acabou levam ao histórico do j
 
 ```ts
   await a.goto('/');
-  await a.getByRole('link', { name: /ITO/ }).click();
+  await a.getByRole('link', { name: /DITU/ }).click();
   await expect(a).toHaveURL(/#\/ito$/);
   await a.getByRole('button', { name: 'criar sala' }).click();
 ```
