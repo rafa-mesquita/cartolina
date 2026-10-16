@@ -1,4 +1,4 @@
-import type { ItoOutcome, RoomView } from '@cartolina/shared';
+import type { ItoOutcome, ItoRoomView } from '@cartolina/shared';
 import { useEffect, useRef, useState } from 'react';
 import { isHost } from '../game/derive';
 import type { GameConn } from '../net/connection';
@@ -34,12 +34,12 @@ function EyeIcon() {
 const UNLOCK_MS = 4000;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-export function ResultBanner({ view, conn }: { view: RoomView; conn: GameConn }) {
+export function ResultBanner({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   // "ver a mesa": esconde véu, banner e confete pra olhar a fila revelada; a pílula traz de volta.
   const [peek, setPeek] = useState(false);
   // Host clicou: botões travados até chegar um estado novo do servidor.
-  const [sentFor, setSentFor] = useState<RoomView | null>(null);
+  const [sentFor, setSentFor] = useState<ItoRoomView | null>(null);
   // Confete uma vez por banner. Marcado só quando o timer dispara: no StrictMode a 1ª execução é desfeita antes.
   const played = useRef(false);
   const outcome = view.game.outcome ?? 'round_lost';

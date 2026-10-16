@@ -41,7 +41,7 @@ class FakeSocket implements SocketLike {
 const createSocket = (url: string) => new FakeSocket(url);
 const last = () => FakeSocket.all[FakeSocket.all.length - 1]!;
 const mocked = vi.mocked(getRoomInfo);
-const info = (seats: RoomInfo['seats'] = []): RoomInfo => ({ exists: true, phase: 'lobby', seats });
+const info = (seats: RoomInfo['seats'] = []): RoomInfo => ({ exists: true, game: 'ito', phase: 'lobby', seats });
 
 function renderRoom() {
   return render(<RoomScreen code="ABCD" createSocket={createSocket} />);

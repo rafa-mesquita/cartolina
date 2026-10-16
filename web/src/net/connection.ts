@@ -7,7 +7,7 @@ import {
   type Activity,
   type ClientMessage,
   type CursorFx,
-  type ItoAction,
+  type GameAction,
   type RoomView,
   type ServerMessage,
 } from '@cartolina/shared';
@@ -114,7 +114,7 @@ export class RoomConnection {
     };
   }
 
-  sendAction(action: ItoAction): void {
+  sendAction(action: GameAction): void {
     this.send({ t: 'action', action });
   }
 

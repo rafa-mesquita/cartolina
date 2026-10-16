@@ -1,4 +1,4 @@
-import type { Activity, RoomView, SeatView } from '@cartolina/shared';
+import type { Activity, ItoRoomView, SeatView } from '@cartolina/shared';
 import type { CSSProperties } from 'react';
 import { backsOf, seatStatus } from '../game/derive';
 import { Avatar } from '../screens/Avatar';
@@ -11,7 +11,7 @@ function positionOf(slot: SeatSlot): CSSProperties {
   return slot.side === 'left' ? { left: 20, top } : { right: 20, top };
 }
 
-export function Seat({ view, seat, slot, snap, activity }: { view: RoomView; seat: SeatView; slot: SeatSlot; snap: EngineSnapshot; activity: Activity | undefined }) {
+export function Seat({ view, seat, slot, snap, activity }: { view: ItoRoomView; seat: SeatView; slot: SeatSlot; snap: EngineSnapshot; activity: Activity | undefined }) {
   const status = seatStatus(view, seat, activity);
   return (
     <div className={`seat ${slot.side}`} style={positionOf(slot)}>

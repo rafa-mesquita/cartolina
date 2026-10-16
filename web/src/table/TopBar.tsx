@@ -1,10 +1,10 @@
-import { CAMPAIGN_LIVES, type RoomView } from '@cartolina/shared';
+import { CAMPAIGN_LIVES, type ItoRoomView } from '@cartolina/shared';
 import { useEffect, useRef, useState } from 'react';
 import { roomLink } from '../lib/router';
 
 const COPIED_MS = 2000;
 
-export function TopBar({ view }: { view: RoomView }) {
+export function TopBar({ view }: { view: ItoRoomView }) {
   const { mode, level, lives } = view.game;
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

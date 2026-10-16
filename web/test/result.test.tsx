@@ -1,6 +1,6 @@
 import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import type { RoomView } from '@cartolina/shared';
+import type { ItoRoomView } from '@cartolina/shared';
 import type { GameConn } from '../src/net/connection';
 import { confetti } from '../src/table/confetti';
 import { resultCopy, ResultBanner } from '../src/table/ResultBanner';
@@ -118,7 +118,7 @@ describe('ResultBanner', () => {
 });
 
 describe('ResultBanner (confete)', () => {
-  const withOutcome = (outcome: 'round_won' | 'round_lost'): RoomView => {
+  const withOutcome = (outcome: 'round_won' | 'round_lost'): ItoRoomView => {
     const v = viewOf(revealed(), 'p1');
     return { ...v, game: { ...v.game, outcome } };
   };

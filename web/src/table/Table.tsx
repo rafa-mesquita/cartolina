@@ -1,4 +1,4 @@
-import type { Activity, RoomView } from '@cartolina/shared';
+import type { Activity, ItoRoomView } from '@cartolina/shared';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { isHost, seatStatus } from '../game/derive';
 import type { GameConn } from '../net/connection';
@@ -23,7 +23,7 @@ const getEmpty = () => EMPTY;
 const ACTIVITY_TTL_MS = 4000;
 const ROLLBACK_ERRORS = new Set(['not_owner', 'unknown_card', 'bad_phase']);
 
-export function Table({ view, conn }: { view: RoomView; conn: GameConn }) {
+export function Table({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
   const wrap = useRef<HTMLDivElement>(null);
   const felt = useRef<HTMLDivElement>(null);
   const row = useRef<HTMLDivElement>(null);

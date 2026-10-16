@@ -1,4 +1,4 @@
-import { CLUE_MAX, type ItoCardView, type RoomView } from '@cartolina/shared';
+import { CLUE_MAX, type ItoCardView, type ItoRoomView } from '@cartolina/shared';
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { handCards, type CardPlace } from '../game/derive';
 import { Critter } from '../screens/Critter';
@@ -106,7 +106,7 @@ function HandSlot({ card, place, color, phase, engine, conn }: {
   );
 }
 
-export function Hand({ view, snap, engine, conn }: { view: RoomView; snap: EngineSnapshot; engine: TableEngine | null; conn: GameConn }) {
+export function Hand({ view, snap, engine, conn }: { view: ItoRoomView; snap: EngineSnapshot; engine: TableEngine | null; conn: GameConn }) {
   const me = view.seats.find((s) => s.id === view.you);
   if (!me) return null;
   return (

@@ -1,4 +1,4 @@
-import { MIN_PLAYERS, type ItoMode, type RoomView } from '@cartolina/shared';
+import { MIN_PLAYERS, type ItoMode, type ItoRoomView } from '@cartolina/shared';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { isHost } from '../game/derive';
 import { roomLink } from '../lib/router';
@@ -14,7 +14,7 @@ const MODES: { mode: ItoMode; title: string; text: string }[] = [
   { mode: 'campanha', title: 'campanha', text: '3 vidas e 3 níveis (1, 2 e 3 cartas por pessoa). Cada carta fora de ordem custa uma vida.' },
 ];
 
-export function Lobby({ view, conn }: { view: RoomView; conn: GameConn }) {
+export function Lobby({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
   const host = isHost(view);
   const connected = view.seats.filter((s) => s.connected).length;
   const [copied, setCopied] = useState(false);

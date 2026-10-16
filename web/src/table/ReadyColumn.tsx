@@ -1,10 +1,10 @@
-import type { RoomView } from '@cartolina/shared';
+import type { ItoRoomView } from '@cartolina/shared';
 import { allMineInRow, isHost, isPlaying, readyCount } from '../game/derive';
 import type { GameConn } from '../net/connection';
 import type { EngineSnapshot } from './engine';
 import { ThemePanel } from './ThemePanel';
 
-export function ReadyColumn({ view, snap, conn }: { view: RoomView; snap: EngineSnapshot; conn: GameConn }) {
+export function ReadyColumn({ view, snap, conn }: { view: ItoRoomView; snap: EngineSnapshot; conn: GameConn }) {
   const { phase } = view.game;
   if (phase === 'theme') {
     // o host escolhe o tema aqui embaixo (a mão ainda está vazia), sem cobrir o tema no feltro
