@@ -1,9 +1,17 @@
-import { expect, type Browser, type Page } from '@playwright/test';
+import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+
+const contexts: BrowserContext[] = [];
 
 /** Página num contexto próprio: cada jogador tem seu token (como navegadores diferentes). */
 export async function newPlayer(browser: Browser): Promise<Page> {
   const context = await browser.newContext();
+  contexts.push(context);
   return context.newPage();
+}
+
+/** Fecha os contextos criados por `newPlayer` (chamar no `afterEach`). */
+export async function closePlayers(): Promise<void> {
+  await Promise.all(contexts.splice(0).map((c) => c.close()));
 }
 
 /** Entra na sala aberta na página com o nome e o personagem de índice `critter`. */
@@ -27,9 +35,9 @@ export async function placeMyCard(page: Page, clue: string): Promise<void> {
   await expect(page.locator('[data-hand-slot]').first()).toHaveClass(/away/);
 }
 
-/** Host `a` e `b` já entraram na sala: começa, dá as cartas, os dois colocam, ficam prontos e veem a revelação. */
-export async function playRound(a: Page, b: Page, clues: [string, string]): Promise<void> {
-  await expect(a.getByText('Bia', { exact: true }).first()).toBeVisible();
+/** Host `a` e `b` (que entrou como `bName`) já estão na sala: começa, dá as cartas, os dois colocam, ficam prontos e veem a revelação. */
+export async function playRound(a: Page, b: Page, bName: string, clues: [string, string]): Promise<void> {
+  await expect(a.getByText(bName, { exact: true }).first()).toBeVisible();
   await a.getByRole('button', { name: 'começar' }).click();
   await a.getByRole('button', { name: 'dar as cartas' }).click();
   await placeMyCard(a, clues[0]);

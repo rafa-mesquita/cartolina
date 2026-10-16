@@ -12,17 +12,23 @@ sozinho (`.github/workflows/deploy.yml`); se um teste falhar, nada é publicado.
    pedir, escolha o seu subdomínio `*.workers.dev`.
 2. **Login do wrangler no PC.** Na raiz do repositório:
    `npx wrangler login` → aprove no navegador.
-3. **Banco D1 de produção.** `npx wrangler d1 create cartolina` (dentro de
-   `server/`). Copie o `database_id` que aparecer para `server/wrangler.jsonc`
-   (no lugar dos zeros) e faça commit. O id não é segredo.
+3. **Banco D1 de produção.** Dentro de `server/`:
+   `npx wrangler d1 create cartolina --binding DB`. Copie o `database_id` que
+   aparecer para `server/wrangler.jsonc` (no lugar dos zeros) e faça commit. O
+   id não é segredo. Se o wrangler perguntar se pode atualizar a configuração,
+   ele só deve mudar o `database_id` da entrada `DB` que já existe. Confira
+   o `server/wrangler.jsonc` depois: o binding `DB` e o
+   `migrations_dir: "migrations"` precisam continuar lá. Se mais alguma coisa
+   mudou, desfaça (`git checkout server/wrangler.jsonc`) e cole o id na mão.
 4. **Token pro GitHub publicar.** No painel da Cloudflare: **My Profile → API
    Tokens → Create Token → modelo "Edit Cloudflare Workers"** e acrescente a
-   permissão **Account → D1 → Edit**. Copie o token (ele só aparece uma vez).
+   permissão **Account → D1 → Edit**. Em **Account Resources**, escolha a sua
+   conta. Copie o token (ele só aparece uma vez).
 5. **Segredos no GitHub.** Em https://github.com/rafa-mesquita/cartolina →
    **Settings → Secrets and variables → Actions → New repository secret**:
    - `CLOUDFLARE_API_TOKEN` = o token do passo 4;
    - `CLOUDFLARE_ACCOUNT_ID` = o Account ID (aparece na página inicial de
-     **Workers & Pages**, na lateral).
+     **Workers & Pages**, na lateral; `npx wrangler whoami` também mostra).
 6. **Pages.** **Settings → Pages → Build and deployment → Source: GitHub
    Actions**.
 7. **Primeira publicação.** Faça push no `main` (ou rode o workflow em
@@ -34,14 +40,19 @@ sozinho (`.github/workflows/deploy.yml`); se um teste falhar, nada é publicado.
    `https://cartolina-server.<seu-subdominio>.workers.dev` (sem barra no fim).
    Rode o workflow de novo: agora o site sai.
 
+   Dica: se você já sabe o seu subdomínio `workers.dev`, crie a variável
+   `SERVER_URL` (`https://cartolina-server.<subdominio>.workers.dev`) antes do
+   primeiro push e a primeira execução já sai verde.
+
 Se o `wrangler deploy` reclamar de `ratelimits` (limitador não disponível no
 plano), apague o bloco `ratelimits` de `server/wrangler.jsonc`: o servidor
-funciona sem ele.
+funciona sem ele; faça commit e push.
 
 ## Conferir depois de publicar
 
-- `SERVER_URL=https://cartolina-server.<subdominio>.workers.dev npm run smoke`
-  → deve terminar com `ok`.
+- Deve terminar com `ok`:
+  - bash: `SERVER_URL=https://cartolina-server.<subdominio>.workers.dev npm run smoke`
+  - PowerShell: `$env:SERVER_URL = "https://cartolina-server.<subdominio>.workers.dev"; npm run smoke`
 - Abrir o site, criar uma sala e jogar uma rodada com alguém (ou com uma aba
   anônima).
 

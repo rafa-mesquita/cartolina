@@ -1617,9 +1617,14 @@ sozinho (`.github/workflows/deploy.yml`); se um teste falhar, nada é publicado.
    pedir, escolha o seu subdomínio `*.workers.dev`.
 2. **Login do wrangler no PC.** Na raiz do repositório:
    `npx wrangler login` → aprove no navegador.
-3. **Banco D1 de produção.** `npx wrangler d1 create cartolina` (dentro de
-   `server/`). Copie o `database_id` que aparecer para `server/wrangler.jsonc`
-   (no lugar dos zeros) e faça commit. O id não é segredo.
+3. **Banco D1 de produção.** Dentro de `server/`:
+   `npx wrangler d1 create cartolina --binding DB`. Copie o `database_id` que
+   aparecer para `server/wrangler.jsonc` (no lugar dos zeros) e faça commit. O
+   id não é segredo. Se o wrangler perguntar se pode atualizar a configuração,
+   ele só deve mudar o `database_id` da entrada `DB` que já existe. Confira
+   o `server/wrangler.jsonc` depois: o binding `DB` e o
+   `migrations_dir: "migrations"` precisam continuar lá. Se mais alguma coisa
+   mudou, desfaça (`git checkout server/wrangler.jsonc`) e cole o id na mão.
 4. **Token pro GitHub publicar.** No painel da Cloudflare: **My Profile → API
    Tokens → Create Token → modelo "Edit Cloudflare Workers"** e acrescente a
    permissão **Account → D1 → Edit**. Copie o token (ele só aparece uma vez).
@@ -1711,8 +1716,8 @@ Esta task **não é de subagente**: o controlador faz junto com o usuário. As e
 
 - [ ] **Step 4: D1 de produção**
 
-Run (em `server/`): `npx wrangler d1 create cartolina`
-Expected: imprime um `database_id` (UUID).
+Run (em `server/`): `npx wrangler d1 create cartolina --binding DB`
+Expected: imprime um `database_id` (UUID). Se perguntar se pode atualizar a configuração, ele só deve mudar o `database_id` da entrada `DB`; depois confira que o binding `DB` e o `migrations_dir: "migrations"` continuam em `server/wrangler.jsonc` (se mais algo mudou, desfaça e cole o id na mão).
 
 - Troque o `database_id` de zeros em `server/wrangler.jsonc` por esse UUID.
 - Rode `npm test` e confirme que passa (os testes usam D1 local, o id não muda nada).

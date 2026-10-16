@@ -22,7 +22,8 @@ export default defineConfig({
       command: 'npm run build -w web && npm run preview -w web -- --port 4173 --strictPort --host 127.0.0.1',
       cwd: '..',
       port: 4173,
-      reuseExistingServer: !CI,
+      // Sempre rebuilda: nunca reaproveita um preview velho.
+      reuseExistingServer: false,
       timeout: 180_000,
     },
   ],

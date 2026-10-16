@@ -4,6 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-09-01",
   "compatibility_flags": ["nodejs_compat"],
+  // O site usa http://127.0.0.1:8787 por padrão: fixa o endereço do dev.
+  "dev": { "ip": "127.0.0.1", "port": 8787 },
   "vars": { "ALLOWED_ORIGINS": "https://rafa-mesquita.github.io" },
   // Rate Limiting (opcional no código): se o plano grátis recusar, apague este bloco e o resto continua igual.
   "ratelimits": [
