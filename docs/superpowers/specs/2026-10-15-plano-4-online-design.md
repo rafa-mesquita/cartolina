@@ -117,10 +117,12 @@ upgrade de WebSocket confere a mesma lista pelo cabeçalho `Origin`.
 
 ### 3.5 Aviso no celular
 
-Com tela estreita (< 768 px) **ou** ponteiro grosso (`(pointer: coarse)`), as
+Em aparelhos de toque (`(hover: none) and (pointer: coarse)`), as
 telas de sala (entrar, lobby, mesa) e o "criar sala" da tela inicial mostram:
 "o cartolina por enquanto é pra jogar no computador 💻". A página do grupo
-continua funcionando normalmente no celular (é só leitura).
+continua funcionando normalmente no celular (é só leitura). A detecção é por
+toque, não por largura: uma janela de computador estreita (ex.: meia tela) não é
+afetada e não derruba a partida.
 
 ### 3.6 Detalhes de produção
 

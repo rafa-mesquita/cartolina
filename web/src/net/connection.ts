@@ -145,7 +145,7 @@ export class RoomConnection {
 
   /**
    * Cursor com ritmo: ~12/s solto, 20/s arrastando, com o valor mais recente no fim do intervalo.
-   * Posição repetida não sai; parado, `keepalive` reenvia. Sem foco, só mudanças de arrasto saem.
+   * Posição repetida não sai; parado, `keepalive` reenvia. Sem foco, só sai cursor com carta (ou soltando).
    */
   sendCursor(cursor: CursorFx): void {
     const latest = this.pendingCursor ?? this.lastCursor;
@@ -164,7 +164,7 @@ export class RoomConnection {
       this.cursorTimer = null;
       const next = this.pendingCursor;
       this.pendingCursor = null;
-      if (next) this.flushCursor(next);
+      if (next && !(this.lastCursor && sameCursor(next, this.lastCursor))) this.flushCursor(next);
     }, Math.max(0, wait));
   }
 
@@ -172,11 +172,18 @@ export class RoomConnection {
     this.lastCursorAt = Date.now();
     this.lastCursor = cursor;
     this.send({ t: 'fx.cursor', ...cursor });
+    this.armKeepalive();
+  }
+
+  /** Sem foco não reenvia, mas rearma: o reenvio volta sozinho quando o foco volta. */
+  private armKeepalive(): void {
     if (this.keepaliveTimer) clearTimeout(this.keepaliveTimer);
     this.keepaliveTimer = setTimeout(() => {
       this.keepaliveTimer = null;
       const c = this.lastCursor;
-      if (c && !this.stopped && windowActive()) this.flushCursor(c);
+      if (!c || this.stopped) return;
+      if (windowActive()) this.flushCursor(c);
+      else this.armKeepalive();
     }, CURSOR_KEEPALIVE_MS);
   }
 
@@ -230,7 +237,7 @@ export class RoomConnection {
   }
 
   private open(): void {
-    if (this.stopped) return;
+    if (this.stopped || this.snap.status === 'gone') return;
     this.clearPongDeadline();
     const old = this.ws;
     this.ws = null;
@@ -290,7 +297,7 @@ export class RoomConnection {
     this.stopHeartbeat();
     this.clearPongDeadline();
     this.ws = null;
-    if (this.stopped) return;
+    if (this.stopped || this.snap.status === 'gone') return;
     if (code === CLOSE_REPLACED) return this.setSnap({ status: 'replaced' });
     if (code === CLOSE_GONE) return this.setSnap({ status: 'gone' });
     const delay = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** this.attempt);
@@ -311,9 +318,13 @@ export class RoomConnection {
     check().then(
       (exists) => {
         this.checkingRoom = false;
+        // Só vale se ainda estamos sem socket aberto: 'joining'/'joined' (um socket abriu no meio) ou
+        // 'replaced' ficam como estão. 'gone' é final: sem timers e sem o socket de uma tentativa em andamento.
         if (exists || this.stopped || this.snap.status !== 'reconnecting') return;
-        if (this.retryTimer) clearTimeout(this.retryTimer);
-        this.retryTimer = null;
+        this.clearTimers();
+        const ws = this.ws;
+        this.ws = null;
+        ws?.close(1000);
         this.setSnap({ status: 'gone' });
       },
       () => {

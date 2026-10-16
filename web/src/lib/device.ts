@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
-/** Tela estreita ou toque como ponteiro principal: por enquanto o jogo é só pra computador. */
-export const PHONE_QUERY = '(max-width: 767px), (pointer: coarse)';
+/** Aparelho de toque (sem hover, ponteiro grosso): por enquanto o jogo é só pra computador. Janela estreita de PC não conta. */
+export const PHONE_QUERY = '(hover: none) and (pointer: coarse)';
 
 function media(): MediaQueryList | null {
   return typeof window.matchMedia === 'function' ? window.matchMedia(PHONE_QUERY) : null;

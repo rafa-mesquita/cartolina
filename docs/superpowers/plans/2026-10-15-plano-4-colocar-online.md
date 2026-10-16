@@ -1148,8 +1148,8 @@ Crie `web/src/lib/device.ts`:
 ```ts
 import { useSyncExternalStore } from 'react';
 
-/** Tela estreita ou toque como ponteiro principal: por enquanto o jogo é só pra computador. */
-export const PHONE_QUERY = '(max-width: 767px), (pointer: coarse)';
+/** Aparelho de toque (sem hover, ponteiro grosso): por enquanto o jogo é só pra computador. Janela estreita de PC não conta. */
+export const PHONE_QUERY = '(hover: none) and (pointer: coarse)';
 
 function media(): MediaQueryList | null {
   return typeof window.matchMedia === 'function' ? window.matchMedia(PHONE_QUERY) : null;
@@ -1249,7 +1249,7 @@ Expected: PASS (todos).
 
 - [ ] **Step 5: Conferir no navegador**
 
-Com os servidores locais rodando, abra `http://localhost:5173` numa largura de 375 px (DevTools ou o painel do navegador em modo celular):
+Com os servidores locais rodando, abra `http://localhost:5173` em modo celular com toque (DevTools com emulação de dispositivo; só estreitar a janela não ativa o aviso):
 - o painel do ITO mostra o aviso e o de grupos continua;
 - `#/sala/ABCD` mostra "abre no computador".
 

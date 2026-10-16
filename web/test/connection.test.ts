@@ -226,6 +226,28 @@ describe('RoomConnection', () => {
       expect(sentXs()).toEqual([0.5, 0.6]);
     });
 
+    it('o reenvio volta quando o foco volta', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.4));
+      vi.mocked(document.hasFocus).mockReturnValue(false);
+      vi.advanceTimersByTime(5000);
+      expect(sentXs()).toEqual([0.4]);
+      vi.mocked(document.hasFocus).mockReturnValue(true);
+      vi.advanceTimersByTime(2000);
+      expect(sentXs()).toEqual([0.4, 0.4]);
+    });
+
+    it('voltar à posição já enviada antes do intervalo acabar não reenvia', () => {
+      const conn = make();
+      last().open();
+      conn.sendCursor(hover(0.1));
+      conn.sendCursor(hover(0.2));
+      conn.sendCursor(hover(0.1));
+      vi.advanceTimersByTime(100);
+      expect(sentXs()).toEqual([0.1]);
+    });
+
     it('stop cancela o reenvio', () => {
       const conn = make();
       last().open();
@@ -260,6 +282,24 @@ describe('RoomConnection', () => {
     const sockets = FakeSocket.all.length;
     vi.advanceTimersByTime(60_000);
     expect(FakeSocket.all).toHaveLength(sockets);
+  });
+
+  it('gone é final: a checagem que chega depois da nova tentativa fecha o socket órfão', async () => {
+    let answer!: (exists: boolean) => void;
+    const roomExists = vi.fn(() => new Promise<boolean>((resolve) => (answer = resolve)));
+    const conn = make({ roomExists });
+    failThreeTimes();
+    vi.advanceTimersByTime(4000); // a nova tentativa abre outro socket antes da resposta
+    const orphan = last();
+    expect(FakeSocket.all).toHaveLength(4);
+    answer(false);
+    await vi.waitFor(() => expect(conn.getSnapshot().status).toBe('gone'));
+    expect(orphan.closedWith).toBe(1000);
+    orphan.drop(1006);
+    expect(conn.getSnapshot().status).toBe('gone');
+    vi.advanceTimersByTime(60_000);
+    expect(FakeSocket.all).toHaveLength(4);
+    expect(conn.getSnapshot().status).toBe('gone');
   });
 
   it('a sala existe: continua tentando', async () => {
