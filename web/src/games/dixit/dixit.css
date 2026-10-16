@@ -179,3 +179,5 @@ button.dx-pill:hover { border-color: var(--must); }
 .dx-targets button[aria-pressed='true'] { border-color: var(--must); color: var(--must); }
 .dx-targets b { display: block; font: 400 24px/1 var(--serif); }
 .dx-link { width: 100%; padding: 8px 10px; border-radius: 10px; border: .75px solid rgba(246,234,210,.4); background: rgba(35,61,54,.9); color: var(--cream); }
+.dx-btn.dx-home { width: min(520px, 100%); margin-top: 0; }
+.dx-toast-lobby { bottom: 28px; }
