@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HAND_W, handX, insertIndex, moveCard, orderHand } from '../src/games/dixit/hand';
+import { HAND_W, dragLayout, dropInHand, handX, insertIndex, moveCard, orderHand } from '../src/games/dixit/handOrder';
 
 describe('ordem da mão', () => {
   it('mantém a ordem que a pessoa arrumou', () => {
@@ -102,5 +102,25 @@ describe('índice de soltura na mão', () => {
 
   it('sem cartas devolve 0', () => {
     expect(insertIndex(420, 0)).toBe(0);
+  });
+});
+
+describe('soltar na mão', () => {
+  it('move entre as visíveis e manda as da mesa pro fim', () => {
+    expect(dropInHand(['a', 'x', 'b', 'c'], ['x'], 'c', 0)).toEqual(['c', 'a', 'b', 'x']);
+  });
+
+  it('sem cartas na mesa é só mover', () => {
+    expect(dropInHand(['a', 'b', 'c'], [], 'a', 2)).toEqual(['b', 'c', 'a']);
+  });
+});
+
+describe('mão durante o arrasto', () => {
+  it('as outras abrem espaço onde a carta vai cair', () => {
+    expect(dragLayout(['a', 'b', 'c', 'd'], 'a', 2)).toEqual(['b', 'c', 'a', 'd']);
+  });
+
+  it('carta que não está na mão não mexe em nada', () => {
+    expect(dragLayout(['a', 'b'], 'z', 0)).toEqual(['a', 'b']);
   });
 });

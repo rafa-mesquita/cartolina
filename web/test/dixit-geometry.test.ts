@@ -1,6 +1,6 @@
 import { mulberry32 } from '@cartolina/shared';
 import { describe, expect, it } from 'vitest';
-import { FELT_H, FELT_W, STAGE_W, fitStage, looseSpot, pawnSpots, seatArc, tableSlots, trackPoints, type Pt } from '../src/games/dixit/geometry';
+import { FELT_H, FELT_W, STAGE_W, dropSpot, feltPoint, fitStage, looseSpot, pawnSpots, seatArc, tableSlots, trackPoints, type Pt } from '../src/games/dixit/geometry';
 
 describe('trilha de casas', () => {
   it('31 casas (0…30) dentro do feltro, todas diferentes', () => {
@@ -105,5 +105,35 @@ describe('cartas soltas no feltro', () => {
       if (x > 500) doOutroLado++;
     }
     expect(doOutroLado).toBeGreaterThanOrEqual(95);
+  });
+});
+
+describe('ponto da tela no feltro', () => {
+  const rect = { left: 100, top: 50, width: 500, height: 280 };
+
+  it('converte pela proporção do retângulo do feltro', () => {
+    expect(feltPoint(rect, 100, 50)).toEqual([0, 0]);
+    expect(feltPoint(rect, 600, 330)).toEqual([FELT_W, FELT_H]);
+    expect(feltPoint(rect, 350, 190)).toEqual([FELT_W / 2, FELT_H / 2]);
+  });
+
+  it('feltro sem tamanho não tem ponto', () => {
+    expect(feltPoint({ left: 0, top: 0, width: 0, height: 0 }, 10, 10)).toBeNull();
+  });
+});
+
+describe('carta que você soltou', () => {
+  it('fica onde soltou (pela base) e gira pouco', () => {
+    const [x, y, rz] = dropSpot([400, 300], mulberry32(3));
+    expect(x).toBe(400);
+    expect(y).toBe(370);
+    expect(Math.abs(rz)).toBeLessThanOrEqual(14);
+  });
+
+  it('não sai da área das cartas', () => {
+    expect(dropSpot([-50, -50], () => 0).slice(0, 2)).toEqual([130, 210]);
+    expect(dropSpot([2000, 900], () => 1).slice(0, 2)).toEqual([870, 520]);
+    expect(dropSpot([500, 300], () => 0)[2]).toBe(-14);
+    expect(dropSpot([500, 300], () => 1)[2]).toBe(14);
   });
 });

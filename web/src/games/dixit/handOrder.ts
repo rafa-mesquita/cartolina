@@ -44,3 +44,18 @@ export function insertIndex(x: number, count: number): number {
   const i = Math.round((x - HAND_W / 2) / HAND_STEP + (count - 1) / 2);
   return Math.min(Math.max(i, 0), count - 1);
 }
+
+/**
+ * Nova ordem depois de soltar `id` na posição `toIndex` da mão visível (sem as cartas que foram pra mesa).
+ * As que estão na mesa vão pro fim, na ordem em que estavam (somem da mão de qualquer jeito).
+ */
+export function dropInHand(order: readonly string[], away: readonly string[], id: string, toIndex: number): string[] {
+  const out = new Set(away);
+  const visible = moveCard(order.filter((c) => !out.has(c)), id, toIndex);
+  return [...visible, ...order.filter((c) => out.has(c))];
+}
+
+/** Ordem em que as cartas visíveis aparecem enquanto `id` é arrastada: as outras abrem espaço no índice `at`. */
+export function dragLayout(visible: readonly string[], id: string, at: number): string[] {
+  return visible.includes(id) ? moveCard(visible, id, at) : [...visible];
+}

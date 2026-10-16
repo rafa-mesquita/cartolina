@@ -64,7 +64,11 @@ button.dx-pill:hover { border-color: var(--must); }
 .dx-tcard.loose:hover { --stand: .28; --z: 2px; }
 /* a arrumação: as soltas deslizam para as casas da votação */
 .dx-tcard.gather { transition: left .75s cubic-bezier(.5, 0, .2, 1), top .75s cubic-bezier(.5, 0, .2, 1), transform .75s cubic-bezier(.5, 0, .2, 1); }
+.dx-tcard.loose.pending { cursor: pointer; }
 .dx-flip { position: absolute; inset: 0; transform-style: preserve-3d; }
+/* verso atrás da frente: virada (`down`) mostra o verso; `flip-in` gira até a frente */
+.dx-face.dx-backside { transform: rotateY(180deg); }
+.dx-tcard.down .dx-flip { transform: rotateY(180deg); }
 .dx-tcard.flip-in .dx-flip { animation: dxFlipIn .65s cubic-bezier(.34, 1.4, .64, 1) both; animation-delay: calc(var(--i) * 120ms); }
 @keyframes dxFlipIn { from { transform: translateZ(70px) rotateY(180deg); } to { transform: translateZ(0) rotateY(0); } }
 .dx-face { position: absolute; inset: 0; border-radius: 4px; padding: 3px; border: .75px solid var(--cream); background: var(--bg); backface-visibility: hidden; }

@@ -125,3 +125,32 @@ export function looseSpot(used: readonly Pt[], rng: Rng): Spot {
   }
   return [best[0], best[1], between(-LOOSE_TILT, LOOSE_TILT)];
 }
+
+/** Retângulo na tela (o que `getBoundingClientRect` devolve). */
+export interface ScreenRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Ponto da tela → coordenada do feltro, aproximado pelo retângulo do feltro na tela (ignora a perspectiva).
+ * Retângulo sem tamanho (feltro escondido, ou jsdom): `null`.
+ */
+export function feltPoint(rect: ScreenRect, x: number, y: number): Pt | null {
+  if (!rect.width || !rect.height) return null;
+  return [((x - rect.left) / rect.width) * FELT_W, ((y - rect.top) / rect.height) * FELT_H];
+}
+
+const clamp = (v: number, a: number, b: number): number => Math.min(Math.max(v, a), b);
+/** Giro máximo, em graus, da carta que você soltou. */
+const DROP_TILT = 14;
+
+/**
+ * Lugar da carta que você soltou no feltro: o ponto do feltro onde soltou (a carta fica pela base,
+ * por isso desce 70 px), sem sair da área das cartas, com um giro de −14° a 14°.
+ */
+export function dropSpot(at: Pt, rng: Rng): Spot {
+  return [clamp(at[0], 130, 870), clamp(at[1] + 70, 210, 520), -DROP_TILT + rng() * DROP_TILT * 2];
+}
