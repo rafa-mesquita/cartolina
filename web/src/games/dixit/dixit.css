@@ -156,6 +156,8 @@ button.dx-pill:hover { border-color: var(--must); }
 .dx-board-pill { position: absolute; left: 50%; bottom: 204px; transform: translateX(-50%); z-index: 20; font-size: 14px; padding: 10px 18px 9px; border-color: rgba(242,165,65,.75); }
 .dx-toast { position: absolute; left: 50%; bottom: 262px; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: var(--cream); color: var(--deep); font: 600 13px/1 var(--ui); z-index: 40; pointer-events: none; }
 .dx-viewer { position: absolute; inset: 0; background: rgba(12,22,19,.82); z-index: 50; display: flex; align-items: center; justify-content: center; gap: 34px; }
+/* o overlay recebe o foco ao abrir (pra Esc e setas): não precisa de contorno em volta da tela inteira */
+.dixit .dx-viewer:focus { outline: none; }
 .dx-big { width: 420px; height: 630px; padding: 5px; border: .75px solid var(--cream); border-radius: 6px; background: var(--bg); animation: dxPop .35s var(--spring); }
 .dx-nav { width: 46px; height: 46px; border-radius: 50%; border: .75px solid rgba(246,234,210,.5); background: none; font-size: 22px; }
 .dx-cap { position: absolute; bottom: 40px; left: 0; right: 0; text-align: center; color: var(--mu); font-size: 13px; }
