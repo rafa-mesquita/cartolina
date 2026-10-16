@@ -37,6 +37,11 @@ describe('underLimit', () => {
     expect(l.keys).toEqual([]);
   });
 
+  it('se o limitador falhar, deixa passar', async () => {
+    const broken: Limiter = { limit: async () => Promise.reject(new Error('indisponível')) };
+    expect(await underLimit(broken, '203.0.113.7')).toBe(true);
+  });
+
   it('com binding e IP: pergunta ao limitador usando o IP como chave', async () => {
     const ok = limiter(true);
     expect(await underLimit(ok, '203.0.113.7')).toBe(true);

@@ -30,6 +30,7 @@ describe('HTTP', () => {
     const res = await SELF.fetch('https://x/rooms', { method: 'OPTIONS', headers: { Origin: 'http://localhost:5173' } });
     expect(res.status).toBe(204);
     expect(res.headers.get('Access-Control-Allow-Methods')).toContain('POST');
+    expect(res.headers.get('Access-Control-Max-Age')).toBe('86400');
   });
 
   it('GET /rooms/:code/ws sem Upgrade dá 426', async () => {
@@ -41,6 +42,7 @@ describe('HTTP', () => {
     const res = await SELF.fetch('https://x/rooms/ZZZZ/ws', { headers: { Upgrade: 'websocket' } });
     expect(res.status).toBe(404);
   });
+
   it('CORS: devolve a origem só se ela for permitida', async () => {
     const pages = await SELF.fetch('https://x/rooms/ZZZZ', { headers: { Origin: 'https://rafa-mesquita.github.io' } });
     expect(pages.headers.get('Access-Control-Allow-Origin')).toBe('https://rafa-mesquita.github.io');
@@ -52,6 +54,14 @@ describe('HTTP', () => {
     expect(evil.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
 
+  it('POST de origem de fora dá 403 (não cria nada); local entra', async () => {
+    const evil = await SELF.fetch('https://x/rooms', { method: 'POST', headers: { Origin: 'https://evil.example' } });
+    expect(evil.status).toBe(403);
+    expect(await evil.json()).toEqual({ error: 'forbidden_origin' });
+    const local = await SELF.fetch('https://x/rooms', { method: 'POST', headers: { Origin: 'http://localhost:5173' } });
+    expect(local.status).toBe(201);
+  });
+
   it('WebSocket: origem de fora dá 403; local e sem Origin entram', async () => {
     const code = await newRoomCode();
     const evil = await SELF.fetch(`https://x/rooms/${code}/ws`, { headers: { Upgrade: 'websocket', Origin: 'https://evil.example' } });
@@ -60,7 +70,12 @@ describe('HTTP', () => {
     expect(local.status).toBe(101);
     local.webSocket?.accept();
     local.webSocket?.close();
+    const bare = await SELF.fetch(`https://x/rooms/${code}/ws`, { headers: { Upgrade: 'websocket' } });
+    expect(bare.status).toBe(101);
+    bare.webSocket?.accept();
+    bare.webSocket?.close();
   });
+
   it('corpo grande demais dá 413', async () => {
     const res = await SELF.fetch('https://x/groups', {
       method: 'POST',
@@ -72,9 +87,9 @@ describe('HTTP', () => {
   });
 
   it('criar grupo: o 6º pedido do mesmo IP no minuto dá 429', async () => {
-    const ip = `198.51.100.${Math.floor(Math.random() * 250) + 1}`;
+    const ip = `test-${crypto.randomUUID()}`; // chave única: não depende do estado de outros testes
     const statuses: number[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 6; i++) { // 5 é o limite do GROUP_LIMITER no wrangler.jsonc
       const res = await SELF.fetch('https://x/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },

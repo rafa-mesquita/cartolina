@@ -20,8 +20,6 @@ export const TOO_LARGE = Symbol('too_large');
 
 /** Lê um corpo JSON pequeno. Maior que o limite → `TOO_LARGE`; JSON inválido → null. */
 export async function readSmallJson(request: Request, max = MAX_BODY_BYTES): Promise<unknown> {
-  const declared = Number(request.headers.get('Content-Length') ?? '0');
-  if (declared > max) return TOO_LARGE;
   const text = await request.text();
   if (new TextEncoder().encode(text).length > max) return TOO_LARGE;
   try {
@@ -42,5 +40,9 @@ export interface Limiter {
  */
 export async function underLimit(limiter: Limiter | undefined, ip: string | null): Promise<boolean> {
   if (!limiter || !ip) return true;
-  return (await limiter.limit({ key: ip })).success;
+  try {
+    return (await limiter.limit({ key: ip })).success;
+  } catch {
+    return true; // limitador fora do ar não derruba o jogo: segue sem limite
+  }
 }

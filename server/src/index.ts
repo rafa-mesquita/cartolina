@@ -65,9 +65,13 @@ const tooMany = () => json({ error: 'too_many' }, 429);
 
 async function handle(request: Request, env: Env, rawOrigin: string | null, origin: string | null): Promise<Response> {
   const url = new URL(request.url);
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
+  // Preflight com cache de 1 dia no navegador.
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Max-Age': '86400' } });
+  // CORS só esconde a resposta: POST "simples" de outro site ainda executaria. Recusa antes de criar qualquer coisa.
+  if (request.method === 'POST' && rawOrigin && !origin) return json({ error: 'forbidden_origin' }, 403);
 
   const ip = request.headers.get('CF-Connecting-IP');
+  // Vale para todo POST; o `readSmallJson` cobre corpos sem Content-Length (chunked).
   if (request.method === 'POST' && Number(request.headers.get('Content-Length') ?? '0') > MAX_BODY_BYTES) {
     return json({ error: 'too_large' }, 413);
   }
