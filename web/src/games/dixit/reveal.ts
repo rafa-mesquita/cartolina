@@ -49,9 +49,10 @@ function listParts(ids: readonly string[], name: Name): Part[] {
   return out;
 }
 
-/** "A e B acharam a carta do narrador" / "ninguém achou…" / "todo mundo achou…". */
+/** "A e B acharam a carta do narrador" / "ninguém votou" / "ninguém achou…" / "todo mundo achou…". */
 export function summaryParts(r: DixitRoundResult, name: Name): Part[] {
   const n = r.found.length, voters = Object.keys(r.votes).length;
+  if (voters === 0) return [{ text: 'ninguém votou' }];
   if (n === 0) return [{ text: 'ninguém achou a carta do narrador' }];
   if (n === voters) return [{ text: 'todo mundo achou: a dica foi fácil demais' }];
   return [...listParts(r.found, name), { text: ` ${n === 1 ? 'achou' : 'acharam'} a carta do narrador` }];
@@ -67,14 +68,16 @@ export function fooledCounts(r: DixitRoundResult): [string, number][] {
   return [...counts.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-/** "a carta de X enganou 2 pessoas · …" (até 3). */
-export function fooledParts(r: DixitRoundResult, name: Name): Part[] {
+/** "a carta de X enganou 2 pessoas · …" (até 3). Se X é `me`: "a sua carta enganou…". */
+export function fooledParts(r: DixitRoundResult, name: Name, me: string | null = null): Part[] {
   const top = fooledCounts(r).slice(0, 3);
   if (top.length === 0) return [{ text: 'nenhuma carta enganou ninguém' }];
   const out: Part[] = [];
   top.forEach(([p, k], i) => {
     if (i > 0) out.push({ text: ' · ' });
-    out.push({ text: 'a carta de ' }, { text: name(p), em: true }, { text: ` enganou ${k} ${k === 1 ? 'pessoa' : 'pessoas'}` });
+    if (p === me) out.push({ text: 'a ' }, { text: 'sua', em: true }, { text: ' carta' });
+    else out.push({ text: 'a carta de ' }, { text: name(p), em: true });
+    out.push({ text: ` enganou ${k} ${k === 1 ? 'pessoa' : 'pessoas'}` });
   });
   return out;
 }
@@ -85,7 +88,7 @@ export function reasons(r: DixitRoundResult, p: string): { points: number; text:
   const out: { points: number; text: string }[] = [];
   if (p === r.storyteller) {
     out.push(allOrNone
-      ? { points: 0, text: n === 0 ? 'ninguém achou a carta: quem narra não pontua' : 'todo mundo achou a carta: quem narra não pontua' }
+      ? { points: 0, text: voters.length === 0 ? 'ninguém votou: quem narra não pontua' : n === 0 ? 'ninguém achou a carta: quem narra não pontua' : 'todo mundo achou a carta: quem narra não pontua' }
       : { points: 3, text: 'alguém achou a carta, mas não todos' });
   } else if (r.votes[p] === undefined) out.push({ points: 0, text: 'não votou' });
   else if (allOrNone) out.push({ points: 2, text: n === 0 ? 'ninguém achou: +2 pra quem votou' : 'todo mundo achou: +2 pra quem votou' });
@@ -95,13 +98,20 @@ export function reasons(r: DixitRoundResult, p: string): { points: number; text:
   return out;
 }
 
-/** Sequência da revelação narrada; `order` = ordem em que os peões andam (assentos). */
-export function buildRevealTimeline(r: DixitRoundResult, order: readonly string[], name: Name): RevealEvent[] {
+/**
+ * Sequência da revelação narrada; `order` = ordem em que os peões andam (assentos).
+ * Só quem está em `order` ganha pulos: passe todos os da rodada (`inRound`).
+ * Se o narrador é `me`, a legenda diz "a sua carta, que você narrou".
+ */
+export function buildRevealTimeline(r: DixitRoundResult, order: readonly string[], name: Name, me: string | null = null): RevealEvent[] {
   const T = REVEAL_MS;
   const ev: RevealEvent[] = [];
   let t = T.start;
   const clue: Part[] = r.clue ? [{ text: ' ' }, { text: `“${r.clue}”`, em: true }] : [];
-  ev.push({ at: t, kind: 'spot', caption: { step: 1, parts: [{ text: 'esta era a carta de ' }, { text: name(r.storyteller), em: true }, { text: ', que narrou' }, ...clue] } });
+  const whose: Part[] = r.storyteller === me
+    ? [{ text: 'esta era a ' }, { text: 'sua', em: true }, { text: ' carta, que você narrou' }]
+    : [{ text: 'esta era a carta de ' }, { text: name(r.storyteller), em: true }, { text: ', que narrou' }];
+  ev.push({ at: t, kind: 'spot', caption: { step: 1, parts: [...whose, ...clue] } });
   t += T.spot;
   ev.push({ at: t, kind: 'unspot', caption: { step: 2, parts: [{ text: 'os votos…' }] } });
   Object.entries(r.votes).forEach(([voter, card], index) => {
@@ -117,7 +127,7 @@ export function buildRevealTimeline(r: DixitRoundResult, order: readonly string[
     ev.push({ at: t, kind: 'owner', card });
   }
   t += T.afterOwners;
-  ev.push({ at: t, kind: 'caption', caption: { step: 3, parts: fooledParts(r, name) } });
+  ev.push({ at: t, kind: 'caption', caption: { step: 3, parts: fooledParts(r, name, me) } });
   t += T.fooled;
   ev.push({ at: t, kind: 'caption', caption: { step: 4, parts: [{ text: 'os pontos da rodada…' }] } });
   for (const p of order) {
@@ -134,7 +144,7 @@ export function buildRevealTimeline(r: DixitRoundResult, order: readonly string[
   return ev;
 }
 
-/** O quadro no instante `t` (ms desde o começo da revelação; `Infinity` = pulou pro fim). */
+/** O quadro no instante `t` (ms desde o começo da revelação; `Infinity` = pulou pro fim). Supõe `events` em ordem crescente de `at` (como `buildRevealTimeline` entrega). */
 export function frameAt(events: readonly RevealEvent[], t: number): RevealFrame {
   const f: RevealFrame = { caption: null, spot: false, storyMarked: false, votes: [], owners: [], hops: {}, done: false };
   for (const e of events) {
