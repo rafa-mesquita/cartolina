@@ -66,6 +66,15 @@ export const ERROR_CODES = [
   'not_joined',
   'already_joined',
   'card_on_table',
+  'need_3_players',
+  'not_storyteller',
+  'is_storyteller',
+  'own_card',
+  'wrong_count',
+  'nothing_chosen',
+  'already_confirmed',
+  'paused',
+  'deck_too_small',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -90,6 +99,15 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_joined: 'Entre na sala primeiro.',
   already_joined: 'Você já entrou nesta sala.',
   card_on_table: 'Tira a carta da mesa pra mudar a dica.',
+  need_3_players: 'Precisa de pelo menos 3 jogadores.',
+  not_storyteller: 'Só quem narra escolhe a carta da dica.',
+  is_storyteller: 'Quem narra só espera nesta etapa.',
+  own_card: 'Não dá pra votar na própria carta.',
+  wrong_count: 'Escolha o número certo de cartas.',
+  nothing_chosen: 'Escolha antes de confirmar.',
+  already_confirmed: 'Você já confirmou.',
+  paused: 'Esperando gente: precisa de 3 pessoas na mesa.',
+  deck_too_small: 'O baralho tem poucas cartas pra tanta gente.',
 };
 
 export function errorMessage(code: string): string {
