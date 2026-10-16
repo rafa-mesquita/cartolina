@@ -65,7 +65,8 @@ export function Home() {
       </h1>
       <p className="tagline">jogos de tabuleiro pra jogar com a galera na call</p>
       <section className="panel">
-        <h2>ITO</h2>
+        {/* DITU: a nossa versão do ITO (por dentro o jogo continua com id `ito`). */}
+        <h2>DITU</h2>
         <p>Cada um recebe um número secreto de 1 a 100. Sem dizer o número, use o tema pra dar dicas e coloquem as cartas em ordem juntos.</p>
         {phone ? (
           <p className="hint">{PHONE_TEXT}</p>
