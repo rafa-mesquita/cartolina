@@ -1,12 +1,12 @@
 # Ajustes da Tarefa 10 (valem por cima do texto da tarefa)
 
 As Tarefas 7 e 8 foram implementadas com APIs novas (arrastar e soltar, cartas soltas, dica controlada). Leia os componentes
-reais em `web/src/games/dixit/` (`Hand.tsx`, `useHandDrag.ts`, `Felt.tsx`, `Seats.tsx`, `ActionPanel.tsx`, `hand.ts`, `sounds.ts`)
+reais em `web/src/games/dixit/` (`Hand.tsx`, `useHandDrag.ts`, `Felt.tsx`, `Seats.tsx`, `ActionPanel.tsx`, `handOrder.ts` — renomeado de `hand.ts` na Tarefa 7, porque no Windows `./hand` e `./Hand` se confundiam —, `loose.ts`, `sounds.ts`)
 antes de montar a mesa: **o código da `DixitTable` no texto da tarefa usa as APIs antigas (`sel`, `onPick`, `tell`, `submit`) e
 precisa ser adaptado**. Referência de comportamento: `prototipo/dixit/index.html` (`playFromHand`, `onLooseClick`, `clueReady`, `needClue`).
 
 ## Estado da mesa (`DixitTable`)
-- `handOrder` (string[]) → a mão mostrada é `orderHand(handOrder, g.hand)`; `onReorder` guarda a nova ordem.
+- `handOrder` (string[]) → a mão mostrada é `orderHand(handOrder, g.hand)` (de `./handOrder`); `onReorder` guarda a nova ordem.
 - `pending` (string[]): suas cartas soltas esperando a 2ª (só partida de 3). Zera quando a fase muda.
 - `dropPoints` (Record<string, {x, y}>): onde você soltou cada carta, chave `${me}:${k}`. Zera quando a rodada/fase de escolha acaba.
 - `clue` (string) e `spoken` (boolean): a dica do narrador e o "vou falar a dica na call". Zeram depois de narrar e quando muda o narrador.
@@ -39,3 +39,7 @@ Mantenha os outros testes do texto (troca no `Game.tsx`, votação etc.).
 
 ## Nome
 Textos que o jogador vê dizem "Diquisti" (também no `Game.tsx`).
+
+## Carta ampliada (da revisão da Tarefa 6)
+- Ao ver a mesa no navegador: se aparecer um contorno em volta do overlay inteiro quando a carta ampliada abre, acrescente `.dixit .dx-viewer:focus { outline: none; }` no `dixit.css`.
+- Rodinha pra cima sobre uma carta da mão ou da mesa abre o `CardViewer`; rodinha pra baixo fecha (como no protótipo).
