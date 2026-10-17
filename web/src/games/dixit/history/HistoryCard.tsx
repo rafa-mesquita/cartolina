@@ -17,6 +17,7 @@ export function HistoryCard({ card, group, index, label, badge, onOpen }: Props)
       type="button"
       className="dxh-card"
       aria-label={label}
+      aria-haspopup="dialog"
       data-card-id={card}
       data-group={group}
       data-index={index}

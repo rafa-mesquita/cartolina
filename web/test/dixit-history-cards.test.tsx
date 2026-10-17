@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { HistoryCard } from '../src/games/dixit/history/HistoryCard';
 import { famousItems, matchGroupKey, matchItems } from '../src/games/dixit/history/groups';
-import { ANA, BIA, SAMPLE } from './dixit-history-fixtures';
+import { ANA, BIA, EMPTY_STATS, SAMPLE } from './dixit-history-fixtures';
 
 describe('itens de carta do histórico', () => {
   it('faixas de cartas famosas: selo, dica, quem narrou e o rótulo da carta ampliada', () => {
@@ -22,6 +22,21 @@ describe('itens de carta do histórico', () => {
     expect(matchItems(m1).map((i) => i.label)).toEqual(['rodada 1 · Ana narrou · “luar”', 'rodada 2 · Bia narrou · falada na call']);
     expect(matchGroupKey('m1')).toBe('partida:m1');
   });
+
+  it('partida: cada item guarda carta, dica e quem narrou', () => {
+    const m1 = dixitMatches(SAMPLE).find((m) => m.id === 'm1')!;
+    expect(matchItems(m1).map((i) => [i.card, i.clue, i.teller])).toEqual([
+      ['d001', 'luar', ANA],
+      ['d005', '', BIA],
+    ]);
+  });
+
+  it('plural: 2 vezes e 2 votos', () => {
+    const stats = { ...EMPTY_STATS, favoriteCards: [{ card: 'd001', count: 2 }], trickiestCards: [{ card: 'd002', count: 2 }] };
+    const items = famousItems(stats);
+    expect(items.favoritas[0]).toEqual({ card: 'd001', badge: '2×', label: 'favorita dos narradores · escolhida 2 vezes' });
+    expect(items.enganaram[0]).toEqual({ card: 'd002', badge: '2 votos', label: 'enganou 2 votos' });
+  });
 });
 
 describe('HistoryCard', () => {
@@ -35,5 +50,10 @@ describe('HistoryCard', () => {
     expect(screen.getByText('3×')).toBeTruthy();
     fireEvent.click(btn);
     expect(onOpen).toHaveBeenCalledWith('mural', 2);
+  });
+
+  it('sem selo quando o item não tem badge', () => {
+    const { container } = render(<HistoryCard card="d007" group="mural" index={0} label="sem selo" onOpen={() => {}} />);
+    expect(container.querySelector('.dxh-seal')).toBeNull();
   });
 });
