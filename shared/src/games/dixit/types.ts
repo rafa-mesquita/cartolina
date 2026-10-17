@@ -52,7 +52,11 @@ export interface DixitState {
   paused: boolean;
   /** Partida da sala: 0 no lobby, +1 a cada `start` e `again` (identifica a partida no histórico). */
   match: number;
-  /** Narrações começadas nesta partida: zera na partida nova e soma 1 a cada narração (chave da revelação no histórico). */
+  /**
+   * Narrações começadas nesta partida: zera na partida nova e soma 1 a cada narração (chave da revelação no histórico).
+   * Narração refeita (presença) ou pulada pelo host também conta, então os números podem pular:
+   * não usar como número exibido (a tela numera as rodadas pela ordem na partida).
+   */
   round: number;
 }
 
