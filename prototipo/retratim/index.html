@@ -152,6 +152,67 @@ body.resizing,body.resizing *{cursor:col-resize !important}
 #zoom .nav.l{left:60px}#zoom .nav.r{right:60px}
 #zoom .zx:hover,#zoom .nav:hover{color:var(--blue);border-color:var(--blue)}
 
+/* ---------- galeria de palpites ---------- */
+.guessing-phase #grid .photo{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.guessing-phase #grid .photo:hover{transform:translateY(-2px);box-shadow:0 0 0 2px rgba(47,90,168,.55),0 4px 10px rgba(59,47,47,.22)}
+.guessing-phase.locked #grid .photo{cursor:default}
+.guessing-phase.locked #grid .photo:hover{transform:none;box-shadow:var(--shadow)}
+.guessing-phase #grid .photo.picked,.guessing-phase #grid .photo.picked:hover{box-shadow:0 0 0 3px var(--blue),var(--shadow)}
+#grid .photo .used{position:absolute;left:10px;top:10px;display:flex;gap:2px;z-index:1;pointer-events:none}
+#grid .photo .used span{width:22px;height:22px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);padding:1px}
+#grid .photo .used svg{width:100%;height:100%;display:block}
+#gallery{display:flex;flex-direction:column;height:calc(900px - 84px - 22px - 20px);width:var(--side-w)}
+.gal-head{padding:0 4px 2px}
+.gal-head h2{margin:0;font:700 24px/1.1 var(--ui);white-space:nowrap}
+.gal-head .hint{display:block;min-height:18px;margin-top:4px;font:500 14px/1.3 var(--ui);color:var(--ink-soft)}
+.gal-head .hint b{color:var(--blue);font-weight:700}
+#works{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:26px 22px;padding:18px 16px 18px 14px;margin:0 -16px 0 -14px;
+  scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
+.wf{position:relative;padding:8px 8px 0;background:var(--photo-border);box-shadow:0 1px 3px rgba(59,47,47,.28);cursor:pointer;transform:rotate(var(--tilt,0deg));transition:box-shadow .15s,transform .15s}
+.wf:hover{transform:rotate(var(--tilt,0deg)) translateY(-2px)}
+.wf.sel{box-shadow:0 0 0 3px var(--blue),0 4px 12px rgba(47,90,168,.25)}
+/* a folha é contêiner de tamanho: unidades cq* dos kits (ex.: o vão das cartas de símbolos) medem a folha, não a janela */
+.wf .sheet{position:relative;width:100%;aspect-ratio:4/3;container-type:size;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(211,191,153,.7);overflow:hidden}
+.wf .cap{display:flex;align-items:center;gap:8px;padding:7px 2px 8px}
+.wf .cap .cr{width:30px;height:30px;flex:none}
+.wf .cap .cr svg{width:100%;height:100%;display:block}
+.wf .cap .nm{font:700 15px/1.1 var(--ui)}
+.wf .cap .kt{display:block;font:500 12px/1.2 var(--ui);color:var(--ink-soft)}
+.wf .wz{position:absolute;right:14px;top:14px;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid var(--edge);background:var(--paper);color:var(--ink-soft);
+  display:grid;place-items:center;font-size:16px;box-shadow:var(--shadow);opacity:0;transition:opacity .15s;z-index:3}
+.wf:hover .wz{opacity:1}
+.wf .wz:hover{color:var(--blue);border-color:var(--blue)}
+.gtape{position:absolute;left:-12px;top:-11px;z-index:4;min-width:64px;height:30px;padding:0 12px;display:grid;place-items:center;background:var(--tape);
+  box-shadow:0 1px 2px rgba(59,47,47,.18);font:700 19px/1 var(--ui);color:var(--blue);letter-spacing:.5px;transform:rotate(var(--rot,-7deg));cursor:pointer}
+.gtape:hover{filter:brightness(.96)}
+.gtape:hover::after{content:'✕';position:absolute;right:-7px;top:-7px;width:16px;height:16px;border-radius:50%;background:var(--paper);color:var(--ink-soft);font-size:9px;display:grid;place-items:center;box-shadow:var(--shadow)}
+.gtape.pop{animation:tapein .22s ease-out}
+@keyframes tapein{from{transform:rotate(var(--rot,-7deg)) scale(1.35);opacity:.2}}
+.wf .empty-tag{position:absolute;left:12px;top:12px;z-index:2;padding:3px 9px;border-radius:999px;background:rgba(246,238,221,.92);font:600 11.5px/1.2 var(--ui);color:var(--ink-soft);box-shadow:var(--shadow)}
+.wf.sel .empty-tag{color:var(--blue)}
+#gallery.locked .wf{cursor:default}
+#gallery.locked .wf:hover{transform:rotate(var(--tilt,0deg))}
+#gallery.locked .gtape{cursor:default}
+#gallery.locked .gtape:hover{filter:none}
+#gallery.locked .gtape:hover::after{display:none}
+#gallery.locked .empty-tag{display:none}
+.no-works{grid-column:1/-1;padding:40px 20px;text-align:center;font:500 16px/1.4 var(--ui);color:var(--ink-soft)}
+.gal-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px;border-top:1px dashed rgba(125,106,88,.35)}
+.gal-foot .hint{font:500 14px/1.35 var(--ui);color:var(--ink-soft)}
+.gal-foot .hint b{color:var(--blue);font-weight:700}
+.gal-foot .hint.ok{color:var(--ok);font-weight:700}
+
+/* obra grande (lupa da galeria; usa o mesmo #zoom das fotos) */
+#zoom .frame.work .pic{position:relative;container-type:size;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(211,191,153,.7);overflow:hidden}
+#zoom .frame.work .who{position:absolute;left:16px;bottom:9px;display:flex;align-items:center;gap:10px}
+#zoom .frame.work .who .cr{width:36px;height:36px}
+#zoom .frame.work .who .cr svg{width:100%;height:100%;display:block}
+#zoom .frame.work .who .nm{font:700 20px/1 var(--ui)}
+#zoom .frame.work .who .kt{display:block;font:500 13px/1.2 var(--ui);color:var(--ink-soft)}
+#zoom .frame.work .gtape{left:-18px;top:-16px;height:40px;min-width:84px;font-size:26px;cursor:default}
+#zoom .frame.work .gtape:hover{filter:none}
+#zoom .frame.work .gtape:hover::after{display:none}
+
 #toast{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--ink);color:var(--paper);font:700 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1}
 </style>
@@ -185,6 +246,11 @@ body.resizing,body.resizing *{cursor:col-resize !important}
           <div><span class="lab">sua foto secreta</span><span class="co" id="secretCo"></span><span class="shh">só você vê o contorno azul na grade</span></div></div>
         <div id="bench"></div>
         <div class="bench-foot"><span class="hint" id="benchHint"></span><button class="btn-big" id="readyBtn">estou pronto</button></div>
+      </div>
+      <div id="gallery" hidden>
+        <div class="gal-head"><h2>de quem é qual foto?</h2><span class="hint" id="galHint"></span></div>
+        <div id="works"></div>
+        <div class="gal-foot"><span class="hint" id="galFoot"></span><button class="btn-big" id="confirmBtn">confirmar palpites</button></div>
       </div>
       <div id="banner" hidden></div>
     </section>
@@ -263,7 +329,7 @@ setInterval(() => { if (!state) return; const next = Retratim.settlePictures(sta
 let slowBot = null;
 function newGame() {
   for (const t of timers) clearTimeout(t); timers.clear(); plannedFor.clear(); closePhotoZoom();
-  destroyBench(); resetDraft(); gridKey = ''; secretKey = '';
+  destroyBench(); resetDraft(); clearGallery(); gridKey = ''; secretKey = ''; slowGuesser = { round: -1, p: null };
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
   slowBot = ids[1 + Math.floor(Math.random() * (N - 1))];
   state = Retratim.initialPicturesState(); prevPhase = null;
@@ -274,6 +340,7 @@ function changed() {
   const v = view();
   if (v.phase !== prevPhase) {
     if (prevPhase === 'building') { resetDraft(); destroyBench(); }
+    if (prevPhase === 'guessing' || v.phase === 'guessing') { if (workZoom) closePhotoZoom(); clearGallery(); }
     if (v.phase === 'building') play('round');
   }
   prevPhase = v.phase;
@@ -349,7 +416,9 @@ const plannedFor = new Set();
 const botKey = (p) => `${state.round}:${state.phase}:${p}`;
 function scheduleBots() {
   const st = state;
-  if (st.phase !== 'building' || st.paused) return; // palpite e revelação dos bots: Tasks 6–7
+  if (st.paused) return;
+  if (st.phase === 'guessing') { scheduleGuessBots(); return; }
+  if (st.phase !== 'building') return; // revelação dos bots: Task 7
   for (const p of st.inRound) {
     if (p === ME) continue;
     const key = botKey(p);
@@ -369,6 +438,35 @@ function botReady(p, key) {
   if (botKey(p) !== key || state.ready.includes(p)) return;
   if (!state.works[p]) botDraft(p, key);
   if (!act(p, { type: 'ready', on: true }, true)) console.warn('bot não conseguiu ficar pronto', p, state.kits[p]);
+}
+/** Palpite dos bots: um por rodada (sorteado) só confirma depois de 40 s, pra a contagem dos 30 s aparecer. */
+let slowGuesser = { round: -1, p: null };
+function scheduleGuessBots() {
+  const st = state;
+  const bots = st.inRound.filter((p) => p !== ME);
+  if (slowGuesser.round !== st.round) slowGuesser = { round: st.round, p: bots.length ? bots[Math.floor(Math.random() * bots.length)] : null };
+  for (const p of bots) {
+    const key = botKey(p);
+    if (plannedFor.has(key) || st.confirmed.includes(p)) continue;
+    plannedFor.add(key);
+    const guessAt = between(4000, 12000) * SPEED;
+    later(guessAt, () => botGuess(p, key));
+    later(p === slowGuesser.p ? Math.max(40000, guessAt + 500) : guessAt + between(300, 900) * SPEED, () => botConfirm(p, key));
+  }
+}
+/** O bot cola uma fitinha em cada obra alheia: com chance BOT_HIT acerta (o protótipo lê o estado inteiro), senão chuta. */
+function botGuess(p, key) {
+  if (botKey(p) !== key || state.confirmed.includes(p)) return;
+  for (const artist of Object.keys(state.works)) {
+    if (artist === p) continue;
+    const coord = Math.random() < BOT_HIT ? state.secrets[artist] : Retratim.COORDS[Math.floor(Math.random() * 16)];
+    if (!act(p, { type: 'guess', artist, coord }, true)) console.warn('bot não conseguiu palpitar', p, artist);
+  }
+}
+function botConfirm(p, key) {
+  if (botKey(p) !== key || state.confirmed.includes(p)) return;
+  if (!state.guesses[p]) botGuess(p, key);
+  if (!act(p, { type: 'confirm' }, true)) console.warn('bot não conseguiu confirmar', p);
 }
 
 /* ---------- topo ---------- */
@@ -431,14 +529,120 @@ function renderBuilding(v) {
     : `kit da rodada: <b>${KIT_NAMES[v.kits[ME]]}</b>`;
 }
 
+/* ---------- galeria de palpites ---------- */
+let galKey = '', selArtist = null, keyBuf = '', poppedFor = '';
+const othersOf = (v) => v.inRound.filter((p) => p !== ME && Object.hasOwn(v.works, p));
+const iConfirmed = (v) => v.confirmed.includes(ME);
+/** Um leve giro por artista, sempre o mesmo (álbum colado à mão). */
+const tiltOf = (p) => [-.7, .5, -.3, .8, -.5, .3][Number(p.slice(1)) % 6];
+const tapeRot = (p) => [-7, -4, -9, -5, -8, -3][Number(p.slice(1)) % 6];
+function tapeHTML(p, coord, pop) {
+  return `<span class="gtape${pop ? ' pop' : ''}" data-tape="${p}" style="--rot:${tapeRot(p)}deg" title="tirar o palpite">${coord}</span>`;
+}
+function showWork(el, work) {
+  const k = window.Kits[work.kit];
+  if (!k) { el.innerHTML = `<div class="nokit"><p>obra de ${KIT_NAMES[work.kit]}</p></div>`; return; }
+  try { k.show(el, work); } catch (err) { console.error('kit quebrou no show', work.kit, err); }
+}
+/** Molduras montadas uma vez por rodada (as obras não mudam no palpite); depois só troca fitinha e seleção. */
+function renderGallery(v) {
+  const others = othersOf(v);
+  const key = `${v.round}|${others.join()}`;
+  const box = $('#works');
+  if (key !== galKey) {
+    galKey = key; keyBuf = '';
+    if (!others.includes(selArtist)) selArtist = others[0] || null;
+    box.innerHTML = others.length
+      ? others.map((p) => `<div class="wf" data-artist="${p}" style="--tilt:${tiltOf(p)}deg"><div class="sheet"></div>`
+        + `<button class="wz" data-wz="${p}" title="ver a obra grande"><i class="ti ti-zoom-in"></i></button>`
+        + `<div class="cap"><span class="cr">${critter(p)}</span><span><span class="nm">${nameOf(p)}</span><span class="kt">${KIT_NAMES[v.kits[p]]}</span></span></div></div>`).join('')
+      : '<p class="no-works">Ninguém mais montou nada nesta rodada. Confirme pra seguir.</p>';
+    box.querySelectorAll('.wf').forEach((f) => showWork(f.querySelector('.sheet'), v.works[f.dataset.artist]));
+  }
+  const locked = iConfirmed(v);
+  $('#gallery').classList.toggle('locked', locked);
+  $('#page').classList.toggle('locked', locked);
+  box.querySelectorAll('.wf').forEach((f) => {
+    const p = f.dataset.artist, coord = v.myGuesses[p];
+    f.classList.toggle('sel', !locked && p === selArtist);
+    const old = f.querySelector('.gtape, .empty-tag');
+    const want = coord ? `t:${coord}` : 'e';
+    if (old && old.dataset.k === want) return;
+    if (old) old.remove();
+    const tmp = document.createElement('div');
+    tmp.innerHTML = coord ? tapeHTML(p, coord, poppedFor === `${p}:${coord}`) : '<span class="empty-tag">sem palpite</span>';
+    const n = tmp.firstChild; n.dataset.k = want; f.appendChild(n);
+  });
+  poppedFor = '';
+  // na grade: a foto escolhida pra obra selecionada fica em azul, e cada foto mostra os bichinhos das obras em que você a colou
+  const picked = selArtist && !locked ? Retratim.COORDS.indexOf(v.myGuesses[selArtist]) : -1;
+  document.querySelectorAll('#grid .photo').forEach((el) => {
+    const i = Number(el.dataset.i), coord = Retratim.COORDS[i];
+    el.classList.toggle('picked', i === picked);
+    const who = others.filter((p) => v.myGuesses[p] === coord);
+    let used = el.querySelector('.used');
+    const uk = who.join();
+    if (!who.length) { if (used) used.remove(); return; }
+    if (used && used.dataset.k === uk) return;
+    if (!used) { used = document.createElement('div'); used.className = 'used'; el.appendChild(used); }
+    used.dataset.k = uk; used.innerHTML = who.map((p) => `<span title="${nameOf(p)}">${critter(p)}</span>`).join('');
+  });
+  const missing = others.filter((p) => !v.myGuesses[p]).length;
+  $('#galHint').innerHTML = locked
+    ? 'palpites confirmados ✓'
+    : selArtist ? `obra de <b>${nameOf(selArtist)}</b> selecionada: clique na foto que você acha que é (ou digite <b>b3</b>)` : 'clique numa obra pra escolher';
+  const foot = $('#galFoot');
+  foot.classList.toggle('ok', locked);
+  foot.innerHTML = locked
+    ? 'esperando a galera…'
+    : missing ? `faltam <b>${missing}</b> ${missing === 1 ? 'obra' : 'obras'} sem palpite · dá pra confirmar assim mesmo` : 'todas as obras com palpite';
+  $('#confirmBtn').hidden = locked;
+}
+function clearGallery() {
+  galKey = ''; selArtist = null; keyBuf = '';
+  $('#works').innerHTML = '';
+  $('#page').classList.remove('locked');
+  document.querySelectorAll('#grid .photo').forEach((el) => { el.classList.remove('picked'); const u = el.querySelector('.used'); if (u) u.remove(); });
+}
+/** Cola (ou troca) a fitinha na obra selecionada. */
+function guessAt(coord) {
+  if (!state || state.phase !== 'guessing') return;
+  const v = view();
+  if (iConfirmed(v)) { toast('Você já confirmou.'); return; }
+  if (!selArtist) { toast('Escolha uma obra primeiro.'); return; }
+  if (v.myGuesses[selArtist] === coord) return;
+  poppedFor = `${selArtist}:${coord}`;
+  if (act(ME, { type: 'guess', artist: selArtist, coord })) play('tape');
+}
+function unguess(artist) {
+  if (!state || state.phase !== 'guessing' || iConfirmed(view())) return;
+  selArtist = artist;
+  if (act(ME, { type: 'guess', artist, coord: null })) play('untape');
+}
+function selectWork(artist) {
+  if (!state || state.phase !== 'guessing' || iConfirmed(view()) || selArtist === artist) return;
+  selArtist = artist; keyBuf = ''; render();
+}
+$('#works').addEventListener('click', (e) => {
+  const z = e.target.closest('[data-wz]');
+  if (z) { openWorkZoom(z.dataset.wz); return; }
+  const t = e.target.closest('[data-tape]');
+  if (t) { unguess(t.dataset.tape); return; }
+  const f = e.target.closest('.wf');
+  if (f) selectWork(f.dataset.artist);
+});
+$('#confirmBtn').onclick = () => {
+  if (!state || state.phase !== 'guessing') return;
+  if (act(ME, { type: 'confirm' })) play('ready');
+};
+
 /* ---------- fases que ainda não têm tela ---------- */
-const PHASE_TODO = { guessing: ['fase do palpite', 'tela vem na Task 6'], reveal: ['revelação', 'tela vem na Task 7'], gameover: ['fim de jogo', 'tela vem na Task 7'], lobby: ['saguão', 'o protótipo começa direto'] };
+const PHASE_TODO = { reveal: ['revelação', 'tela vem na Task 7'], gameover: ['fim de jogo', 'tela vem na Task 7'], lobby: ['saguão', 'o protótipo começa direto'] };
 function renderBanner(v) {
   const [title, sub] = PHASE_TODO[v.phase] || [v.phase, ''];
   const who = (p) => (p === ME ? 'você' : nameOf(p));
   const scores = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0)).map((p) => `<b>${who(p)}</b> ${v.scores[p] ?? 0}`).join(' · ');
   let body = '';
-  if (v.phase === 'guessing') body = `<ul><li>${Object.keys(v.works).length} obras na galeria: ${Object.keys(v.works).map(who).join(', ')}</li><li>os bots ainda não palpitam; use “apressar” pra fase fechar em 30 s</li></ul>`;
   if ((v.phase === 'reveal' || v.phase === 'gameover') && v.result) {
     const R = v.result;
     body = R.order.length
@@ -447,24 +651,23 @@ function renderBanner(v) {
   }
   if (v.phase === 'gameover') body += `<p class="scores">ganhou: <b>${v.winners.map(who).join(', ')}</b></p>`;
   let acts = '';
-  if (v.phase === 'guessing' && v.countdownEndsAt === null) acts += '<button class="btn-soft" data-a="hurry">apressar (30 s)</button>';
   if (v.phase === 'reveal') acts += '<button class="btn-big" data-a="next">próxima rodada</button>';
   if (v.phase === 'gameover') acts += '<button class="btn-big" data-a="new">nova partida</button>';
   $('#banner').innerHTML = `<span class="tape"></span><h2>${title}</h2><p class="sub">${sub}</p>${body}<p class="scores">placar: ${scores}</p><div class="acts">${acts}</div>`;
 }
 $('#banner').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-a]'); if (!b) return;
-  if (b.dataset.a === 'hurry') act(ME, { type: 'hurry' });
   if (b.dataset.a === 'next') act(ME, { type: 'next' });
   if (b.dataset.a === 'new') newGame();
 });
 
 function render(v = view()) {
   renderTop(v); renderGrid(v);
-  const building = v.phase === 'building';
-  $('#building').hidden = !building; $('#banner').hidden = building;
+  const building = v.phase === 'building', guessing = v.phase === 'guessing';
+  $('#building').hidden = !building; $('#gallery').hidden = !guessing; $('#banner').hidden = building || guessing;
   $('#page').classList.toggle('building-phase', building);
-  if (building) renderBuilding(v); else renderBanner(v);
+  $('#page').classList.toggle('guessing-phase', guessing);
+  if (building) renderBuilding(v); else if (guessing) renderGallery(v); else renderBanner(v);
   renderDevKits(v);
 }
 
@@ -499,7 +702,7 @@ $('#devBtn').onclick = () => $('#dev').classList.toggle('on');
 $('#hurryBtn').onclick = () => act(ME, { type: 'hurry' });
 $('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
 
-/* ---------- duas colunas: grade | divisor | lado direito (montagem agora, galeria na Task 6) ---------- */
+/* ---------- duas colunas: grade | divisor | lado direito (bancada na montagem, obras na galeria) ---------- */
 const PAGE_H = 900 - 84, PAD = 40, GAP = 48;
 const SIDE_DEFAULT = 600, SIDE_MIN = Math.round(1440 * .35), SIDE_MAX = Math.round(1440 * .75);
 const SIDE_KEY = 'retratim-prototipo:lado-direito';
@@ -570,25 +773,53 @@ function renderZoom() {
   z.hidden = false;
 }
 function stepZoom(d) { zoomAt = (zoomAt + d + 16) % 16; renderZoom(); }
-function closePhotoZoom() { zoomAt = -1; const z = $('#zoom'); z.hidden = true; z.innerHTML = ''; }
+/** Fecha o zoom (foto ou obra: os dois usam o mesmo #zoom). */
+function closePhotoZoom() { zoomAt = -1; workZoom = null; const z = $('#zoom'); z.hidden = true; z.innerHTML = ''; }
 window.openPhotoZoom = openPhotoZoom;
+
+/* lupa da galeria: a obra grande, com o artista, o kit e a sua fitinha (se tiver) */
+let workZoom = null;
+function openWorkZoom(artist) {
+  const v = state && view();
+  if (!v || !Object.hasOwn(v.works, artist)) return;
+  zoomAt = -1; workZoom = artist;
+  const coord = v.myGuesses[artist];
+  const z = $('#zoom');
+  z.innerHTML = `<div class="frame work"><div class="pic"></div>`
+    + `<span class="who"><span class="cr">${critter(artist)}</span><span><span class="nm">${nameOf(artist)}</span><span class="kt">${KIT_NAMES[v.works[artist].kit]}</span></span></span>`
+    + `<span class="cap">Esc fecha</span>${coord ? `<span class="gtape" style="--rot:${tapeRot(artist)}deg">${coord}</span>` : ''}</div>`
+    + `<button class="zx" data-z="x" title="fechar (Esc)">✕</button>`;
+  z.hidden = false;
+  showWork(z.querySelector('.pic'), v.works[artist]);
+}
 $('#zoom').addEventListener('click', (e) => {
   const b = e.target.closest('[data-z]');
   if (b) { if (b.dataset.z === 'x') closePhotoZoom(); else stepZoom(Number(b.dataset.z)); return; }
   if (!e.target.closest('.frame')) closePhotoZoom();
 });
 document.addEventListener('keydown', (e) => {
-  if (zoomAt < 0) return;
+  if (workZoom) { if (e.key === 'Escape') { closePhotoZoom(); e.preventDefault(); } return; }
+  if (zoomAt < 0) { guessKey(e); return; }
   if (e.key === 'Escape') closePhotoZoom();
   else if (e.key === 'ArrowLeft') stepZoom(-1);
   else if (e.key === 'ArrowRight') stepZoom(1);
   else return;
   e.preventDefault();
 });
+/** Teclado na galeria: com uma obra selecionada, "b" e depois "3" cola a fitinha B3. */
+function guessKey(e) {
+  if (!state || state.phase !== 'guessing' || !selArtist || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if ('abcd'.includes(k) && k.length === 1) { keyBuf = k.toUpperCase(); e.preventDefault(); return; }
+  if ('1234'.includes(k) && k.length === 1 && keyBuf) { const c = keyBuf + k; keyBuf = ''; e.preventDefault(); guessAt(c); return; }
+  keyBuf = '';
+}
 $('#grid').addEventListener('click', (e) => {
   const ph = e.target.closest('.photo'); if (!ph) return;
+  const coord = Retratim.COORDS[Number(ph.dataset.i)];
   // na montagem a foto inteira abre o zoom; nas outras fases só a lupinha (o clique na foto fica pro palpite)
-  if (e.target.closest('.zoom-btn') || (state && state.phase === 'building')) openPhotoZoom(Retratim.COORDS[Number(ph.dataset.i)]);
+  if (e.target.closest('.zoom-btn') || (state && state.phase === 'building')) { openPhotoZoom(coord); return; }
+  if (state && state.phase === 'guessing') guessAt(coord);
 });
 $('.secret-card').addEventListener('click', () => { const v = state && view(); if (v && v.mySecret) openPhotoZoom(v.mySecret); });
 
