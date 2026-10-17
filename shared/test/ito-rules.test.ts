@@ -5,7 +5,7 @@ import type { ItoAction, ItoState } from '../src/games/ito/types';
 import { mulberry32 } from '../src/rng';
 
 export function ctx(active: string[], hostId: string | null = active[0] ?? null, seed = 1): GameContext {
-  return { hostId, active, rng: mulberry32(seed) };
+  return { hostId, active, rng: mulberry32(seed), now: 0 };
 }
 
 /** Congela o estado recursivamente: qualquer mutação nas regras lança erro. */

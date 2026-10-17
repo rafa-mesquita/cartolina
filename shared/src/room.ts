@@ -176,7 +176,7 @@ export function tick(room: Room, now: number, rng: Rng): Room {
     hostId =
       rotated.find((id) => connected.has(id)) ?? rotated.find((id) => active.includes(id)) ?? hostId;
   }
-  const game = GAMES[room.gameId].module.onPresenceChange(room.game, { hostId, active, rng });
+  const game = GAMES[room.gameId].module.onPresenceChange(room.game, { hostId, active, rng, now });
   return { ...room, hostId, game };
 }
 
@@ -190,6 +190,7 @@ export function roomAction(room: Room, playerId: string, action: unknown, rng: R
     hostId: room.hostId,
     active: activePlayers(room, now),
     rng,
+    now,
   });
   if (!res.ok) return res;
   const startedRun = room.game.phase === 'lobby' && res.state.phase !== 'lobby';
