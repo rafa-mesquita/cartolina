@@ -141,6 +141,11 @@ recente daquele nome).
   como carta impossível.
 - Dica com texto do usuário: sempre exibida como texto (sem HTML).
 - Carta com id desconhecido (baralho mudou): `CardArt` já cai na pintura SVG.
+- Rodada com bot (narrador, dono de carta, quem votou ou alguém do placar com
+  nome `Bot …`): não grava, como no DITU (`isBotName` em `pendingDixitRecord`).
+- Rollback da publicação: um pendente do Diquisti fica tentando gravar até a sala
+  expirar, sem corromper a tabela `rounds`. Se for publicar, voltar e publicar de
+  novo, as rodadas com chave repetida são descartadas pelo `ON CONFLICT`.
 
 ## 7. Testes
 
