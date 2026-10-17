@@ -37,7 +37,7 @@
 | `web/src/games/catalog.ts` | `CatalogEntry.mobile` (DITU `true`, Diquisti `false` até a etapa 2) |
 | `web/src/App.tsx`, `web/src/screens/RoomScreen.tsx`, `web/src/screens/GamePage.tsx`, `web/src/screens/Home.tsx` | Aviso só para jogos sem `mobile`; aviso de celular deitado |
 | `web/src/screens/RotateNotice.tsx` (novo) | Aviso "vira o celular em pé" |
-| `web/src/table/phone/phoneRow.ts` (novo) | Lógica pura da fila em pé: alvos "aqui", quem pode pegar o quê, cursor equivalente pro PC, posição pelo dedo |
+| `web/src/table/phone/phoneRowLogic.ts` (novo) | Lógica pura da fila em pé: alvos "aqui", quem pode pegar o quê, cursor equivalente pro PC, posição pelo dedo |
 | `web/src/table/phone/usePhoneReveal.ts` (novo) | Revelação passo a passo com o mesmo ritmo e sons do computador |
 | `web/src/table/phone/PhoneRow.tsx` (novo) | Fila em pé (faixas, alvos "aqui", vão de arrasto remoto, revelação) |
 | `web/src/table/phone/PhoneHand.tsx` + `ClueSheet.tsx` (novos) | Barra da mão e painel da dica |
@@ -296,7 +296,7 @@ git commit -m "feat(web): catálogo diz quem joga no celular; DITU liberado no c
 ### Task 3: lógica pura da fila em pé
 
 **Files:**
-- Create: `web/src/table/phone/phoneRow.ts`
+- Create: `web/src/table/phone/phoneRowLogic.ts`
 - Create: `web/test/phone-row-logic.test.ts`
 
 - [ ] **Step 1: Testes que falham**
@@ -307,7 +307,7 @@ Crie `web/test/phone-row-logic.test.ts`:
 import { describe, expect, it } from 'vitest';
 import { FH, FW, ROW_Y } from '../src/table/constants';
 import { rowEntries } from '../src/table/rowLayout';
-import { canPick, deskCursor, posFromY, slotTargets } from '../src/table/phone/phoneRow';
+import { canPick, deskCursor, posFromY, slotTargets } from '../src/table/phone/phoneRowLogic';
 import { act, sortingRoom, viewOf } from './fixtures';
 
 describe('alvos "aqui" da fila em pé', () => {
@@ -381,7 +381,7 @@ Expected: FAIL (módulo não existe).
 
 - [ ] **Step 3: Implementar**
 
-Crie `web/src/table/phone/phoneRow.ts`:
+Crie `web/src/table/phone/phoneRowLogic.ts`:
 
 ```ts
 import type { ItoRoomView } from '@cartolina/shared';
@@ -443,7 +443,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/table/phone/phoneRow.ts web/test/phone-row-logic.test.ts
+git add web/src/table/phone/phoneRowLogic.ts web/test/phone-row-logic.test.ts
 git commit -m "feat(web): lógica da fila em pé do celular (alvos, permissões, cursor pro PC)"
 ```
 
@@ -731,7 +731,7 @@ Crie `web/src/table/phone/PhoneRow.tsx`:
 import type { ItoRoomView } from '@cartolina/shared';
 import { Fragment, type CSSProperties } from 'react';
 import { Critter } from '../../screens/Critter';
-import { slotTargets } from './phoneRow';
+import { slotTargets } from './phoneRowLogic';
 
 export interface PhoneRowProps {
   view: ItoRoomView;
@@ -1171,7 +1171,7 @@ Implementação esperada, que segue as regras acima:
 ```ts
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import type { GameConn } from '../../net/connection';
-import { deskCursor, posFromY, slotTargets } from './phoneRow';
+import { deskCursor, posFromY, slotTargets } from './phoneRowLogic';
 
 const MOUSE_START_PX = 6;
 const TOUCH_HOLD_MS = 220;
@@ -1382,7 +1382,7 @@ Escreva a `PhoneTable` seguindo o comportamento acima e reaproveitando o que já
 - `TopBar`, `ThemeCard`, `ThemePanel`, `ReadyColumn`, `ResultBanner`, `Avatar`, `SoundToggle`;
 - `seatStatus`, `isHost`, `cardsOf` de `game/derive`;
 - `effectiveRow`, `intentSettled`, `toVisibleIndex` e o tipo `Intent` de `rowLayout`;
-- `canPick` de `phoneRow`;
+- `canPick` de `phoneRowLogic`;
 - `PhoneRow`, `PhoneHand`, `ClueSheet`, `usePhoneDrag` e `usePhoneReveal` das tasks anteriores.
 
 Acrescente em `phone.css`:

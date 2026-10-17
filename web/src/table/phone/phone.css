@@ -1,0 +1,19 @@
+/* Mesa do celular (DITU em pé). */
+.p-row { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow-y: auto; overscroll-behavior: contain; }
+.p-end { margin: 0; font: 600 13px/1.2 var(--font-ui); opacity: 0.65; text-align: center; }
+.p-strip {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 10px; text-align: left;
+  border: 2px solid var(--ink); border-radius: var(--r); background: var(--c); color: var(--ink); box-shadow: 2px 3px 0 var(--ink);
+  font: 19px/1.1 var(--font-hand); touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.p-strip.mine { outline: 3px solid var(--paper); outline-offset: -5px; }
+.p-strip.sel { transform: translateX(6px); box-shadow: 4px 5px 0 var(--ink); }
+.p-strip.carried { opacity: 0.35; }
+.p-strip.err { border-color: var(--pink2); }
+.p-badge { width: 30px; height: 30px; flex: none; }
+.p-clue { flex: 1; overflow-wrap: anywhere; }
+.p-num { flex: none; min-width: 40px; text-align: center; font: 700 22px/1 var(--font-ui); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px 6px 7px 5px; padding: 4px; }
+.p-x { position: absolute; right: -6px; top: -8px; font: 700 22px/1 var(--font-ui); color: var(--pink2); }
+.p-gap { height: 46px; border: 3px dashed var(--c); border-radius: var(--r); }
+.p-here { height: 36px; border: 2px dashed var(--ink); border-radius: var(--r); background: transparent; font: 600 15px/1 var(--font-ui); }
+.p-return { align-self: center; }

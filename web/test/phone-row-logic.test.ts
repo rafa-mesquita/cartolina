@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FH, FW, ROW_Y } from '../src/table/constants';
 import { rowEntries } from '../src/table/rowLayout';
-import { canPick, deskCursor, posFromY, slotTargets } from '../src/table/phone/phoneRow';
+import { canPick, deskCursor, posFromY, slotTargets } from '../src/table/phone/phoneRowLogic';
 import { act, sortingRoom, viewOf } from './fixtures';
 
 describe('alvos "aqui" da fila em pé', () => {
