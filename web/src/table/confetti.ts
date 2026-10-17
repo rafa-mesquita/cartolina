@@ -48,5 +48,9 @@ export function confetti(canvas: HTMLCanvasElement | null, colors: readonly stri
     if (alive > 0) raf = requestAnimationFrame(step);
   };
   raf = requestAnimationFrame(step);
-  return () => cancelAnimationFrame(raf);
+  // Parar no meio também apaga: um canvas que continua montado (o da mesa do Diquisti) guardaria o último quadro.
+  return () => {
+    cancelAnimationFrame(raf);
+    ctx.clearRect(0, 0, W, H);
+  };
 }
