@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import { playSound } from '../src/brand/sounds';
 import { PicturesTable } from '../src/games/pictures/PicturesTable';
 import { randomWork } from '../src/games/pictures/random';
+import { KIT_NAMES } from '../src/games/pictures/status';
 import type { GameConn } from '../src/net/connection';
-import { guessing, picturesView, play, started, stateOf } from './pictures-fixtures';
+import { guessing, picturesView, play, revealed, started, stateOf } from './pictures-fixtures';
 
 vi.mock('../src/brand/sounds', () => ({ playSound: vi.fn() }));
 // Os blocos carregam o three.js sob demanda: aqui não precisa (ninguém monta blocos na rodada 0 com 3).
@@ -206,12 +207,148 @@ describe('mesa do Retratim: montagem', () => {
   });
 });
 
-describe('mesa do Retratim: outras fases (por enquanto)', () => {
-  it('no palpite mostra o aviso da fase e a grade, sem bancada', () => {
-    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={conn()} serverOffset={0} />);
-    expect(screen.getByText('hora dos palpites')).toBeTruthy();
+describe('mesa do Retratim: galeria de palpites', () => {
+  const photo = (container: HTMLElement, coord: string) => container.querySelector<HTMLElement>(`.pc-photo[data-coord="${coord}"]`)!;
+  const frame = (container: HTMLElement, p: string) => container.querySelector<HTMLElement>(`.pc-wf[data-artist="${p}"]`)!;
+
+  it('mostra as obras dos outros (não a sua) com artista e kit, a grade e os selinhos', () => {
+    const room = guessing(3);
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+    expect(screen.getByText('de quem é qual foto?')).toBeTruthy();
+    const frames = [...container.querySelectorAll<HTMLElement>('.pc-wf')];
+    expect(frames.map((f) => f.dataset.artist)).toEqual(['p1', 'p2']);
+    const kits = stateOf(room).kits;
+    expect(frame(container, 'p1').querySelector('.cap .nm')!.textContent).toBe('P1');
+    expect(frame(container, 'p1').querySelector('.cap .kt')!.textContent).toBe(KIT_NAMES[kits.p1!]);
+    expect(frame(container, 'p2').querySelector('.cap .kt')!.textContent).toBe(KIT_NAMES[kits.p2!]);
+    // cada moldura desenha a obra na própria folha
+    expect(frame(container, 'p1').querySelector('.pc-wsheet')!.childElementCount).toBeGreaterThan(0);
     expect(container.querySelectorAll('.pc-grid .pc-photo')).toHaveLength(16);
     expect(container.querySelector('.pc-bench')).toBeNull();
-    expect(container.querySelector(`.pc-seal[data-p="p1"] .stt`)!.textContent).toBe('palpitando…');
+    expect(frame(container, 'p1').classList.contains('sel')).toBe(true);
+    expect(frame(container, 'p1').querySelector('.pc-empty-tag')!.textContent).toBe('sem palpite');
+    expect(container.querySelector('.pc-seal[data-p="p1"] .stt')!.textContent).toBe('palpitando…');
+  });
+
+  it('clicar na foto cola a fitinha na obra selecionada; a mesma foto vale em duas obras; a fitinha tira', () => {
+    const c = conn();
+    let room = guessing(3);
+    const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    const show = () => rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+
+    fireEvent.click(photo(container, 'B2'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: 'B2' });
+    // sem o eco ainda nada aparece: o que vale são os palpites da visão
+    expect(frame(container, 'p1').querySelector('.pc-gtape')).toBeNull();
+    room = play(room, 'p0', c.sendAction.mock.lastCall![0]);
+    show();
+    const tape = frame(container, 'p1').querySelector('.pc-gtape')!;
+    expect(tape.textContent).toBe('B2');
+    expect(tape.classList.contains('pop')).toBe(true);
+    expect(photo(container, 'B2').classList.contains('picked')).toBe(true);
+    expect(photo(container, 'B2').querySelectorAll('.pc-used > span')).toHaveLength(1);
+
+    // seleciona a outra obra e cola a mesma foto
+    fireEvent.click(frame(container, 'p2'));
+    expect(frame(container, 'p2').classList.contains('sel')).toBe(true);
+    expect(photo(container, 'B2').classList.contains('picked')).toBe(false);
+    fireEvent.click(photo(container, 'B2'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p2', coord: 'B2' });
+    room = play(room, 'p0', c.sendAction.mock.lastCall![0]);
+    show();
+    expect(photo(container, 'B2').querySelectorAll('.pc-used > span')).toHaveLength(2);
+
+    // clicar de novo na mesma foto não manda nada; trocar manda a nova
+    const sent = c.sendAction.mock.calls.length;
+    fireEvent.click(photo(container, 'B2'));
+    expect(c.sendAction).toHaveBeenCalledTimes(sent);
+    fireEvent.click(photo(container, 'D4'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p2', coord: 'D4' });
+
+    // a fitinha da p1 sai (e a obra fica selecionada)
+    expect(screen.getAllByRole('button', { name: 'tirar o palpite B2' })).toHaveLength(2);
+    fireEvent.click(frame(container, 'p1').querySelector('.pc-gtape')!);
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: null });
+    expect(frame(container, 'p1').classList.contains('sel')).toBe(true);
+  });
+
+  it('teclado: letra e número colam a fitinha (com a foto ampliada aberta, não)', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.keyDown(document, { key: 'c' });
+    fireEvent.keyDown(document, { key: '3' });
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: 'C3' });
+    // um número sem letra antes não faz nada
+    fireEvent.keyDown(document, { key: '2' });
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+
+    // a lupinha abre a foto grande (sem palpite); lá as setas passam as fotos
+    fireEvent.click(photo(container, 'A1').querySelector('.pc-zoom-btn')!);
+    expect(screen.getByRole('dialog', { name: 'foto A1' })).toBeTruthy();
+    fireEvent.keyDown(document, { key: 'b' });
+    fireEvent.keyDown(document, { key: '1' });
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('a lupa da obra abre a obra grande com o artista e a sua fitinha; Esc fecha', () => {
+    const c = conn();
+    let room = guessing(3);
+    room = play(room, 'p0', { type: 'guess', artist: 'p2', coord: 'A4' });
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'ver a obra de P2 grande' }));
+    const dialog = screen.getByRole('dialog', { name: 'obra de P2' });
+    expect(dialog.querySelector('.who .nm')!.textContent).toBe('P2');
+    expect(dialog.querySelector('.pc-gtape')!.textContent).toBe('A4');
+    expect(dialog.querySelector('.pic')!.childElementCount).toBeGreaterThan(0);
+    // a lupa não seleciona a obra, e o teclado não cola fitinha com ela aberta
+    expect(frame(container, 'p1').classList.contains('sel')).toBe(true);
+    fireEvent.keyDown(document, { key: 'b' });
+    fireEvent.keyDown(document, { key: '1' });
+    expect(c.sendAction).not.toHaveBeenCalled();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('"confirmar palpites" avisa quantas faltam e manda confirm; depois só "esperando a galera…"', () => {
+    const c = conn();
+    let room = guessing(3);
+    room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' });
+    const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(container.querySelector('.pc-gal-foot .hint')!.textContent).toBe('faltam 1 obra sem palpite · dá pra confirmar assim mesmo');
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar palpites' }));
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'confirm' });
+
+    room = play(room, 'p0', { type: 'confirm' });
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(screen.getByText('esperando a galera…')).toBeTruthy();
+    expect(screen.getByText('palpites confirmados ✓')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'confirmar palpites' })).toBeNull();
+    expect(container.querySelector('.pc-seal[data-p="p0"] .stt')!.textContent).toBe('confirmou ✓');
+    expect(container.querySelector('.pc-wf.sel')).toBeNull();
+    expect(container.querySelector('.pc-empty-tag')).toBeNull();
+    // a fitinha fica, mas não sai mais; foto, obra e teclado não mandam nada
+    expect(frame(container, 'p1').querySelector('.pc-gtape')!.tagName).toBe('SPAN');
+    fireEvent.click(frame(container, 'p2'));
+    fireEvent.click(photo(container, 'C2'));
+    fireEvent.keyDown(document, { key: 'c' });
+    fireEvent.keyDown(document, { key: '2' });
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Você já confirmou.')).toBeTruthy();
+  });
+
+  it('todas com palpite: o pé diz isso', () => {
+    let room = guessing(3);
+    room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' });
+    room = play(room, 'p0', { type: 'guess', artist: 'p2', coord: 'A1' });
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+    expect(container.querySelector('.pc-gal-foot .hint')!.textContent).toBe('todas as obras com palpite');
+  });
+
+  it('todos confirmaram: a mesa passa pra revelação (ainda o aviso da fase)', () => {
+    render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    expect(screen.getByText('revelação')).toBeTruthy();
+    expect(screen.queryByText('de quem é qual foto?')).toBeNull();
   });
 });

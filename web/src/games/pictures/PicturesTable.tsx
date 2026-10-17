@@ -6,6 +6,7 @@ import { JOIN_ERRORS, type GameConn } from '../../net/connection';
 import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
 import { Building } from './Building';
+import { Gallery } from './Gallery';
 import { PhotoGrid } from './PhotoGrid';
 import { PhotoZoom } from './PhotoZoom';
 import { SplitLayout } from './SplitLayout';
@@ -21,9 +22,8 @@ interface Props {
   serverOffset: number;
 }
 
-/** Fases que ainda não têm tela (galeria, revelação e fim chegam nas próximas etapas). */
+/** Fases que ainda não têm tela (revelação e fim chegam na próxima etapa). */
 const SOON: Record<string, { title: string; sub: string }> = {
-  guessing: { title: 'hora dos palpites', sub: 'De quem é qual foto? A galeria das obras chega na próxima etapa.' },
   reveal: { title: 'revelação', sub: 'A revelação narrada chega numa próxima etapa.' },
   gameover: { title: 'fim de jogo', sub: 'O placar final chega numa próxima etapa.' },
 };
@@ -70,10 +70,12 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
         <TopBar view={view} serverOffset={serverOffset} host={host} onHurry={() => conn.sendAction({ type: 'hurry' })} />
         {g.phase === 'building' ? (
           <Building view={view} conn={conn} onZoom={openZoom} onWarn={warn} />
+        ) : g.phase === 'guessing' ? (
+          <Gallery key={g.round} view={view} conn={conn} zoomOpen={zoomAt !== null} onZoom={openZoom} onWarn={warn} />
         ) : (
           soon && (
             <SplitLayout
-              left={g.phase === 'gameover' ? null : <PhotoGrid grid={g.grid} secret={g.phase === 'guessing' ? g.mySecret : null} onPhoto={openZoom} onZoom={openZoom} />}
+              left={g.phase === 'gameover' ? null : <PhotoGrid grid={g.grid} secret={null} onPhoto={openZoom} onZoom={openZoom} />}
               right={
                 <div className="pc-banner">
                   <h2>{soon.title}</h2>
