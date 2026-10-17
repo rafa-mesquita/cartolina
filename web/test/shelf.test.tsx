@@ -17,7 +17,8 @@ describe('estante de jogos', () => {
     render(<Home />);
     expect(screen.getByRole('link', { name: /DITU/ }).getAttribute('href')).toBe('#/ito');
     expect(screen.getByRole('link', { name: /Diquisti/ }).getAttribute('href')).toBe('#/dixit');
-    expect(screen.queryByText('em breve')).toBeNull(); // os dois já dá pra jogar
+    expect(screen.getByRole('link', { name: /Retratim/ }).getAttribute('href')).toBe('#/pictures');
+    expect(screen.getAllByText('em breve')).toHaveLength(1); // só o Retratim; DITU e Diquisti já dá pra jogar
     expect(screen.queryByText(/grupo/i)).toBeNull();
     expect(screen.queryByText(/Dixit/)).toBeNull();
   });

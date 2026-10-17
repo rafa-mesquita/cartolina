@@ -15,7 +15,7 @@ export interface CatalogEntry {
   hasHistory: boolean;
 }
 
-// Nomes de vitrine: o ITO aparece como DITU e o Dixit como Diquisti; os ids internos não mudam.
+// Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti e o Pictures como Retratim; os ids internos não mudam.
 const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> = {
   ito: {
     name: 'DITU',
@@ -37,6 +37,18 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Todo mundo vota em qual era a do narrador. Nem todos podem acertar, nem ninguém.',
     ],
     playable: true,
+  },
+  pictures: {
+    name: 'Retratim',
+    tagline: 'remonte a foto secreta com o que tiver na mão',
+    rules: [
+      'Na mesa há 16 fotos. Cada um tira uma coordenada secreta: essa é a sua foto.',
+      'Cada rodada você recebe um kit diferente (cubos, cadarços, palitos e pedras, blocos, símbolos ou pontos e linhas) e remonta a foto do jeito que der.',
+      'Depois, todo mundo palpita qual foto cada um montou: +1 por acerto, e +1 pro artista por cada um que acertou a dele.',
+      '6 rodadas: cada um usa cada kit uma vez.',
+    ],
+    // A mesa vem no Plano R2.
+    playable: false,
   },
 };
 
