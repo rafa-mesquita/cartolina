@@ -4453,9 +4453,16 @@ var Retratim = (() => {
         if (e) return fail(e);
         if (!action.on) return ok({ ...state, ready: state.ready.filter((p) => p !== playerId) });
         if (state.ready.includes(playerId)) return fail("already_ready");
-        const notYet = readyError(state.works[playerId]);
+        let next = state;
+        if (action.work !== void 0) {
+          if (action.work.kit !== state.kits[playerId]) return fail("wrong_kit");
+          const bad = workError(action.work);
+          if (bad) return fail(bad);
+          next = { ...state, works: { ...state.works, [playerId]: action.work } };
+        }
+        const notYet = readyError(next.works[playerId]);
         if (notYet) return fail(notYet);
-        return ok(settlePictures({ ...state, ready: [...state.ready, playerId] }, ctx));
+        return ok(settlePictures({ ...next, ready: [...next.ready, playerId] }, ctx));
       }
       case "guess": {
         const e = playerError(state, playerId, "guessing");
@@ -4527,7 +4534,7 @@ var Retratim = (() => {
   var picturesActionSchema = external_exports.discriminatedUnion("type", [
     external_exports.object({ type: external_exports.literal("start") }),
     external_exports.object({ type: external_exports.literal("draft"), work: workSchema }),
-    external_exports.object({ type: external_exports.literal("ready"), on: external_exports.boolean() }),
+    external_exports.object({ type: external_exports.literal("ready"), on: external_exports.boolean(), work: workSchema.optional() }),
     external_exports.object({ type: external_exports.literal("guess"), artist: external_exports.string().min(1).max(64), coord: coord.nullable() }),
     external_exports.object({ type: external_exports.literal("confirm") }),
     external_exports.object({ type: external_exports.literal("hurry") }),

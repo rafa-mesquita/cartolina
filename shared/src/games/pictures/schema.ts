@@ -7,7 +7,7 @@ const coord = z.enum(COORDS);
 export const picturesActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }),
   z.object({ type: z.literal('draft'), work: workSchema }),
-  z.object({ type: z.literal('ready'), on: z.boolean() }),
+  z.object({ type: z.literal('ready'), on: z.boolean(), work: workSchema.optional() }),
   z.object({ type: z.literal('guess'), artist: z.string().min(1).max(64), coord: coord.nullable() }),
   z.object({ type: z.literal('confirm') }),
   z.object({ type: z.literal('hurry') }),

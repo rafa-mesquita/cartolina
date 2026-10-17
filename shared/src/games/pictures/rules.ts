@@ -210,9 +210,17 @@ export function applyPicturesAction(
       if (e) return fail(e);
       if (!action.on) return ok({ ...state, ready: state.ready.filter((p) => p !== playerId) });
       if (state.ready.includes(playerId)) return fail('already_ready');
-      const notYet = readyError(state.works[playerId]);
+      let next = state;
+      if (action.work !== undefined) {
+        // "estou pronto" leva a obra local: o último rascunho nunca se perde no meio do caminho.
+        if (action.work.kit !== state.kits[playerId]) return fail('wrong_kit');
+        const bad = workError(action.work);
+        if (bad) return fail(bad);
+        next = { ...state, works: { ...state.works, [playerId]: action.work } };
+      }
+      const notYet = readyError(next.works[playerId]);
       if (notYet) return fail(notYet);
-      return ok(settlePictures({ ...state, ready: [...state.ready, playerId] }, ctx));
+      return ok(settlePictures({ ...next, ready: [...next.ready, playerId] }, ctx));
     }
     case 'guess': {
       const e = playerError(state, playerId, 'guessing');

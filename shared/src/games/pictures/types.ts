@@ -70,7 +70,7 @@ export interface PicturesState {
 export type PicturesAction =
   | { type: 'start' }
   | { type: 'draft'; work: Work }
-  | { type: 'ready'; on: boolean }
+  | { type: 'ready'; on: boolean; work?: Work }
   | { type: 'guess'; artist: string; coord: Coord | null }
   | { type: 'confirm' }
   | { type: 'hurry' }

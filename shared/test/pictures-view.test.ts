@@ -63,6 +63,7 @@ describe('Retratim: schema das ações', () => {
     expect(ok({ type: 'start' })).toBe(true);
     expect(ok({ type: 'draft', work: sampleWork('blocks') })).toBe(true);
     expect(ok({ type: 'ready', on: false })).toBe(true);
+    expect(ok({ type: 'ready', on: true, work: sampleWork('dots') })).toBe(true);
     expect(ok({ type: 'guess', artist: 'p1', coord: 'D4' })).toBe(true);
     expect(ok({ type: 'guess', artist: 'p1', coord: null })).toBe(true);
     for (const type of ['confirm', 'hurry', 'next', 'again', 'lobby']) expect(ok({ type })).toBe(true);

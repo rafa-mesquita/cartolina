@@ -69,6 +69,22 @@ describe('Retratim: montagem', () => {
     expect(applyPicturesAction(one, 'p4', { type: 'ready', on: true }, ctx)).toEqual({ ok: false, error: 'icons_too_few' });
   });
 
+  it('"pronto" pode levar a obra junto: grava e fica pronto de uma vez', () => {
+    const { state, ctx } = started(3);
+    const s = act(state, 'p0', { type: 'ready', on: true, work: sampleWork('cubes') }, ctx);
+    expect(s.works.p0).toEqual(sampleWork('cubes'));
+    expect(s.ready).toEqual(['p0']);
+  });
+
+  it('"pronto" com obra de outro kit, inválida ou em branco é recusado e nada muda', () => {
+    const { state, ctx } = started(3);
+    expect(applyPicturesAction(state, 'p0', { type: 'ready', on: true, work: sampleWork('laces') }, ctx)).toEqual({ ok: false, error: 'wrong_kit' });
+    const four = { kit: 'cubes' as const, cells: [0, 0, 0, 0, ...Array<null>(12).fill(null)] };
+    expect(applyPicturesAction(state, 'p0', { type: 'ready', on: true, work: four }, ctx)).toEqual({ ok: false, error: 'bad_work' });
+    const blank = { kit: 'cubes' as const, cells: Array<null>(16).fill(null) };
+    expect(applyPicturesAction(state, 'p0', { type: 'ready', on: true, work: blank }, ctx)).toEqual({ ok: false, error: 'empty_work' });
+  });
+
   it('pronto trava o rascunho até desmarcar', () => {
     const { state, ctx } = started(4);
     let s = drafted(state, ['p0'], ctx);

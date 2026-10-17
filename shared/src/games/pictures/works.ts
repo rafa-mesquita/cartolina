@@ -13,6 +13,11 @@ export const STONES = 4;
 /** Ordem fixa das peças do kit de blocos: a obra guarda uma posição por forma, nessa ordem. */
 export const BLOCK_SHAPES = ['cube', 'brick', 'plank', 'pillar', 'roof', 'arch'] as const;
 export const ICON_COUNT = 19;
+/** Os 19 símbolos do kit (id = índice): nomes de ícone do Tabler Icons, sem o prefixo `ti-`. */
+export const ICON_NAMES = [
+  'circle', 'square', 'triangle', 'arrow-up', 'arrow-right', 'wave-sine', 'sun', 'moon', 'cloud', 'flame',
+  'droplet', 'leaf', 'home', 'eye', 'heart', 'star', 'bolt', 'user', 'paw',
+] as const;
 export const ICONS_MIN = 2;
 export const ICONS_MAX = 5;
 export const DOTS_MAX = 5;

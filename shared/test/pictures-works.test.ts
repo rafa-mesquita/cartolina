@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KITS, isBlankWork, readyError, workError, workSchema, type Work } from '../src/games/pictures/works';
+import { ICON_COUNT, ICON_NAMES, KITS, isBlankWork, readyError, workError, workSchema, type Work } from '../src/games/pictures/works';
 import { sampleWork } from './pictures-helpers';
 
 const parse = (w: unknown) => workSchema.safeParse(w).success;
@@ -16,6 +16,11 @@ describe('Retratim: obras dos kits', () => {
       expect(workError(work)).toBeNull();
       expect(readyError(work)).toBeNull();
     }
+  });
+
+  it('os 19 símbolos têm nome, sem repetir', () => {
+    expect(ICON_NAMES).toHaveLength(ICON_COUNT);
+    expect(new Set(ICON_NAMES).size).toBe(ICON_COUNT);
   });
 
   it('cubos: 16 casas, cores de 0 a 7, no máximo 3 de cada cor', () => {
