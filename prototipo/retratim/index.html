@@ -220,7 +220,7 @@ const KIT_NAMES = { cubes: 'cubos coloridos', laces: 'cadarços', sticks: 'palit
 /** Mensagens de shared/src/protocol.ts pros códigos do Retratim. */
 const ERR = {
   wrong_kit: 'Esse não é o seu kit nesta rodada.', bad_work: 'Essa obra não vale com esse kit.',
-  empty_work: 'Monte alguma coisa antes de ficar pronto.', cubes_incomplete: 'Preencha todas as casas antes.',
+  empty_work: 'Monte alguma coisa antes de ficar pronto.',
   icons_too_few: 'Escolha pelo menos 2 cartas.', already_ready: 'Você já está pronto. Desmarque pra mexer.',
   own_work: 'Não dá pra palpitar na própria obra.', no_work: 'Essa pessoa não tem obra nesta rodada.',
   already_confirmed: 'Você já confirmou.', not_player: 'Você está assistindo esta rodada.',
@@ -301,10 +301,7 @@ function onReady() {
   clearTimeout(draftTimer); draftTimer = 0;
   if (!sendDraft()) return;
   const work = state.works[ME], e = Retratim.readyError(work);
-  if (e) {
-    const n = e === 'cubes_incomplete' ? work.cells.filter((c) => c === null).length : 0;
-    toast(e === 'cubes_incomplete' ? `Faltam ${n} ${n === 1 ? 'casa' : 'casas'}` : ERR[e]); play('error'); return;
-  }
+  if (e) { toast(ERR[e]); play('error'); return; }
   if (act(ME, { type: 'ready', on: true })) play('ready');
 }
 $('#readyBtn').onclick = onReady;

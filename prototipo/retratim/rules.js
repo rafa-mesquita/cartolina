@@ -4259,7 +4259,6 @@ var Retratim = (() => {
   }
   function readyError(work) {
     if (work === void 0 || isBlankWork(work)) return "empty_work";
-    if (work.kit === "cubes" && work.cells.some((c) => c === null)) return "cubes_incomplete";
     if (work.kit === "icons" && work.ids.length < ICONS_MIN) return "icons_too_few";
     return null;
   }

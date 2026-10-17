@@ -29,6 +29,7 @@
 .kc-tip{margin:2.6cqw 0 0;font:500 2.2cqw/1.45 var(--ui);color:var(--ink-soft)}
 .kc-left{position:absolute;left:5cqw;width:57cqw;top:66cqw;text-align:center;font:700 3.2cqw/1 var(--ui);color:var(--ink-soft)}
 .kc-left.full{color:var(--ok)}
+.kc-left small{display:block;margin-top:1cqw;font:500 2.4cqw/1.2 var(--ui)}
 .kc-show{position:absolute;inset:0;width:100%;height:100%;display:block}`;
   function injectCSS() {
     if (document.getElementById('kit-cubes-css')) return;
@@ -63,7 +64,8 @@
         b.querySelector('.n').textContent = `×${left(c)}`;
       });
       const empty = cells.filter((c) => c === null).length;
-      leftEl.textContent = empty ? `faltam ${empty} ${empty === 1 ? 'casa' : 'casas'}` : 'pronto pra ficar pronto!';
+      leftEl.innerHTML = empty === cells.length ? 'pinte pelo menos uma casa'
+        : empty ? `${empty} ${empty === 1 ? 'casa vazia' : 'casas vazias'} <small>(pode ficar pronto assim)</small>` : 'todas as casas pintadas!';
       leftEl.classList.toggle('full', !empty);
     }
     const emit = () => onChange({ kit: 'cubes', cells: cells.slice() });
