@@ -85,8 +85,8 @@ artista não ganha pontos de artista naquela rodada. Ele ainda palpita.
 
 - Depois da 6ª rodada: placar final. Mais pontos vence; empate = vários
   vencedores.
-- "Jogar de novo" volta pro lobby com os mesmos assentos (grade e saquinho
-  novos).
+- "Jogar de novo" começa outra partida na hora com quem está ativo (grade e
+  saquinho novos); "voltar pro lobby" é outra ação do host.
 
 ### Presença (tolerância de 30 s, como no ITO e no Diquisti)
 
@@ -95,7 +95,11 @@ artista não ganha pontos de artista naquela rodada. Ele ainda palpita.
 - Quem sai de vez continua no placar; nas rodadas seguintes não monta nem
   palpita, e a contagem de "metade da mesa" considera só os ativos.
 - Quem entra no meio da partida espera a próxima, como no Diquisti.
-- Com < 3 ativos a partida pausa, como no Diquisti.
+- Quem é da partida e volta **durante a montagem** entra na rodada na hora
+  (tira ficha, recebe o kit do assento). No palpite, só espera a próxima.
+- Com < 3 ativos a fase pausa, como no Diquisti; "apressar" não vale em pausa.
+  "Próxima rodada" só vai com pelo menos 3 da partida ativos.
+- Se a montagem fecha sem nenhuma obra, pula direto pra revelação (vazia).
 
 ## 3. Kits
 
