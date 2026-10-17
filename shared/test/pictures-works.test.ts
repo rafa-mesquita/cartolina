@@ -26,6 +26,11 @@ describe('Retratim: obras dos kits', () => {
     expect(workError(four)).toBe('bad_work');
   });
 
+  it('cubos: cor negativa ou fracionária numa casa é recusada', () => {
+    expect(parse({ kit: 'cubes', cells: [-1, ...Array(15).fill(null)] })).toBe(false);
+    expect(parse({ kit: 'cubes', cells: [1.5, ...Array(15).fill(null)] })).toBe(false);
+  });
+
   it('cubos com casa vazia valem como rascunho, mas não ficam prontos', () => {
     const partial: Work = { kit: 'cubes', cells: [0, 1, ...Array(14).fill(null)] };
     expect(workError(partial)).toBeNull();
@@ -36,6 +41,10 @@ describe('Retratim: obras dos kits', () => {
     expect(parse({ kit: 'laces', long: [[0, 0]], short: [[0, 0], [1, 1]] })).toBe(false);
     expect(parse({ kit: 'laces', long: [[0, 0], [1.2, 0]], short: [[0, 0], [1, 1]] })).toBe(false);
     expect(parse({ kit: 'laces', long: Array(61).fill([0.5, 0.5]), short: [[0, 0], [1, 1]] })).toBe(false);
+  });
+
+  it('cadarços: exatamente 60 pontos ainda passa', () => {
+    expect(parse({ kit: 'laces', long: Array(60).fill([0.5, 0.5]), short: [[0, 0], [1, 1]] })).toBe(true);
   });
 
   it('palitos e pedras: sempre 4 + 4; peça fora da folha (guardada de lado) é aceita até 1,5', () => {
@@ -57,6 +66,10 @@ describe('Retratim: obras dos kits', () => {
     const repeated: Work = { kit: 'icons', ids: [3, 3] };
     expect(workError(repeated)).toBe('bad_work');
     expect(readyError({ kit: 'icons', ids: [7] })).toBe('icons_too_few');
+  });
+
+  it('símbolos: com 2 cartas já pode ficar pronto', () => {
+    expect(readyError({ kit: 'icons', ids: [4, 9] })).toBeNull();
   });
 
   it('pontos e linhas: até 5 pontos e 10 linhas; linha entre pontos que existem, sem repetir', () => {
