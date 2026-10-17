@@ -60,7 +60,7 @@ describe('BotControls (dev)', () => {
 
   it('adiciona bots e mostra "tirar bots" só quando existem', () => {
     render(<BotControls code="ABCD" seats={2} />);
-    expect(screen.getByText('modo teste (só no localhost)')).toBeTruthy();
+    expect(screen.getByText(/^modo teste: os bots jogam daqui/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /tirar bots/ })).toBeNull();
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /adicionar bot/ }));

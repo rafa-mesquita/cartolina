@@ -44,6 +44,32 @@ describe('layout do celular', () => {
     expect(screen.getByText('deitado')).toBeTruthy();
   });
 
+  it('teclado aberto com o celular em pé não conta como deitado (a tela fica baixa, mas a orientação é retrato)', () => {
+    media([LANDSCAPE_PHONE_QUERY]);
+    vi.stubGlobal('screen', { orientation: { type: 'portrait-primary', addEventListener: vi.fn(), removeEventListener: vi.fn() } });
+    render(<LandscapeProbe />);
+    expect(screen.getByText('ok')).toBeTruthy();
+  });
+
+  it('com a orientação da tela em paisagem, segue deitado', () => {
+    media([LANDSCAPE_PHONE_QUERY]);
+    vi.stubGlobal('screen', { orientation: { type: 'landscape-primary', addEventListener: vi.fn(), removeEventListener: vi.fn() } });
+    render(<LandscapeProbe />);
+    expect(screen.getByText('deitado')).toBeTruthy();
+  });
+
+  it('iPhone antigo sem screen.orientation: usa window.orientation (0 = em pé)', () => {
+    media([LANDSCAPE_PHONE_QUERY]);
+    vi.stubGlobal('screen', {});
+    vi.stubGlobal('orientation', 0);
+    const { unmount } = render(<LandscapeProbe />);
+    expect(screen.getByText('ok')).toBeTruthy();
+    unmount();
+    vi.stubGlobal('orientation', 90);
+    render(<LandscapeProbe />);
+    expect(screen.getByText('deitado')).toBeTruthy();
+  });
+
   it('aviso de virar o celular só aparece deitado', () => {
     media([]);
     const { container, unmount } = render(<RotateNotice />);

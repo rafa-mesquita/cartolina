@@ -38,6 +38,21 @@ export function useLayout(): Layout {
   return useMedia(PHONE_LAYOUT_QUERY) ? 'phone' : 'desktop';
 }
 
+/**
+ * Orientação física da tela, que não muda quando o teclado abre (a media query muda: com o teclado,
+ * a área visível fica mais larga que alta). `null` quando o navegador não diz.
+ */
+function screenIsLandscape(): boolean | null {
+  const type = window.screen?.orientation?.type;
+  if (type) return type.startsWith('landscape');
+  // iPhone antigo (antes do iOS 16.4): só tem o `window.orientation`, em graus.
+  const deg = (window as { orientation?: unknown }).orientation;
+  if (typeof deg === 'number') return Math.abs(deg) === 90;
+  return null;
+}
+
 export function useIsLandscapePhone(): boolean {
-  return useMedia(LANDSCAPE_PHONE_QUERY);
+  const lowAndWide = useMedia(LANDSCAPE_PHONE_QUERY);
+  // Girar o celular também muda a media query, então ela já re-renderiza; aqui só se confirma a orientação.
+  return lowAndWide && (screenIsLandscape() ?? true);
 }
