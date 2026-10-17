@@ -34,7 +34,8 @@ const CSS = `
 .pc-ki-foot .t{font:700 3.2cqw/1 var(--ui);color:var(--ink-soft)}
 .pc-ki-foot .t.ok{color:var(--ok)}
 .pc-ki-foot .s{display:block;margin-top:1.4cqw;font:500 2.2cqw/1.35 var(--ui);color:var(--ink-soft)}
-.pc-ki-show{position:absolute;inset:0;container-type:size;display:flex;align-items:center;justify-content:center;gap:2.6cqw}
+.pc-ki-show{position:absolute;inset:0;container-type:size}
+.pc-ki-fila{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:2.6cqw}
 .pc-ki-show .pc-ki-card{width:16cqw;height:21.3cqw;border-radius:1.3cqw}
 .pc-ki-show .pc-ki-card i{font-size:10cqw;line-height:1}`;
 
@@ -167,15 +168,16 @@ function build(el: HTMLElement, work: WorkOf<'icons'> | null, onChange: (work: W
 }
 
 /**
- * As cartas da fila lado a lado, centralizadas na folha. O `.pc-ki-show` é um contêiner de tamanho dentro do próprio
- * `el`: o tamanho das cartas e o vão entre elas saem do `el`, não da janela.
+ * As cartas da fila lado a lado, centralizadas na folha. O `.pc-ki-show` ocupa o `el` inteiro e é o contêiner de
+ * tamanho; a `.pc-ki-fila` fica DENTRO dele, então o tamanho das cartas e o vão entre elas (em `cqw`) saem do `el`.
+ * (Unidade `cq*` numa propriedade do próprio contêiner mede o contêiner de cima ou a janela, por isso o vão fica no filho.)
  */
 function show(el: HTMLElement, work: WorkOf<'icons'>): void {
   injectCSS();
   const ids = (work?.ids ?? []).filter(validId);
-  el.innerHTML = `<div class="pc-ki-show">${ids
+  el.innerHTML = `<div class="pc-ki-show"><div class="pc-ki-fila">${ids
     .map((id, k) => `<div class="pc-ki-card" style="transform:rotate(${TILT[k % TILT.length]}deg)"><i class="${iconClass(id)}"></i></div>`)
-    .join('')}</div>`;
+    .join('')}</div></div>`;
 }
 
 export const icons: KitModule<'icons'> = { build, show };

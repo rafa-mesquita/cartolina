@@ -282,6 +282,8 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
   let drag: { r: number; i: number; pid: number; moved: boolean } | null = null;
   let hov: { r: number; i: number } | null = null;
   let lastEmit = 0;
+  /** Houve arraste desde o último envio (o envio no meio do arraste é limitado a cada 300 ms). */
+  let unsent = false;
 
   el.innerHTML =
     `<div class="pc-kl"><canvas></canvas><div class="pc-kl-st">arraste qualquer ponto da corda: o trecho em volta vem junto, o resto só segue quando ela estica</div>` +
@@ -302,6 +304,7 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
   });
   const emit = () => {
     lastEmit = performance.now();
+    unsent = false;
     onChange(toWork());
   };
 
@@ -362,6 +365,7 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
     if (e.pointerId !== drag.pid) return;
     dragPoint(ropes[drag.r]!, drag.i, x, y);
     drag.moved = true;
+    unsent = true;
     draw();
     if (performance.now() - lastEmit >= EMIT_MS) emit();
   }
@@ -406,6 +410,9 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
       cv.removeEventListener('pointerleave', onLeave);
       again.removeEventListener('click', onAgain);
       again.removeEventListener('pointerdown', stop);
+      // desmontou no meio de um arraste: o último movimento ainda não tinha ido
+      if (unsent) emit();
+      drag = null;
       el.innerHTML = '';
     },
   };

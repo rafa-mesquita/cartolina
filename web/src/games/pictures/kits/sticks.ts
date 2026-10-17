@@ -40,7 +40,7 @@ const START: { sticks: Piece[]; stones: Piece[] } = {
   ).map(([x, y]) => ({ x, y, rot: 0 })),
 };
 // o centro da peça fica sempre dentro da caixa visível (e dentro do −0,5/1,5 do schema)
-const LIM = { x0: (VB.x + 8) / W, x1: (VB.x + VB.w - 8) / W, y0: (VB.y + 8) / H, y1: (VB.y + VB.h - 8) / H };
+export const LIM = { x0: (VB.x + 8) / W, x1: (VB.x + VB.w - 8) / W, y0: (VB.y + 8) / H, y1: (VB.y + VB.h - 8) / H };
 const HANDLE = 62, KNOB = 10, WHEEL_STEP = 15;
 
 const CSS = `

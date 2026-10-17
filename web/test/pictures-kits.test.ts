@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { KITS_UI } from '../src/games/pictures/kits';
 import { blocks } from '../src/games/pictures/kits/blocks';
 import { cubes } from '../src/games/pictures/kits/cubes';
+import { LIM } from '../src/games/pictures/kits/sticks';
 import { ROPES, chainLength, dragPoint, makeChain, resample, SHEET_H, SHEET_W } from '../src/games/pictures/kits/laces';
 import { PHOTO_THEMES, PICTURES_PHOTOS_READY, photoPlaceholder, photoSrc, photoTheme } from '../src/games/pictures/photos';
 import { randomWork } from '../src/games/pictures/random';
@@ -120,6 +121,16 @@ describe('show dos kits (jsdom)', () => {
     expect([...el.querySelectorAll('i')].map((i) => i.className)).toEqual(['ti ti-circle', 'ti ti-heart', 'ti ti-paw']);
   });
 
+  it('icons: a fila (com o vão) fica dentro do contêiner de tamanho, não nele', () => {
+    KITS_UI.icons.show(el, { kit: 'icons', ids: [2, 3] });
+    const box = el.firstElementChild!;
+    expect(box.className).toBe('pc-ki-show');
+    const fila = box.firstElementChild!;
+    expect(fila.className).toBe('pc-ki-fila');
+    expect(box.childElementCount).toBe(1);
+    expect([...fila.children].map((c) => c.className)).toEqual(['pc-ki-card', 'pc-ki-card']);
+  });
+
   it('sticks: o que está na gaveta (fora de 0–1) não aparece', () => {
     const p = (x: number) => ({ x, y: 0.5, rot: 0 });
     KITS_UI.sticks.show(el, { kit: 'sticks', sticks: [p(0.5), p(1.2), p(1.2), p(1.2)], stones: [p(-0.2), p(1.3), p(1.3), p(0.3)] });
@@ -149,6 +160,21 @@ describe('build dos kits (jsdom)', () => {
     expect(el.childElementCount).toBe(0);
   });
 
+  it('cubes: botão direito não pinta', () => {
+    const onChange = vi.fn();
+    const bench = cubes.build(el, null, onChange);
+    const cell = el.querySelector<HTMLElement>('[data-i="2"]')!;
+    const realFromPoint = document.elementFromPoint;
+    document.elementFromPoint = () => cell;
+    try {
+      fireEvent.pointerDown(cell, { button: 2, pointerId: 1 });
+    } finally {
+      document.elementFromPoint = realFromPoint;
+    }
+    expect(onChange).not.toHaveBeenCalled();
+    bench.destroy();
+  });
+
   it('cubes: montar a partir de um rascunho não chama onChange', () => {
     const onChange = vi.fn();
     const bench = cubes.build(el, randomWork('cubes'), onChange);
@@ -167,10 +193,89 @@ describe('build dos kits (jsdom)', () => {
     expect(el.childElementCount).toBe(0);
   });
 
+  it('icons: a partir de uma obra, clicar numa carta da mão põe ela no fim da fila', () => {
+    const onChange = vi.fn();
+    const bench = KITS_UI.icons.build(el, { kit: 'icons', ids: [4, 0] }, onChange);
+    fireEvent.click(el.querySelector('.pc-ki-hand [data-id="9"]')!);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0]![0]).toEqual({ kit: 'icons', ids: [4, 0, 9] });
+    bench.destroy();
+  });
+
+  it('sticks: a partir de uma obra, a rodinha na peça 0 só gira ela', () => {
+    const onChange = vi.fn();
+    const work = randomWork('sticks');
+    const bench = KITS_UI.sticks.build(el, work, onChange);
+    fireEvent.wheel(el.querySelector('.pc-ks-p[data-i="0"] rect')!, { deltaY: 100 });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const out = onChange.mock.calls[0]![0] as WorkOf<'sticks'>;
+    expect(out.sticks[0]).toEqual({ ...work.sticks[0], rot: (work.sticks[0]!.rot + 15) % 360 });
+    expect(out.sticks.slice(1)).toEqual(work.sticks.slice(1));
+    expect(out.stones).toEqual(work.stones);
+    bench.destroy();
+  });
+
+  it('sticks: o limite do arraste fica dentro do −0,5/1,5 do schema', () => {
+    expect(LIM.x0).toBeGreaterThanOrEqual(-0.5);
+    expect(LIM.y0).toBeGreaterThanOrEqual(-0.5);
+    expect(LIM.x1).toBeLessThanOrEqual(1.5);
+    expect(LIM.y1).toBeLessThanOrEqual(1.5);
+  });
+
+  it('laces: reconstruir a corda a partir da obra e reamostrar volta perto da obra', () => {
+    // distância (px) de um ponto até a polilinha da obra
+    const toPx = ([x, y]: readonly [number, number]) => ({ x: x * SHEET_W, y: y * SHEET_H });
+    function distance(p: { x: number; y: number }, line: readonly (readonly [number, number])[]): number {
+      let best = Infinity;
+      for (let j = 1; j < line.length; j++) {
+        const a = toPx(line[j - 1]!), b = toPx(line[j]!), dx = b.x - a.x, dy = b.y - a.y;
+        const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
+        best = Math.min(best, Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t)));
+      }
+      return best;
+    }
+    for (let k = 0; k < 20; k++) {
+      const w = randomWork('laces');
+      for (const spec of ROPES) {
+        const orig = w[spec.id];
+        const back = resample(makeChain(spec, orig).P, orig.length);
+        expect(back).toHaveLength(orig.length);
+        // mesmas pontas e o mesmo desenho (os pontos podem escorregar ao longo da corda, que sai igualmente espaçada)
+        expect(Math.hypot(...[0, 1].map((c) => (back[0]![c]! - orig[0]![c]!) * 600))).toBeLessThan(1.5);
+        expect(Math.hypot(...[0, 1].map((c) => (back.at(-1)![c]! - orig.at(-1)![c]!) * 600))).toBeLessThan(1.5);
+        for (const q of back) expect(distance(toPx(q), orig)).toBeLessThan(1.5);
+      }
+    }
+  });
+
   it('blocks: exporta build e show (o three.js só carrega dentro deles)', () => {
     expect(typeof blocks.build).toBe('function');
     expect(typeof blocks.show).toBe('function');
     expect(KITS_UI.blocks).toBe(blocks);
+  });
+});
+
+describe('three.js sob demanda', () => {
+  afterEach(() => {
+    vi.doUnmock('three');
+    vi.resetModules();
+  });
+
+  it('importar kits/index.ts não carrega o three; o show dos blocos carrega', async () => {
+    vi.resetModules();
+    let loaded = false;
+    vi.doMock('three', () => {
+      loaded = true;
+      return {};
+    });
+    const { KITS_UI: fresh } = await import('../src/games/pictures/kits');
+    expect(loaded).toBe(false);
+    // prova de que o mock enxerga o carregamento: o show pede o three (o falso quebra e cai no "tentar de novo")
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    fresh.blocks.show(el, randomWork('blocks'));
+    await vi.waitFor(() => expect(el.textContent).toContain('tentar de novo'));
+    expect(loaded).toBe(true);
+    quiet.mockRestore();
   });
 });
 

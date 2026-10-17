@@ -121,6 +121,7 @@ function build(el: HTMLElement, work: WorkOf<'cubes'> | null, onChange: (work: W
     return d && tray.contains(d) ? Number(d.dataset.i) : -1;
   };
   function onDown(e: PointerEvent): void {
+    if (e.button !== 0) return; // só o botão principal pinta
     const i = cellAt(e);
     if (i < 0) return;
     e.preventDefault();

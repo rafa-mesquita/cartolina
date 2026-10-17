@@ -51,6 +51,8 @@ export function photoTheme(id: string): PicturesTheme {
 /** Como desenhar a foto provisória `id` (pura: o mesmo id dá sempre o mesmo desenho). */
 export function photoPlaceholder(id: string): PhotoPlaceholder {
   const theme = photoTheme(id), t = PHOTO_THEMES[theme], h = hash(id);
+  // O `>>` com sinal é proposital: com o bit alto ligado, os valores saem negativos (fora das faixas "de nome"),
+  // e é exatamente esse o visual aprovado no protótipo. Não trocar por `>>>`.
   return {
     theme,
     icon: t.icons[h % t.icons.length]!,

@@ -1,3 +1,4 @@
+import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import type { WorkOf } from '@cartolina/shared';
 import type * as ThreeNS from 'three';
 import type { KitModule } from './types';
@@ -20,7 +21,7 @@ const COLORS = [0xd9a066, 0xc98b4f, 0xe3b67a, 0xd29a5c, 0xdba870, 0xcf9358];
 const START: readonly (readonly [number, number])[] = [[-3, -3], [-0.9, -3.1], [2.1, -3], [-3.1, 0.3], [3, 0.2], [0.3, 3]];
 const CAM0: Camera = { theta: 0.5, phi: 0.95 }, DI = 12.5, FOV = 38, LOOK_Y = 0.6;
 const PHI_MIN = 0.02, PHI_MAX = 1.4, LIM = 5.5, TURN = Math.PI / 12;
-const SHOW_W = 800, SHOW_H = 600, CACHE_MAX = 60;
+const SHOW_W = 800, SHOW_H = 600, CACHE_MAX = 24;
 
 const CSS = `
 .pc-kb{position:absolute;inset:0;container-type:size;font-family:var(--ui);overflow:hidden;border-radius:3px;touch-action:none}
@@ -263,233 +264,240 @@ function mount(T: Three, el: HTMLElement, work: Work | null, onChange: (work: Wo
   const W = root.clientWidth || 600, H = root.clientHeight || 450;
 
   const R = makeRenderer(T);
-  // resolução pelo tamanho na tela (no arraste do divisor o canvas só escala; ao soltar a bancada é recriada)
-  const onScreen = root.getBoundingClientRect().width || W;
-  R.setPixelRatio(clamp((onScreen / W) * (window.devicePixelRatio || 1), 1, 2));
-  R.setSize(W, H, false);
-  const cv = R.domElement;
-  root.insertBefore(cv, root.firstChild);
-  const { S, B } = makeScene(T);
-  const cam = new T.PerspectiveCamera(FOV, W / H, 0.1, 100);
+  try {
+    // resolução pelo tamanho na tela (no arraste do divisor o canvas só escala; ao soltar a bancada é recriada)
+    const onScreen = root.getBoundingClientRect().width || W;
+    R.setPixelRatio(clamp((onScreen / W) * (window.devicePixelRatio || 1), 1, 2));
+    R.setSize(W, H, false);
+    const cv = R.domElement;
+    root.insertBefore(cv, root.firstChild);
+    const { S, B } = makeScene(T);
+    const cam = new T.PerspectiveCamera(FOV, W / H, 0.1, 100);
 
-  const got = readWork(work);
-  let th = got.camera ? got.camera.theta : CAM0.theta, ph = got.camera ? got.camera.phi : CAM0.phi;
+    const got = readWork(work);
+    let th = got.camera ? got.camera.theta : CAM0.theta, ph = got.camera ? got.camera.phi : CAM0.phi;
 
-  const box = (b: ThreeNS.Object3D) => new T.Box3().setFromObject(b);
-  function ov(a: ThreeNS.Box3, b: ThreeNS.Box3): boolean {
-    const e = 0.04;
-    return a.min.x < b.max.x - e && a.max.x > b.min.x + e && a.min.z < b.max.z - e && a.max.z > b.min.z + e;
-  }
-  /** Empilha: de baixo pra cima, cada peça desce até o topo mais alto de quem ela cobre (`top` por último). */
-  function settle(top: ThreeNS.Object3D | null): void {
-    const bx = new Map<ThreeNS.Object3D, ThreeNS.Box3>(), done: ThreeNS.Object3D[] = [];
-    const order: ThreeNS.Object3D[] = B.filter((b) => b !== top).sort((a, b) => box(a).min.y - box(b).min.y);
-    if (top) order.push(top);
-    for (const b of order) {
-      b.position.y = 0;
-      b.updateMatrixWorld(true);
-      const x = box(b);
-      let base = 0;
-      for (const o of done) if (ov(x, bx.get(o)!)) base = Math.max(base, bx.get(o)!.max.y);
-      b.position.y = base - x.min.y;
-      b.updateMatrixWorld(true);
-      bx.set(b, box(b));
-      done.push(b);
+    const box = (b: ThreeNS.Object3D) => new T.Box3().setFromObject(b);
+    function ov(a: ThreeNS.Box3, b: ThreeNS.Box3): boolean {
+      const e = 0.04;
+      return a.min.x < b.max.x - e && a.max.x > b.min.x + e && a.min.z < b.max.z - e && a.max.z > b.min.z + e;
     }
-    draw();
-  }
-  function scatter(): void {
-    B.forEach((b, i) => {
-      data(b).ry = 0;
-      data(b).lay = false;
-      orient(b);
-      b.position.set(START[i]![0], 0, START[i]![1]);
+    /** Empilha: de baixo pra cima, cada peça desce até o topo mais alto de quem ela cobre (`top` por último). */
+    function settle(top: ThreeNS.Object3D | null): void {
+      const bx = new Map<ThreeNS.Object3D, ThreeNS.Box3>(), done: ThreeNS.Object3D[] = [];
+      const order: ThreeNS.Object3D[] = B.filter((b) => b !== top).sort((a, b) => box(a).min.y - box(b).min.y);
+      if (top) order.push(top);
+      for (const b of order) {
+        b.position.y = 0;
+        b.updateMatrixWorld(true);
+        const x = box(b);
+        let base = 0;
+        for (const o of done) if (ov(x, bx.get(o)!)) base = Math.max(base, bx.get(o)!.max.y);
+        b.position.y = base - x.min.y;
+        b.updateMatrixWorld(true);
+        bx.set(b, box(b));
+        done.push(b);
+      }
+      draw();
+    }
+    function scatter(): void {
+      B.forEach((b, i) => {
+        data(b).ry = 0;
+        data(b).lay = false;
+        orient(b);
+        b.position.set(START[i]![0], 0, START[i]![1]);
+      });
+      settle(null);
+    }
+    const toWork = (): Work => ({
+      kit: 'blocks',
+      pieces: B.map((b) => ({
+        x: round2(clamp(b.position.x, -6, 6)),
+        y: round2(clamp(b.position.y, 0, 20)),
+        z: round2(clamp(b.position.z, -6, 6)),
+        rot: normDeg((data(b).ry * 180) / Math.PI),
+        lay: !!data(b).lay,
+      })),
+      camera: { theta: round2(normTheta(th)), phi: round2(clamp(ph, 0, 1.6)) },
     });
-    settle(null);
-  }
-  const toWork = (): Work => ({
-    kit: 'blocks',
-    pieces: B.map((b) => ({
-      x: round2(clamp(b.position.x, -6, 6)),
-      y: round2(clamp(b.position.y, 0, 20)),
-      z: round2(clamp(b.position.z, -6, 6)),
-      rot: normDeg((data(b).ry * 180) / Math.PI),
-      lay: !!data(b).lay,
-    })),
-    camera: { theta: round2(normTheta(th)), phi: round2(clamp(ph, 0, 1.6)) },
-  });
-  const emit = () => onChange(toWork());
+    const emit = () => onChange(toWork());
 
-  let sel: (typeof B)[number] | null = null, showTb = false;
-  function pick(b: (typeof B)[number] | null): void {
-    if (sel) sel.material.emissive.setHex(0);
-    sel = b;
-    if (sel) sel.material.emissive.copy(lin(T, 0x3a2408));
-    if (!b) showTb = false;
-    draw();
-  }
-  /** Menu flutuante logo acima da peça escolhida (em % da cena, pra acompanhar a escala do divisor). */
-  function placeTb(): void {
-    if (!sel || !showTb) {
-      tb.style.display = 'none';
-      return;
+    let sel: (typeof B)[number] | null = null, showTb = false;
+    function pick(b: (typeof B)[number] | null): void {
+      if (sel) sel.material.emissive.setHex(0);
+      sel = b;
+      if (sel) sel.material.emissive.copy(lin(T, 0x3a2408));
+      if (!b) showTb = false;
+      draw();
     }
-    const x = box(sel), c = new T.Vector3((x.min.x + x.max.x) / 2, x.max.y + 0.35, (x.min.z + x.max.z) / 2).project(cam);
-    tb.style.display = 'flex';
-    layT.textContent = data(sel).lay ? 'levantar' : 'deitar';
-    const w = tb.offsetWidth, h = tb.offsetHeight;
-    const px = clamp(((c.x + 1) / 2) * W - w / 2, 6, W - w - 6), py = clamp(((1 - c.y) / 2) * H - h - 6, 6, H - h - 6);
-    tb.style.left = (px / W) * 100 + '%';
-    tb.style.top = (py / H) * 100 + '%';
-  }
-  function draw(): void {
-    R.render(S, cam);
-    placeTb();
-  }
-  function updCam(): void {
-    aim(cam, th, ph);
-    draw();
-  }
+    /** Menu flutuante logo acima da peça escolhida (em % da cena, pra acompanhar a escala do divisor). */
+    function placeTb(): void {
+      if (!sel || !showTb) {
+        tb.style.display = 'none';
+        return;
+      }
+      const x = box(sel), c = new T.Vector3((x.min.x + x.max.x) / 2, x.max.y + 0.35, (x.min.z + x.max.z) / 2).project(cam);
+      tb.style.display = 'flex';
+      layT.textContent = data(sel).lay ? 'levantar' : 'deitar';
+      const w = tb.offsetWidth, h = tb.offsetHeight;
+      const px = clamp(((c.x + 1) / 2) * W - w / 2, 6, W - w - 6), py = clamp(((1 - c.y) / 2) * H - h - 6, 6, H - h - 6);
+      tb.style.left = (px / W) * 100 + '%';
+      tb.style.top = (py / H) * 100 + '%';
+    }
+    function draw(): void {
+      R.render(S, cam);
+      placeTb();
+    }
+    function updCam(): void {
+      aim(cam, th, ph);
+      draw();
+    }
 
-  const ray = new T.Raycaster(), mv = new T.Vector2(), floor = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3();
-  function setM(e: PointerEvent): void {
-    const r = cv.getBoundingClientRect();
-    mv.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-    mv.y = (-(e.clientY - r.top) / r.height) * 2 + 1;
-    ray.setFromCamera(mv, cam);
-  }
-  let mode: 'drag' | 'orbit' | null = null, moved = false, pid: number | null = null;
-  const off = { x: 0, z: 0 }, last = { x: 0, y: 0 };
-  function onDown(e: PointerEvent): void {
-    if (e.button !== undefined && e.button !== 0) return;
-    e.preventDefault();
-    setM(e);
-    const hs = ray.intersectObjects(B, false);
-    cv.setPointerCapture(e.pointerId);
-    pid = e.pointerId;
-    moved = false;
-    showTb = false;
-    const first = hs[0];
-    if (first) {
-      pick(first.object as (typeof B)[number]);
-      mode = 'drag';
-      if (ray.ray.intersectPlane(floor, hit)) {
-        off.x = sel!.position.x - hit.x;
-        off.z = sel!.position.z - hit.z;
+    const ray = new T.Raycaster(), mv = new T.Vector2(), floor = new T.Plane(new T.Vector3(0, 1, 0), 0), hit = new T.Vector3();
+    function setM(e: PointerEvent): void {
+      const r = cv.getBoundingClientRect();
+      mv.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+      mv.y = (-(e.clientY - r.top) / r.height) * 2 + 1;
+      ray.setFromCamera(mv, cam);
+    }
+    let mode: 'drag' | 'orbit' | null = null, moved = false, pid: number | null = null;
+    const off = { x: 0, z: 0 }, last = { x: 0, y: 0 };
+    function onDown(e: PointerEvent): void {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+      setM(e);
+      const hs = ray.intersectObjects(B, false);
+      cv.setPointerCapture(e.pointerId);
+      pid = e.pointerId;
+      moved = false;
+      showTb = false;
+      const first = hs[0];
+      if (first) {
+        pick(first.object as (typeof B)[number]);
+        mode = 'drag';
+        if (ray.ray.intersectPlane(floor, hit)) {
+          off.x = sel!.position.x - hit.x;
+          off.z = sel!.position.z - hit.z;
+        } else {
+          off.x = off.z = 0;
+        }
+        cv.style.cursor = 'grabbing';
       } else {
-        off.x = off.z = 0;
+        pick(null);
+        mode = 'orbit';
+        last.x = e.clientX;
+        last.y = e.clientY;
       }
-      cv.style.cursor = 'grabbing';
-    } else {
-      pick(null);
-      mode = 'orbit';
-      last.x = e.clientX;
-      last.y = e.clientY;
     }
-  }
-  function onMove(e: PointerEvent): void {
-    if (mode === 'drag' && e.pointerId === pid) {
-      setM(e);
-      if (sel && ray.ray.intersectPlane(floor, hit)) {
-        sel.position.x = clamp(hit.x + off.x, -LIM, LIM);
-        sel.position.z = clamp(hit.z + off.z, -LIM, LIM);
+    function onMove(e: PointerEvent): void {
+      if (mode === 'drag' && e.pointerId === pid) {
+        setM(e);
+        if (sel && ray.ray.intersectPlane(floor, hit)) {
+          sel.position.x = clamp(hit.x + off.x, -LIM, LIM);
+          sel.position.z = clamp(hit.z + off.z, -LIM, LIM);
+          moved = true;
+          settle(sel);
+        }
+      } else if (mode === 'orbit' && e.pointerId === pid) {
+        th -= (e.clientX - last.x) * 0.008;
+        ph = clamp(ph - (e.clientY - last.y) * 0.006, PHI_MIN, PHI_MAX);
+        last.x = e.clientX;
+        last.y = e.clientY;
         moved = true;
-        settle(sel);
+        updCam();
+      } else if (!mode) {
+        setM(e);
+        cv.style.cursor = ray.intersectObjects(B, false).length ? 'grab' : 'default';
       }
-    } else if (mode === 'orbit' && e.pointerId === pid) {
-      th -= (e.clientX - last.x) * 0.008;
-      ph = clamp(ph - (e.clientY - last.y) * 0.006, PHI_MIN, PHI_MAX);
-      last.x = e.clientX;
-      last.y = e.clientY;
-      moved = true;
-      updCam();
-    } else if (!mode) {
-      setM(e);
-      cv.style.cursor = ray.intersectObjects(B, false).length ? 'grab' : 'default';
     }
-  }
-  function onUp(e: PointerEvent): void {
-    if (!mode || e.pointerId !== pid) return;
-    if (mode === 'drag' && sel) showTb = true;
-    const changed = moved;
-    mode = null;
-    pid = null;
-    moved = false;
-    cv.style.cursor = 'default';
-    draw();
-    if (changed) emit();
-  }
-  function onWheel(e: WheelEvent): void {
-    e.preventDefault();
-    th += e.deltaY * 0.004;
-    updCam();
-    emit();
-  }
-  function turn(d: number): void {
-    if (!sel) return;
-    data(sel).ry += d;
-    orient(sel);
-    settle(sel);
-    emit();
-  }
-  function onTb(e: MouseEvent): void {
-    const b = (e.target as Element).closest<HTMLElement>('button[data-b]');
-    if (!b || !sel) return;
-    if (b.dataset.b === 'l') turn(TURN);
-    else if (b.dataset.b === 'r') turn(-TURN);
-    else {
-      data(sel).lay = !data(sel).lay;
+    function onUp(e: PointerEvent): void {
+      if (!mode || e.pointerId !== pid) return;
+      if (mode === 'drag' && sel) showTb = true;
+      const changed = moved;
+      mode = null;
+      pid = null;
+      moved = false;
+      cv.style.cursor = 'default';
+      draw();
+      if (changed) emit();
+    }
+    function onWheel(e: WheelEvent): void {
+      e.preventDefault();
+      th += e.deltaY * 0.004;
+      updCam();
+      emit();
+    }
+    function turn(d: number): void {
+      if (!sel) return;
+      data(sel).ry += d;
       orient(sel);
       settle(sel);
       emit();
     }
-  }
-  function onScatter(): void {
-    pick(null);
-    scatter();
-    emit();
-  }
-  const stop = (e: Event) => e.stopPropagation();
-
-  // peças e câmera: da obra recebida (sem reempilhar) ou espalhadas na borda do papel
-  B.forEach((b, i) => {
-    const q = got.pieces[i];
-    if (q) place(b, q);
-    else {
-      b.position.set(START[i]![0], 0, START[i]![1]);
-      orient(b);
+    function onTb(e: MouseEvent): void {
+      const b = (e.target as Element).closest<HTMLElement>('button[data-b]');
+      if (!b || !sel) return;
+      if (b.dataset.b === 'l') turn(TURN);
+      else if (b.dataset.b === 'r') turn(-TURN);
+      else {
+        data(sel).lay = !data(sel).lay;
+        orient(sel);
+        settle(sel);
+        emit();
+      }
     }
-  });
-  if (got.pieces.some((q) => !q)) settle(null);
-  aim(cam, th, ph);
-  draw();
+    function onScatter(): void {
+      pick(null);
+      scatter();
+      emit();
+    }
+    const stop = (e: Event) => e.stopPropagation();
 
-  cv.addEventListener('pointerdown', onDown);
-  cv.addEventListener('pointermove', onMove);
-  cv.addEventListener('pointerup', onUp);
-  cv.addEventListener('pointercancel', onUp);
-  cv.addEventListener('wheel', onWheel, { passive: false });
-  tb.addEventListener('click', onTb);
-  tb.addEventListener('pointerdown', stop);
-  rs.addEventListener('click', onScatter);
-  rs.addEventListener('pointerdown', stop);
-  return {
-    destroy() {
-      cv.removeEventListener('pointerdown', onDown);
-      cv.removeEventListener('pointermove', onMove);
-      cv.removeEventListener('pointerup', onUp);
-      cv.removeEventListener('pointercancel', onUp);
-      cv.removeEventListener('wheel', onWheel);
-      tb.removeEventListener('click', onTb);
-      tb.removeEventListener('pointerdown', stop);
-      rs.removeEventListener('click', onScatter);
-      rs.removeEventListener('pointerdown', stop);
-      disposeScene(S);
-      R.dispose();
-      R.forceContextLoss();
-      el.innerHTML = '';
-    },
-  };
+    // peças e câmera: da obra recebida (sem reempilhar) ou espalhadas na borda do papel
+    B.forEach((b, i) => {
+      const q = got.pieces[i];
+      if (q) place(b, q);
+      else {
+        b.position.set(START[i]![0], 0, START[i]![1]);
+        orient(b);
+      }
+    });
+    if (got.pieces.some((q) => !q)) settle(null);
+    aim(cam, th, ph);
+    draw();
+
+    cv.addEventListener('pointerdown', onDown);
+    cv.addEventListener('pointermove', onMove);
+    cv.addEventListener('pointerup', onUp);
+    cv.addEventListener('pointercancel', onUp);
+    cv.addEventListener('wheel', onWheel, { passive: false });
+    tb.addEventListener('click', onTb);
+    tb.addEventListener('pointerdown', stop);
+    rs.addEventListener('click', onScatter);
+    rs.addEventListener('pointerdown', stop);
+    return {
+      destroy() {
+        cv.removeEventListener('pointerdown', onDown);
+        cv.removeEventListener('pointermove', onMove);
+        cv.removeEventListener('pointerup', onUp);
+        cv.removeEventListener('pointercancel', onUp);
+        cv.removeEventListener('wheel', onWheel);
+        tb.removeEventListener('click', onTb);
+        tb.removeEventListener('pointerdown', stop);
+        rs.removeEventListener('click', onScatter);
+        rs.removeEventListener('pointerdown', stop);
+        disposeScene(S);
+        R.dispose();
+        R.forceContextLoss();
+        el.innerHTML = '';
+      },
+    };
+  } catch (err) {
+    // falhou depois de criar o renderizador: devolve o contexto WebGL antes de mostrar o "tentar de novo"
+    R.dispose();
+    R.forceContextLoss();
+    throw err;
+  }
 }
 
 /* ---------- mostra: um renderizador só, fora da tela, que vira imagem ---------- */
@@ -502,6 +510,15 @@ function sharedRenderer(T: Three) {
     const R = makeRenderer(T, { preserveDrawingBuffer: true });
     R.setPixelRatio(1);
     R.setSize(SHOW_W, SHOW_H, false);
+    // o navegador pode tirar o contexto (muitos WebGL abertos, GPU reiniciada): recomeça do zero no próximo show
+    R.domElement.addEventListener(
+      'webglcontextlost',
+      () => {
+        if (shared?.R === R) shared = null;
+        cache.clear();
+      },
+      { once: true },
+    );
     shared = { R, ...makeScene(T), cam: new T.PerspectiveCamera(FOV, SHOW_W / SHOW_H, 0.1, 100) };
   }
   return shared;
