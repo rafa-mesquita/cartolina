@@ -1,4 +1,4 @@
-import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse } from '@cartolina/shared';
+import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse, type HistoryResponseOf } from '@cartolina/shared';
 import { CODE_RE, randomCode } from './codes';
 import { dixitHistoryPage } from './dixit-history-page';
 import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
@@ -73,6 +73,20 @@ async function getHistoryPage(env: Env, before: number | null): Promise<HistoryR
   };
 }
 
+/** Página do histórico no formato de cada jogo (jogo novo no registro sem caso aqui não compila). */
+async function historyPageOf(env: Env, game: GameId, before: number | null): Promise<HistoryResponseOf<GameId>> {
+  switch (game) {
+    case 'ito':
+      return getHistoryPage(env, before);
+    case 'dixit':
+      return dixitHistoryPage(env.DB, before);
+    default: {
+      const _never: never = game;
+      throw new Error(`jogo sem página de histórico: ${String(_never)}`);
+    }
+  }
+}
+
 /** O binding pode não existir (removido do wrangler.jsonc se o plano não tiver): lê sem depender do tipo gerado. */
 function limiterOf(env: Env, name: 'ROOM_LIMITER' | 'HISTORY_LIMITER'): Limiter | undefined {
   return (env as unknown as Partial<Record<typeof name, Limiter>>)[name];
@@ -107,7 +121,7 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
     if (before === undefined) return json({ error: 'bad_before' }, 400);
     // Público e caro na primeira página (lê até 5000 rodadas): limite por IP. Sem cache: a rodada recém-jogada tem que aparecer.
     if (!(await underLimit(limiterOf(env, 'HISTORY_LIMITER'), ip))) return tooMany();
-    const page = game === 'dixit' ? await dixitHistoryPage(env.DB, before) : await getHistoryPage(env, before);
+    const page = await historyPageOf(env, game, before);
     return json(page, 200, { 'Cache-Control': 'no-cache' });
   }
 
