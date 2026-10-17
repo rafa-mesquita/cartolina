@@ -111,7 +111,7 @@ obra e uma validação (quantidade e limites); no `web/`, um componente
 
 | Kit | Material | Interação (protótipos de 2026-10-17) | Obra salva |
 |---|---|---|---|
-| `cubes` | 24 cubos, **3 de cada uma das 8 cores**, grade **4×4** | Escolhe a cor e clica na casa. A paleta mostra quantos restam de cada cor. "Pronto" com casa vazia avisa ("faltam 3 casas") e não marca pronto; se o tempo acaba, vai como está. | `cells: (cor \| null)[16]` |
+| `cubes` | 24 cubos, **3 de cada uma das 8 cores**, grade **4×4** | Escolhe a cor e clica na casa. A paleta mostra quantos restam de cada cor. **Não precisa preencher tudo** (decisão do usuário, 2026-10-17, diferente do original): com pelo menos 1 cubo já dá pra ficar pronto; grade vazia é obra em branco. | `cells: (cor \| null)[16]` |
 | `laces` | 1 cadarço **longo** + 1 **curto** | Física da v3: o ponto pego arrasta um **trecho** em volta (janela com queda suave, tamanho fixo, padrão 9 pontos de 160); o resto só se move quando a corda estica; comprimento constante. Pontos de pegar invisíveis; o trecho aparece destacado ao passar o mouse. | 2 polilinhas, ~40 pontos cada |
 | `sticks` | **4 palitos + 4 pedras** | Arrasta pra mover; clicar mostra a **alça azul** de girar; rodinha gira 15°. | `{tipo, x, y, giro}[]` |
 | `blocks` | **6 blocos** de madeira: cubo, tijolo, prancha, pilar, telhado, arco | three.js. Arrastar move sobre a mesa; a peça **sobe em cima** do que está embaixo. Ao soltar, **menu flutuante** junto da peça: girar ↺/↻ (15°) e deitar/levantar. **Sem botões fora da cena**: legendas no canto explicam (arraste a peça pra mover, rodinha gira a mesa, arraste o fundo pra inclinar). **O ângulo da câmera faz parte da obra.** | `{forma, x, y, z, giro, deitado}[]` + câmera `{θ, φ}` |
