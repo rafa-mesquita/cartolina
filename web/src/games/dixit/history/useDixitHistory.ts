@@ -22,6 +22,8 @@ export function useDixitHistory(): DixitHistoryState {
   const [moreError, setMoreError] = useState<string | null>(null);
   /** Cada carga nova (ou a desmontagem) invalida as respostas que ainda estão a caminho. */
   const generation = useRef(0);
+  /** Trava síncrona: um segundo "carregar mais" antes do primeiro voltar é ignorado (o estado só vale no próximo render). */
+  const loadingMoreRef = useRef(false);
 
   const reload = useCallback(() => {
     const gen = ++generation.current;
@@ -44,7 +46,8 @@ export function useDixitHistory(): DixitHistoryState {
   }, [reload]);
 
   async function loadMore() {
-    if (!data || data.nextBefore === null) return;
+    if (loadingMoreRef.current || !data || data.nextBefore === null) return;
+    loadingMoreRef.current = true;
     const gen = generation.current;
     const before = data.nextBefore;
     setLoadingMore(true);
@@ -70,6 +73,7 @@ export function useDixitHistory(): DixitHistoryState {
     } catch (err) {
       if (gen === generation.current) setMoreError(isTooMany(err) ? TOO_MANY_MESSAGE : 'Não deu pra carregar mais partidas. Tenta de novo.');
     } finally {
+      loadingMoreRef.current = false;
       if (gen === generation.current) setLoadingMore(false);
     }
   }

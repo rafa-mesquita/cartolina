@@ -1,8 +1,9 @@
 import type { DixitHistoryResponse } from '@cartolina/shared';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DixitHistory } from '../src/games/dixit/history/DixitHistory';
+import { useDixitHistory } from '../src/games/dixit/history/useDixitHistory';
 import * as api from '../src/net/api';
 import { SAMPLE, dixitResponse } from './dixit-history-fixtures';
 
@@ -26,6 +27,7 @@ describe('aba histórico do Diquisti', () => {
   });
   afterEach(() => {
     window.location.hash = '';
+    vi.restoreAllMocks();
   });
 
   it('de cima pra baixo: a galera, as cartas famosas e as partidas (a mais recente primeiro)', async () => {
@@ -70,6 +72,96 @@ describe('aba histórico do Diquisti', () => {
     const wall = await screen.findByRole('region', { name: 'mural de dicas' });
     fireEvent.wheel(within(wall).getAllByRole('button')[1]!, { deltaY: -120 });
     expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe('“luar” · Ana narrou');
+  });
+
+  it('a rodinha que abre a carta não rola a página; com a carta aberta, a rodinha no overlay também não', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    const wall = await screen.findByRole('region', { name: 'mural de dicas' });
+    // fireEvent devolve false quando alguém chamou preventDefault
+    expect(fireEvent.wheel(within(wall).getAllByRole('button')[0]!, { deltaY: -120 })).toBe(false);
+    expect(fireEvent.wheel(screen.getByRole('dialog'), { deltaY: -120 })).toBe(false);
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  it('rodinha pra baixo numa carta não abre (e deixa a página rolar)', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    const wall = await screen.findByRole('region', { name: 'mural de dicas' });
+    expect(fireEvent.wheel(within(wall).getAllByRole('button')[0]!, { deltaY: 120 })).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('rodinha pra cima fora de carta não abre', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    const title = await screen.findByRole('heading', { name: 'cartas famosas' });
+    expect(fireEvent.wheel(title, { deltaY: -120 })).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('rodinha pra cima logo depois de a página rolar não abre; com o ponteiro parado, abre', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    const wall = await screen.findByRole('region', { name: 'mural de dicas' });
+    const card = within(wall).getAllByRole('button')[0]!;
+    const now = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+    fireEvent.scroll(window);
+    now.mockReturnValue(10_200);
+    expect(fireEvent.wheel(card, { deltaY: -120 })).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    now.mockReturnValue(10_400);
+    fireEvent.wheel(card, { deltaY: -120 });
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('carta de uma partida: as setas navegam só pelas cartas dela', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    await screen.findByRole('heading', { name: 'partidas' });
+    // a partida m1 (a mais antiga, 2ª da lista) tem as cartas d001 e d005; a m2 tem a d009
+    fireEvent.click(heads()[1]!);
+    const body = document.getElementById(heads()[1]!.getAttribute('aria-controls')!)!;
+    fireEvent.click(within(body).getAllByRole('button', { name: /^rodada/ })[0]!);
+    const src = () => screen.getByRole('dialog').querySelector('.dx-big img')!.getAttribute('src');
+    expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe('rodada 1 · Ana narrou · “luar”');
+    expect(src()).toContain('d001');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' });
+    expect(src()).toContain('d005');
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' });
+    expect(src()).toContain('d001');
+  });
+
+  it('clique duplo em "carregar mais" pede a página seguinte uma vez só', async () => {
+    const more = deferred<DixitHistoryResponse | null>();
+    vi.mocked(api.getHistory).mockResolvedValueOnce(dixitResponse([SAMPLE[2]!], 5_000)).mockReturnValueOnce(more.promise);
+    render(<DixitHistory />);
+    const button = await screen.findByRole('button', { name: 'carregar mais' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(api.getHistory).toHaveBeenCalledTimes(2);
+    await act(async () => more.resolve(dixitResponse(SAMPLE.slice(0, 2), null, false)));
+    expect(heads()).toHaveLength(2);
+  });
+
+  it('loadMore chamado de novo antes do primeiro voltar é ignorado', async () => {
+    const more = deferred<DixitHistoryResponse | null>();
+    vi.mocked(api.getHistory).mockResolvedValueOnce(dixitResponse([SAMPLE[2]!], 5_000)).mockReturnValueOnce(more.promise);
+    const { result } = renderHook(() => useDixitHistory());
+    await act(async () => {});
+    expect(result.current.data?.nextBefore).toBe(5_000);
+    const { loadMore } = result.current;
+    let first!: Promise<void>;
+    act(() => {
+      first = loadMore();
+      void loadMore();
+    });
+    expect(api.getHistory).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      more.resolve(dixitResponse(SAMPLE.slice(0, 2), null, false));
+      await first;
+    });
+    expect(result.current.data?.matches).toHaveLength(2);
   });
 
   it('sem partidas: convida a jogar a primeira', async () => {

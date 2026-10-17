@@ -1,4 +1,4 @@
-import { useMemo, useState, type WheelEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TOO_MANY_MESSAGE } from '../../../net/errors';
 import { Brushes } from '../Brushes';
 import { CardViewer } from '../CardViewer';
@@ -10,6 +10,9 @@ import { MatchList } from './MatchList';
 import { useDixitHistory } from './useDixitHistory';
 import '../dixit.css';
 import './dixit-history.css';
+
+/** Rodinha até esse tempo depois de a página rolar é rolagem, não pedido de ampliar. */
+const WHEEL_AFTER_SCROLL_MS = 300;
 
 /** Aba histórico do Diquisti: a galera, cartas famosas e partidas, no visual da mesa. */
 export function DixitHistory() {
@@ -24,16 +27,55 @@ export function DixitHistory() {
     return map;
   }, [data, famous]);
 
-  const open = (group: string, index: number) => {
-    if (groups.get(group)?.[index]) setViewer({ group, index });
+  /** Abre a carta ampliada; devolve se abriu. */
+  const open = (group: string, index: number): boolean => {
+    if (!groups.get(group)?.[index]) return false;
+    setViewer({ group, index });
+    return true;
   };
 
-  // Rodinha pra cima numa carta amplia (como na mesa); pra baixo, a própria carta ampliada fecha.
-  function onWheel(e: WheelEvent<HTMLDivElement>) {
-    if (viewer || e.deltaY >= 0) return;
-    const el = (e.target as Element).closest<HTMLElement>('[data-card-id][data-group]');
-    if (el?.dataset.group) open(el.dataset.group, Number(el.dataset.index));
-  }
+  // O listener nativo da rodinha lê o estado por refs (registrado uma vez, não a cada render).
+  const viewerOpen = useRef(false);
+  const openRef = useRef(open);
+  useLayoutEffect(() => {
+    viewerOpen.current = viewer !== null;
+    openRef.current = open;
+  });
+  /** Horário do último `scroll` da janela: a rodinha só amplia com o ponteiro parado. */
+  const lastScroll = useRef(-Infinity);
+  useEffect(() => {
+    const onScroll = () => {
+      lastScroll.current = Date.now();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  /**
+   * Rodinha pra cima numa carta amplia (como na mesa); pra baixo, a própria carta ampliada fecha. Aqui a página rola
+   * (na mesa não): quem está rolando não abre carta sem querer. O listener é nativo e não passivo (o `onWheel` do
+   * React 19 é passivo) para segurar a página quando abre a carta e enquanto ela está aberta.
+   * Callback ref, e não `useEffect`, porque o `.dxh` só aparece depois da carga.
+   */
+  const wheelRoot = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    const onWheel = (e: globalThis.WheelEvent) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (viewerOpen.current) {
+        if (target?.closest('.dx-viewer')) e.preventDefault();
+        return;
+      }
+      if (e.deltaY >= 0 || Date.now() - lastScroll.current < WHEEL_AFTER_SCROLL_MS) return;
+      const card = target?.closest<HTMLElement>('[data-card-id][data-group]');
+      if (!card?.dataset.group) return;
+      if (openRef.current(card.dataset.group, Number(card.dataset.index))) {
+        viewerOpen.current = true;
+        e.preventDefault();
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   if (data === undefined && loadFailed) {
     return (
@@ -64,7 +106,7 @@ export function DixitHistory() {
 
   const items = viewer ? (groups.get(viewer.group) ?? []) : [];
   return (
-    <div className="dxh" onWheel={onWheel}>
+    <div className="dxh" ref={wheelRoot}>
       <Brushes width={760} height={1600} />
       {data.matches.length === 0 ? (
         <EmptyHistory />

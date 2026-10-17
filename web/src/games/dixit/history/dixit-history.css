@@ -75,7 +75,7 @@
 /* carta ampliada: na página ela cobre a janela toda */
 .dxh .dx-viewer { position: fixed; z-index: 60; }
 .dxh .dx-viewer:focus { outline: none; }
-.dxh .dx-big { width: min(420px, 62vw, calc((100dvh - 160px) * 2 / 3)); height: auto; aspect-ratio: 2 / 3; }
+.dxh .dx-big { width: min(420px, 62vw, calc((100dvh - 200px) * 2 / 3)); height: auto; aspect-ratio: 2 / 3; }
 
 @media (max-width: 720px) {
   .dxh { padding: 18px 14px 22px; }
