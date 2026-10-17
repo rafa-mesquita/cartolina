@@ -34,6 +34,12 @@ describe('Retratim: pontuação (regra do original)', () => {
     expect(r.correct).toEqual({ a: ['c'], b: [] });
   });
 
+  it('chaves do protótipo não viram obra nem palpite', () => {
+    const r = scorePicturesRound({ artists: ['constructor'], guessers: ['constructor', 'b'], secrets: {}, guesses: { b: {} } });
+    expect(r.gained.constructor).toBe(0);
+    expect(r.correct.constructor).toEqual([]);
+  });
+
   it('palpite na própria obra é ignorado', () => {
     const r = scorePicturesRound({ artists: ['a'], guessers: ['a'], secrets, guesses: { a: { a: 'A1' } } });
     expect(r.gained).toEqual({ a: 0 });

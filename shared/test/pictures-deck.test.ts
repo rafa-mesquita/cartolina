@@ -29,13 +29,22 @@ describe('Retratim: baralho e grade', () => {
   });
 
   it('a grade tem 16 fotos diferentes, de 4 temas com 4 fotos cada', () => {
-    const grid = drawGrid(mulberry32(7));
-    expect(grid).toHaveLength(16);
-    expect(new Set(grid).size).toBe(16);
     const themeOf = new Map(PICTURES_DECK.map((p) => [p.id, p.theme]));
-    const count = new Map<string, number>();
-    for (const id of grid) count.set(themeOf.get(id)!, (count.get(themeOf.get(id)!) ?? 0) + 1);
-    expect([...count.values()]).toEqual([4, 4, 4, 4]);
+    for (let seed = 1; seed <= 20; seed++) {
+      const grid = drawGrid(mulberry32(seed));
+      expect(grid).toHaveLength(16);
+      expect(new Set(grid).size).toBe(16);
+      const count = new Map<string, number>();
+      for (const id of grid) count.set(themeOf.get(id)!, (count.get(themeOf.get(id)!) ?? 0) + 1);
+      expect([...count.values()]).toEqual([4, 4, 4, 4]);
+    }
+  });
+
+  it('baralho com menos de 4 temas utilizáveis: a grade se recusa a sair incompleta', () => {
+    const deck = PICTURES_THEMES.slice(0, 3).flatMap((theme, t) =>
+      Array.from({ length: 5 }, (_, i) => ({ id: `t${t}-${i}`, theme })),
+    );
+    expect(() => drawGrid(mulberry32(1), deck)).toThrow();
   });
 
   it('a grade muda com a semente', () => {
