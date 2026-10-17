@@ -1,5 +1,5 @@
 import type { ItoRoomView } from '@cartolina/shared';
-import { Fragment, type CSSProperties } from 'react';
+import { Fragment, type CSSProperties, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { Critter } from '../../screens/Critter';
 import { slotTargets } from './phoneRowLogic';
 import './phone.css';
@@ -20,10 +20,14 @@ export interface PhoneRowProps {
   onTarget(index: number): void;
   /** "voltar pra mão" (só aparece com uma carta minha da fila selecionada). */
   onReturn(cardId: string): void;
+  /** Liga o arrasto nas faixas (`usePhoneDrag`). O toque curto continua sendo clique. */
+  onPointerDown?(e: ReactPointerEvent, cardId: string): void;
+  /** O contêiner que rola: o arrasto mede as faixas e rola por ele. */
+  listRef?: Ref<HTMLDivElement>;
 }
 
 /** Fila em pé: 1 no topo, 100 embaixo. Cada carta é uma faixa com o bichinho do dono e a dica. */
-export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, onTarget, onReturn }: PhoneRowProps) {
+export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, onTarget, onReturn, onPointerDown, listRef }: PhoneRowProps) {
   const colorOf = (owner: string) => view.seats.find((s) => s.id === owner)?.color ?? '#D9C2A0';
   const reveal = view.game.phase === 'reveal' ? (view.game.reveal ?? []) : [];
   const revealed = new Map(reveal.slice(0, shown).map((e) => [e.cardId, e]));
@@ -57,7 +61,7 @@ export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, on
   };
 
   return (
-    <div className="p-row" role="group" aria-label="fila de cartas">
+    <div ref={listRef} className="p-row" role="group" aria-label="fila de cartas">
       <p className="p-end">
         <b>1</b> · {view.game.theme?.min ?? ''}
       </p>
@@ -76,6 +80,7 @@ export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, on
               style={{ '--c': colorOf(card.owner) } as CSSProperties}
               aria-pressed={selected === id}
               onClick={() => onPick(id)}
+              onPointerDown={onPointerDown ? (e) => onPointerDown(e, id) : undefined}
             >
               <span className="p-badge">
                 <Critter color={colorOf(card.owner)} />

@@ -40,3 +40,33 @@
 .p-sheet-note { margin: 0; font: 600 14px/1.2 var(--font-ui); opacity: 0.7; }
 .p-sheet-num { margin: 0; font: 700 28px/1 var(--font-ui); }
 .p-sheet textarea { font: 22px/1.2 var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; padding: 10px; background: var(--kraft); resize: none; }
+
+/* A mesa: coluna da altura da tela. Topo e rodapé fixos; só a fila (.p-row) rola.
+   As peças do computador (.topbar, .theme, .ready-col, .theme-panel, .banner) entram no fluxo, sem `position: absolute`. */
+.p-table { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; -webkit-user-select: none; user-select: none; }
+.p-table .topbar { position: static; padding: 8px 10px 0; gap: 8px; }
+.p-table .topbar .logo { font-size: 22px; }
+.p-table .pills { gap: 6px; }
+.p-table .pill { font-size: 13px; padding: 6px 10px 5px; }
+.p-seats { flex: none; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 4px 8px; }
+.p-seat { display: flex; flex-direction: column; align-items: center; gap: 2px; font: 500 11px/1 var(--font-ui); max-width: 72px; }
+.p-seat .avatar { width: 30px; height: 30px; }
+.p-seat-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-seat .tag { font-size: 10px; padding: 2px 6px 1px; }
+.p-mid { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.p-mid .theme { position: static; width: auto; margin: 4px 10px; padding: 6px 12px 8px; transform: none; flex: none; }
+.p-mid .theme-title { font-size: 18px; }
+.p-mid .tscale { margin-top: 4px; font-size: 16px; }
+.p-mid .p-row { flex: 1; min-height: 0; }
+.p-mid .ready-col { width: auto; padding: 12px 8px; }
+.p-mid .theme-panel { margin: 12px 10px; }
+.p-mid .theme-panel .text-in { width: 100%; }
+.p-foot { flex: none; border-top: 2px solid var(--ink); background: var(--paper); padding-bottom: env(safe-area-inset-bottom); }
+.p-actions { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 8px; }
+.p-actions .ready-col { flex-direction: row; flex-wrap: wrap; justify-content: center; width: auto; padding: 0; gap: 4px 10px; }
+.p-actions .ready-col .btn { padding: 10px 16px 9px; font-size: 17px; }
+.p-actions .ready-hint { font-size: 15px; }
+.p-host { display: flex; gap: 8px; justify-content: center; padding: 0 8px 6px; }
+.p-table .banner { min-width: 0; width: calc(100vw - 32px); padding: 20px 18px; }
+.p-table .b-title { font-size: 38px; }
+.p-table .b-sub { font-size: 20px; }
