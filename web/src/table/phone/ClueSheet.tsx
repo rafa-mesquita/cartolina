@@ -1,5 +1,5 @@
 import { CLUE_MAX, type ItoRoomView } from '@cartolina/shared';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { GameConn } from '../../net/connection';
 import './phone.css';
 
@@ -12,6 +12,26 @@ export interface ClueSheetHandle {
   flush(): void;
 }
 
+/**
+ * No iOS o teclado não encolhe a janela: ele cobre o painel fixo. Mede o quanto o `visualViewport` perdeu
+ * embaixo e guarda em `--kb` (o CSS usa de `padding-bottom`). Sem `visualViewport`, fica em 0.
+ */
+function useKeyboardOffset(target: RefObject<HTMLElement | null>) {
+  useLayoutEffect(() => {
+    const vv = window.visualViewport;
+    const el = target.current;
+    if (!vv || !el) return;
+    const update = () => el.style.setProperty('--kb', `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`);
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [target]);
+}
+
 export const ClueSheet = forwardRef<ClueSheetHandle, { view: ItoRoomView; cardId: string; conn: GameConn; onClose(): void }>(function ClueSheet(
   { view, cardId, conn, onClose },
   ref,
@@ -19,6 +39,7 @@ export const ClueSheet = forwardRef<ClueSheetHandle, { view: ItoRoomView; cardId
   const card = view.game.cards[cardId];
   const [text, setText] = useState(card?.clue ?? '');
   const area = useRef<HTMLTextAreaElement>(null);
+  const veil = useRef<HTMLDivElement>(null);
   const timer = useRef(0);
   const pending = useRef<string | null>(null);
   const lastActivity = useRef(-Infinity);
@@ -45,8 +66,15 @@ export const ClueSheet = forwardRef<ClueSheetHandle, { view: ItoRoomView; cardId
     latest.current.onClose();
   }, [flush]);
 
-  useEffect(() => {
+  useKeyboardOffset(veil);
+
+  // Layout effect: no iOS o teclado só abre se o foco vem dentro do gesto de toque. Ao fechar, o foco volta a quem abriu.
+  useLayoutEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     area.current?.focus();
+    return () => {
+      if (opener?.isConnected) opener.focus();
+    };
   }, []);
 
   // Esc fecha de qualquer ponto do painel (o foco pode ter saído do campo).
@@ -72,11 +100,12 @@ export const ClueSheet = forwardRef<ClueSheetHandle, { view: ItoRoomView; cardId
   };
 
   return (
-    <div className="p-sheet-veil" onClick={close}>
-      <div className="p-sheet" role="dialog" aria-label="dica da carta" onClick={(e) => e.stopPropagation()}>
+    <div ref={veil} className="p-sheet-veil" onClick={close}>
+      <div className="p-sheet" role="dialog" aria-modal="true" aria-label="dica da carta" onClick={(e) => e.stopPropagation()}>
         <p className="p-sheet-num">{card?.value}</p>
         <textarea
           ref={area}
+          aria-label={`dica do ${card?.value ?? ''}`}
           rows={3}
           maxLength={CLUE_MAX}
           placeholder="escreve uma dica…"
@@ -85,6 +114,7 @@ export const ClueSheet = forwardRef<ClueSheetHandle, { view: ItoRoomView; cardId
           readOnly={locked}
           onChange={(e) => onChange(e.target.value)}
         />
+        {locked && <p className="p-sheet-note">tira a carta da fila pra mudar a dica</p>}
         <button type="button" className="btn" onClick={close}>
           ok
         </button>

@@ -35,7 +35,8 @@
 .p-hclue { font: 16px/1.1 var(--font-hand); max-width: 160px; text-align: left; }
 .p-hbadge { position: absolute; left: 6px; top: 8px; width: 24px; height: 24px; pointer-events: none; }
 .p-edit { border: 2px dashed var(--ink); border-radius: 8px; background: var(--paper); font: 600 14px/1 var(--font-ui); padding: 6px; }
-.p-sheet-veil { position: fixed; inset: 0; z-index: 40; background: rgba(59, 47, 47, 0.35); display: flex; align-items: flex-end; }
+.p-sheet-veil { position: fixed; inset: 0; z-index: 40; background: rgba(59, 47, 47, 0.35); display: flex; align-items: flex-end; padding-bottom: var(--kb, 0px); }
 .p-sheet { width: 100%; background: var(--paper); border-top: 2px solid var(--ink); border-radius: 16px 16px 0 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+.p-sheet-note { margin: 0; font: 600 14px/1.2 var(--font-ui); opacity: 0.7; }
 .p-sheet-num { margin: 0; font: 700 28px/1 var(--font-ui); }
 .p-sheet textarea { font: 22px/1.2 var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; padding: 10px; background: var(--kraft); resize: none; }

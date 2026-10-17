@@ -1594,6 +1594,7 @@ git commit -m "feat(web): arrastar cartas na fila em pé (dedo e mouse) com curs
     3. `conn.sendAction({ type: 'place', cardId, index })`;
     4. toca `playSound('card')`.
   - "voltar pra mão": `pending = { kind: 'return', … }` e `sendAction({ type: 'return', cardId })`.
+  - **`ClueSheet`:** a `PhoneTable` o renderiza como `<ClueSheet key={cardId} … />`. Assim trocar de carta remonta o painel (texto, foco e debounce voltam do zero, e a dica pendente da carta anterior é enviado no desmonte).
 - **Arrastos dos outros:** `conn.onFx` guarda `fx.cursor` com `drag` por pessoa (`{ cardId, index, at }`).
   - Vira `gaps` (posição visual = `toVisibleIndex(row, view.game.row, cardId, index)`) e `carried`.
   - Expira em 6 s sem notícia, que é o `REMOTE_STALE_MS` do computador.

@@ -155,4 +155,54 @@ describe('painel da dica', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ok' }));
     expect(c.sendAction).not.toHaveBeenCalled();
   });
+
+  it('desmontar com dica pendente manda a dica', () => {
+    const c = conn();
+    const { unmount } = render(<ClueSheet view={viewOf(sortingRoom(2), 'p0')} cardId="p0:0" conn={c} onClose={vi.fn()} />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'gato' } });
+    unmount();
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'clue', cardId: 'p0:0', text: 'gato' });
+  });
+
+  it('com a carta na fila o campo é só leitura e explica por quê', () => {
+    const room = act(sortingRoom(2), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    render(<ClueSheet view={viewOf(room, 'p0')} cardId="p0:0" conn={conn()} onClose={vi.fn()} />);
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).readOnly).toBe(true);
+    expect(screen.getByText('tira a carta da fila pra mudar a dica')).toBeTruthy();
+  });
+
+  it('é modal, o campo tem nome com o número e o foco volta pra quem abriu', () => {
+    const view = viewOf(sortingRoom(2), 'p0');
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+    const { unmount } = render(<ClueSheet view={view} cardId="p0:0" conn={conn()} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog').getAttribute('aria-modal')).toBe('true');
+    expect(screen.getByRole('textbox', { name: `dica do ${view.game.cards['p0:0']!.value}` })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole('textbox'));
+    unmount();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+
+  it('sobe o painel acima do teclado conforme o visualViewport', () => {
+    const listeners = new Map<string, () => void>();
+    const vv = {
+      height: 400,
+      offsetTop: 0,
+      addEventListener: (t: string, fn: () => void) => void listeners.set(t, fn),
+      removeEventListener: (t: string) => void listeners.delete(t),
+    };
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true });
+    try {
+      const { container } = render(<ClueSheet view={viewOf(sortingRoom(2), 'p0')} cardId="p0:0" conn={conn()} onClose={vi.fn()} />);
+      const veil = container.querySelector<HTMLElement>('.p-sheet-veil')!;
+      expect(veil.style.getPropertyValue('--kb')).toBe(`${window.innerHeight - 400}px`);
+      vv.height = window.innerHeight;
+      rtlAct(() => listeners.get('resize')?.());
+      expect(veil.style.getPropertyValue('--kb')).toBe('0px');
+    } finally {
+      delete (window as unknown as { visualViewport?: unknown }).visualViewport;
+    }
+  });
 });

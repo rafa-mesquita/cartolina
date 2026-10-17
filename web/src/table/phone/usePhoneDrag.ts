@@ -7,7 +7,10 @@ const TOUCH_HOLD_MS = 220;
 const TOUCH_SLOP_PX = 10;
 const EDGE_PX = 56;
 const EDGE_STEP_PX = 8;
-/** Depois de um arrasto o navegador ainda dispara `click` na carta; engolimos esse clique por este tempo. */
+/**
+ * Depois de um arrasto o navegador ainda dispara `click` na carta (logo depois do `pointerup`, no mesmo gesto).
+ * Engolimos esse clique por este tempo; 100 ms sobra pra ele chegar e é curto pra não pegar um toque de verdade.
+ */
 const CLICK_GUARD_MS = 100;
 
 export interface PhoneDrag {
@@ -54,9 +57,14 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
   let dropClickGuard: (() => void) | null = null;
 
   /** Alvo pela altura do dedo: posição visual (pra o vão) e índice do servidor (pra o `place`). */
-  const targetFor = (cardId: string, y: number): { visual: number; index: number | null } => {
+  const targetFor = (cardId: string, y: number): { visual: number | null; index: number | null } => {
     const { container, row, serverRow } = live.current;
     const box = container.current;
+    // Fora da fila (ex.: soltar sobre a barra da mão) não há alvo: a carta volta.
+    if (box) {
+      const r = box.getBoundingClientRect();
+      if (y < r.top || y > r.bottom) return { visual: null, index: null };
+    }
     const rects = box
       ? Array.from(box.querySelectorAll<HTMLElement>('[data-card]'))
           .filter((el) => el.dataset.card !== cardId && row.includes(el.dataset.card ?? ''))
@@ -70,6 +78,12 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     return { visual, index: hit ? hit.index : null };
   };
 
+  /** Sem alvo, o cursor fica onde a carta está no servidor (ou no fim, se vem da mão). */
+  const currentIndex = (serverRow: readonly string[], cardId: string) => {
+    const at = serverRow.indexOf(cardId);
+    return at >= 0 ? at : serverRow.length;
+  };
+
   /** Recalcula o alvo; avisa o PC só quando ele muda. */
   const retarget = (s: Press) => {
     const { visual, index } = targetFor(s.cardId, s.y);
@@ -77,14 +91,21 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     if (index === s.index) return;
     s.index = index;
     const { conn, serverRow } = live.current;
-    conn.sendCursor({ ...deskCursor(serverRow, s.cardId, index ?? 0), drag: { cardId: s.cardId, index } });
+    conn.sendCursor({ ...deskCursor(serverRow, s.cardId, index ?? currentIndex(serverRow, s.cardId)), drag: { cardId: s.cardId, index } });
   };
 
-  const blockScroll = (e: TouchEvent) => {
-    if (e.cancelable) e.preventDefault();
+  /**
+   * Segura o gesto de toque depois que o arrasto ativou. Fica registrado desde a montagem (`attach`), NÃO só aos
+   * 220 ms: no iOS a possibilidade de cancelar a sequência de toques é decidida no `touchstart`, e um listener
+   * não passivo que chega depois recebe `touchmove` com `cancelable=false`. Aí a faixa (`pan-y`) rola e vem
+   * `pointercancel`, matando o arrasto.
+   */
+  const guardTouch = (e: TouchEvent) => {
+    if (press?.touch && press.active && e.cancelable) e.preventDefault();
   };
   const blockMenu = (e: Event) => e.preventDefault();
 
+  // Obs.: só `touch-action` e o `touchmove` acima impedem a rolagem; `preventDefault` num `pointermove` não faz nada.
   const onMove = (e: PointerEvent) => {
     const s = press;
     if (!s || e.pointerId !== s.pointerId) return;
@@ -98,7 +119,6 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
       if (moved < MOUSE_START_PX) return;
       activate();
     }
-    if (e.cancelable) e.preventDefault();
     retarget(s);
   };
   const onUp = (e: PointerEvent) => {
@@ -114,19 +134,20 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     s.active = true;
     setDragging(s.cardId);
     live.current.conn.sendActivity('dragging');
-    if (s.touch) {
-      // Já é arrasto: o navegador não pode tomar o gesto como rolagem (senão vem `pointercancel`).
-      window.addEventListener('touchmove', blockScroll, { passive: false });
-      window.addEventListener('contextmenu', blockMenu);
-    }
+    if (s.touch) window.addEventListener('contextmenu', blockMenu); // segurar abriria o menu do sistema
+    if (typeof navigator !== 'undefined') navigator.vibrate?.(10);
+    retarget(s); // o vão já aparece sob o dedo
     const edge = () => {
       const cur = press;
       const box = live.current.container.current;
       if (!cur || !box) return;
       const r = box.getBoundingClientRect();
       const before = box.scrollTop;
-      if (cur.y < r.top + EDGE_PX) box.scrollTop -= EDGE_STEP_PX;
-      else if (cur.y > r.bottom - EDGE_PX) box.scrollTop += EDGE_STEP_PX;
+      // Só com o dedo dentro da fila (sobre a barra da mão não rola).
+      if (cur.y >= r.top && cur.y <= r.bottom) {
+        if (cur.y < r.top + EDGE_PX) box.scrollTop -= EDGE_STEP_PX;
+        else if (cur.y > r.bottom - EDGE_PX) box.scrollTop += EDGE_STEP_PX;
+      }
       if (box.scrollTop !== before) retarget(cur); // o conteúdo andou sob o dedo
       cur.raf = requestAnimationFrame(edge);
     };
@@ -139,14 +160,13 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onCancel);
-    window.removeEventListener('touchmove', blockScroll);
     window.removeEventListener('contextmenu', blockMenu);
     if (!s) return;
     clearTimeout(s.hold);
     cancelAnimationFrame(s.raf);
     if (!s.active) return;
     const { conn, serverRow, onDrop } = live.current;
-    conn.sendCursor({ ...deskCursor(serverRow, s.cardId, s.index ?? 0), drag: null });
+    conn.sendCursor({ ...deskCursor(serverRow, s.cardId, s.index ?? currentIndex(serverRow, s.cardId)), drag: null });
     conn.sendActivity('thinking');
     setDragging(null);
     setPos(null);
@@ -164,18 +184,25 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
 
   const onPointerDown = (e: ReactPointerEvent, cardId: string) => {
     if (!live.current.canPick(cardId) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    // Um 2º dedo não derruba um arrasto ativo; uma pressão ainda não ativa é simplesmente trocada.
+    if (press?.active && e.pointerId !== press.pointerId) return;
     dropClickGuard?.();
     if (press) finish(false);
     const touch = e.pointerType !== 'mouse';
     press = { cardId, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, y: e.clientY, touch, active: false, index: null, hold: 0, raf: 0 };
     if (touch) press.hold = window.setTimeout(activate, TOUCH_HOLD_MS);
-    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onCancel);
   };
 
   return {
     onPointerDown,
+    /** Registra o guarda de toque (ver `guardTouch`); devolve a função que o tira. */
+    attach: () => {
+      document.addEventListener('touchmove', guardTouch, { passive: false });
+      return () => document.removeEventListener('touchmove', guardTouch);
+    },
     dispose: () => {
       finish(false);
       dropClickGuard?.();
@@ -192,6 +219,12 @@ export function usePhoneDrag(opts: PhoneDragOptions): PhoneDrag {
     live.current = opts;
   });
   const [ctl] = useState(() => createController(live, setDragging, setPos));
-  useEffect(() => ctl.dispose, [ctl]);
+  useEffect(() => {
+    const detach = ctl.attach();
+    return () => {
+      detach();
+      ctl.dispose();
+    };
+  }, [ctl]);
   return { dragging, pos, onPointerDown: ctl.onPointerDown };
 }

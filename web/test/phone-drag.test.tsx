@@ -2,6 +2,7 @@ import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react
 import { useRef } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi, type Mock } from 'vitest';
 import type { GameConn } from '../src/net/connection';
+import { deskCursor } from '../src/table/phone/phoneRowLogic';
 import { usePhoneDrag } from '../src/table/phone/usePhoneDrag';
 
 // jsdom antigo não tem PointerEvent: sem ele o `fireEvent` perde clientY/pointerType.
@@ -42,11 +43,17 @@ function Harness({
   onDrop: (id: string, index: number) => void;
   onClick?: (id: string) => void;
 }) {
-  const box = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLDivElement | null>(null);
   const drag = usePhoneDrag({ container: box, row, serverRow, canPick, conn, onDrop });
   return (
     <div>
-      <div ref={box} data-testid="box">
+      <div
+        ref={(el) => {
+          box.current = el;
+          if (el) el.getBoundingClientRect = () => rect(0, 400); // a barra da mão fica abaixo de 400
+        }}
+        data-testid="box"
+      >
         {row.map((id) => (
           <div
             key={id}
@@ -98,25 +105,46 @@ describe('arrastar no celular', () => {
     rtlAct(() => void vi.advanceTimersByTime(219));
     expect(state()).toBe('-|-');
     rtlAct(() => void vi.advanceTimersByTime(2));
-    expect(state()).toBe('h|-');
+    expect(state()).toBe('h|3'); // o vão já aparece sob o dedo
     fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 30 });
     expect(state()).toBe('h|1');
   });
 
-  it('depois de ativar, o touchmove da janela é bloqueado; ao terminar, volta ao normal', () => {
+  it('o guarda de touchmove existe desde a montagem; só segura o gesto com o arrasto ativo', () => {
     vi.useFakeTimers();
     render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
     const touchmove = () => {
       const ev = new Event('touchmove', { cancelable: true, bubbles: true });
-      window.dispatchEvent(ev);
+      document.body.dispatchEvent(ev);
       return ev.defaultPrevented;
     };
+    expect(touchmove()).toBe(false); // sem toque nenhum: não segura
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 0, clientY: 200 });
     expect(touchmove()).toBe(false); // ainda não segurou: deixa rolar
     rtlAct(() => void vi.advanceTimersByTime(230));
     expect(touchmove()).toBe(true);
+    const notCancelable = new Event('touchmove', { cancelable: false, bubbles: true });
+    document.body.dispatchEvent(notCancelable);
+    expect(notCancelable.defaultPrevented).toBe(false);
     fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 0, clientY: 200 });
     expect(touchmove()).toBe(false);
+  });
+
+  it('o guarda de touchmove sai ao desmontar', () => {
+    const { unmount } = render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
+    const spy = vi.spyOn(document, 'removeEventListener');
+    unmount();
+    expect(spy).toHaveBeenCalledWith('touchmove', expect.any(Function));
+    spy.mockRestore();
+  });
+
+  it('arrastar com o mouse não segura touchmove', () => {
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    const ev = new Event('touchmove', { cancelable: true, bubbles: true });
+    document.body.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(false);
   });
 
   it('toque que mexe antes dos 220 ms é rolagem: nada acontece', () => {
@@ -246,5 +274,114 @@ describe('arrastar no celular', () => {
     const calls = conn.sendCursor.mock.calls.length;
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 10 });
     expect(conn.sendCursor).toHaveBeenCalledTimes(calls);
+  });
+
+  it('soltar sobre a barra da mão (fora da fila) não coloca a carta; voltar pra dentro traz o alvo de volta', () => {
+    const conn = mkConn();
+    const onDrop = vi.fn();
+    render(<Harness conn={conn} onDrop={onDrop} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    expect(state()).toBe('h|2');
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 450 });
+    expect(state()).toBe('h|-');
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 450 });
+    expect(onDrop).not.toHaveBeenCalled();
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 450 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    expect(onDrop).toHaveBeenCalledWith('h', 2);
+  });
+
+  it('carta da fila arrastada pra baixo da fila: sem alvo, volta', () => {
+    const onDrop = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={onDrop} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 70 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 460 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 460 });
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
+  it('sem alvo, o cursor do PC fica no índice atual da carta no servidor (ou no fim, se vem da mão)', () => {
+    const conn = mkConn();
+    render(<Harness conn={conn} onDrop={vi.fn()} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 70 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 78 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 78 });
+    expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'b', 1), drag: null });
+
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 450 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
+    expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'h', 3), drag: null });
+  });
+
+  it('não rola com o dedo abaixo da fila (sobre a barra da mão)', () => {
+    vi.useFakeTimers();
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
+    const box = screen.getByTestId('box');
+    let top = 0;
+    Object.defineProperty(box, 'scrollTop', { get: () => top, set: (v: number) => void (top = v), configurable: true });
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 300 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 450 });
+    rtlAct(() => void vi.advanceTimersByTime(100));
+    expect(top).toBe(0);
+  });
+
+  it('um 2º dedo não derruba o arrasto ativo; o 1º dedo ainda solta', () => {
+    vi.useFakeTimers();
+    const onDrop = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={onDrop} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 200 });
+    rtlAct(() => void vi.advanceTimersByTime(230));
+    fireEvent.pointerMove(window, { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 95 });
+    fireEvent.pointerDown(screen.getByTestId('a'), { pointerType: 'touch', pointerId: 2, clientX: 0, clientY: 20 });
+    rtlAct(() => void vi.advanceTimersByTime(300));
+    fireEvent.pointerUp(window, { pointerType: 'touch', pointerId: 2, clientX: 0, clientY: 20 });
+    expect(state()).toBe('h|2');
+    fireEvent.pointerUp(window, { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 95 });
+    expect(onDrop).toHaveBeenCalledTimes(1);
+    expect(onDrop).toHaveBeenCalledWith('h', 2);
+  });
+
+  it('pressão ainda não ativa é trocada por uma nova', () => {
+    vi.useFakeTimers();
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 200 });
+    fireEvent.pointerDown(screen.getByTestId('a'), { pointerType: 'touch', pointerId: 2, clientX: 0, clientY: 20 });
+    rtlAct(() => void vi.advanceTimersByTime(230));
+    expect(state().startsWith('a|')).toBe(true);
+  });
+
+  it('pointercancel durante o arrasto ativo: não solta e avisa o PC', () => {
+    vi.useFakeTimers();
+    const conn = mkConn();
+    const onDrop = vi.fn();
+    render(<Harness conn={conn} onDrop={onDrop} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 0, clientY: 200 });
+    rtlAct(() => void vi.advanceTimersByTime(230));
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 95 });
+    fireEvent(window, new PointerEvent('pointercancel', { pointerType: 'touch' }));
+    expect(onDrop).not.toHaveBeenCalled();
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+    expect(conn.sendActivity).toHaveBeenLastCalledWith('thinking');
+    expect(state()).toBe('-|-');
+  });
+
+  it('vibra de leve ao ativar o arrasto de toque', () => {
+    vi.useFakeTimers();
+    const vibrate = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true, writable: true });
+    try {
+      render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
+      fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 0, clientY: 200 });
+      rtlAct(() => void vi.advanceTimersByTime(230));
+      expect(vibrate).toHaveBeenCalledWith(10);
+    } finally {
+      delete (navigator as unknown as { vibrate?: unknown }).vibrate;
+    }
   });
 });
