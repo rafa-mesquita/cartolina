@@ -50,10 +50,11 @@
 .dxh-date { font-size: 13px; color: var(--mu); white-space: nowrap; }
 .dxh-meta { font-size: 14px; }
 .dxh-outcome { font: italic 400 17px/1.1 var(--serif); color: var(--must); white-space: nowrap; }
-.dxh-outcome.open { font: 300 13px/1 var(--ui); color: var(--mu); }
+.dxh-outcome.unfinished { font: 300 13px/1 var(--ui); color: var(--mu); }
 .dxh-faces { display: flex; flex-wrap: wrap; gap: 2px; }
 .dxh-faces .critter { width: 24px; height: 24px; }
 .dxh-match-body { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.dxh-match-body[hidden] { display: none; }
 .dxh-final { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .dxh-final li { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .dxh-final .critter { width: 26px; height: 26px; }
