@@ -86,10 +86,11 @@ describe('posição pelo dedo', () => {
     { top: 50, bottom: 90 },
     { top: 100, bottom: 140 },
   ];
-  it('acima do meio da primeira faixa = 0; entre faixas conta as metades', () => {
-    expect(posFromY(5, rects)).toBe(0);
-    expect(posFromY(30, rects)).toBe(1);
-    expect(posFromY(95, rects)).toBe(2);
-    expect(posFromY(500, rects)).toBe(3);
+  // A fila em pé é invertida (100 no topo, 1 embaixo): a posição conta as faixas com o meio ABAIXO do dedo.
+  it('abaixo do meio da última faixa = 0 (o lado do 1); acima de todas = n (o lado do 100)', () => {
+    expect(posFromY(500, rects)).toBe(0);
+    expect(posFromY(95, rects)).toBe(1);
+    expect(posFromY(30, rects)).toBe(2);
+    expect(posFromY(5, rects)).toBe(3);
   });
 });

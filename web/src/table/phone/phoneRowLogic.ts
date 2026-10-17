@@ -3,7 +3,10 @@ import { isPlaying } from '../../game/derive';
 import { FH, FW, ROW_Y } from '../constants';
 import { rowEntries, toServerIndex } from '../rowLayout';
 
-/** Um espaço "aqui" na fila em pé: `pos` = posição visual (0 = antes da 1ª faixa); `index` = índice do `place` no servidor. */
+/**
+ * Um espaço "aqui" na fila em pé: `pos` = posição na fila mostrada (0 = antes da menor, que na tela fica embaixo de
+ * tudo; `row.length` = depois da maior, no topo); `index` = índice do `place` no servidor.
+ */
 export interface SlotTarget {
   pos: number;
   index: number;
@@ -52,9 +55,12 @@ export function deskCursor(row: readonly string[], cardId: string, index: number
  */
 export const PARKED_CURSOR: CursorFx = Object.freeze({ zone: 'hand', x: 0, y: 0, drag: null });
 
-/** Posição visual (0..n) pelo y do dedo: conta quantas faixas têm o meio acima dele. */
+/**
+ * Posição na fila (0..n) pelo y do dedo. A fila em pé é invertida (100 no topo, 1 embaixo), então conta quantas
+ * faixas têm o meio ABAIXO dele: embaixo de tudo = 0 (antes da menor), acima de tudo = n.
+ */
 export function posFromY(y: number, rects: ReadonlyArray<{ top: number; bottom: number }>): number {
   let n = 0;
-  for (const r of rects) if ((r.top + r.bottom) / 2 < y) n++;
+  for (const r of rects) if ((r.top + r.bottom) / 2 > y) n++;
   return n;
 }

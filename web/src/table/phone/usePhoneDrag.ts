@@ -16,8 +16,10 @@ const CLICK_GUARD_MS = 100;
 export interface PhoneDrag {
   /** Carta sendo arrastada por mim, ou null. */
   dragging: string | null;
-  /** Posição visual do vão do meu arrasto (pra `PhoneRow.gaps`), ou null. */
+  /** Posição do vão do meu arrasto na fila mostrada (pra `PhoneRow.gaps`; 0 = embaixo de tudo), ou null. */
   pos: number | null;
+  /** Carta da fila sendo arrastada sobre a mão: soltar ali devolve ela (a mão mostra o realce). */
+  overHand: boolean;
   /** Liga no `onPointerDown` das faixas e cartas da mão. */
   onPointerDown(e: ReactPointerEvent, cardId: string): void;
 }
@@ -34,6 +36,12 @@ export interface PhoneDragOptions {
   canPick(cardId: string): boolean;
   conn: Pick<GameConn, 'sendCursor' | 'sendActivity'>;
   onDrop(cardId: string, index: number): void;
+  /** A área da mão (barra de baixo): soltar uma carta da fila ali chama `onReturn`. */
+  hand?: RefObject<HTMLElement | null>;
+  /** Devolve uma carta da fila pra mão (o "voltar pra mão"). */
+  onReturn?(cardId: string): void;
+  /** Esta carta da fila pode voltar pra mão? (só as minhas). Sem ela, qualquer uma. */
+  canReturn?(cardId: string): boolean;
 }
 
 interface Press {
@@ -43,9 +51,13 @@ interface Press {
   startY: number;
   y: number;
   touch: boolean;
+  /** Começou numa faixa da fila (rola na vertical) e não numa carta da mão (rola de lado). */
+  fromRow: boolean;
   active: boolean;
   /** Índice do servidor do alvo atual, ou null (sem alvo). */
   index: number | null;
+  /** Carta da fila com o dedo sobre a mão: soltar devolve. */
+  overHand: boolean;
   hold: number;
   raf: number;
 }
@@ -54,16 +66,37 @@ interface Press {
  * Cria os handlers uma única vez (identidade estável: `removeEventListener` recebe as mesmas funções do
  * `addEventListener`). Eles leem as opções mais recentes por `live`.
  */
-function createController(live: MutableRefObject<PhoneDragOptions>, setDragging: (id: string | null) => void, setPos: (pos: number | null) => void) {
+function createController(
+  live: MutableRefObject<PhoneDragOptions>,
+  setDragging: (id: string | null) => void,
+  setPos: (pos: number | null) => void,
+  setOverHand: (over: boolean) => void,
+) {
   let press: Press | null = null;
   /** Tira o guarda de clique de um arrasto anterior (se ainda estiver ativo). */
   let dropClickGuard: (() => void) | null = null;
 
-  /** Alvo pela altura do dedo: posição visual (pra o vão) e índice do servidor (pra o `place`). */
+  /**
+   * Carta da fila (que eu possa devolver) com o dedo sobre a mão? Só a altura conta: a barra ocupa a largura toda.
+   * Carta da mão sobre a mão não é alvo de nada (soltar ali não faz nada, como antes). Só vale pra arrasto que
+   * começou numa faixa: a ficha da mão de uma carta que já está na fila nasce sobre a mão, e segurar e soltar ali
+   * mesmo não pode devolver a carta sem querer.
+   */
+  const overHandFor = (s: Press): boolean => {
+    const { hand, onReturn, canReturn, row, serverRow } = live.current;
+    const el = hand?.current;
+    if (!el || !onReturn || !s.fromRow) return false;
+    if (!row.includes(s.cardId) && !serverRow.includes(s.cardId)) return false;
+    if (canReturn && !canReturn(s.cardId)) return false;
+    const r = el.getBoundingClientRect();
+    return s.y >= r.top && s.y <= r.bottom;
+  };
+
+  /** Alvo pela altura do dedo: posição na fila mostrada (pra o vão) e índice do servidor (pra o `place`). */
   const targetFor = (cardId: string, y: number): { visual: number | null; index: number | null } => {
     const { container, row, serverRow } = live.current;
     const box = container.current;
-    // Fora da fila (ex.: soltar sobre a barra da mão) não há alvo: a carta volta.
+    // Fora da fila (ex.: sobre a barra da mão) não há alvo: a carta fica onde está (ou volta pra mão, ver `overHandFor`).
     if (box) {
       const r = box.getBoundingClientRect();
       if (y < r.top || y > r.bottom) return { visual: null, index: null };
@@ -73,7 +106,7 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
           .filter((el) => el.dataset.card !== cardId && row.includes(el.dataset.card ?? ''))
           .map((el) => el.getBoundingClientRect())
       : [];
-    // posFromY conta as faixas sem a arrastada: converte pra posição visual na fila com ela.
+    // posFromY conta as faixas sem a arrastada (as de baixo do dedo, a fila é invertida): converte pra posição na fila com ela.
     const without = posFromY(y, rects);
     const at = row.indexOf(cardId);
     const visual = at >= 0 && without > at ? without + 1 : without;
@@ -89,7 +122,13 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
 
   /** Recalcula o alvo; avisa o PC só quando ele muda. */
   const retarget = (s: Press) => {
-    const { visual, index } = targetFor(s.cardId, s.y);
+    const over = overHandFor(s);
+    if (over !== s.overHand) {
+      s.overHand = over;
+      setOverHand(over);
+    }
+    // Sobre a mão a carta vai voltar: nada de vão na fila.
+    const { visual, index } = over ? { visual: null, index: null } : targetFor(s.cardId, s.y);
     setPos(index === null ? null : visual);
     if (index === s.index) return;
     s.index = index;
@@ -114,12 +153,20 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     if (!s || e.pointerId !== s.pointerId) return;
     s.y = e.clientY;
     if (!s.active) {
-      const moved = Math.hypot(e.clientX - s.startX, e.clientY - s.startY);
+      const dx = e.clientX - s.startX;
+      const dy = e.clientY - s.startY;
+      const moved = Math.hypot(dx, dy);
       if (s.touch) {
-        if (moved > TOUCH_SLOP_PX) finish(false); // mexeu antes de segurar: é rolagem
-        return;
-      }
-      if (moved < MOUSE_START_PX) return;
+        if (moved <= TOUCH_SLOP_PX) return;
+        // A mão só rola de lado (`pan-x`) e a fila só em pé (`pan-y`): andar no outro eixo nunca é rolagem, então já
+        // é arrasto, sem esperar o segurar (gente arrasta na hora, como no computador). No eixo da rolagem, antes de
+        // segurar, é rolagem mesmo: larga.
+        const across = s.fromRow ? Math.abs(dx) > Math.abs(dy) : Math.abs(dy) > Math.abs(dx);
+        if (!across) {
+          finish(false);
+          return;
+        }
+      } else if (moved < MOUSE_START_PX) return;
       activate();
     }
     retarget(s);
@@ -168,9 +215,10 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     clearTimeout(s.hold);
     cancelAnimationFrame(s.raf);
     if (!s.active) return;
-    const { conn, onDrop } = live.current;
-    // `place` antes do cursor sem arrasto (igual ao computador): quem olha não vê a carta voltar por uma ida e volta.
-    if (drop && s.index !== null) onDrop(s.cardId, s.index);
+    const { conn, onDrop, onReturn } = live.current;
+    // `place`/`return` antes do cursor sem arrasto (igual ao computador): quem olha não vê a carta voltar por uma ida e volta.
+    if (drop && s.overHand) onReturn?.(s.cardId);
+    else if (drop && s.index !== null) onDrop(s.cardId, s.index);
     // Solta já estacionando (soltar, cancelar ou desmontar). No PC, `drag: null` solta a carta onde ela está sem
     // olhar a zona (`remoteDrop`: pousa ou espera o `state`); só a seta vai pro assento. Um cursor de soltar na
     // fila antes deste seria engolido pelo ritmo da conexão (o mais recente substitui o pendente) e, se saísse
@@ -179,6 +227,7 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     conn.sendActivity('thinking');
     setDragging(null);
     setPos(null);
+    setOverHand(false);
     // Soltar o dedo/mouse na mesma carta gera um `click`: não deixa virar seleção.
     const swallow = (ev: Event) => ev.stopPropagation();
     window.addEventListener('click', swallow, true);
@@ -197,7 +246,23 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     dropClickGuard?.();
     if (press) finish(false);
     const touch = e.pointerType !== 'mouse';
-    press = { cardId, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, y: e.clientY, touch, active: false, index: null, hold: 0, raf: 0 };
+    // Faixa da fila ou carta da mão? Decide o eixo que vira arrasto na hora (ver `onMove`).
+    const { container, row } = live.current;
+    const fromRow = container.current ? container.current.contains(e.currentTarget as Node) : row.includes(cardId);
+    press = {
+      cardId,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      y: e.clientY,
+      touch,
+      fromRow,
+      active: false,
+      index: null,
+      overHand: false,
+      hold: 0,
+      raf: 0,
+    };
     if (touch) press.hold = window.setTimeout(activate, TOUCH_HOLD_MS);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -218,15 +283,20 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
   };
 }
 
-/** Arrastar uma carta (da mão ou da fila) com o dedo ou o mouse. Não chama `preventDefault` no `pointerdown`: toque curto segue sendo clique. */
+/**
+ * Arrastar uma carta (da mão ou da fila) com o dedo ou o mouse. Não chama `preventDefault` no `pointerdown`: toque
+ * curto segue sendo clique. No toque, o arrasto começa ao segurar 220 ms ou na hora, se o dedo anda no eixo que
+ * não rola (pra cima na mão, de lado na fila). Carta da fila solta sobre a mão volta pra mão (`onReturn`).
+ */
 export function usePhoneDrag(opts: PhoneDragOptions): PhoneDrag {
   const [dragging, setDragging] = useState<string | null>(null);
   const [pos, setPos] = useState<number | null>(null);
+  const [overHand, setOverHand] = useState(false);
   const live = useRef(opts);
   useEffect(() => {
     live.current = opts;
   });
-  const [ctl] = useState(() => createController(live, setDragging, setPos));
+  const [ctl] = useState(() => createController(live, setDragging, setPos, setOverHand));
   useEffect(() => {
     const detach = ctl.attach();
     return () => {
@@ -234,5 +304,5 @@ export function usePhoneDrag(opts: PhoneDragOptions): PhoneDrag {
       ctl.dispose();
     };
   }, [ctl]);
-  return { dragging, pos, onPointerDown: ctl.onPointerDown };
+  return { dragging, pos, overHand, onPointerDown: ctl.onPointerDown };
 }

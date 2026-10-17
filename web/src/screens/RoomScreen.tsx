@@ -11,6 +11,7 @@ import { getToken, joinedProfile, loadProfile, markJoined, saveProfile, type Pro
 import { useConnSnapshot } from '../net/useConnSnapshot';
 import { Game } from './Game';
 import { JoinForm } from './JoinForm';
+import { LeaveGuard } from './LeaveGuard';
 import { PhoneNotice } from './PhoneNotice';
 import { RotateNotice } from './RotateNotice';
 
@@ -170,6 +171,7 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
       <>
         <Game conn={conn} snap={snap} view={snap.view} />
         <RotateNotice />
+        <LeaveGuard exitTo={gameHash(snap.view.gameId)} />
       </>
     );
   }
