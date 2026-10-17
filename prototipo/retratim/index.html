@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retratim · protótipo da mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Nunito:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --kraft:#eadbc0; --paper:#f6eedd; --edge:#d3bf99; --ink:#3b2f2f; --ink-soft:#7d6a58;
+  --blue:#2f5aa8; --tape:rgba(242,165,65,.75); --photo-border:#fbf7ef; --ok:#3b6d11; --no:#a3958a;
+  --hand:'Caveat',cursive; --ui:'Nunito',system-ui,sans-serif;
+  --shadow:0 1px 2px rgba(59,47,47,.25);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;height:100%;overflow:hidden;background:#d6c39f}
+body{font-family:var(--ui);font-weight:400;color:var(--ink);-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* ---------- palco 1440×900 (página de álbum em kraft) ---------- */
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 18% 22%,rgba(255,255,255,.22),transparent 45%),
+    radial-gradient(ellipse at 85% 80%,rgba(125,106,88,.10),transparent 50%),
+    repeating-linear-gradient(112deg,rgba(125,106,88,.035) 0 1px,transparent 1px 6px),
+    repeating-linear-gradient(22deg,rgba(255,255,255,.05) 0 1px,transparent 1px 9px),
+    var(--kraft)}
+
+/* ---------- topo ---------- */
+#top{position:absolute;left:0;right:0;top:0;height:84px;display:flex;align-items:center;gap:16px;padding:0 26px;z-index:8;
+  border-bottom:1px dashed rgba(125,106,88,.35)}
+.logo{font:700 44px/1 var(--hand);letter-spacing:.5px;color:var(--ink);white-space:nowrap}
+.logo small{display:block;font:300 11px/1.2 var(--ui);color:var(--ink-soft);letter-spacing:1px;margin-top:1px}
+#info{flex:1;text-align:center;font:400 14px/1.15 var(--ui);color:var(--ink-soft);white-space:nowrap}
+#info b{font-weight:600;color:var(--ink)}
+#info .kit{display:block;font:700 26px/1 var(--hand);color:var(--blue)}
+#seals{display:flex;gap:8px}
+.seal{display:flex;align-items:center;gap:5px;padding:3px 10px 3px 4px;border-radius:999px;background:var(--paper);box-shadow:var(--shadow);white-space:nowrap}
+.seal.me{box-shadow:0 0 0 1.5px var(--blue),var(--shadow)}
+.seal .cr{width:28px;height:28px;flex:none}
+.seal .cr svg{width:100%;height:100%;display:block}
+.seal .nm{font:600 12.5px/1.1 var(--ui)}
+.seal .stt{display:block;font:400 10.5px/1.2 var(--ui);color:var(--ink-soft)}
+.seal .stt.ok{color:var(--ok);font-weight:600}
+.clock{display:none;font:700 24px/1 var(--hand);color:var(--blue);padding:5px 14px 4px;border:1.5px solid var(--blue);border-radius:999px;background:rgba(246,238,221,.7);white-space:nowrap}
+.clock.on{display:block}
+.clock.hurry{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.07)}}
+.icon-btn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--edge);background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;font-size:19px;color:var(--ink-soft)}
+.icon-btn:hover{color:var(--blue);border-color:var(--blue)}
+
+/* ---------- painel de dev ---------- */
+#dev{position:absolute;right:24px;top:82px;width:330px;padding:14px 16px 16px;border:1px solid var(--edge);border-radius:6px;background:var(--paper);box-shadow:0 8px 24px rgba(59,47,47,.22);z-index:30;display:none;font-size:13px}
+#dev.on{display:block}
+#dev h4{margin:0 0 8px;font:700 28px/1 var(--hand)}
+#dev .row{display:flex;align-items:center;justify-content:space-between;margin:9px 0;gap:8px}
+#dev .col{margin:12px 0 6px}
+#dev .col .opts{justify-content:flex-start;margin-top:6px}
+#dev .opts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#dev .opts button{padding:4px 9px;border:1px solid var(--edge);border-radius:999px;background:none;font-size:12px}
+#dev .opts button.on{border-color:var(--blue);color:var(--blue);font-weight:600}
+#dev .wide{width:100%;margin-top:8px;padding:8px;border:1px solid var(--blue);border-radius:999px;background:none;color:var(--blue);font-weight:600}
+#dev p{color:var(--ink-soft);font-size:11.5px;line-height:1.45;margin:10px 0 0}
+
+/* ---------- página (1440 centralizado) ---------- */
+#page{position:absolute;top:84px;bottom:0;left:50%;width:1440px;margin-left:-720px}
+
+/* grade 4×4 */
+#gridWrap{position:absolute;left:40px;top:22px}
+#grid{display:grid;grid-template-columns:28px repeat(4,164px);grid-template-rows:30px repeat(4,126px);gap:12px}
+#grid .lbl{display:grid;place-items:center;font:700 26px/1 var(--hand);color:var(--ink-soft)}
+.photo{position:relative;width:164px;height:126px;padding:6px;background:var(--photo-border);box-shadow:var(--shadow);border-radius:1px}
+.photo.secret{outline:3px dashed var(--blue);outline-offset:4px}
+#gridNote{margin:16px 0 0 40px;max-width:680px;font:500 21px/1.15 var(--hand);color:var(--ink-soft)}
+
+/* foto provisória (photos.js) */
+.ph{position:relative;width:100%;height:100%;overflow:hidden;display:grid;place-items:center;color:rgba(59,47,47,.55);container-type:size}
+.ph i{font-size:calc(var(--s) * 1cqh);line-height:1}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph-cap{position:absolute;left:6px;bottom:4px;font:600 10px var(--ui);color:rgba(59,47,47,.6)}
+
+/* lado direito */
+#side{position:absolute;left:800px;top:22px;width:600px}
+.secret-card{position:relative;display:flex;align-items:center;gap:16px;width:max-content;padding:12px 22px 12px 12px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(-1deg);margin-left:6px}
+.tape{position:absolute;width:86px;height:24px;background:var(--tape);left:-18px;top:-9px;transform:rotate(-8deg);box-shadow:0 1px 1px rgba(59,47,47,.1)}
+.secret-card .mini{width:96px;height:74px;padding:4px;background:var(--photo-border);box-shadow:var(--shadow)}
+.secret-card .lab{font:500 26px/1 var(--hand);color:var(--ink-soft)}
+.secret-card .co{font:700 52px/.9 var(--hand);color:var(--blue);margin-left:6px}
+.secret-card .shh{display:block;font:400 11px/1.3 var(--ui);color:var(--ink-soft);margin-top:4px}
+#bench{position:relative;width:600px;height:450px;margin-top:18px;background:var(--paper);box-shadow:0 0 0 1px var(--edge),0 2px 6px rgba(59,47,47,.18);border-radius:3px;transition:opacity .25s}
+#bench.ready{opacity:.6;pointer-events:none}
+#bench .sheet{position:absolute;inset:0}
+.bench-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px}
+.bench-foot .hint{font:500 20px/1.1 var(--hand);color:var(--ink-soft)}
+.bench-foot .hint b{color:var(--blue);font-weight:700}
+.btn-big{font:700 28px/1 var(--hand);padding:10px 30px 9px;border-radius:999px;border:1.5px solid var(--blue);background:var(--blue);color:var(--paper);box-shadow:var(--shadow);white-space:nowrap}
+.btn-big:hover{filter:brightness(1.08)}
+.btn-big.off{background:none;color:var(--blue)}
+.btn-soft{font:600 14px/1 var(--ui);padding:9px 18px;border-radius:999px;border:1px solid var(--blue);background:none;color:var(--blue)}
+.btn-soft:hover{background:rgba(47,90,168,.08)}
+
+/* kit que ainda não existe */
+.nokit{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:30px}
+.nokit i{font-size:56px;color:var(--edge)}
+.nokit h3{margin:0;font:700 32px/1 var(--hand);color:var(--ink)}
+.nokit p{margin:0;max-width:380px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
+.nokit .st{min-height:18px;color:var(--ok);font-weight:600}
+
+/* faixa das fases sem tela */
+#banner{position:relative;margin-top:30px;padding:26px 30px 28px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(.6deg)}
+#banner h2{margin:0;font:700 44px/1 var(--hand)}
+#banner .sub{margin:6px 0 16px;font:500 22px/1.1 var(--hand);color:var(--ink-soft)}
+#banner ul{margin:0 0 14px;padding-left:18px;font-size:13px;line-height:1.6}
+#banner .scores{font-size:13px;color:var(--ink-soft);margin:0 0 18px}
+#banner .scores b{color:var(--ink)}
+#banner .acts{display:flex;gap:10px;flex-wrap:wrap}
+
+#toast{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--ink);color:var(--paper);font:600 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="logo">Retratim<small>protótipo da mesa · cartolina~</small></div>
+    <div id="info"></div>
+    <div id="seals"></div>
+    <div class="clock" id="clock"></div>
+    <button class="icon-btn" id="soundBtn" title="som"><i class="ti ti-volume"></i></button>
+    <button class="icon-btn" id="devBtn" title="protótipo">⚙</button>
+  </header>
+  <div id="dev">
+    <h4>protótipo</h4>
+    <div class="row">jogadores<div class="opts" id="optN"></div></div>
+    <div class="row">bots<div class="opts" id="optS"></div></div>
+    <div class="row">bots acertam<div class="opts" id="optH"></div></div>
+    <div class="col">trocar meu kit<div class="opts" id="optK"></div></div>
+    <button class="wide" id="hurryBtn">apressar (contagem de 30 s)</button>
+    <button class="wide" id="newBtn">nova partida</button>
+    <p>Protótipo descartável: as regras são as reais (as mesmas do servidor), os bots montam obras ao acaso. Fotos provisórias; a foto real entra sozinha quando existir. Trocar o kit mexe direto no estado (só aqui).</p>
+  </div>
+  <main id="page">
+    <section id="gridWrap"><div id="grid"></div><p id="gridNote"></p></section>
+    <section id="side">
+      <div id="building">
+        <div class="secret-card"><span class="tape"></span><div class="mini" id="secretMini"></div>
+          <div><span class="lab">sua foto secreta</span><span class="co" id="secretCo"></span><span class="shh">só você vê o contorno azul na grade</span></div></div>
+        <div id="bench"></div>
+        <div class="bench-foot"><span class="hint" id="benchHint"></span><button class="btn-big" id="readyBtn">estou pronto</button></div>
+      </div>
+      <div id="banner" hidden></div>
+    </section>
+  </main>
+  <div id="toast"></div>
+</div>
+<script src="../dixit/critters.js"></script>
+<script src="rules.js"></script>
+<script src="photos.js"></script>
+<script src="random.js"></script>
+<script src="sounds.js"></script>
+<script>window.Kits = window.Kits || {};</script>
+<!-- kits/*.js entram aqui (Tasks 2–5); kit que falta mostra "usar obra aleatória". -->
+<script>
+'use strict';
+/* =========================================================
+   Protótipo da mesa do Retratim (descartável). Regras: shared/src/games/pictures
+   empacotadas em rules.js. Tudo aqui é só interface + bots falsos.
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+const ME = 'p0';
+let N = 4, SPEED = 1, BOT_HIT = .5, ids = [], state = null, prevPhase = null;
+const NAMES = ['você', 'Bia', 'Léo', 'Nina', 'Caio', 'Duda'];
+const COLORS = Object.keys(window.CRITTERS);
+const KIT_NAMES = { cubes: 'cubos coloridos', laces: 'cadarços', sticks: 'palitos e pedras', blocks: 'blocos', icons: 'símbolos', dots: 'pontos e linhas' };
+/** Mensagens de shared/src/protocol.ts pros códigos do Retratim. */
+const ERR = {
+  wrong_kit: 'Esse não é o seu kit nesta rodada.', bad_work: 'Essa obra não vale com esse kit.',
+  empty_work: 'Monte alguma coisa antes de ficar pronto.', cubes_incomplete: 'Preencha todas as casas antes.',
+  icons_too_few: 'Escolha pelo menos 2 cartas.', already_ready: 'Você já está pronto. Desmarque pra mexer.',
+  own_work: 'Não dá pra palpitar na própria obra.', no_work: 'Essa pessoa não tem obra nesta rodada.',
+  already_confirmed: 'Você já confirmou.', not_player: 'Você está assistindo esta rodada.',
+  bad_phase: 'Agora não dá pra fazer isso.', paused: 'Esperando gente: precisa de 3 pessoas na mesa.',
+  need_3_players: 'Precisa de pelo menos 3 jogadores.', not_host: 'Só o host pode fazer isso.',
+};
+const ctx = () => ({ hostId: ME, active: ids, rng: Math.random, now: Date.now() });
+const view = () => Retratim.picturesViewFor(state, ME);
+
+/* ---------- utilidades ---------- */
+const timers = new Set();
+const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+const between = (a, b) => a + Math.random() * (b - a);
+const nameOf = (p) => NAMES[Number(p.slice(1))];
+const critter = (p) => window.CRITTERS[COLORS[Number(p.slice(1)) % COLORS.length]];
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2400); }
+
+/* ---------- escala do palco 1440×900 ---------- */
+let APPW = 1440;
+function fit() {
+  let sc = innerHeight / 900, w = innerWidth / sc;
+  if (w < 1440) { sc = innerWidth / 1440; w = 1440; }
+  APPW = Math.round(w); app.style.width = APPW + 'px';
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+}
+addEventListener('resize', fit);
+
+/* ---------- laço do jogo ---------- */
+/** Igual ao servidor: o schema das ações valida antes das regras. */
+function act(pid, action, quiet) {
+  const parsed = Retratim.picturesActionSchema.safeParse(action);
+  if (!parsed.success) { console.error('ação inválida (bug do protótipo)', action, parsed.error); toast('Ação inválida (bug do protótipo — veja o console)'); return false; }
+  const res = Retratim.applyPicturesAction(state, pid, parsed.data, ctx());
+  if (!res.ok) { if (!quiet) { toast(ERR[res.error] || res.error); play('error'); } return false; }
+  state = res.state; changed(); return true;
+}
+/** O "alarme" do servidor: reavalia contagem/fechamento/pausa. */
+setInterval(() => { if (!state) return; const next = Retratim.settlePictures(state, ctx()); if (next !== state) { state = next; changed(); } else renderClock(); }, 200);
+
+let slowBot = null;
+function newGame() {
+  for (const t of timers) clearTimeout(t); timers.clear(); plannedFor.clear();
+  destroyBench(); resetDraft(); gridKey = ''; secretKey = '';
+  ids = Array.from({ length: N }, (_, i) => `p${i}`);
+  slowBot = ids[1 + Math.floor(Math.random() * (N - 1))];
+  state = Retratim.initialPicturesState(); prevPhase = null;
+  act(ME, { type: 'start' });
+}
+
+function changed() {
+  const v = view();
+  if (v.phase !== prevPhase) {
+    if (prevPhase === 'building') { resetDraft(); destroyBench(); }
+    if (v.phase === 'building') play('round');
+  }
+  prevPhase = v.phase;
+  render(v); scheduleBots();
+}
+
+/* ---------- rascunho (no máximo a cada 2 s; o último sempre vai) ---------- */
+let myWork = null, dirty = false, lastDraftAt = 0, draftTimer = 0;
+function resetDraft() { clearTimeout(draftTimer); draftTimer = 0; myWork = null; dirty = false; lastDraftAt = 0; }
+function onBenchChange(work) { myWork = work; dirty = true; queueDraft(); }
+function queueDraft() {
+  if (draftTimer) return;
+  const wait = Math.max(0, lastDraftAt + 2000 - Date.now());
+  draftTimer = setTimeout(() => { draftTimer = 0; sendDraft(); }, wait);
+}
+/** Manda o rascunho pendente. Devolve false se a regra recusou. */
+function sendDraft() {
+  if (!dirty || !state || state.phase !== 'building' || state.ready.includes(ME)) return true;
+  dirty = false; lastDraftAt = Date.now();
+  return act(ME, { type: 'draft', work: myWork });
+}
+function onReady() {
+  if (!state || state.phase !== 'building') return;
+  if (state.ready.includes(ME)) { act(ME, { type: 'ready', on: false }); return; }
+  clearTimeout(draftTimer); draftTimer = 0;
+  if (!sendDraft()) return;
+  const work = state.works[ME], e = Retratim.readyError(work);
+  if (e) {
+    const n = e === 'cubes_incomplete' ? work.cells.filter((c) => c === null).length : 0;
+    toast(e === 'cubes_incomplete' ? `Faltam ${n} ${n === 1 ? 'casa' : 'casas'}` : ERR[e]); play('error'); return;
+  }
+  if (act(ME, { type: 'ready', on: true })) play('ready');
+}
+$('#readyBtn').onclick = onReady;
+
+/* ---------- bancada (recriada só quando a rodada ou o kit muda; nunca pelo eco do rascunho) ---------- */
+let bench = null, benchKey = '';
+function ensureBench(v) {
+  const kit = v.kits[ME]; if (!kit) return;
+  const key = `${v.round}:${kit}`;
+  if (key === benchKey) return;
+  destroyBench(); resetDraft(); benchKey = key;
+  const sheet = document.createElement('div'); sheet.className = 'sheet'; $('#bench').appendChild(sheet);
+  const prev = v.works[ME];
+  const work = prev && prev.kit === kit ? prev : null;
+  myWork = work;
+  const k = window.Kits[kit] || fallbackKit(kit);
+  let handle = null;
+  try { handle = k.build(sheet, work, onBenchChange); } catch (err) { console.error('kit quebrou no build', kit, err); }
+  bench = { handle, sheet };
+}
+function destroyBench() {
+  if (bench) { try { bench.handle && bench.handle.destroy(); } catch (err) { console.error('kit quebrou no destroy', err); } bench.sheet.remove(); bench = null; }
+  benchKey = '';
+}
+/** Bancada provisória pros kits que ainda não existem: sorteia uma obra válida. */
+function fallbackKit(kit) {
+  return {
+    build(el, work, onChange) {
+      el.innerHTML = `<div class="nokit"><i class="ti ti-tools"></i><h3>kit ainda não feito no protótipo</h3>`
+        + `<p>A bancada de <b>${KIT_NAMES[kit]}</b> chega numa próxima etapa. Por enquanto, sorteie uma obra válida pra seguir a partida.</p>`
+        + `<button class="btn-soft">usar obra aleatória</button><p class="st"></p></div>`;
+      const btn = el.querySelector('button'), st = el.querySelector('.st');
+      let cur = work;
+      const mark = () => { st.textContent = cur ? 'obra aleatória escolhida ✓ — já dá pra ficar pronto' : ''; btn.textContent = cur ? 'sortear outra obra' : 'usar obra aleatória'; };
+      const onClick = () => { cur = RandomWork[kit](); mark(); onChange(cur); };
+      mark(); btn.addEventListener('click', onClick);
+      return { destroy() { btn.removeEventListener('click', onClick); } };
+    },
+    show() {},
+  };
+}
+
+/* ---------- bots ---------- */
+const plannedFor = new Set();
+const botKey = (p) => `${state.round}:${state.phase}:${p}`;
+function scheduleBots() {
+  const st = state;
+  if (st.phase !== 'building' || st.paused) return; // palpite e revelação dos bots: Tasks 6–7
+  for (const p of st.inRound) {
+    if (p === ME) continue;
+    const key = botKey(p);
+    if (plannedFor.has(key) || st.ready.includes(p)) continue;
+    plannedFor.add(key);
+    const draftAt = between(3000, 9000) * SPEED;
+    later(draftAt, () => botDraft(p, key));
+    // um bot por partida demora: só fica pronto depois de 40 s (a contagem dos 30 s aparece e fecha a fase)
+    later(p === slowBot ? Math.max(40000, draftAt + 500) : draftAt + between(300, 900) * SPEED, () => botReady(p, key));
+  }
+}
+function botDraft(p, key) {
+  if (botKey(p) !== key || state.ready.includes(p)) return;
+  if (!act(p, { type: 'draft', work: RandomWork[state.kits[p]]() }, true)) console.warn('bot não conseguiu mandar o rascunho', p, state.kits[p]);
+}
+function botReady(p, key) {
+  if (botKey(p) !== key || state.ready.includes(p)) return;
+  if (!state.works[p]) botDraft(p, key);
+  if (!act(p, { type: 'ready', on: true }, true)) console.warn('bot não conseguiu ficar pronto', p, state.kits[p]);
+}
+
+/* ---------- topo ---------- */
+function statusOf(v, p) {
+  if (!v.inRound.includes(p)) return ['assistindo', ''];
+  if (v.phase === 'building') return v.ready.includes(p) ? ['pronto ✓', 'ok'] : ['mexendo…', ''];
+  if (v.phase === 'guessing') return v.confirmed.includes(p) ? ['confirmou ✓', 'ok'] : ['palpitando…', ''];
+  return [`${v.scores[p] ?? 0} pts`, ''];
+}
+function renderTop(v) {
+  $('#info').innerHTML = v.phase === 'gameover'
+    ? '<b>fim de jogo</b>'
+    : `rodada <b>${v.round + 1}</b> de ${v.rounds} · seu kit<span class="kit">${KIT_NAMES[v.kits[ME]] || '—'}</span>`;
+  $('#seals').innerHTML = v.players.map((p) => {
+    const [txt, cls] = statusOf(v, p);
+    return `<div class="seal${p === ME ? ' me' : ''}"><span class="cr">${critter(p)}</span><span><span class="nm">${nameOf(p)}</span><span class="stt ${cls}">${txt}</span></span></div>`;
+  }).join('');
+  renderClock();
+}
+function renderClock() {
+  const el = $('#clock'), end = state && state.countdownEndsAt;
+  if (state && state.paused) { el.textContent = 'esperando gente'; el.classList.add('on'); el.classList.remove('hurry'); return; }
+  if (!end) { el.classList.remove('on', 'hurry'); return; }
+  const s = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+  el.textContent = `faltam ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  el.classList.add('on'); el.classList.toggle('hurry', s <= 10);
+}
+
+/* ---------- grade 4×4 (montada uma vez por partida; o contorno da secreta só troca a classe) ---------- */
+let gridKey = '', secretKey = '';
+function renderGrid(v) {
+  const key = v.grid.join();
+  if (key !== gridKey) {
+    gridKey = key;
+    let h = '<span></span>' + ['A', 'B', 'C', 'D'].map((c) => `<span class="lbl">${c}</span>`).join('');
+    for (let row = 0; row < 4; row++) {
+      h += `<span class="lbl">${row + 1}</span>`;
+      for (let col = 0; col < 4; col++) { const i = row * 4 + col; h += `<div class="photo" data-i="${i}">${photoHTML(v.grid[i])}</div>`; }
+    }
+    $('#grid').innerHTML = h;
+  }
+  const mine = v.phase === 'building' || v.phase === 'guessing' ? Retratim.COORDS.indexOf(v.mySecret) : -1;
+  document.querySelectorAll('#grid .photo').forEach((el) => el.classList.toggle('secret', Number(el.dataset.i) === mine));
+  $('#gridNote').textContent = v.phase === 'building'
+    ? 'A grade é a mesma a partida toda. Remonte a sua foto secreta com o kit da rodada; os outros vão tentar adivinhar qual é.'
+    : 'A grade é a mesma a partida toda.';
+}
+
+/* ---------- montagem ---------- */
+function renderBuilding(v) {
+  const secret = v.mySecret, i = Retratim.COORDS.indexOf(secret);
+  const sk = `${gridKey}|${secret}`;
+  if (sk !== secretKey) { secretKey = sk; $('#secretCo').textContent = secret || '—'; $('#secretMini').innerHTML = i >= 0 ? photoHTML(v.grid[i]) : ''; }
+  ensureBench(v);
+  const ready = v.ready.includes(ME);
+  $('#bench').classList.toggle('ready', ready);
+  const btn = $('#readyBtn'); btn.textContent = ready ? 'desmarcar pronto' : 'estou pronto'; btn.classList.toggle('off', ready);
+  $('#benchHint').innerHTML = ready
+    ? 'pronto ✓ — esperando os outros'
+    : `kit da rodada: <b>${KIT_NAMES[v.kits[ME]]}</b>`;
+}
+
+/* ---------- fases que ainda não têm tela ---------- */
+const PHASE_TODO = { guessing: ['fase do palpite', 'tela vem na Task 6'], reveal: ['revelação', 'tela vem na Task 7'], gameover: ['fim de jogo', 'tela vem na Task 7'], lobby: ['saguão', 'o protótipo começa direto'] };
+function renderBanner(v) {
+  const [title, sub] = PHASE_TODO[v.phase] || [v.phase, ''];
+  const who = (p) => (p === ME ? 'você' : nameOf(p));
+  const scores = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0)).map((p) => `<b>${who(p)}</b> ${v.scores[p] ?? 0}`).join(' · ');
+  let body = '';
+  if (v.phase === 'guessing') body = `<ul><li>${Object.keys(v.works).length} obras na galeria: ${Object.keys(v.works).map(who).join(', ')}</li><li>os bots ainda não palpitam; use “apressar” pra fase fechar em 30 s</li></ul>`;
+  if ((v.phase === 'reveal' || v.phase === 'gameover') && v.result) {
+    const R = v.result;
+    body = R.order.length
+      ? `<ul>${R.order.map((a) => `<li><b>${who(a)}</b> (${KIT_NAMES[R.kits[a]]}) era <b>${R.secrets[a]}</b> — ${R.correct[a].length ? 'acertaram: ' + R.correct[a].map(who).join(', ') : 'ninguém acertou'}</li>`).join('')}</ul>`
+      : '<ul><li>ninguém montou nada nesta rodada</li></ul>';
+  }
+  if (v.phase === 'gameover') body += `<p class="scores">ganhou: <b>${v.winners.map(who).join(', ')}</b></p>`;
+  let acts = '';
+  if (v.phase === 'guessing' && v.countdownEndsAt === null) acts += '<button class="btn-soft" data-a="hurry">apressar (30 s)</button>';
+  if (v.phase === 'reveal') acts += '<button class="btn-big" data-a="next">próxima rodada</button>';
+  if (v.phase === 'gameover') acts += '<button class="btn-big" data-a="new">nova partida</button>';
+  $('#banner').innerHTML = `<span class="tape"></span><h2>${title}</h2><p class="sub">${sub}</p>${body}<p class="scores">placar: ${scores}</p><div class="acts">${acts}</div>`;
+}
+$('#banner').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-a]'); if (!b) return;
+  if (b.dataset.a === 'hurry') act(ME, { type: 'hurry' });
+  if (b.dataset.a === 'next') act(ME, { type: 'next' });
+  if (b.dataset.a === 'new') newGame();
+});
+
+function render(v = view()) {
+  renderTop(v); renderGrid(v);
+  const building = v.phase === 'building';
+  $('#building').hidden = !building; $('#banner').hidden = building;
+  if (building) renderBuilding(v); else renderBanner(v);
+  renderDevKits(v);
+}
+
+/* ---------- controles do protótipo ---------- */
+function opts(el, values, cur, label, set) {
+  el.innerHTML = values.map((x) => `<button class="${x === cur ? 'on' : ''}" data-v="${x}">${label(x)}</button>`).join('');
+  el.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; set(b.dataset.v); };
+}
+function renderDev() {
+  opts($('#optN'), [3, 4, 5, 6], N, String, (x) => { N = Number(x); renderDev(); newGame(); });
+  opts($('#optS'), [.4, 1, 2], SPEED, (x) => ({ 0.4: 'rápido', 1: 'normal', 2: 'lento' })[x], (x) => { SPEED = Number(x); renderDev(); });
+  opts($('#optH'), [.2, .5, .8], BOT_HIT, (x) => `${Math.round(x * 100)}%`, (x) => { BOT_HIT = Number(x); renderDev(); });
+}
+function renderDevKits(v) {
+  opts($('#optK'), [...Retratim.KITS], v.kits[ME], (k) => KIT_NAMES[k], swapKit);
+}
+/** Só no protótipo: troca o meu kit com quem tem o kit escolhido (mexida direta no estado). */
+function swapKit(target) {
+  if (!state || state.phase !== 'building') { toast('Só dá pra trocar o kit na montagem.'); return; }
+  const mine = state.kits[ME]; if (mine === target) return;
+  const other = Object.keys(state.kits).find((p) => state.kits[p] === target);
+  const kits = { ...state.kits, [ME]: target }; if (other) kits[other] = mine;
+  const touched = other ? [ME, other] : [ME];
+  const works = Object.fromEntries(Object.entries(state.works).filter(([p]) => !touched.includes(p)));
+  state = { ...state, kits, works, ready: state.ready.filter((p) => !touched.includes(p)) };
+  if (other) plannedFor.delete(botKey(other)); // o bot refaz a obra com o kit novo
+  changed();
+}
+let soundOn = true;
+$('#soundBtn').onclick = () => { soundOn = !soundOn; setSound(soundOn); $('#soundBtn').innerHTML = `<i class="ti ${soundOn ? 'ti-volume' : 'ti-volume-off'}"></i>`; };
+$('#devBtn').onclick = () => $('#dev').classList.toggle('on');
+$('#hurryBtn').onclick = () => act(ME, { type: 'hurry' });
+$('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
+
+fit(); renderDev(); newGame();
+</script>
+</body>
+</html>
