@@ -33,7 +33,7 @@ function PlayTab({ game }: { game: GameId }) {
       <section className="panel">
         {!entry.playable ? (
           <p className="hint">O {entry.name} tá chegando! Por enquanto dá pra ver as regras aqui embaixo.</p>
-        ) : phone ? (
+        ) : phone && !entry.mobile ? (
           <p className="hint">{PHONE_TEXT}</p>
         ) : (
           <>

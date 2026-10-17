@@ -13,6 +13,8 @@ export interface CatalogEntry {
   playable: boolean;
   /** Tem aba de histórico com partidas (segue `GAMES[id].recordsHistory`). */
   hasHistory: boolean;
+  /** Joga no celular (aparelho de toque). Sem isso, o celular vê "abre no computador". Ausente = só no computador. */
+  mobile?: boolean;
 }
 
 // Nomes de vitrine: o ITO aparece como DITU e o Dixit como Diquisti; os ids internos não mudam.
@@ -27,6 +29,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Modo livre: rodadas soltas. Campanha: 3 vidas e 3 níveis.',
     ],
     playable: true,
+    mobile: true,
   },
   dixit: {
     name: 'Diquisti',
@@ -37,6 +40,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Todo mundo vota em qual era a do narrador. Nem todos podem acertar, nem ninguém.',
     ],
     playable: true,
+    mobile: false,
   },
 };
 

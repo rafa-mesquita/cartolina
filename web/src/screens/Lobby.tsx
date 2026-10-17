@@ -7,8 +7,11 @@ import type { GameConn } from '../net/connection';
 import { Avatar } from './Avatar';
 import { SoundToggle } from './SoundToggle';
 
-/** Bots para testar sozinho: só existe em dev; em produção o import some e o código não vai pro bundle. */
-const BotControls = import.meta.env.DEV ? lazy(() => import('../dev/BotControls')) : null;
+/**
+ * Bots para testar sozinho, também no site no ar (pra testar no celular). O código só baixa ao abrir o lobby;
+ * rodada com bot não entra no histórico (`isBotName` em `pendingRecord`).
+ */
+const BotControls = lazy(() => import('../dev/BotControls'));
 
 const MODES: { mode: ItoMode; title: string; text: string }[] = [
   { mode: 'livre', title: 'livre', text: '1 carta por pessoa. Acertou a ordem, ganhou. Joga quantas rodadas quiser.' },
@@ -111,11 +114,9 @@ export function Lobby({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
           <p className="hint">esperando o host começar…</p>
         )}
       </section>
-      {BotControls && (
-        <Suspense fallback={null}>
-          <BotControls code={view.code} seats={view.seats.length} />
-        </Suspense>
-      )}
+      <Suspense fallback={null}>
+        <BotControls code={view.code} seats={view.seats.length} />
+      </Suspense>
     </main>
   );
 }

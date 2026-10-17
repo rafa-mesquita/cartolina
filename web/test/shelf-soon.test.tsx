@@ -11,6 +11,7 @@ const soon: CatalogEntry = {
   rules: ['regra'],
   playable: false,
   hasHistory: false,
+  mobile: false,
 };
 
 vi.mock('../src/games/catalog', () => ({ CATALOG: [soon], catalogEntry: () => soon }));

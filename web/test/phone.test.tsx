@@ -36,24 +36,35 @@ describe('aviso no celular', () => {
     window.location.hash = '';
   });
 
-  it('no celular, a sala mostra o aviso em vez do jogo', () => {
+  it('no celular, a sala não mostra mais o aviso direto: pergunta ao servidor qual é o jogo', () => {
     phone(true);
     window.location.hash = '#/sala/ABCD';
     render(<App />);
-    expect(screen.getByText(PHONE_TEXT)).toBeTruthy();
-    expect(screen.queryByText('carregando…')).toBeNull();
+    expect(screen.queryByText(PHONE_TEXT)).toBeNull();
+    expect(screen.getByText('carregando…')).toBeTruthy();
   });
 
-  it('no celular, a estante continua e a página do DITU troca "criar sala" pelo aviso', () => {
+  it('no celular, a estante continua com a linha do código', () => {
     phone(true);
-    const { unmount } = render(<Home />);
+    render(<Home />);
     expect(screen.getByRole('link', { name: /DITU/ })).toBeTruthy();
-    // a linha do código fica de fora: a sala não abre no celular (como na aba jogar)
-    expect(screen.queryByText('tem um código?')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'entrar' })).toBeNull();
+    expect(screen.getByText('tem um código?')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'entrar' })).toBeTruthy();
     expect(screen.queryByText(PHONE_TEXT)).toBeNull();
-    unmount();
+  });
+
+  it('no celular, a página do DITU mostra "criar sala" e a entrada por código', () => {
+    phone(true);
     render(<GamePage game="ito" tab="jogar" />);
+    expect(screen.getByRole('button', { name: 'criar sala' })).toBeTruthy();
+    expect(screen.getByLabelText('código da sala')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'entrar na sala' })).toBeTruthy();
+    expect(screen.queryByText(PHONE_TEXT)).toBeNull();
+  });
+
+  it('no celular, a página do Diquisti mostra o aviso e nenhum "criar sala"', () => {
+    phone(true);
+    render(<GamePage game="dixit" tab="jogar" />);
     expect(screen.queryByRole('button', { name: 'criar sala' })).toBeNull();
     expect(screen.getByText(PHONE_TEXT)).toBeTruthy();
   });

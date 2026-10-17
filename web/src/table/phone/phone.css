@@ -1,0 +1,99 @@
+/* Mesa do celular (DITU em pé). */
+.p-row { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow-y: auto; overflow-x: clip; overscroll-behavior: contain; }
+/* Fila curta encosta embaixo (o lado do 1, colado na mão). `margin-top: auto` e não `justify-content: flex-end`:
+   com este, o que transborda pelo topo não dá pra rolar. Quando a fila rola, a margem vira 0. */
+.p-row > :first-child { margin-top: auto; }
+.p-end { margin: 0; font: 600 13px/1.2 var(--font-ui); opacity: 0.65; text-align: center; }
+.p-strip {
+  position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 10px; text-align: left;
+  border: 2px solid var(--ink); border-radius: var(--r); background: var(--c); color: var(--ink); box-shadow: 2px 3px 0 var(--ink);
+  font: 19px/1.1 var(--font-hand); touch-action: pan-y; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+}
+.p-strip.mine { box-shadow: 2px 3px 0 var(--ink), inset 0 0 0 3px var(--paper); }
+.p-strip:focus-visible, .p-here:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.p-strip.sel { transform: translateX(6px); box-shadow: 4px 5px 0 var(--ink); }
+.p-strip.mine.sel { box-shadow: 4px 5px 0 var(--ink), inset 0 0 0 3px var(--paper); }
+.p-strip.carried { opacity: 0.35; }
+.p-strip.err { border-color: var(--pink2); }
+.p-badge { width: 30px; height: 30px; flex: none; }
+.p-clue { flex: 1; overflow-wrap: anywhere; }
+.p-num { flex: none; min-width: 40px; text-align: center; font: 700 22px/1 var(--font-ui); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px 6px 7px 5px; padding: 4px; }
+/* No fluxo, ao lado do número: posicionado fora da faixa ele era cortado pelo `overflow` da fila. */
+.p-x { flex: none; margin-left: -4px; font: 700 22px/1 var(--font-ui); color: var(--pink2); }
+.p-gap { height: 46px; border: 3px dashed var(--c); border-radius: var(--r); }
+.p-here { height: 44px; border: 2px dashed var(--ink); border-radius: var(--r); background: transparent; font: 600 15px/1 var(--font-ui); }
+.p-return { align-self: center; }
+
+/* Mão (barra de baixo) e painel da dica. A barra rola na horizontal, então nada de `touch-action: none` aqui:
+   o arrasto vem de puxar pra cima (ou segurar 220 ms) + `touchmove` com preventDefault (usePhoneDrag). */
+.p-hand { display: flex; gap: 10px; overflow-x: auto; padding: 8px; scroll-snap-type: x mandatory; }
+.p-hcard { position: relative; flex: none; scroll-snap-align: center; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.p-hcard.away { opacity: 0.45; }
+.p-hcard.sel .p-hnum { transform: translateY(-6px); box-shadow: 4px 6px 0 var(--ink); }
+.p-hnum {
+  min-width: 110px; min-height: 76px; padding: 8px 10px 6px 36px; display: flex; flex-direction: column; align-items: flex-start;
+  border: 2px solid var(--ink); border-radius: var(--r); background: var(--c); box-shadow: 2px 3px 0 var(--ink);
+  font: 700 30px/1 var(--font-ui); color: var(--ink); touch-action: pan-x; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+}
+.p-hnum:focus-visible, .p-edit:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.p-hclue { font: 16px/1.1 var(--font-hand); max-width: 160px; text-align: left; }
+.p-hbadge { position: absolute; left: 6px; top: 8px; width: 24px; height: 24px; pointer-events: none; }
+.p-edit { border: 2px dashed var(--ink); border-radius: 8px; background: var(--paper); font: 600 14px/1 var(--font-ui); padding: 6px; }
+.p-sheet-veil { position: fixed; inset: 0; z-index: 40; background: rgba(59, 47, 47, 0.35); display: flex; align-items: flex-end; padding-bottom: var(--kb, 0px); }
+.p-sheet { width: 100%; background: var(--paper); border-top: 2px solid var(--ink); border-radius: 16px 16px 0 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+.p-sheet-note { margin: 0; font: 600 14px/1.2 var(--font-ui); opacity: 0.7; }
+.p-sheet-num { margin: 0; font: 700 28px/1 var(--font-ui); }
+.p-sheet textarea { font: 22px/1.2 var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; padding: 10px; background: var(--kraft); resize: none; }
+
+/* A mesa: coluna da altura da tela. Topo e rodapé fixos; só a fila (.p-row) rola.
+   As peças do computador (.topbar, .theme, .ready-col, .theme-panel, .banner) entram no fluxo, sem `position: absolute`. */
+/* `-webkit-touch-callout: none`: no iOS, segurar uma carta não abre o balão do sistema. */
+.p-table { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* No iOS o `user-select: none` herdado trava a digitação nos campos. */
+.p-table input, .p-table textarea { -webkit-user-select: text; user-select: text; }
+.p-table .topbar { position: static; padding: 8px 10px 0; gap: 8px; }
+.p-table .topbar .logo { font-size: 22px; }
+.p-table .pills { gap: 6px; }
+.p-table .pill { font-size: 13px; padding: 6px 10px 5px; }
+.p-seats { flex: none; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 4px 8px; }
+.p-seat { display: flex; flex-direction: column; align-items: center; gap: 2px; font: 500 11px/1 var(--font-ui); max-width: 72px; }
+.p-seat .avatar { width: 30px; height: 30px; }
+.p-seat-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-seat .tag { font-size: 10px; padding: 2px 6px 1px; }
+/* Sem transform/filter/contain aqui: véu, banner e confete do resultado (dentro dela) seguem fixos na tela toda. */
+.p-mid { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* A pílula "ver resultado" fica no pé da fila (no topo cobria o logo e as pílulas da sala); a fila ganha folga pra ela. */
+.p-mid .peek-pill { position: absolute; top: auto; bottom: 10px; }
+.p-mid:has(.peek-pill) .p-row { padding-bottom: 60px; }
+.p-mid .theme { position: static; width: auto; margin: 4px 10px; padding: 6px 12px 8px; transform: none; flex: none; }
+.p-mid .theme-title { font-size: 18px; }
+.p-mid .tscale { margin-top: 4px; font-size: 16px; }
+.p-mid .p-row { flex: 1; min-height: 0; }
+.p-mid .ready-col { width: auto; padding: 12px 8px; }
+.p-mid .theme-panel { margin: 12px 10px; }
+.p-mid .theme-panel .text-in { width: 100%; }
+.p-foot { position: relative; flex: none; border-top: 2px solid var(--ink); background: var(--paper); padding-bottom: env(safe-area-inset-bottom); }
+/* Carta minha da fila arrastada sobre a barra: soltar devolve pra mão. O aviso cobre a barra sem mudar a altura dela. */
+.p-foot.p-hand-drop { background: var(--warm); }
+.p-hand-note {
+  position: absolute; inset: 6px; z-index: 2; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+  border: 3px dashed var(--ink); border-radius: var(--r); background: rgba(255, 231, 179, 0.88); color: var(--ink);
+  font: 600 18px/1.2 var(--font-ui); pointer-events: none;
+}
+.p-actions { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 6px 8px; }
+.p-actions .ready-col { flex-direction: row; flex-wrap: wrap; justify-content: center; width: auto; padding: 0; gap: 4px 10px; }
+.p-actions .ready-col .btn { padding: 10px 16px 9px; font-size: 17px; }
+.p-actions .ready-hint { font-size: 15px; }
+.p-host { display: flex; gap: 8px; justify-content: center; padding: 0 8px 6px; }
+.p-table .banner { min-width: 0; width: calc(100vw - 32px); padding: 20px 18px; }
+.p-table .b-title { font-size: 38px; }
+.p-table .b-sub { font-size: 20px; }
+
+/* Esconder a barra de baixo pra focar na fila. O botão é uma etiqueta tracejada como os outros `.sbtn`, menor. */
+.p-fold { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 7px 10px 6px; font-size: 14px; font-weight: 600; white-space: nowrap; background: var(--kraft); }
+.p-fold:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+/* Recolhida: uma alça fininha numa linha só (botão, "tô pronto" e som). A dica do pronto volta ao abrir;
+   o botão desligado já diz que falta carta na fila. */
+.p-foot.p-folded .p-actions { padding: 5px 8px; gap: 10px; }
+.p-foot.p-folded .ready-hint { display: none; }
+.p-foot.p-folded .p-actions .ready-col .btn { padding: 7px 14px 6px; font-size: 15px; }

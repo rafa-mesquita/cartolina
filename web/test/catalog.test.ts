@@ -22,4 +22,9 @@ describe('catálogo de jogos do site', () => {
     expect(catalogEntry('dixit')?.playable).toBe(true);
     expect(catalogEntry('xyz')).toBeNull();
   });
+
+  it('DITU funciona no celular; Diquisti ainda não (etapa 2)', () => {
+    expect(catalogEntry('ito')?.mobile).toBe(true);
+    expect(catalogEntry('dixit')?.mobile).toBe(false);
+  });
 });
