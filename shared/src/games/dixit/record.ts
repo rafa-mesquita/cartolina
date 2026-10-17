@@ -8,6 +8,21 @@ export interface DixitPerson {
   color: PlayerColor;
 }
 
+/** Carta da mesa com o dono. */
+export interface DixitTableEntry {
+  card: string;
+  owner: DixitPerson;
+}
+
+/** Voto de uma pessoa numa carta. */
+export interface DixitVote {
+  voter: DixitPerson;
+  card: string;
+}
+
+/** Pontos de uma pessoa na rodada: ganhos nela e placar acumulado. */
+export type DixitScore = DixitPerson & { gained: number; score: number };
+
 /** Uma rodada revelada do Diquisti, como fica gravada no histórico. */
 export interface DixitRoundRecord {
   id: string;
@@ -23,10 +38,10 @@ export interface DixitRoundRecord {
   clue: string;
   storyCard: string;
   /** Cartas da mesa, na ordem da votação, com o dono. */
-  cards: { card: string; owner: DixitPerson }[];
-  votes: { voter: DixitPerson; card: string }[];
+  cards: DixitTableEntry[];
+  votes: DixitVote[];
   /** Todos da partida depois da rodada: pontos ganhos nela e placar. */
-  scores: { name: string; color: PlayerColor; gained: number; score: number }[];
+  scores: DixitScore[];
 }
 
 /** Id da partida: muda a cada partida (`match`) e a cada sessão que sai do lobby (`runStartedAt`). */
@@ -41,7 +56,10 @@ export function dixitRevealKey(room: Room): string | null {
   return `${dixitMatchId(room, state)}|${state.round}`;
 }
 
-/** Registro a gravar se a sala do Diquisti está numa revelação ainda não gravada. */
+/**
+ * Registro a gravar se a sala do Diquisti está numa revelação ainda não gravada.
+ * Não olha `GAMES.dixit.recordsHistory`: esse portão fica em `pendingHistoryRecord`.
+ */
 export function pendingDixitRecord(room: Room, now: number, id: string): { key: string; record: DixitRoundRecord } | null {
   const state = dixitStateOf(room);
   const key = dixitRevealKey(room);
@@ -52,6 +70,7 @@ export function pendingDixitRecord(room: Room, now: number, id: string): { key: 
     return seat ? { name: seat.name, color: seat.color } : null;
   };
   const storyteller = person(result.storyteller);
+  // Defesa: o narrador sempre tem assento (assentos de quem jogou não são reaproveitados); hoje não acontece.
   if (!storyteller) return null;
   const cards = result.table.flatMap((card) => {
     const owner = person(result.owners[card]);

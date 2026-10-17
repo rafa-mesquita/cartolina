@@ -34,11 +34,25 @@ describe('pendingDixitRecord', () => {
     expect(r.storyteller).toEqual({ name: NAMES[res.storyteller], color: colorOf(res.storyteller) });
     expect(r.cards.map((c) => c.card)).toEqual(res.table);
     expect(r.cards.find((c) => c.card === res.storyCard)!.owner.name).toBe(NAMES[res.storyteller]);
+    expect(r.cards.map((c) => c.owner.name)).toEqual(res.table.map((c) => NAMES[res.owners[c]!]));
+    expect(r.cards.map((c) => c.owner.color)).toEqual(res.table.map((c) => colorOf(res.owners[c]!)));
     expect(r.votes).toHaveLength(3);
     expect(r.votes.every((v) => v.card === res.storyCard)).toBe(true);
+    expect(r.votes.map((v) => v.voter.name)).toEqual(Object.keys(res.votes).map((p) => NAMES[p]));
     expect(r.scores.map((s) => s.name)).toEqual(['Ana', 'Bia', 'Caio', 'Duda']);
     expect(r.scores.map((s) => s.score)).toEqual(ids(4).map((p) => state.scores[p]));
     expect(r.scores.map((s) => s.gained)).toEqual(ids(4).map((p) => res.gained[p]));
+  });
+
+  it('numa rodada seguinte o placar é o acumulado, não só os pontos da rodada', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const second = playToReveal(act(state, 'p0', { type: 'next' }, ctx), ctx);
+    const pending = pendingDixitRecord(roomOf(second), 1, 'r-2')!;
+    expect(pending.key).toBe('ABCD-50-1|2');
+    const { scores } = pending.record;
+    expect(scores.map((x) => x.score)).toEqual(ids(4).map((p) => second.scores[p]));
+    expect(scores.map((x) => x.gained)).toEqual(ids(4).map((p) => second.result!.gained[p] ?? 0));
+    expect(scores.some((x) => x.score !== x.gained)).toBe(true);
   });
 
   it('dica falada na call fica vazia', () => {
@@ -102,6 +116,11 @@ describe('chave da revelação e id da partida', () => {
     room = playRoom(room, 'p0', { type: 'start' }, 300);
     expect(first).toBe('ABCD-100-1');
     expect(dixitMatchId(room, dixitStateOf(room)!)).toBe('ABCD-300-1');
+  });
+
+  it('sessão sem início gravado usa 0 no id da partida', () => {
+    const room = roomOf(started(4).state, { runStartedAt: null });
+    expect(dixitMatchId(room, dixitStateOf(room)!)).toBe('ABCD-0-1');
   });
 
   it('fora da revelação não tem chave', () => {

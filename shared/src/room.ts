@@ -26,9 +26,9 @@ export interface Room {
   gameId: GameId;
   game: GameState;
   lastActivity: number;
-  /** Quando o host começou a partida (saiu do lobby); identifica a campanha do ITO. */
+  /** Quando o host começou a partida (saiu do lobby); identifica a campanha do ITO e a sessão (partida) do Diquisti. */
   runStartedAt: number | null;
-  /** Chave da última revelação do ITO já gravada no histórico (evita duplicar). */
+  /** Chave da última revelação (ITO ou Diquisti) já gravada no histórico (evita duplicar). */
   recordedRevealKey: string | null;
 }
 

@@ -159,10 +159,18 @@ export type PendingHistoryRecord =
 /** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação nova. */
 export function pendingHistoryRecord(room: Room, now: number, id: string): PendingHistoryRecord | null {
   if (!GAMES[room.gameId].recordsHistory) return null;
-  if (room.gameId === 'dixit') {
-    const pending = pendingDixitRecord(room, now, id);
-    return pending ? { game: 'dixit', ...pending } : null;
+  switch (room.gameId) {
+    case 'dixit': {
+      const pending = pendingDixitRecord(room, now, id);
+      return pending ? { game: 'dixit', ...pending } : null;
+    }
+    case 'ito': {
+      const pending = pendingRecord(room, now, id);
+      return pending ? { game: 'ito', ...pending } : null;
+    }
+    default: {
+      const _never: never = room.gameId;
+      return _never;
+    }
   }
-  const pending = pendingRecord(room, now, id);
-  return pending ? { game: 'ito', ...pending } : null;
 }
