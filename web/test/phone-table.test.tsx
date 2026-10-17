@@ -1,5 +1,5 @@
 import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi, type Mock } from 'vitest';
 import type { ItoRoomView, RoomView } from '@cartolina/shared';
 import { playSound } from '../src/brand/sounds';
 import { PHONE_LAYOUT_QUERY } from '../src/lib/device';
@@ -41,6 +41,22 @@ function conn(): Conn {
 const handCard = (id: string) => document.querySelector<HTMLButtonElement>(`.p-hnum[data-card="${id}"]`)!;
 const strip = (id: string) => document.querySelector(`.p-strip[data-card="${id}"]`);
 const heres = () => screen.getAllByRole('button', { name: /^colocar aqui/ });
+
+// jsdom antigo não tem PointerEvent: sem ele o `fireEvent` perde clientY/pointerType.
+beforeAll(() => {
+  if (typeof globalThis.PointerEvent === 'undefined') {
+    class PolyPointerEvent extends MouseEvent {
+      pointerType: string;
+      pointerId: number;
+      constructor(type: string, init: PointerEventInit = {}) {
+        super(type, init);
+        this.pointerType = init.pointerType ?? 'mouse';
+        this.pointerId = init.pointerId ?? 1;
+      }
+    }
+    (globalThis as unknown as { PointerEvent: unknown }).PointerEvent = PolyPointerEvent;
+  }
+});
 
 afterEach(() => {
   vi.mocked(playSound).mockClear();
@@ -91,6 +107,71 @@ describe('mesa do celular', () => {
     expect(strip('p0:0')).toBeTruthy();
     c.error('not_owner');
     expect(strip('p0:0')).toBeNull();
+  });
+
+  it.each(['unknown_card', 'bad_phase'])('servidor recusou (%s): a faixa pendente some', (code) => {
+    const c = conn();
+    render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={c} />);
+    fireEvent.click(handCard('p0:0'));
+    fireEvent.click(heres()[0]!);
+    expect(strip('p0:0')).toBeTruthy();
+    c.error(code);
+    expect(strip('p0:0')).toBeNull();
+  });
+
+  it('outro erro do servidor (não de posse/fase): a faixa pendente fica', () => {
+    const c = conn();
+    render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={c} />);
+    fireEvent.click(handCard('p0:0'));
+    fireEvent.click(heres()[0]!);
+    c.error('rate_limited');
+    expect(strip('p0:0')).toBeTruthy();
+  });
+
+  it('a seleção não passa pra próxima rodada (os ids das cartas se repetem)', () => {
+    const c = conn();
+    let room = sortingRoom(2);
+    const { rerender } = render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    fireEvent.click(handCard('p0:0'));
+    expect(handCard('p0:0').getAttribute('aria-pressed')).toBe('true');
+    room = act(room, 'p0', { type: 'next' });
+    expect(room.game.phase).not.toBe('sorting');
+    rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    room = act(room, 'p0', { type: 'beginRound' });
+    expect(room.game.phase).toBe('sorting');
+    rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    expect(handCard('p0:0').getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryAllByRole('button', { name: /^colocar aqui/ })).toHaveLength(0);
+  });
+
+  it('arrasto que atravessa a revelação: soltar não manda place', () => {
+    const c = conn();
+    let room = sortingRoom(2);
+    room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
+    // Fila de 0 a 400; a faixa do p1 em 0..40: soltar em y=95 põe a minha depois dela (índice 1).
+    const box = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 300, height: bottom - top, width: 300, x: 0, y: top, toJSON() {} }) as DOMRect;
+    const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this.classList.contains('p-row')) return box(0, 400);
+      if (this.getAttribute('data-card') === 'p1:0') return box(0, 40);
+      return box(500, 540);
+    });
+    try {
+      const { rerender } = render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+      fireEvent.pointerDown(strip('p0:0')!, { pointerType: 'mouse', button: 0, clientX: 0, clientY: 20 });
+      fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+      expect(c.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: { cardId: 'p0:0', index: 1 } }));
+      expect(document.querySelector('.p-gap')).toBeTruthy();
+      room = act(room, 'p0', { type: 'forceReveal' });
+      rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+      // fora da escolha, meu arrasto não abre vão nem apaga a faixa
+      expect(document.querySelector('.p-gap')).toBeNull();
+      expect(document.querySelector('.p-strip.carried')).toBeNull();
+      fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+      expect(c.sendAction).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'place' }));
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('a intenção some quando o servidor confirma', () => {

@@ -80,7 +80,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     return () => clearTimeout(t);
   }, [pending]);
 
-  // Fora da escolha não há arrasto nem painel de dica (os ids das cartas se repetem na próxima rodada).
+  // Fora da escolha não há arrasto, seleção nem painel de dica (os ids das cartas se repetem na próxima rodada).
   useEffect(() => {
     if (phase === 'sorting') return;
     if (Object.keys(remotesRef.current).length) {
@@ -88,6 +88,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
       setRemotes({});
     }
     setEditing(null);
+    setSelected(null);
   }, [phase]);
 
   useEffect(
@@ -142,7 +143,9 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   const pickable = (id: string) => canPick(view, id) && !carriedByOthers.has(id);
   const sel = selected !== null && pickable(selected) ? selected : null;
 
+  // `live` (não `phase`): um arrasto que começou na escolha e terminou depois da revelação chama o `place` mais novo.
   const place = (cardId: string, index: number) => {
+    if (live.current.game.phase !== 'sorting') return;
     // A dica que ainda está no debounce vai antes: com a carta na fila o servidor recusaria.
     sheet.current?.flush();
     setEditing(null);
@@ -153,6 +156,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     setSelected(null);
   };
   const ret = (cardId: string) => {
+    if (live.current.game.phase !== 'sorting') return;
     setPending({ kind: 'return', cardId, at: Date.now() });
     conn.sendAction({ type: 'return', cardId });
     setSelected(null);
@@ -168,8 +172,10 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   const gaps = Object.entries(remotes)
     .filter(([, r]) => r.index !== null && carriedByOthers.has(r.cardId))
     .map(([owner, r]) => ({ owner, pos: toVisibleIndex(row, serverRow, r.cardId, r.index!) }));
-  if (drag.pos !== null && view.you) gaps.push({ owner: view.you, pos: drag.pos });
-  const carried = drag.dragging ? new Set([...carriedByOthers, drag.dragging]) : carriedByOthers;
+  // Meu arrasto só conta na escolha (se a fase virou no meio dele, o `place` nem sai).
+  const sorting = phase === 'sorting';
+  if (sorting && drag.pos !== null && view.you) gaps.push({ owner: view.you, pos: drag.pos });
+  const carried = sorting && drag.dragging ? new Set([...carriedByOthers, drag.dragging]) : carriedByOthers;
   // Carta minha que outra pessoa está carregando continua "na mesa" pra mão.
   const handRow = carriedByOthers.size ? [...row, ...carriedByOthers] : row;
   const snap: EngineSnapshot = { row, inFlight: carriedByOthers, dragging: drag.dragging, revealing: phase === 'reveal' && !reveal.done };
@@ -225,6 +231,8 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
             listRef={rowBox}
           />
         )}
+        {/* Aqui dentro (e não no fim da mesa): a pílula "ver resultado" fica no pé da fila, sem cobrir o topo. */}
+        {phase === 'reveal' && reveal.done && <ResultBanner view={view} conn={conn} />}
       </div>
 
       <div className="p-foot">
@@ -263,7 +271,6 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
       {editing && view.game.cards[editing] && (
         <ClueSheet key={editing} ref={sheet} view={view} cardId={editing} conn={conn} onClose={() => setEditing(null)} />
       )}
-      {phase === 'reveal' && reveal.done && <ResultBanner view={view} conn={conn} />}
     </div>
   );
 }

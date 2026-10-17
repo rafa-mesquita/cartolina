@@ -166,6 +166,8 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     cancelAnimationFrame(s.raf);
     if (!s.active) return;
     const { conn, serverRow, onDrop } = live.current;
+    // `place` antes do cursor sem arrasto (igual ao computador): quem olha não vê a carta voltar por uma ida e volta.
+    if (drop && s.index !== null) onDrop(s.cardId, s.index);
     conn.sendCursor({ ...deskCursor(serverRow, s.cardId, s.index ?? currentIndex(serverRow, s.cardId)), drag: null });
     conn.sendActivity('thinking');
     setDragging(null);
@@ -179,7 +181,6 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
       window.removeEventListener('click', swallow, true);
       dropClickGuard = null;
     };
-    if (drop && s.index !== null) onDrop(s.cardId, s.index);
   }
 
   const onPointerDown = (e: ReactPointerEvent, cardId: string) => {

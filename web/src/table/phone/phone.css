@@ -15,7 +15,8 @@
 .p-badge { width: 30px; height: 30px; flex: none; }
 .p-clue { flex: 1; overflow-wrap: anywhere; }
 .p-num { flex: none; min-width: 40px; text-align: center; font: 700 22px/1 var(--font-ui); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px 6px 7px 5px; padding: 4px; }
-.p-x { position: absolute; right: -6px; top: -8px; font: 700 22px/1 var(--font-ui); color: var(--pink2); }
+/* No fluxo, ao lado do número: posicionado fora da faixa ele era cortado pelo `overflow` da fila. */
+.p-x { flex: none; margin-left: -4px; font: 700 22px/1 var(--font-ui); color: var(--pink2); }
 .p-gap { height: 46px; border: 3px dashed var(--c); border-radius: var(--r); }
 .p-here { height: 44px; border: 2px dashed var(--ink); border-radius: var(--r); background: transparent; font: 600 15px/1 var(--font-ui); }
 .p-return { align-self: center; }
@@ -43,7 +44,9 @@
 
 /* A mesa: coluna da altura da tela. Topo e rodapé fixos; só a fila (.p-row) rola.
    As peças do computador (.topbar, .theme, .ready-col, .theme-panel, .banner) entram no fluxo, sem `position: absolute`. */
-.p-table { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; -webkit-user-select: none; user-select: none; }
+.p-table { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; -webkit-user-select: none; user-select: none; }
+/* No iOS o `user-select: none` herdado trava a digitação nos campos. */
+.p-table input, .p-table textarea { -webkit-user-select: text; user-select: text; }
 .p-table .topbar { position: static; padding: 8px 10px 0; gap: 8px; }
 .p-table .topbar .logo { font-size: 22px; }
 .p-table .pills { gap: 6px; }
@@ -53,7 +56,11 @@
 .p-seat .avatar { width: 30px; height: 30px; }
 .p-seat-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-seat .tag { font-size: 10px; padding: 2px 6px 1px; }
-.p-mid { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Sem transform/filter/contain aqui: véu, banner e confete do resultado (dentro dela) seguem fixos na tela toda. */
+.p-mid { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* A pílula "ver resultado" fica no pé da fila (no topo cobria o logo e as pílulas da sala); a fila ganha folga pra ela. */
+.p-mid .peek-pill { position: absolute; top: auto; bottom: 10px; }
+.p-mid:has(.peek-pill) .p-row { padding-bottom: 60px; }
 .p-mid .theme { position: static; width: auto; margin: 4px 10px; padding: 6px 12px 8px; transform: none; flex: none; }
 .p-mid .theme-title { font-size: 18px; }
 .p-mid .tscale { margin-top: 4px; font-size: 16px; }

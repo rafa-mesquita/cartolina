@@ -97,6 +97,17 @@ describe('arrastar no celular', () => {
     expect(state()).toBe('-|-');
   });
 
+  it('ao soltar, o place vai antes do cursor sem arrasto (igual ao computador: a carta não volta por um instante)', () => {
+    const conn = mkConn();
+    const order: string[] = [];
+    conn.sendCursor.mockImplementation((c) => void order.push(c.drag ? 'cursor' : 'cursor:null'));
+    render(<Harness conn={conn} onDrop={() => order.push('drop')} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    expect(order.slice(-2)).toEqual(['drop', 'cursor:null']);
+  });
+
   it('toque segurado 220 ms vira arrasto', () => {
     vi.useFakeTimers();
     const conn = mkConn();
