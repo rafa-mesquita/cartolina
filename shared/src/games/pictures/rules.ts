@@ -117,8 +117,9 @@ function toReveal(state: PicturesState): PicturesState {
  * Pausa, contagem e fechamento da montagem/palpite. Roda depois de "pronto"/"confirmar" e a cada `tick` da sala
  * (presença e alarme no fim da contagem). Devolve o MESMO objeto quando nada muda (o servidor compara referência).
  */
-export function settlePictures(state: PicturesState, ctx: GameContext): PicturesState {
-  if (state.phase !== 'building' && state.phase !== 'guessing') return state;
+export function settlePictures(input: PicturesState, ctx: GameContext): PicturesState {
+  if (input.phase !== 'building' && input.phase !== 'guessing') return input;
+  const state = input.phase === 'building' ? admitReturners(input, ctx) : input;
   const people = here(state, ctx);
   if (people.length < PICTURES_MIN_PLAYERS) {
     return state.paused && state.countdownEndsAt === null ? state : { ...state, paused: true, countdownEndsAt: null };
@@ -127,11 +128,33 @@ export function settlePictures(state: PicturesState, ctx: GameContext): Pictures
   const done = resumed.phase === 'building' ? resumed.ready : resumed.confirmed;
   const doneHere = people.filter((p) => done.includes(p)).length;
   const timeUp = resumed.countdownEndsAt !== null && ctx.now >= resumed.countdownEndsAt;
-  if (doneHere === people.length || timeUp) return resumed.phase === 'building' ? toGuessing(resumed) : toReveal(resumed);
+  if (doneHere === people.length || timeUp) {
+    if (resumed.phase === 'guessing') return toReveal(resumed);
+    // Ninguém montou nada: não há o que palpitar, vai direto pra revelação (vazia).
+    return Object.keys(resumed.works).length === 0 ? toReveal(resumed) : toGuessing(resumed);
+  }
   if (resumed.countdownEndsAt === null && doneHere >= Math.ceil(people.length / 2)) {
     return { ...resumed, countdownEndsAt: ctx.now + PICTURES_COUNTDOWN_MS };
   }
   return resumed;
+}
+
+/**
+ * Na montagem, quem é da partida, está ativo e ficou de fora da rodada entra nela: ganha ficha e o kit do seu assento
+ * (os kits de quem já estava não mudam). Sem ninguém assim, devolve o mesmo objeto.
+ */
+function admitReturners(state: PicturesState, ctx: GameContext): PicturesState {
+  const returners = state.players.filter((p) => ctx.active.includes(p) && !state.inRound.includes(p));
+  if (returners.length === 0) return state;
+  const inRound = state.players.filter((p) => state.inRound.includes(p) || returners.includes(p));
+  const drawn = drawSecrets(ctx.rng, state.bag, returners);
+  return {
+    ...state,
+    inRound,
+    secrets: { ...state.secrets, ...drawn.secrets },
+    bag: drawn.bag,
+    kits: kitsForRound(state.players, inRound, state.round),
+  };
 }
 
 /** Depois da revelação: fim de jogo na 6ª rodada, senão a próxima montagem. */
@@ -203,11 +226,13 @@ export function applyPicturesAction(
     case 'hurry':
       if (!isHost) return fail('not_host');
       if (state.phase !== 'building' && state.phase !== 'guessing') return fail('bad_phase');
+      if (state.paused) return fail('paused');
       if (state.countdownEndsAt !== null) return ok(state);
       return ok({ ...state, countdownEndsAt: ctx.now + PICTURES_COUNTDOWN_MS });
     case 'next':
       if (!isHost) return fail('not_host');
       if (state.phase !== 'reveal') return fail('bad_phase');
+      if (state.players.filter((p) => ctx.active.includes(p)).length < PICTURES_MIN_PLAYERS) return fail('need_3_players');
       return ok(afterReveal(state, ctx));
     case 'again':
       if (!isHost) return fail('not_host');

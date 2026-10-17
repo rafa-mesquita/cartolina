@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyPicturesAction, initialPicturesState, settlePictures } from '../src/games/pictures/rules';
+import { kitFor } from '../src/games/pictures/rotation';
 import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
 import {
   T0,
@@ -283,5 +284,95 @@ describe('Retratim: presença', () => {
     expect(s.inRound).toEqual(ids(3));
     expect(s.kits.p3).toBeUndefined();
     expect(applyPicturesAction(s, 'p3', { type: 'draft', work: sampleWork('cubes') }, ctxOf(ids(4)))).toEqual({ ok: false, error: 'not_player' });
+  });
+});
+
+describe('Retratim: mesa pequena não trava', () => {
+  it('próxima rodada com menos de 3 da partida ativos é recusada', () => {
+    const { state, ctx } = started(3);
+    const rev = toRevealPhase(toGuessingPhase(state, ctx), ctx, rightGuess);
+    expect(applyPicturesAction(rev, 'p0', { type: 'next' }, ctxOf(['p0', 'p1']))).toEqual({ ok: false, error: 'need_3_players' });
+  });
+
+  it('quem volta na montagem entra na rodada com ficha e o kit do assento; os outros não mudam', () => {
+    const { state, ctx } = started(4);
+    const rev = toRevealPhase(toGuessingPhase(state, ctx), ctx, rightGuess);
+    const n = act(rev, 'p0', { type: 'next' }, ctxOf(['p0', 'p1', 'p2']));
+    expect(n.inRound).toEqual(['p0', 'p1', 'p2']);
+    expect(n.secrets.p3).toBeUndefined();
+    const back = settlePictures(deepFreeze(n), ctxOf(ids(4)));
+    expect(back.inRound).toEqual(ids(4));
+    expect(back.secrets.p3).toBeDefined();
+    expect(back.bag).toHaveLength(n.bag.length - 1);
+    expect(back.kits.p3).toBe(kitFor(3, 1));
+    for (const p of ['p0', 'p1', 'p2']) expect(back.kits[p]).toBe(n.kits[p]);
+    expect(back.secrets.p0).toBe(n.secrets.p0);
+    // Depois de entrar, sem mudança nenhuma: o mesmo objeto.
+    expect(settlePictures(deepFreeze(back), ctxOf(ids(4)))).toBe(back);
+  });
+
+  it('rodada que nasceu pausada (só 2 na rodada) sai da pausa quando alguém da partida volta', () => {
+    const { state } = started(4);
+    const small: PicturesState = deepFreeze({
+      ...state,
+      inRound: ['p0', 'p1'],
+      secrets: { p0: state.secrets.p0!, p1: state.secrets.p1! },
+      kits: { p0: state.kits.p0!, p1: state.kits.p1! },
+      paused: true,
+    });
+    const back = settlePictures(small, ctxOf(ids(4)));
+    expect(back.paused).toBe(false);
+    expect(back.inRound).toEqual(ids(4));
+  });
+
+  it('no palpite, quem volta não entra na rodada', () => {
+    const { state, ctx } = started(4);
+    const rev = toRevealPhase(toGuessingPhase(state, ctx), ctx, rightGuess);
+    const next = act(rev, 'p0', { type: 'next' }, ctxOf(['p0', 'p1', 'p2']));
+    const g = toGuessingPhase(next, ctxOf(['p0', 'p1', 'p2']));
+    expect(g.phase).toBe('guessing');
+    expect(settlePictures(g, ctxOf(ids(4)))).toBe(g);
+  });
+
+  it('apressar com a mesa pausada é recusado', () => {
+    const { state, ctx } = started(4);
+    const paused = settlePictures(state, ctxOf(['p0', 'p1']));
+    expect(paused.paused).toBe(true);
+    expect(applyPicturesAction(paused, 'p0', { type: 'hurry' }, ctx)).toEqual({ ok: false, error: 'paused' });
+  });
+
+  it('ninguém montou nada: o tempo acaba e vai direto pra revelação vazia', () => {
+    const { state, ctx } = started(4);
+    const s = act(state, 'p0', { type: 'hurry' }, ctx);
+    const end = settlePictures(s, ctxOf(ids(4), { now: T0 + PICTURES_COUNTDOWN_MS }));
+    expect(end.phase).toBe('reveal');
+    expect(end.result!.order).toEqual([]);
+    expect(end.scores).toEqual({ p0: 0, p1: 0, p2: 0, p3: 0 });
+  });
+});
+
+describe('Retratim: contagem e pausa (casos extras)', () => {
+  it('com 6, a contagem pede 3 prontos', () => {
+    const { state, ctx } = started(6);
+    let s = drafted(state, ['p0', 'p1', 'p2'], ctx);
+    s = act(s, 'p0', { type: 'ready', on: true }, ctx);
+    s = act(s, 'p1', { type: 'ready', on: true }, ctx);
+    expect(s.countdownEndsAt).toBeNull();
+    s = act(s, 'p2', { type: 'ready', on: true }, ctx);
+    expect(s.countdownEndsAt).toBe(T0 + PICTURES_COUNTDOWN_MS);
+  });
+
+  it('no palpite, menos de 3 ativos pausa e cancela a contagem', () => {
+    const { state, ctx } = started(4);
+    const g = act(toGuessingPhase(state, ctx), 'p0', { type: 'hurry' }, ctx);
+    expect(g.countdownEndsAt).not.toBeNull();
+    const paused = settlePictures(g, ctxOf(['p0', 'p1']));
+    expect(paused).toMatchObject({ phase: 'guessing', paused: true, countdownEndsAt: null });
+  });
+
+  it('no palpite com a contagem correndo e nada mudando: o mesmo objeto', () => {
+    const { state, ctx } = started(4);
+    const g = act(toGuessingPhase(state, ctx), 'p0', { type: 'hurry' }, ctx);
+    expect(settlePictures(deepFreeze(g), ctx)).toBe(g);
   });
 });
