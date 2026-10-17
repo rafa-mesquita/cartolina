@@ -3,6 +3,7 @@ import { MAX_PLAYERS } from '@cartolina/shared';
 import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
 import { addDixitBot, dixitBotsIn, dixitBotsVersion, removeAllDixitBots, subscribeDixitBots } from './dixitBots';
+import { addPicturesBot, picturesBotsIn, picturesBotsVersion, removeAllPicturesBots, subscribePicturesBots } from './picturesBots';
 
 type GameKey = 'ito' | 'dixit' | 'pictures';
 interface Api {
@@ -13,10 +14,11 @@ interface Api {
   removeAll: () => void;
 }
 
-/** Cada jogo tem o seu registro de bots; o componente só escolhe qual usar. O Retratim ainda não tem entrada (Task 10). */
+/** Cada jogo tem o seu registro de bots; o componente só escolhe qual usar. */
 const API: Partial<Record<GameKey, Api>> = {
   ito: { subscribe: subscribeBots, version: botsVersion, count: (code: string) => botsIn(code).length, add: (code: string) => void addBot(code), removeAll: removeAllBots },
   dixit: { subscribe: subscribeDixitBots, version: dixitBotsVersion, count: dixitBotsIn, add: addDixitBot, removeAll: removeAllDixitBots },
+  pictures: { subscribe: subscribePicturesBots, version: picturesBotsVersion, count: picturesBotsIn, add: addPicturesBot, removeAll: removeAllPicturesBots },
 };
 
 /** Jogo sem entrada em `API` não mostra nada. */
