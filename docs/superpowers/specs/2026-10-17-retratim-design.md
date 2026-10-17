@@ -318,7 +318,8 @@ Os números mínimos são ponto de partida.
 
 1. **Lote de teste das fotos** (pode correr em paralelo com o resto).
 2. **Protótipo** (`prototipo/retratim/`) com os 6 kits, galeria e revelação.
-3. **Plano R1 — regras e base:** módulo em `shared/`, prazo do jogo na sala,
+3. **Plano R1 — regras e base** (feito,
+   `docs/superpowers/plans/2026-10-17-plano-r1-retratim-regras.md`): módulo em `shared/`, prazo do jogo na sala,
    servidor aceitando `pictures`.
 4. **Plano R2 — mesa no site:** kits (montar/mostrar), telas, sons, bots,
    catálogo jogável, E2E.
