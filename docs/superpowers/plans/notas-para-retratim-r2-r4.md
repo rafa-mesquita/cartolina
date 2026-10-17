@@ -28,6 +28,14 @@ Saíram das revisões do Plano R1 (2026-10-17). Ler antes de escrever cada plano
   decidir o que vira "mexendo…" e "palpitando…".
 - **Bots:** gerar obras válidas como o `sampleWork` dos testes.
 - **Capa:** criar `.cover-pictures` em `web/src/screens/shelf.css`.
+- **Do protótipo (`prototipo/retratim/`, 2026-10-17):** os kits de lá são a
+  referência (contrato `build(el, work, onChange)` / `show(el, work)`).
+  `kits/icons.js` mede o vão entre cartas pelo contêiner: quem chama o `show`
+  precisa dar um contêiner (a galeria fez isso). O `show` de blocos usa um
+  renderer compartilhado + `toDataURL` (um contexto WebGL só); o `destroy` da
+  montagem faz `forceContextLoss()`. Divisor da bancada e zoom das fotos são
+  pedidos do usuário (spec §5 / plano do protótipo, Task 2b). A lista dos 19
+  ícones (`window.ICON_NAMES`) deve ir pro `shared`.
 - **Tela vazia:** `web/src/screens/Game.tsx` devolve `null` pra sala
   `pictures`; a mesa do R2 substitui.
 
