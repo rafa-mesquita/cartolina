@@ -25,15 +25,26 @@ function SoundButton() {
   );
 }
 
+/** Um adesivo "+n" saindo do selinho (revelação). */
+export interface SealPlus {
+  id: string;
+  player: string;
+  n: number;
+}
+
 interface Props {
   view: PicturesRoomView;
   serverOffset: number;
   host: boolean;
   onHurry: () => void;
+  /** Placar mostrado nos selinhos (na revelação, o que já subiu); sem ele, o da visão. */
+  scores?: Readonly<Record<string, number>>;
+  /** Adesivos "+n" da obra que está sendo revelada. */
+  plus?: readonly SealPlus[];
 }
 
 /** Logo, rodada e kit, selinhos de quem joga, relógio da contagem, som e "apressar" (só do host). */
-export function TopBar({ view, serverOffset, host, onHurry }: Props) {
+export function TopBar({ view, serverOffset, host, onHurry, scores, plus = [] }: Props) {
   const g = view.game, me = view.you;
   const left = useCountdown(g.paused ? null : g.countdownEndsAt, serverOffset);
   const myKit = me !== null ? g.kits[me] : undefined;
@@ -58,9 +69,10 @@ export function TopBar({ view, serverOffset, host, onHurry }: Props) {
         {g.players.map((p) => {
           const seat = view.seats.find((s) => s.id === p);
           if (!seat) return null;
-          const label = seatLabel(g, seat) || pts(g.scores[p] ?? 0);
+          const label = seatLabel(g, seat) || pts((scores ?? g.scores)[p] ?? 0);
+          const mine = plus.filter((x) => x.player === p);
           return (
-            <div key={p} className={`pc-seal${p === me ? ' me' : ''}`} data-p={p}>
+            <div key={p} className={`pc-seal${p === me ? ' me' : ''}${mine.length ? ' bump' : ''}`} data-p={p}>
               <span className="cr">
                 <Critter color={seat.color} />
               </span>
@@ -68,6 +80,11 @@ export function TopBar({ view, serverOffset, host, onHurry }: Props) {
                 <span className="nm">{seat.name}</span>
                 <span className={`stt${label.endsWith('✓') ? ' ok' : ''}`}>{label}</span>
               </span>
+              {mine.map((x) => (
+                <span key={x.id} className="pc-plus" aria-hidden="true">
+                  +{x.n}
+                </span>
+              ))}
             </div>
           );
         })}

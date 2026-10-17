@@ -5,9 +5,12 @@ import { PicturesTable } from '../src/games/pictures/PicturesTable';
 import { randomWork } from '../src/games/pictures/random';
 import { KIT_NAMES } from '../src/games/pictures/status';
 import type { GameConn } from '../src/net/connection';
-import { guessing, picturesView, play, revealed, started, stateOf } from './pictures-fixtures';
+import { COORDS, type PicturesRoomView } from '@cartolina/shared';
+import { confetti } from '../src/table/confetti';
+import { finished, guessing, lastReveal, picturesView, play, revealed, started, stateOf } from './pictures-fixtures';
 
 vi.mock('../src/brand/sounds', () => ({ playSound: vi.fn() }));
+vi.mock('../src/table/confetti', () => ({ confetti: vi.fn(() => () => {}) }));
 // Os blocos carregam o three.js sob demanda: aqui não precisa (ninguém monta blocos na rodada 0 com 3).
 vi.mock('../src/games/pictures/kits/blocks', () => ({ blocks: { build: () => ({ destroy() {} }), show() {} } }));
 
@@ -346,9 +349,9 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(container.querySelector('.pc-gal-foot .hint')!.textContent).toBe('todas as obras com palpite');
   });
 
-  it('todos confirmaram: a mesa passa pra revelação (ainda o aviso da fase)', () => {
+  it('todos confirmaram: a mesa passa pra revelação', () => {
     render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
-    expect(screen.getByText('revelação')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'pular ›' })).toBeTruthy();
     expect(screen.queryByText('de quem é qual foto?')).toBeNull();
   });
 });
@@ -460,5 +463,190 @@ describe('mesa do Retratim: foco e teclado', () => {
     expect(root.classList.contains('pc-resizing')).toBe(true);
     rerender(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={conn()} serverOffset={0} />);
     expect(root.classList.contains('pc-resizing')).toBe(false);
+  });
+});
+
+describe('mesa do Retratim: revelação narrada', () => {
+  const tick = (ms: number) => rtlAct(() => vi.advanceTimersByTime(ms));
+  const seal = (c: HTMLElement, p: string) => c.querySelector(`.pc-seal[data-p="${p}"] .stt`)!.textContent;
+  const caption = (c: HTMLElement) => c.querySelector('.pc-rv-t')!.textContent;
+
+  it('passo a passo: a obra cresce, as fitinhas, a foto sai da grade, ✓ e os pontos sobem nos selinhos', () => {
+    const room = revealed(3);
+    const r = stateOf(room).result!;
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+    // os selinhos começam no placar de antes da rodada (não o final)
+    expect(seal(container, 'p0')).toBe('0 pts');
+    expect(container.querySelectorAll('.pc-grid .pc-photo')).toHaveLength(16);
+    tick(350);
+    expect(r.order[0]).toBe('p0');
+    expect(caption(container)).toBe(`a sua obra · ${KIT_NAMES[r.kits.p0!]}`);
+    expect(container.querySelector('.pc-rv-n')!.textContent).toBe('obra 1 de 3');
+    expect(container.querySelector('.pc-rv-work .pc-wsheet')).toBeTruthy();
+    tick(900);
+    expect(caption(container)).toBe('os palpites…');
+    expect(container.querySelectorAll('.pc-rv-g')).toHaveLength(1);
+    tick(400);
+    expect([...container.querySelectorAll('.pc-rv-g .pc-rv-tape')].map((e) => e.textContent)).toEqual([r.guesses.p1!.p0, r.guesses.p2!.p0]);
+    tick(850);
+    const secret = r.secrets.p0!;
+    expect(caption(container)).toBe(`a foto era a ${secret}!`);
+    expect(container.querySelector(`.pc-photo[data-coord="${secret}"]`)!.classList.contains('lifted')).toBe(true);
+    expect(container.querySelector('.pc-rv-slot')!.classList.contains('on')).toBe(true); // sem animação no jsdom: pousa na hora
+    expect(container.querySelector('.pc-rv-co')!.textContent).toBe(`era a${secret}`);
+    tick(1200);
+    expect(caption(container)).toBe('P1 e P2 acertaram');
+    expect(container.querySelectorAll('.pc-rv-g.ok')).toHaveLength(2);
+    expect(container.querySelectorAll('.pc-rv-g .tick')).toHaveLength(2);
+    expect(seal(container, 'p0')).toBe('0 pts');
+    tick(800);
+    expect(caption(container)).toBe('+2 pra você · +1 pra P1 · +1 pra P2');
+    expect(seal(container, 'p0')).toBe('2 pts');
+    expect(container.querySelector('.pc-seal[data-p="p0"] .pc-plus')!.textContent).toBe('+2');
+    tick(500);
+    expect(seal(container, 'p1')).toBe('1 pt');
+    expect(seal(container, 'p2')).toBe('1 pt');
+    // a próxima obra: a anterior volta pra grade com o bichinho do artista
+    tick(1400);
+    expect(container.querySelector('.pc-rv-n')!.textContent).toBe('obra 2 de 3');
+    expect(caption(container)).toBe('a obra de P1 · ' + KIT_NAMES[r.kits.p1!]);
+    expect(container.querySelector(`.pc-photo[data-coord="${secret}"]`)!.classList.contains('lifted')).toBe(false);
+    expect(container.querySelector(`.pc-photo[data-coord="${secret}"] .pc-used`)).toBeTruthy();
+    expect(container.querySelectorAll('.pc-rv-g')).toHaveLength(0);
+  });
+
+  it('palpite errado fica cinza; sem palpite vira fitinha vazia; ninguém pontua', () => {
+    let room = guessing(3);
+    const st = stateOf(room);
+    const wrong = COORDS.find((c) => c !== st.secrets.p0)!;
+    room = play(room, 'p1', { type: 'guess', artist: 'p0', coord: wrong });
+    for (const p of ['p0', 'p1', 'p2']) room = play(room, p, { type: 'confirm' });
+    const { container } = render(<PicturesTable view={picturesView(room, 'p1')} conn={conn()} serverOffset={0} />);
+    tick(2450);
+    expect([...container.querySelectorAll('.pc-rv-tape')].map((e) => e.textContent)).toEqual([wrong, 'sem palpite']);
+    expect(container.querySelector('.pc-rv-tape.none')).toBeTruthy();
+    tick(1200);
+    expect(caption(container)).toBe('ninguém acertou');
+    expect(container.querySelectorAll('.pc-rv-g.no')).toHaveLength(2);
+    expect(container.querySelector('.pc-rv-g .tick')).toBeNull();
+    tick(800);
+    expect(caption(container)).toBe('ninguém pontua com esta obra');
+  });
+
+  it('um re-render com a mesma rodada não recomeça a revelação', () => {
+    const room = revealed(3);
+    const c = conn();
+    const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    tick(2450);
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    tick(100);
+    expect(caption(container)).toMatch(/^a foto era a /);
+  });
+
+  it('pular leva ao placar com os totais da visão; o host vê "próxima rodada" e manda next', () => {
+    const c = conn();
+    const room = revealed(3);
+    const g = picturesView(room, 'p0').game;
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    tick(600);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    expect(screen.getByRole('heading', { name: 'placar da rodada 1' })).toBeTruthy();
+    expect(container.querySelector('.pc-rv-board .sum')!.textContent).toBe('3 obras · 6 acertos');
+    for (const p of g.players) {
+      const row = container.querySelector(`.pc-board-row[data-p="${p}"]`)!;
+      expect(row.querySelector('.tot')!.textContent).toBe(`${g.scores[p]}pts`);
+      expect(row.querySelector('.g')!.textContent).toBe(`+${g.result!.gained[p]}`);
+      expect(seal(container, p)).toBe(`${g.scores[p]} pts`);
+    }
+    // todas as fotos reveladas marcadas na grade
+    expect(container.querySelectorAll('.pc-grid .pc-used > span').length).toBe(3);
+    expect(screen.queryByText('esperando o host…')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'próxima rodada' }));
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'next' });
+  });
+
+  it('quem não é host vê "esperando o host…" (sem botão)', () => {
+    render(<PicturesTable view={picturesView(revealed(3), 'p1')} conn={conn()} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    expect(screen.getByText('esperando o host…')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'próxima rodada' })).toBeNull();
+  });
+
+  it('o placar chega sozinho no fim da linha do tempo; a próxima rodada abre a montagem', () => {
+    const c = conn();
+    const room = revealed(3);
+    const { rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    tick(20_000);
+    expect(screen.getByRole('heading', { name: 'placar da rodada 1' })).toBeTruthy();
+    rerender(<PicturesTable view={picturesView(play(room, 'p0', { type: 'next' }), 'p0')} conn={c} serverOffset={0} />);
+    expect(screen.getByRole('button', { name: 'estou pronto' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'pular ›' })).toBeNull();
+  });
+
+  it('ninguém montou nada: o aviso e depois o placar "ninguém montou nada nesta rodada"', () => {
+    const v = picturesView(revealed(3), 'p0');
+    const r = v.game.result!;
+    const zero = { p0: 0, p1: 0, p2: 0 };
+    const empty: PicturesRoomView = { ...v, game: { ...v.game, scores: zero, result: { ...r, order: [], works: {}, guesses: {}, correct: {}, gained: zero } } };
+    const { container } = render(<PicturesTable view={empty} conn={conn()} serverOffset={0} />);
+    expect(screen.getByText(/Ninguém montou nada nesta rodada, então não tem obra pra revelar/)).toBeTruthy();
+    tick(2500);
+    expect(container.querySelector('.pc-rv-board .sum')!.textContent).toBe('ninguém montou nada nesta rodada');
+  });
+
+  it('na última rodada o host vê "ver o fim do jogo"', () => {
+    render(<PicturesTable view={picturesView(lastReveal(3), 'p0')} conn={conn()} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    expect(screen.getByRole('heading', { name: 'placar da rodada 6' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'ver o fim do jogo' })).toBeTruthy();
+  });
+});
+
+describe('mesa do Retratim: fim de jogo', () => {
+  const over = (scores: Record<string, number>, winners: string[], viewer: string): PicturesRoomView => {
+    const v = picturesView(finished(3), viewer);
+    return { ...v, game: { ...v.game, scores, winners } };
+  };
+  const rows = (c: HTMLElement) => [...c.querySelectorAll('.pc-fin-row')].map((r) => `${r.querySelector('.pos')!.textContent} ${r.querySelector('.nm')!.textContent} ${r.querySelector('.pts')!.textContent}`);
+
+  it('empate geral: "empate!", todo mundo em 1º com estrelinha; o host joga de novo ou volta pro lobby', () => {
+    const c = conn();
+    const v = picturesView(finished(3), 'p0');
+    expect(v.game.phase).toBe('gameover');
+    const { container } = render(<PicturesTable view={v} conn={c} serverOffset={0} />);
+    expect(screen.getByRole('heading', { name: 'fim de jogo' })).toBeTruthy();
+    expect(container.querySelector('.pc-fin .sub')!.textContent).toBe('empate! você, P1 e P2 dividem o álbum');
+    expect(container.querySelectorAll('.pc-fin-row .pos')).toHaveLength(3);
+    expect([...container.querySelectorAll('.pc-fin-row .pos')].every((e) => e.textContent === '1º')).toBe(true);
+    expect(container.querySelectorAll('.pc-fin-row .star')).toHaveLength(3);
+    expect(container.querySelector('.pc-grid')).toBeNull(); // no fim a grade some
+    fireEvent.click(screen.getByRole('button', { name: 'jogar de novo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'voltar pro lobby' }));
+    expect(c.sendAction.mock.calls.map(([a]) => a)).toEqual([{ type: 'again' }, { type: 'lobby' }]);
+    // abriu a mesa já no fim: sem confete
+    expect(vi.mocked(confetti)).not.toHaveBeenCalled();
+  });
+
+  it('empate dividindo o 1º (1º, 1º, 3º) e quem não é host espera', () => {
+    const { container } = render(<PicturesTable view={over({ p0: 10, p1: 7, p2: 10 }, ['p0', 'p2'], 'p1')} conn={conn()} serverOffset={0} />);
+    expect(rows(container)).toEqual(['1º P0 10pts', '1º P2 10pts', '3º você 7pts']);
+    expect(container.querySelector('.pc-fin .sub')!.textContent).toBe('empate! P0 e P2 dividem o álbum');
+    expect(container.querySelectorAll('.pc-fin-row.win')).toHaveLength(2);
+    expect(screen.getByText('esperando o host…')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'jogar de novo' })).toBeNull();
+  });
+
+  it('um vencedor: "você venceu!" e o 2º dividido', () => {
+    const { container } = render(<PicturesTable view={over({ p0: 12, p1: 1, p2: 1 }, ['p0'], 'p0')} conn={conn()} serverOffset={0} />);
+    expect(container.querySelector('.pc-fin .sub')!.textContent).toBe('você venceu!');
+    expect(rows(container)).toEqual(['1º você 12pts', '2º P1 1pt', '2º P2 1pt']);
+  });
+
+  it('da revelação pro fim: confete de papel uma vez', () => {
+    const c = conn();
+    const { rerender } = render(<PicturesTable view={picturesView(lastReveal(3), 'p0')} conn={c} serverOffset={0} />);
+    rerender(<PicturesTable view={picturesView(finished(3), 'p0')} conn={c} serverOffset={0} />);
+    expect(vi.mocked(confetti)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(confetti).mock.calls[0]![1]).toContain('#2f5aa8');
   });
 });

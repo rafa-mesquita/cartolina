@@ -1,4 +1,5 @@
 import {
+  PICTURES_ROUNDS,
   PLAYER_COLORS,
   createRoom,
   isPicturesRoomView,
@@ -65,3 +66,29 @@ export function revealed(n = 3): Room {
   }
   return room;
 }
+
+/** Da revelação: todos prontos com obra aleatória, todos acertam tudo e confirmam (a rodada seguinte já revelada). */
+function playRound(room: Room): Room {
+  for (const p of stateOf(room).inRound) {
+    room = play(room, p, { type: 'ready', on: true, work: randomWork(stateOf(room).kits[p]!) });
+  }
+  const st = stateOf(room);
+  for (const p of st.inRound) {
+    for (const artist of st.inRound) {
+      if (artist === p || !Object.hasOwn(st.works, artist)) continue;
+      room = play(room, p, { type: 'guess', artist, coord: st.secrets[artist]! });
+    }
+    room = play(room, p, { type: 'confirm' });
+  }
+  return room;
+}
+
+/** A última rodada (6ª) revelada: o próximo "next" do host leva ao fim de jogo. */
+export function lastReveal(n = 3): Room {
+  let room = revealed(n);
+  while (stateOf(room).round + 1 < PICTURES_ROUNDS) room = playRound(play(room, 'p0', { type: 'next' }));
+  return room;
+}
+
+/** Fim de jogo (todos acertaram tudo: empate geral). */
+export const finished = (n = 3): Room => play(lastReveal(n), 'p0', { type: 'next' });

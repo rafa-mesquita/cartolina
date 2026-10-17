@@ -28,10 +28,12 @@ interface Props {
   picked?: Coord | null;
   /** Galeria: bichinhos das obras em que você colou cada foto. */
   marks?: Partial<Record<Coord, readonly PhotoMark[]>>;
+  /** Revelação: a foto que saiu da grade (fica o lugar vazio até a próxima obra). */
+  lifted?: Coord | null;
 }
 
 /** A grade 4×4 com as letras A–D em cima e os números 1–4 do lado. */
-export function PhotoGrid({ grid, secret, onPhoto, onZoom, zoomCursor = false, pickable = false, picked = null, marks }: Props) {
+export function PhotoGrid({ grid, secret, onPhoto, onZoom, zoomCursor = false, pickable = false, picked = null, marks, lifted = null }: Props) {
   return (
     <div className={`pc-grid${zoomCursor ? ' zoomable' : ''}${pickable ? ' pickable' : ''}`}>
       <span />
@@ -45,7 +47,7 @@ export function PhotoGrid({ grid, secret, onPhoto, onZoom, zoomCursor = false, p
           <span className="pc-lbl">{row + 1}</span>
           {COLS.map((_, col) => {
             const coord = COORDS[row * 4 + col]!, id = grid[row * 4 + col], who = marks?.[coord];
-            const cls = `pc-photo${coord === secret ? ' secret' : ''}${coord === picked ? ' picked' : ''}`;
+            const cls = `pc-photo${coord === secret ? ' secret' : ''}${coord === picked ? ' picked' : ''}${coord === lifted ? ' lifted' : ''}`;
             return (
               <div key={coord} className={cls} data-coord={coord} onClick={() => onPhoto(coord)}>
                 {id && <Photo id={id} />}
