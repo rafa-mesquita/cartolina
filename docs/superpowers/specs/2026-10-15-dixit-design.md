@@ -135,7 +135,7 @@ diretas). Muda para:
   `lobby`.
 - `scoring.ts`: função pura `scoreRound(...)` → pontos por jogador e detalhes
   (quem acertou, votos por carta). Concentra a maior parte dos testes.
-- `deck.ts`: `DIXIT_DECK_SIZE` e ids `d001…dNNN`. 100 (a arte da §7).
+- `deck.ts`: `DIXIT_DECK_SIZE` e ids `d001…dNNN`. 113 (a arte da §7).
 - `rules.ts`: implementa `GameModule`; `onPresenceChange` cuida de narrador
   inativo, jogadores inativos e pausa com < 3.
 
@@ -315,15 +315,18 @@ raiz `.dixit` das telas do Dixit (lobby e mesa).
 
 ## 7. Arte das cartas
 
-- **Feita:** 100 cartas pintadas no Google Flow (surrealismo em óleo; prompts
+- **Feita:** 113 cartas pintadas no Google Flow (surrealismo em óleo; prompts
   em `docs/dixit/cartas-prompts.md`): 90 escolhidas pelo usuário entre 368 e 5
   temas extras (natal, resetar, pele pintada, trem, cubo de gelo) gerados em 2
   opções, com a escolha feita pelo Claude a pedido do usuário (2026-10-16), e
   mais 5 (forja, diferença de idade, esporte, gel, banho) em 2 opções, com a
+  escolha do usuário; e mais 13 em 2026-10-17 (vinho, presidente, músculo,
+  dente, fantasma, formas geométricas simples, fogueira, pássaro gigante,
+  senha, perfuração, broca, minúsculo, tamanduá Salvador Dalí), também com a
   escolha do usuário.
 - Formato retrato **2:3** (como a carta original, 80×120 mm).
 - `npm run dixit:cartas -- <pasta | lista.json>`: recorta no centro para 2:3,
-  grava WebP 600×900 (~95 KB cada, ~9,5 MB o baralho) como `d001…` em
+  grava WebP 600×900 (~95 KB cada, ~11 MB o baralho) como `d001…` em
   `web/public/dixit/cards/`, escreve `cartas.json` (id → tema → origem) e
   atualiza `DIXIT_DECK_SIZE`. A lista é um JSON
   `[{ "file": "...jpg", "tema": "..." }]` na ordem das cartas.
