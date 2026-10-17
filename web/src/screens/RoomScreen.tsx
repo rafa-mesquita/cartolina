@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameId } from '@cartolina/shared';
 import { catalogEntry } from '../games/catalog';
+import { useIsPhone } from '../lib/device';
 import { gameHash, goHome, goToRoom } from '../lib/router';
 import { createRoom, getRoomInfo, type RoomInfo } from '../net/api';
 import { TOO_MANY_MESSAGE, isTooMany } from '../net/errors';
@@ -10,6 +11,8 @@ import { getToken, joinedProfile, loadProfile, markJoined, saveProfile, type Pro
 import { useConnSnapshot } from '../net/useConnSnapshot';
 import { Game } from './Game';
 import { JoinForm } from './JoinForm';
+import { PhoneNotice } from './PhoneNotice';
+import { RotateNotice } from './RotateNotice';
 
 function connect(code: string, profile: Profile, createSocket?: ConnOptions['createSocket']): RoomConnection {
   return new RoomConnection({
@@ -96,6 +99,7 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
   const usedProfile = useRef<Profile | null>(null);
   const hasInfo = useRef(false);
   const snap = useConnSnapshot(conn);
+  const phone = useIsPhone();
 
   const refresh = useCallback(() => {
     getRoomInfo(code)
@@ -155,11 +159,18 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
   if (info === null) {
     return <Message title="sala não encontrada" text="Essa sala não existe ou expirou. Crie uma nova no início." />;
   }
+  // Aparelho de toque só entra em jogo com versão de celular (o resto abre no computador).
+  if (phone && !catalogEntry(info.game)?.mobile) return <PhoneNotice />;
   if (status === 'replaced') {
     return <Message title="você abriu a sala em outra aba" text="Continue jogando na outra aba, ou recarregue esta pra voltar." />;
   }
   if (conn && snap && snap.status !== 'join_failed' && snap.view) {
-    return <Game conn={conn} snap={snap} view={snap.view} />;
+    return (
+      <>
+        <Game conn={conn} snap={snap} view={snap.view} />
+        <RotateNotice />
+      </>
+    );
   }
 
   const busy = !!snap && (snap.status === 'connecting' || snap.status === 'joining');
@@ -180,6 +191,7 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
       </h1>
       <p className="tagline">sala {code}</p>
       <JoinForm takenColors={takenColors} initial={initial} busy={busy} error={snap?.joinError ?? null} onSubmit={submit} />
+      <RotateNotice />
     </main>
   );
 }

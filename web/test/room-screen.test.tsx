@@ -69,6 +69,22 @@ describe('RoomScreen', () => {
     expect(await screen.findByText('sala não encontrada')).toBeTruthy();
   });
 
+  it('celular: sala de jogo sem versão de celular mostra o aviso', async () => {
+    vi.stubGlobal('matchMedia', vi.fn((q: string) => ({ matches: q === '(hover: none) and (pointer: coarse)', media: q, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+    mocked.mockResolvedValue({ exists: true, game: 'dixit', phase: 'lobby', seats: [] });
+    renderRoom();
+    expect(await screen.findByText(/pra jogar no computador/)).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it('celular: sala de DITU entra normalmente', async () => {
+    vi.stubGlobal('matchMedia', vi.fn((q: string) => ({ matches: q === '(hover: none) and (pointer: coarse)', media: q, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
+    mocked.mockResolvedValue({ exists: true, game: 'ito', phase: 'lobby', seats: [] });
+    renderRoom();
+    expect(await screen.findByLabelText('seu nome')).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
   it('falha de rede é diferente de sala inexistente e dá pra tentar de novo', async () => {
     mocked.mockRejectedValueOnce(new Error('network'));
     renderRoom();
