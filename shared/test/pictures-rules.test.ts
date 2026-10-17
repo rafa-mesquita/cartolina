@@ -57,11 +57,13 @@ describe('Retratim: montagem', () => {
     expect(applyPicturesAction(s, 'p9', { type: 'draft', work: sampleWork('cubes') }, ctx)).toEqual({ ok: false, error: 'not_player' });
   });
 
-  it('pronto pede obra: sem rascunho, cubos incompletos e símbolos de menos são recusados', () => {
+  it('pronto pede obra: sem rascunho, grade vazia e símbolos de menos são recusados; cubos incompletos valem', () => {
     const { state, ctx } = started(5);
     expect(applyPicturesAction(state, 'p0', { type: 'ready', on: true }, ctx)).toEqual({ ok: false, error: 'empty_work' });
+    const blank = act(state, 'p0', { type: 'draft', work: { kit: 'cubes', cells: Array<null>(16).fill(null) } }, ctx);
+    expect(applyPicturesAction(blank, 'p0', { type: 'ready', on: true }, ctx)).toEqual({ ok: false, error: 'empty_work' });
     const partial = act(state, 'p0', { type: 'draft', work: { kit: 'cubes', cells: [0, ...Array<null>(15).fill(null)] } }, ctx);
-    expect(applyPicturesAction(partial, 'p0', { type: 'ready', on: true }, ctx)).toEqual({ ok: false, error: 'cubes_incomplete' });
+    expect(applyPicturesAction(partial, 'p0', { type: 'ready', on: true }, ctx).ok).toBe(true);
     expect(state.kits.p4).toBe('icons');
     const one = act(state, 'p4', { type: 'draft', work: { kit: 'icons', ids: [3] } }, ctx);
     expect(applyPicturesAction(one, 'p4', { type: 'ready', on: true }, ctx)).toEqual({ ok: false, error: 'icons_too_few' });

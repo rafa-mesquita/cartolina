@@ -129,9 +129,8 @@ export function isBlankWork(work: Work): boolean {
 }
 
 /** Por que essa obra ainda não pode ficar "pronta" (`null` = pode). Quando o tempo acaba, vale como está. */
-export function readyError(work: Work | undefined): 'empty_work' | 'cubes_incomplete' | 'icons_too_few' | null {
+export function readyError(work: Work | undefined): 'empty_work' | 'icons_too_few' | null {
   if (work === undefined || isBlankWork(work)) return 'empty_work';
-  if (work.kit === 'cubes' && work.cells.some((c) => c === null)) return 'cubes_incomplete';
   if (work.kit === 'icons' && work.ids.length < ICONS_MIN) return 'icons_too_few';
   return null;
 }

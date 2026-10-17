@@ -31,10 +31,12 @@ describe('Retratim: obras dos kits', () => {
     expect(parse({ kit: 'cubes', cells: [1.5, ...Array(15).fill(null)] })).toBe(false);
   });
 
-  it('cubos com casa vazia valem como rascunho, mas não ficam prontos', () => {
+  it('cubos com casa vazia podem ficar prontos', () => {
     const partial: Work = { kit: 'cubes', cells: [0, 1, ...Array(14).fill(null)] };
     expect(workError(partial)).toBeNull();
-    expect(readyError(partial)).toBe('cubes_incomplete');
+    expect(readyError(partial)).toBeNull();
+    expect(readyError({ kit: 'cubes', cells: [null, null, null, 3, ...Array(12).fill(null)] })).toBeNull();
+    expect(readyError({ kit: 'cubes', cells: Array(16).fill(null) })).toBe('empty_work');
   });
 
   it('cadarços: pontos dentro da folha, de 2 a 60 por cadarço', () => {

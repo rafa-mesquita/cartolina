@@ -200,10 +200,11 @@ describe('sala de Retratim', () => {
   });
 
   it('erros do Retratim têm mensagem em português', () => {
-    for (const code of ['wrong_kit', 'bad_work', 'empty_work', 'cubes_incomplete', 'icons_too_few', 'already_ready', 'own_work', 'no_work']) {
+    for (const code of ['wrong_kit', 'bad_work', 'empty_work', 'icons_too_few', 'already_ready', 'own_work', 'no_work']) {
       expect(ERROR_CODES).toContain(code);
       expect(errorMessage(code)).not.toBe('Algo deu errado.');
     }
+    expect(ERROR_CODES).not.toContain('cubes_incomplete');
     expect(errorMessage('room_full')).toBe('A sala está cheia.');
   });
 });
