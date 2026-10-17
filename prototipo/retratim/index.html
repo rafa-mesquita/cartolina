@@ -95,7 +95,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 /* divisor arrastável (alça de papel com 3 risquinhos) */
 #divider{position:absolute;left:var(--div-x);top:0;bottom:0;width:24px;cursor:col-resize;z-index:5;touch-action:none}
-#divider::before{content:'';position:absolute;left:11px;top:22px;bottom:22px;border-left:1px dashed rgba(125,106,88,.4)}
+#divider::before{content:'';position:absolute;left:12px;top:22px;bottom:22px;border-left:1px dashed rgba(125,106,88,.4)}
 #divider .grip{position:absolute;left:3px;top:50%;width:18px;height:64px;margin-top:-32px;border-radius:9px;background:var(--paper);
   box-shadow:0 0 0 1px var(--edge),var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:box-shadow .15s}
 #divider .grip i{display:block;width:8px;height:1.5px;border-radius:1px;background:var(--ink-soft)}
@@ -104,7 +104,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 #divider:hover::before,#divider.on::before{border-left-color:var(--blue)}
 body.resizing,body.resizing *{cursor:col-resize !important}
 .secret-card{position:relative;cursor:zoom-in;display:flex;align-items:center;gap:16px;width:max-content;padding:12px 22px 12px 12px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(-1deg);margin-left:6px}
-.tape{position:absolute;width:86px;height:24px;background:var(--tape);left:-18px;top:-9px;transform:rotate(-8deg);box-shadow:0 1px 1px rgba(59,47,47,.1)}
+.tape{position:absolute;width:86px;height:24px;background:var(--tape);left:-8px;top:-9px;transform:rotate(-8deg);box-shadow:0 1px 1px rgba(59,47,47,.1)}
 .secret-card .mini{width:96px;height:74px;padding:4px;background:var(--photo-border);box-shadow:var(--shadow)}
 .secret-card .lab{font:700 17px/1 var(--ui);color:var(--ink-soft)}
 .secret-card .co{font:700 40px/.9 var(--ui);color:var(--blue);margin-left:6px}
@@ -501,7 +501,7 @@ $('#hurryBtn').onclick = () => act(ME, { type: 'hurry' });
 $('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
 
 /* ---------- duas colunas: grade | divisor | lado direito (montagem agora, galeria na Task 6) ---------- */
-const PAGE_H = 900 - 84, PAD = 40;
+const PAGE_H = 900 - 84, PAD = 40, GAP = 48;
 const SIDE_DEFAULT = 600, SIDE_MIN = Math.round(1440 * .35), SIDE_MAX = Math.round(1440 * .75);
 const SIDE_KEY = 'retratim-prototipo:lado-direito';
 let sideW = SIDE_DEFAULT;
@@ -509,10 +509,11 @@ try { const w = Number(localStorage.getItem(SIDE_KEY)); if (w >= SIDE_MIN && w <
 function saveSide() { try { localStorage.setItem(SIDE_KEY, String(sideW)); } catch (err) { /* ignora */ } }
 /** Recalcula as larguras (px do palco): fotos 4:3 na sobra da esquerda, bancada 4:3 na coluna da direita. */
 function layout() {
-  const sideX = 1440 - PAD - sideW, divX = sideX - 28, gridW = divX - 4 - PAD;
+  // respiro de GAP px de cada lado da linha do divisor, em qualquer posição (a alça fica centrada na linha)
+  const sideX = 1440 - PAD - sideW, line = sideX - GAP, divX = line - 12, gridW = line - GAP - PAD;
   // grade = rótulo 28 + 4 fotos + 4 vãos de 12; na altura: topo 22 + rótulos 30 + 4 vãos + nota ~80
   const byW = (gridW - 28 - 48) / 4, byH = ((PAGE_H - 22 - 30 - 48 - 80) / 4 - 12) * 4 / 3 + 12;
-  const pw = Math.max(36, Math.min(byW, byH)), ph = (pw - 12) * .75 + 12; // borda de 6 px em volta da foto 4:3
+  const pw = Math.max(16, Math.min(byW, byH)), ph = (pw - 12) * .75 + 12; // borda de 6 px em volta da foto 4:3
   // bancada: largura da coluna, limitada pela altura (cartão da secreta ~104 + 18 + pé ~70 + folga)
   const bw = Math.min(sideW, (PAGE_H - 22 - 104 - 18 - 70 - 16) * 4 / 3);
   const st = $('#page').style;
