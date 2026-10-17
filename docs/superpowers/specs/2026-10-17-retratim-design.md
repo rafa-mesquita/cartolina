@@ -64,7 +64,11 @@ Decisões do usuário (2026-10-17):
    aparece pra você). Pra cada obra você escolhe uma coordenada; pode trocar até
    **"confirmar"**. Obra sem palpite vale zero. A mesma coordenada pode ir em
    mais de uma obra. Mesma regra de tempo: `ceil(n/2)` confirmados → 30 s pra
-   quem falta.
+   quem falta. Quando o tempo acaba, valem os palpites já colados, confirmados
+   ou não.
+
+Contagem já disparada não para se alguém desmarca "pronto". O host tem
+**"apressar"**: dispara os 30 s na hora (pra quando alguém some sem cair).
 3. **Revelar** (`reveal`): uma obra por vez, na ordem dos assentos (§5.3).
    Depois, placar da rodada; o host clica **"próxima rodada"**.
 
@@ -123,8 +127,8 @@ precisa refazer o empilhamento.
   `kitOf` (kit por jogador na rodada), `works` (rascunho/obra por jogador),
   `ready`, `guesses` (por jogador: obra-alvo → coordenada), `confirmed`,
   `countdownEndsAt`, `lastRound` (resultado pra animar).
-- Ações: `start`, `draft { work }`, `ready { on }`, `guess { target, coord |
-  null }`, `confirm`, `next`, `again`, `lobby`.
+- Ações: `start`, `draft { work }`, `ready { on }`, `guess { artist, coord |
+  null }`, `confirm`, `hurry` (host), `next`, `again`, `lobby`.
 - `kits/*.ts`: tipo da obra + `validate` de cada kit. Rascunho inválido →
   erro `bad_work`, estado inalterado.
 - `rotation.ts`: rodízio de kits; `bag.ts`: saquinho; `scoring.ts`:
@@ -136,10 +140,11 @@ precisa refazer o empilhamento.
 Duas coisas que a sala genérica ainda não tem:
 
 1. **Tempo controlado pelo servidor.** `GameContext` ganha `now`, e
-   `GameModule` ganha `nextDeadline?(state): number | null` + `onDeadline?(state,
-   ctx)`. `nextAlarmAt` da sala passa a considerar o prazo do jogo, e o alarme
-   do Durable Object chama `onDeadline` (fecha a fase quando acabam os 30 s).
-   ITO e Diquisti não implementam e não mudam.
+   `GameModule` ganha `nextDeadline?(state): number | null`. `nextAlarmAt` da
+   sala passa a considerar o prazo do jogo. O alarme do Durable Object já chama
+   `tick` → `onPresenceChange`, que agora recebe `now` e fecha a fase quando
+   acabam os 30 s (não precisa de um `onDeadline` separado). ITO e Diquisti não
+   implementam `nextDeadline` e não mudam.
 2. **Histórico genérico.** Hoje `pendingRecord` é do ITO. Passa a ser um hook
    do registro (`historyRecord?(state)` devolvendo chave + registro), com tabela
    própria por jogo. O histórico do Diquisti (brainstorming em pausa) precisa da
