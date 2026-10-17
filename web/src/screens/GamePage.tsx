@@ -1,6 +1,7 @@
 import type { GameId } from '@cartolina/shared';
 import { useState } from 'react';
 import { catalogEntry } from '../games/catalog';
+import { DixitHistory } from '../games/dixit/history/DixitHistory';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goToRoom, type GameTab } from '../lib/router';
 import { createRoom } from '../net/api';
@@ -62,6 +63,20 @@ function PlayTab({ game }: { game: GameId }) {
   );
 }
 
+/** Histórico no formato de cada jogo (jogo novo no registro sem caso aqui não compila). */
+function HistoryTab({ game }: { game: GameId }) {
+  switch (game) {
+    case 'ito':
+      return <HistoryPanel game={game} />;
+    case 'dixit':
+      return <DixitHistory />;
+    default: {
+      const _never: never = game;
+      throw new Error(`jogo sem histórico: ${String(_never)}`);
+    }
+  }
+}
+
 export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: GameTab; legacy?: boolean }) {
   const entry = catalogEntry(game)!;
   return (
@@ -91,12 +106,8 @@ export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: Gam
       {legacy && <p className="hint">Os grupos acabaram: agora todo o histórico fica aqui, dentro de cada jogo.</p>}
       {tab === 'jogar' ? (
         <PlayTab game={game} />
-      ) : entry.hasHistory ? (
-        <HistoryPanel game={game} />
       ) : (
-        <section className="panel">
-          <p>O histórico do {entry.name} vem em breve.</p>
-        </section>
+        <HistoryTab game={game} />
       )}
     </main>
   );

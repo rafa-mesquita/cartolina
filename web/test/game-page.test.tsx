@@ -236,8 +236,9 @@ describe('GamePage', () => {
     });
   });
 
-  it('Diquisti (o Dixit): jogar cria sala de dixit; o histórico diz "em breve" e não chama o servidor', async () => {
+  it('Diquisti (o Dixit): jogar cria sala de dixit; o histórico mostra o painel do Diquisti', async () => {
     vi.mocked(api.createRoom).mockResolvedValue('DXQ7');
+    vi.mocked(api.getHistory).mockResolvedValue({ game: 'dixit', matches: [], stats: null, nextBefore: null });
     const { rerender } = render(<GamePage game="dixit" tab="jogar" />);
     expect(screen.getByRole('heading', { name: 'Diquisti' })).toBeTruthy();
     expect(screen.queryByText(/tá chegando/)).toBeNull();
@@ -245,8 +246,9 @@ describe('GamePage', () => {
     await waitFor(() => expect(window.location.hash).toBe('#/sala/DXQ7'));
     expect(api.createRoom).toHaveBeenCalledWith('dixit');
     rerender(<GamePage game="dixit" tab="historico" />);
-    expect(screen.getByText(/histórico do Diquisti vem em breve/)).toBeTruthy();
-    expect(api.getHistory).not.toHaveBeenCalled();
+    expect(await screen.findByText('Ainda não tem partida de Diquisti. Bora jogar a primeira!')).toBeTruthy();
+    expect(api.getHistory).toHaveBeenCalledWith('dixit');
+    expect(screen.queryByText(/vem em breve/)).toBeNull();
   });
 
   it('link antigo de grupo mostra um aviso', async () => {

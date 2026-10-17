@@ -14,35 +14,35 @@ import {
   joinRoom,
   nextAlarmAt,
   parseClientMessage,
-  pendingRecord,
+  pendingHistoryRecord,
   reconcilePresence,
   restoreRoom,
   roomAction,
   roomSummary,
   roomView,
   tick,
-  type GameId,
+  type DixitRoundRecord,
   type Room,
   type RoundRecord,
   type ServerMessage,
 } from '@cartolina/shared';
+import { insertDixitRound } from './dixit-history-db';
 import { insertRound } from './history-db';
 import { isStale, nextWakeAt } from './liveness';
 
 /**
  * Rodada revelada ainda não confirmada no D1 (fila durável no storage do DO, uma chave por rodada).
  * Entra no mesmo `put` que marca `recordedRevealKey`, então nem queda do DO nem falha do D1 perdem a rodada.
+ * Pendentes deixados por um servidor antigo (antes da estante) têm só `groupId` e eram do ITO.
  */
-interface PendingRound {
-  /** Jogo do histórico. Pendentes deixados por um servidor antigo (antes da estante) têm `groupId` e eram do ITO. */
-  game?: GameId;
-  groupId?: string;
-  key: string;
-  record: RoundRecord;
-}
-/** Jogo de um pendente; os deixados por um servidor antigo (só `groupId`) eram do ITO. */
-export function pendingGame(round: { game?: GameId }): GameId {
-  return round.game ?? 'ito';
+export type PendingRound =
+  | { game: 'dixit'; key: string; record: DixitRoundRecord }
+  | { game?: 'ito'; groupId?: string; key: string; record: RoundRecord };
+
+/** Grava o pendente na tabela do jogo dele (o UNIQUE de cada tabela absorve repetições). */
+export async function insertPending(db: D1Database, round: PendingRound): Promise<void> {
+  if (round.game === 'dixit') await insertDixitRound(db, round.record, round.key);
+  else await insertRound(db, 'ito', round.record, round.key);
 }
 
 const PENDING_ROUND_PREFIX = 'pendingRound:';
@@ -227,7 +227,7 @@ export class RoomDO extends DurableObject<Env> {
   /** Tenta gravar uma rodada pendente no D1; sai da fila só se deu certo (o UNIQUE do D1 absorve repetições). */
   private async flushRound(storageKey: string, round: PendingRound): Promise<void> {
     try {
-      await insertRound(this.env.DB, pendingGame(round), round.record, round.key);
+      await insertPending(this.env.DB, round);
       await this.ctx.storage.delete(storageKey);
     } catch (err) {
       console.error('falha ao gravar rodada no histórico (tenta de novo no alarme)', err);
@@ -283,11 +283,11 @@ export class RoomDO extends DurableObject<Env> {
     this.room = tick(this.room, Date.now(), Math.random);
     // Sala de um jogo que grava histórico entrou numa revelação nova: marca como gravada e põe a rodada na fila durável no MESMO put
     // (síncrono até aqui, então outro evento que intercale depois já vê a marca e não enfileira de novo).
-    const pending = pendingRecord(this.room, Date.now(), crypto.randomUUID());
+    const pending = pendingHistoryRecord(this.room, Date.now(), crypto.randomUUID());
     let queued: [string, PendingRound] | null = null;
     if (pending) {
       this.room = { ...this.room, recordedRevealKey: pending.key };
-      queued = [PENDING_ROUND_PREFIX + pending.record.id, { game: this.room.gameId, key: pending.key, record: pending.record }];
+      queued = [PENDING_ROUND_PREFIX + pending.record.id, pending];
       await this.ctx.storage.put<unknown>({ room: this.room, [queued[0]]: queued[1] });
     } else {
       await this.ctx.storage.put('room', this.room);

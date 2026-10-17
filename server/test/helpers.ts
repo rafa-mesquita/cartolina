@@ -1,5 +1,5 @@
 import { SELF } from 'cloudflare:test';
-import { HEARTBEAT_PONG, type ClientMessage, type ItoRoomView, type RoomView, type ServerMessage } from '@cartolina/shared';
+import { HEARTBEAT_PONG, type ClientMessage, type DixitRoomView, type ItoRoomView, type RoomView, type ServerMessage } from '@cartolina/shared';
 
 export async function newRoomCode(): Promise<string> {
   const res = await SELF.fetch('https://x/rooms', { method: 'POST' });
@@ -132,4 +132,30 @@ export async function playRound(code: string): Promise<{ client: TestClient; id:
   a!.client.send({ t: 'action', action: { type: 'forceReveal' } });
   await a!.client.state((r) => r.game.phase === 'reveal');
   return players;
+}
+
+/** Três jogadores (P0 host) jogam uma rodada de Diquisti até a revelação; cada um vota na 1ª carta que não é sua. */
+export async function playDixitRound(
+  code: string,
+  clue = 'saudade',
+): Promise<{ players: { client: TestClient; id: string; token: string }[]; tellerId: string }> {
+  const players = await joined(code, 3);
+  players[0]!.client.send({ t: 'action', action: { type: 'start' } });
+  const views = await Promise.all(players.map((p) => p.client.state<DixitRoomView>((r) => r.game.phase === 'storytelling')));
+  const tellerId = views[0]!.game.storyteller!;
+  const ti = players.findIndex((p) => p.id === tellerId);
+  players[ti]!.client.send({ t: 'action', action: { type: 'tell', cardId: views[ti]!.game.hand[0]!, clue } });
+  const rest = players.filter((p) => p.id !== tellerId);
+  for (const p of rest) {
+    const v = await p.client.state<DixitRoomView>((r) => r.game.phase === 'submitting');
+    p.client.send({ t: 'action', action: { type: 'submit', cardIds: v.game.hand.slice(0, 2) } });
+    p.client.send({ t: 'action', action: { type: 'confirm' } });
+  }
+  for (const p of rest) {
+    const v = await p.client.state<DixitRoomView>((r) => r.game.phase === 'voting');
+    p.client.send({ t: 'action', action: { type: 'vote', cardId: v.game.table.find((t) => !t.mine)!.cardId } });
+    p.client.send({ t: 'action', action: { type: 'confirm' } });
+  }
+  await players[ti]!.client.state<DixitRoomView>((r) => r.game.phase === 'reveal');
+  return { players, tellerId };
 }

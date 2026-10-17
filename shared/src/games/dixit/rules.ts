@@ -50,7 +50,19 @@ export function initialDixitState(target: DixitTarget = DIXIT_DEFAULT_TARGET): D
     result: null,
     winners: [],
     paused: false,
+    match: 0,
+    round: 0,
   };
+}
+
+/**
+ * Estado gravado antes do histórico do Diquisti não tem `match` nem `round`: partida em andamento vira a partida 1
+ * (rodada 0, a próxima narração já é a 1). Sem isso, todas as revelações dela teriam a mesma chave.
+ */
+export function withDixitCounters(state: DixitState): DixitState {
+  const stored = state as Omit<DixitState, 'match' | 'round'> & Partial<Pick<DixitState, 'match' | 'round'>>;
+  if (stored.match !== undefined && stored.round !== undefined) return state;
+  return { ...state, match: stored.match ?? (state.phase === 'lobby' ? 0 : 1), round: stored.round ?? 0 };
 }
 
 /**
@@ -118,6 +130,7 @@ function beginRound(state: DixitState, ctx: GameContext, storyteller: { keep: st
     table: [],
     result: null,
     paused: inRound.length < DIXIT_MIN_PLAYERS,
+    round: state.round + 1,
   };
   const dealt = refill(reset, inRound, dixitHandSize(inRound.length), ctx.rng);
   const chosen = 'keep' in storyteller ? storyteller.keep : nextStoryteller(dealt, ctx.active, storyteller.after);
@@ -137,6 +150,7 @@ function startMatch(state: DixitState, ctx: GameContext): ActionResult<DixitStat
   const players = [...ctx.active];
   const fresh: DixitState = {
     ...initialDixitState(state.target),
+    match: state.match + 1,
     players,
     scores: Object.fromEntries(players.map((p) => [p, 0])),
     deck: shuffle(ctx.rng, dixitCardIds()),

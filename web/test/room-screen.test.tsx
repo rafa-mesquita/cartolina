@@ -246,7 +246,7 @@ describe('RoomScreen', () => {
     await waitFor(() => expect(window.location.hash).toBe('#/sala/QRST'));
   });
 
-  it('sala de Diquisti que acabou: cria outra do Diquisti e não oferece histórico (não tem)', async () => {
+  it('sala de Diquisti que acabou: cria outra do Diquisti e mostra o histórico do Diquisti', async () => {
     mocked.mockResolvedValue({ ...info(), game: 'dixit' });
     vi.mocked(createRoom).mockResolvedValue('QRST');
     markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
@@ -254,7 +254,7 @@ describe('RoomScreen', () => {
     await waitFor(() => expect(FakeSocket.all).toHaveLength(1));
     act(() => last().drop(4004));
     expect(await screen.findByText('essa sala acabou')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'ver o histórico' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'ver o histórico' }).getAttribute('href')).toBe('#/dixit/historico');
     fireEvent.click(screen.getByRole('button', { name: 'criar sala nova' }));
     await waitFor(() => expect(createRoom).toHaveBeenCalledWith('dixit'));
   });

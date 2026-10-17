@@ -81,7 +81,7 @@ describe('pendingRecord', () => {
     expect(pendingRecord(createRoom('ABCD', 0), 1, 'r')).toBeNull();
   });
 
-  it('sala de Dixit, mesmo na revelação, não grava histórico', () => {
+  it('pendingRecord (o do DITU) ignora sala de Diquisti, mesmo na revelação', () => {
     const { state } = revealed(3, (s) => s.storyCard!);
     expect(state.phase).toBe('reveal');
     const room: Room = { ...createRoom('ABCD', 0, 'dixit'), game: state };

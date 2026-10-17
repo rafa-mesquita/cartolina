@@ -57,7 +57,7 @@ export const GAMES: Record<GameId, GameEntry> = {
     minPlayers: DIXIT_MIN_PLAYERS,
     maxPlayers: MAX_PLAYERS,
     liveCursors: false,
-    recordsHistory: false,
+    recordsHistory: true,
   }),
 };
 

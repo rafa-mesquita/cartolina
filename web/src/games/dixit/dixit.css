@@ -180,3 +180,9 @@ button.dx-pill:hover { border-color: var(--must); }
 .dx-link { width: 100%; padding: 8px 10px; border-radius: 10px; border: .75px solid rgba(246,234,210,.4); background: rgba(35,61,54,.9); color: var(--cream); }
 .dx-btn.dx-home { width: min(520px, 100%); margin-top: 0; }
 .dx-toast-lobby { bottom: 28px; }
+
+/* links pro histórico: no lobby (botão fantasma) e embaixo do logo da mesa */
+a.dx-btn { text-align: center; text-decoration: none; }
+/* padding + margem negativa: área de clique maior sem sair do lugar */
+.dx-histlink { position: absolute; left: 30px; top: 84px; z-index: 8; padding: 6px 0; margin-top: -6px; font: 400 13px/1 var(--ui); color: var(--mu); text-decoration: none; }
+.dx-histlink:hover, .dx-histlink:focus-visible { color: var(--must); }

@@ -1,5 +1,6 @@
 import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
-import type { DixitView } from './games/dixit/types';
+import { withDixitCounters } from './games/dixit/rules';
+import type { DixitState, DixitView } from './games/dixit/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
 import type { Rng } from './rng';
@@ -25,9 +26,9 @@ export interface Room {
   gameId: GameId;
   game: GameState;
   lastActivity: number;
-  /** Quando o host começou a partida (saiu do lobby); identifica a campanha do ITO. */
+  /** Quando o host começou a partida (saiu do lobby); identifica a campanha do ITO e a sessão (partida) do Diquisti. */
   runStartedAt: number | null;
-  /** Chave da última revelação do ITO já gravada no histórico (evita duplicar). */
+  /** Chave da última revelação (ITO ou Diquisti) já gravada no histórico (evita duplicar). */
   recordedRevealKey: string | null;
 }
 
@@ -73,6 +74,11 @@ export function itoStateOf(room: Room): ItoState | null {
   return room.gameId === 'ito' ? (room.game as ItoState) : null;
 }
 
+/** Estado do Diquisti, ou null se a sala é de outro jogo. */
+export function dixitStateOf(room: Room): DixitState | null {
+  return room.gameId === 'dixit' ? (room.game as DixitState) : null;
+}
+
 type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &
   Partial<Pick<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'>> & {
     /** Salas gravadas antes da estante de jogos tinham grupo; o campo é ignorado. */
@@ -82,9 +88,12 @@ type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &
 /** Sala lida do storage: salas antigas não têm `gameId` (eram todas ITO) e podem ter `group` (ignorado). */
 export function restoreRoom(stored: StoredRoom): Room {
   const { group: _legacyGroup, ...rest } = stored;
+  const gameId = stored.gameId ?? 'ito';
   return {
     ...rest,
-    gameId: stored.gameId ?? 'ito',
+    gameId,
+    // Diquisti gravado antes do histórico não tem `match`/`round`.
+    game: gameId === 'dixit' ? withDixitCounters(rest.game as DixitState) : rest.game,
     runStartedAt: stored.runStartedAt ?? null,
     recordedRevealKey: stored.recordedRevealKey ?? null,
   };

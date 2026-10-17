@@ -10,6 +10,8 @@ export { applyItoAction, initialItoState, ito, itoViewFor, maybeReveal } from '.
 export * from './history';
 export { itoActionSchema } from './games/ito/schema';
 export * from './games/dixit/types';
+export * from './games/dixit/record';
+export * from './games/dixit/summary';
 export { DIXIT_DECK_SIZE, dixitCardIds } from './games/dixit/deck';
 export { scoreRound } from './games/dixit/scoring';
 export {
@@ -20,6 +22,7 @@ export {
   dixitOnPresenceChange,
   dixitPicksPerPlayer,
   initialDixitState,
+  withDixitCounters,
 } from './games/dixit/rules';
 export { dixit, dixitViewFor } from './games/dixit/view';
 export { dixitActionSchema } from './games/dixit/schema';

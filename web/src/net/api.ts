@@ -1,4 +1,4 @@
-import type { GameId, HistoryResponse, RoomSummary } from '@cartolina/shared';
+import type { GameId, HistoryResponseOf, RoomSummary } from '@cartolina/shared';
 import { SERVER_URL } from './config';
 
 export type RoomInfo = { exists: true } & RoomSummary;
@@ -20,16 +20,16 @@ export async function getRoomInfo(code: string, fetcher: typeof fetch = fetch, b
   return (await res.json()) as RoomInfo;
 }
 
-/** Histórico do jogo; `null` quando o jogo não tem histórico (404). */
-export async function getHistory(
-  game: GameId,
+/** Histórico do jogo, no formato dele (`HistoryResponses` do shared); `null` quando o jogo não tem histórico (404). */
+export async function getHistory<G extends GameId>(
+  game: G,
   before: number | null = null,
   fetcher: typeof fetch = fetch,
   base: string = SERVER_URL,
-): Promise<HistoryResponse | null> {
+): Promise<HistoryResponseOf<G> | null> {
   const qs = before === null ? '' : `?before=${before}`;
   const res = await fetcher(`${base}/history/${game}${qs}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`history_failed_${res.status}`);
-  return (await res.json()) as HistoryResponse;
+  return (await res.json()) as HistoryResponseOf<G>;
 }
