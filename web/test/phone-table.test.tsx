@@ -470,6 +470,120 @@ describe('mesa do celular', () => {
   });
 });
 
+describe('esconder a barra de baixo (sua mão)', () => {
+  const KEY = 'cartolina:mao-escondida';
+  const fold = () => screen.getByRole('button', { name: /sua mão$/ });
+
+  it('o botão esconde a mão e os controles do host; o "tô pronto" e o som ficam', () => {
+    render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={conn()} />);
+    expect(fold().getAttribute('aria-label')).toBe('esconder sua mão');
+    expect(fold().getAttribute('aria-expanded')).toBe('true');
+    expect(fold().textContent).toContain('esconder');
+    fireEvent.click(fold());
+    expect(fold().getAttribute('aria-label')).toBe('mostrar sua mão');
+    expect(fold().getAttribute('aria-expanded')).toBe('false');
+    expect(fold().textContent).toContain('sua mão');
+    expect(document.querySelector('.p-hand')).toBeNull();
+    expect(document.querySelector('.p-foot')!.classList.contains('p-folded')).toBe(true);
+    expect(screen.queryByRole('button', { name: 'revelar agora' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'pular rodada' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'tô pronto' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /som/ })).toBeTruthy();
+    fireEvent.click(fold());
+    expect(handCard('p0:0')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'revelar agora' })).toBeTruthy();
+    expect(fold().getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('lembra a escolha na aba (sessionStorage), mesmo recarregando no meio da rodada', () => {
+    const { unmount } = render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={conn()} />);
+    fireEvent.click(fold());
+    expect(sessionStorage.getItem(KEY)).toBe('1');
+    unmount();
+    render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={conn()} />);
+    expect(fold().getAttribute('aria-expanded')).toBe('false');
+    expect(document.querySelector('.p-hand')).toBeNull();
+    fireEvent.click(fold());
+    expect(sessionStorage.getItem(KEY)).toBe('0');
+  });
+
+  it('sem sessionStorage (bloqueado), começa aberta e o botão funciona', () => {
+    const get = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('bloqueado');
+    });
+    const set = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('bloqueado');
+    });
+    try {
+      render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={conn()} />);
+      expect(fold().getAttribute('aria-expanded')).toBe('true');
+      fireEvent.click(fold());
+      expect(fold().getAttribute('aria-expanded')).toBe('false');
+    } finally {
+      get.mockRestore();
+      set.mockRestore();
+    }
+  });
+
+  it('abre sozinha quando uma rodada nova dá as cartas', () => {
+    const c = conn();
+    let room = act(sortingRoom(2), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    const { rerender } = render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    fireEvent.click(fold());
+    // Outra pessoa mexe na fila: continua escondida.
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
+    rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    expect(fold().getAttribute('aria-expanded')).toBe('false');
+    room = act(room, 'p0', { type: 'next' });
+    rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    room = act(room, 'p0', { type: 'beginRound' });
+    expect(room.game.phase).toBe('sorting');
+    rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    expect(fold().getAttribute('aria-expanded')).toBe('true');
+    expect(handCard('p0:0')).toBeTruthy();
+  });
+
+  it('escolher a carta, esconder a mão e tocar no "aqui": a seleção não se perde', () => {
+    const c = conn();
+    render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={c} />);
+    fireEvent.click(handCard('p0:0'));
+    fireEvent.click(fold());
+    fireEvent.click(heres()[0]!);
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'place', cardId: 'p0:0', index: 0 });
+  });
+
+  it('fora da escolha não tem o botão (não há mão)', () => {
+    render(<PhoneTable view={revealedItoView()} conn={conn()} />);
+    expect(screen.queryByRole('button', { name: /sua mão$/ })).toBeNull();
+  });
+
+  it('escondida, a barra ainda devolve a carta solta sobre ela, e abre pra mostrar a carta de volta', () => {
+    const c = conn();
+    const room = act(sortingRoom(2), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+    const box = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 300, height: bottom - top, width: 300, x: 0, y: top, toJSON() {} }) as DOMRect;
+    const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this.classList.contains('p-row')) return box(0, 500);
+      if (this.classList.contains('p-foot')) return box(500, 560); // a alça fininha
+      if (this.classList.contains('p-strip') && this.getAttribute('data-card') === 'p0:0') return box(400, 440);
+      return box(600, 640);
+    });
+    try {
+      render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+      fireEvent.click(fold());
+      fireEvent.pointerDown(strip('p0:0')!, { pointerType: 'mouse', button: 0, clientX: 100, clientY: 420 });
+      fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 530 });
+      expect(document.querySelector('.p-foot.p-hand-drop')).toBeTruthy();
+      expect(screen.getByText('solta aqui pra voltar pra mão')).toBeTruthy();
+      fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 530 });
+      expect(c.sendAction).toHaveBeenCalledWith({ type: 'return', cardId: 'p0:0' });
+      expect(fold().getAttribute('aria-expanded')).toBe('true');
+      expect(handCard('p0:0')).toBeTruthy();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
 describe('Game escolhe a mesa pelo layout', () => {
   const snap = (view: RoomView): ConnSnapshot => ({ status: 'joined', playerId: view.you, view, joinError: null });
   const media = (matching: string[]) =>

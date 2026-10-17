@@ -1,5 +1,8 @@
 /* Mesa do celular (DITU em pé). */
 .p-row { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow-y: auto; overflow-x: clip; overscroll-behavior: contain; }
+/* Fila curta encosta embaixo (o lado do 1, colado na mão). `margin-top: auto` e não `justify-content: flex-end`:
+   com este, o que transborda pelo topo não dá pra rolar. Quando a fila rola, a margem vira 0. */
+.p-row > :first-child { margin-top: auto; }
 .p-end { margin: 0; font: 600 13px/1.2 var(--font-ui); opacity: 0.65; text-align: center; }
 .p-strip {
   position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 10px; text-align: left;
@@ -85,3 +88,12 @@
 .p-table .banner { min-width: 0; width: calc(100vw - 32px); padding: 20px 18px; }
 .p-table .b-title { font-size: 38px; }
 .p-table .b-sub { font-size: 20px; }
+
+/* Esconder a barra de baixo pra focar na fila. O botão é uma etiqueta tracejada como os outros `.sbtn`, menor. */
+.p-fold { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 7px 10px 6px; font-size: 14px; font-weight: 600; white-space: nowrap; background: var(--kraft); }
+.p-fold:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+/* Recolhida: uma alça fininha numa linha só (botão, "tô pronto" e som). A dica do pronto volta ao abrir;
+   o botão desligado já diz que falta carta na fila. */
+.p-foot.p-folded .p-actions { padding: 5px 8px; gap: 10px; }
+.p-foot.p-folded .ready-hint { display: none; }
+.p-foot.p-folded .p-actions .ready-col .btn { padding: 7px 14px 6px; font-size: 15px; }
