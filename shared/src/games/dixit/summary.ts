@@ -50,6 +50,10 @@ export interface DixitWinsEntry {
   wins: number;
 }
 
+/**
+ * `rate` = `hits` ÷ `total`. Em "quem mais acha" e "melhor narrador" fica entre 0 e 1 (é uma fração).
+ * Em "quem mais engana" é votos por rodada e pode passar de 1 (duas cartas na mesa, vários votos): não é porcentagem.
+ */
 export interface DixitRateEntry {
   name: string;
   color: PlayerColor;
@@ -76,7 +80,7 @@ export interface DixitHistoryStats {
   mostWins: DixitWinsEntry[];
   /** Quem mais acha: votos na carta do narrador ÷ votos dados (mín. 5 votos). */
   bestFinders: DixitRateEntry[];
-  /** Quem mais engana: votos na própria carta ÷ rodadas em que jogou sem narrar (mín. 5 rodadas). */
+  /** Quem mais engana: votos na própria carta ÷ rodadas em que jogou sem narrar (mín. 5 rodadas); `rate` pode passar de 1. */
   bestFoolers: DixitRateEntry[];
   /** Melhor narrador: narrações em que alguns acharam, mas não todos ÷ narrações (mín. 3). */
   bestTellers: DixitRateEntry[];
@@ -164,9 +168,14 @@ const clueEntry = (r: DixitRoundRecord): DixitClueEntry => ({
   playedAt: r.playedAt,
 });
 
+/** As `n` rodadas mais recentes de `ordered` (cronológica) que passam em `pred`, da mais recente pra mais antiga. */
+const latest = (ordered: readonly DixitRoundRecord[], pred: (r: DixitRoundRecord) => boolean, n: number): DixitClueEntry[] =>
+  ordered.filter(pred).slice(-n).reverse().map(clueEntry);
+
 /** Estatísticas da galera e cartas famosas. Pessoas são identificadas pelo nome, com o personagem mais recente. */
 export function summarizeDixitHistory(rounds: readonly DixitRoundRecord[]): DixitHistoryStats {
   const ordered = [...rounds].sort(byTime);
+  // Cor mais recente de qualquer aparição do nome (carta, voto, narração ou só no placar).
   const colors = new Map<string, PlayerColor>();
   const finders = new Map<string, Tally>();
   const foolers = new Map<string, Tally>();
@@ -208,15 +217,7 @@ export function summarizeDixitHistory(rounds: readonly DixitRoundRecord[]): Dixi
     bestTellers: ranking(tellers, DIXIT_TELLER_MIN_TELLS, colors),
     favoriteCards: topCards(favorites),
     trickiestCards: topCards(tricky),
-    clueWall: ordered
-      .filter((r) => r.clue.trim() !== '')
-      .slice(-DIXIT_CLUE_WALL_SIZE)
-      .reverse()
-      .map(clueEntry),
-    impossibleCards: ordered
-      .filter((r) => r.votes.length > 0 && r.votes.every((v) => v.card !== r.storyCard))
-      .slice(-DIXIT_IMPOSSIBLE_SIZE)
-      .reverse()
-      .map(clueEntry),
+    clueWall: latest(ordered, (r) => r.clue.trim() !== '', DIXIT_CLUE_WALL_SIZE),
+    impossibleCards: latest(ordered, (r) => r.votes.length > 0 && r.votes.every((v) => v.card !== r.storyCard), DIXIT_IMPOSSIBLE_SIZE),
   };
 }

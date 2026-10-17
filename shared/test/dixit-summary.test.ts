@@ -19,6 +19,11 @@ describe('dixitMatches', () => {
     expect(ms[1]!.rounds[0]).toEqual({ id: 'r10', round: 1, playedAt: 10, storyteller: PEOPLE.Ana, storyCard: 'd001', clue: '' });
   });
 
+  it('partidas que começaram na mesma hora: desempata pelo id, o maior primeiro (como o SQL)', () => {
+    const ms = dixitMatches([R({ at: 5, teller: 'Ana', match: 'm1' }), R({ at: 5, teller: 'Ana', match: 'm2' })]);
+    expect(ms.map((m) => m.id)).toEqual(['m2', 'm1']);
+  });
+
   it('terminada quando alguém chega na meta: vencedor e placar do maior pro menor', () => {
     const [m] = dixitMatches([R({ at: 1, teller: 'Ana', scores: { Ana: 12, Bia: 31, Caio: 20 } })]);
     expect(m!.finished).toBe(true);
@@ -99,6 +104,28 @@ describe('summarizeDixitHistory', () => {
     expect(summarizeDixitHistory(rounds).bestFoolers).toEqual([{ ...PEOPLE.Caio, hits: 3, total: 5, rate: 0.6 }]);
   });
 
+  it('quem mais engana: dois votos na mesma carta numa rodada → taxa passa de 1 (votos por rodada)', () => {
+    const rounds = range(5).map((at) => R({ at, teller: 'Ana', cards: { c1: 'Caio' }, votes: { Bia: 'c1', Duda: 'c1' } }));
+    expect(summarizeDixitHistory(rounds).bestFoolers).toEqual([{ ...PEOPLE.Caio, hits: 10, total: 5, rate: 2 }]);
+  });
+
+  it('quem mais engana: com duas cartas na mesa (partida de 3), a rodada conta uma vez e os votos nas duas somam', () => {
+    // Caio põe c1 e c2 em toda rodada; Bia vota na c1 sempre e Duda na c2 só nas duas primeiras: 7 votos em 5 rodadas.
+    const rounds = range(5).map((at) =>
+      R({ at, teller: 'Ana', cards: { c1: 'Caio', c2: 'Caio' }, votes: { Bia: 'c1', ...(at <= 2 ? { Duda: 'c2' } : {}) } }),
+    );
+    expect(summarizeDixitHistory(rounds).bestFoolers).toEqual([{ ...PEOPLE.Caio, hits: 7, total: 5, rate: 1.4 }]);
+  });
+
+  it('melhor narrador: ninguém achar conta como narração sem acerto', () => {
+    const s = summarizeDixitHistory([
+      R({ at: 1, teller: 'Ana', cards: { d002: 'Bia' }, votes: { Bia: 'd002', Caio: 'd002' } }),
+      R({ at: 2, teller: 'Ana', cards: { d002: 'Bia' }, votes: { Bia: 'd001', Caio: 'd002' } }),
+      R({ at: 3, teller: 'Ana', votes: { Bia: 'd001', Caio: 'd001' } }),
+    ]);
+    expect(s.bestTellers).toEqual([{ ...PEOPLE.Ana, hits: 1, total: 3, rate: 1 / 3 }]);
+  });
+
   it('melhor narrador: alguns acharam mas não todos ÷ narrações (mín. 3); rodada sem voto não conta como acerto', () => {
     const s = summarizeDixitHistory([
       R({ at: 1, teller: 'Ana', cards: { d002: 'Bia' }, votes: { Bia: 'd001', Caio: 'd002' } }),
@@ -142,6 +169,14 @@ describe('summarizeDixitHistory', () => {
     expect(wall).toHaveLength(12);
     expect(wall[0]).toEqual({ roundId: 'r13', card: 'd013', clue: 'dica 13', storyteller: PEOPLE.Ana, playedAt: 13 });
     expect(wall.at(-1)!.clue).toBe('dica 2');
+  });
+
+  it('mural de dicas: dica só com espaços não entra', () => {
+    const wall = summarizeDixitHistory([
+      R({ at: 1, teller: 'Ana', clue: 'eco' }),
+      R({ at: 2, teller: 'Ana', clue: '   ' }),
+    ]).clueWall;
+    expect(wall.map((e) => e.roundId)).toEqual(['r1']);
   });
 
   it('cartas impossíveis: as 8 mais recentes que ninguém achou (com pelo menos 1 voto), com a dica e quem narrou', () => {
