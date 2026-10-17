@@ -8,6 +8,8 @@
   display: flex; flex-direction: column; gap: 30px;
 }
 .dxh > :not(.dx-bg):not(.dx-viewer) { position: relative; z-index: 1; }
+/* tudo menos o fundo e a carta ampliada (que deixa isto inert) */
+.dxh-body { display: flex; flex-direction: column; gap: 30px; }
 .dxh button { font: inherit; color: inherit; cursor: pointer; }
 .dxh h2 { margin: 0 0 14px; font: 400 30px/1.1 var(--serif); }
 .dxh h3 { margin: 0 0 8px; font: 400 19px/1.15 var(--serif); }
@@ -76,6 +78,8 @@
 /* carta ampliada: na página ela cobre a janela toda */
 .dxh .dx-viewer { position: fixed; z-index: 60; }
 .dxh .dx-viewer:focus { outline: none; }
+.dxh .dx-close { position: absolute; top: 18px; right: 18px; width: 46px; height: 46px; border-radius: 50%; border: .75px solid rgba(246,234,210,.5); background: none; font-size: 26px; line-height: 1; }
+.dxh .dx-close:focus-visible { outline: 2px solid var(--must); outline-offset: 3px; }
 .dxh .dx-big { width: min(420px, 62vw, calc((100dvh - 200px) * 2 / 3)); height: auto; aspect-ratio: 2 / 3; }
 
 @media (max-width: 720px) {

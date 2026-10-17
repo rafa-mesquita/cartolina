@@ -86,6 +86,7 @@ export function DixitHistory() {
   if (data === undefined && loadFailed) {
     return (
       <div className="dxh">
+        <Brushes width={760} height={600} />
         <section className="dxh-fail">
           <h2>{loadFailed === 'too_many' ? TOO_MANY_MESSAGE : 'não deu pra falar com o servidor'}</h2>
           <button className="dx-btn" type="button" onClick={reload}>
@@ -114,28 +115,31 @@ export function DixitHistory() {
   return (
     <div className="dxh" ref={wheelRoot}>
       <Brushes width={760} height={1600} />
-      {data.matches.length === 0 ? (
-        <EmptyHistory />
-      ) : (
-        <>
-          {data.stats && <GaleraBoards stats={data.stats} />}
-          {famous && <FamousCards items={famous} onOpen={open} />}
-          <section>
-            <h2>partidas</h2>
-            <MatchList matches={data.matches} onOpen={open} />
-            {data.nextBefore !== null && (
-              <button className="dxh-more" type="button" onClick={() => void loadMore()} disabled={loadingMore}>
-                {loadingMore ? 'carregando…' : 'carregar mais'}
-              </button>
-            )}
-            {moreError && (
-              <p className="dxh-error" role="alert">
-                {moreError}
-              </p>
-            )}
-          </section>
-        </>
-      )}
+      {/* com a carta aberta, o resto fica inert: o Tab não sai do diálogo */}
+      <div className="dxh-body" inert={viewer !== null}>
+        {data.matches.length === 0 ? (
+          <EmptyHistory />
+        ) : (
+          <>
+            {data.stats && <GaleraBoards stats={data.stats} />}
+            {famous && <FamousCards items={famous} onOpen={open} />}
+            <section>
+              <h2>partidas</h2>
+              <MatchList matches={data.matches} onOpen={open} />
+              {data.nextBefore !== null && (
+                <button className="dxh-more" type="button" onClick={() => void loadMore()} disabled={loadingMore}>
+                  {loadingMore ? 'carregando…' : 'carregar mais'}
+                </button>
+              )}
+              {moreError && (
+                <p className="dxh-error" role="alert">
+                  {moreError}
+                </p>
+              )}
+            </section>
+          </>
+        )}
+      </div>
       {viewer && items.length > 0 && (
         <CardViewer
           ids={items.map((it) => it.card)}
@@ -143,6 +147,7 @@ export function DixitHistory() {
           label={(_id, i) => items[i]?.label ?? ''}
           onIndex={(index) => setViewer((cur) => (cur ? { ...cur, index } : cur))}
           onClose={() => setViewer(null)}
+          closeButton
         />
       )}
     </div>

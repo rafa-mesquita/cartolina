@@ -1,4 +1,4 @@
-import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
+import { act as rtlAct, fireEvent, render, screen, within } from '@testing-library/react';
 import type { RoomView } from '@cartolina/shared';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { installButtonSounds } from '../src/brand/buttonSounds';
@@ -304,6 +304,14 @@ describe('mesa do Diquisti: carta ampliada e sons', () => {
     rtlAct(() => vi.advanceTimersByTime(400));
     fireEvent.wheel(dialog, { deltaY: 100 });
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('na mesa a carta ampliada não ganha o botão de fechar do histórico', () => {
+    render(<DixitTable view={dixitView(started(4), 'p1')} conn={conn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'sua carta 1' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: 'fechar' })).toBeNull();
+    expect(within(dialog).getAllByRole('button')).toHaveLength(2);
   });
 
   it('a carta ampliada fecha quando a fase muda', () => {

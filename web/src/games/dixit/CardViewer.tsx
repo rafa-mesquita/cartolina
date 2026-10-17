@@ -7,10 +7,12 @@ interface Props {
   label: (id: string, index: number) => string;
   onIndex: (index: number) => void;
   onClose: () => void;
+  /** Mostra um botão de fechar (o histórico, que também é usado no toque). A mesa não usa. */
+  closeButton?: boolean;
 }
 
 /** Carta ampliada: setas navegam; rodinha pra baixo, Esc ou clique fora fecham. O foco vai pro diálogo e volta ao fechar. */
-export function CardViewer({ ids, index, label, onIndex, onClose }: Props) {
+export function CardViewer({ ids, index, label, onIndex, onClose, closeButton = false }: Props) {
   const opened = useRef(Date.now());
   const dialog = useRef<HTMLDivElement>(null);
   const id = ids[index];
@@ -57,6 +59,11 @@ export function CardViewer({ ids, index, label, onIndex, onClose }: Props) {
       <div className="dx-cap">
         <b>{label(id, index)}</b>setas ‹ › navegam · rodinha pra baixo, Esc ou clique fora fecha
       </div>
+      {closeButton && (
+        <button className="dx-close" type="button" aria-label="fechar" onClick={onClose}>
+          ×
+        </button>
+      )}
     </div>
   );
 }

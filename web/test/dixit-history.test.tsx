@@ -66,6 +66,35 @@ describe('aba histórico do Diquisti', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('com a carta aberta, o resto da aba fica inert (o Tab não sai do diálogo); fechar devolve', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    const { container } = render(<DixitHistory />);
+    const fav = await screen.findByRole('region', { name: 'favoritas dos narradores' });
+    const root = container.querySelector('.dxh')!;
+    const rest = () => [...root.children].filter((el) => !el.matches('.dx-bg, .dx-viewer'));
+    expect(rest().length).toBeGreaterThan(0);
+    expect(rest().some((el) => el.hasAttribute('inert'))).toBe(false);
+    const card = within(fav).getAllByRole('button')[0]!;
+    card.focus();
+    fireEvent.click(card);
+    const dialog = screen.getByRole('dialog');
+    expect(rest().every((el) => el.hasAttribute('inert'))).toBe(true);
+    expect(dialog.closest('[inert]')).toBeNull();
+    expect(root.querySelector('.dx-bg')!.closest('[inert]')).toBeNull();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(rest().some((el) => el.hasAttribute('inert'))).toBe(false);
+    expect(document.activeElement).toBe(card);
+  });
+
+  it('a carta ampliada do histórico tem botão de fechar (no toque não tem Esc nem rodinha)', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    const fav = await screen.findByRole('region', { name: 'favoritas dos narradores' });
+    fireEvent.click(within(fav).getAllByRole('button')[0]!);
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'fechar' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('rodinha pra cima numa carta também amplia', async () => {
     vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
     render(<DixitHistory />);
@@ -246,6 +275,8 @@ describe('aba histórico do Diquisti', () => {
       .mockResolvedValueOnce(dixitResponse(SAMPLE));
     render(<DixitHistory />);
     expect(await screen.findByText('não deu pra falar com o servidor')).toBeTruthy();
+    // o erro também fica no fundo de pinceladas da mesa
+    expect(document.querySelector('.dxh .dx-bg')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'tentar de novo' }));
     expect(await screen.findByRole('heading', { name: 'a galera' })).toBeTruthy();
   });
