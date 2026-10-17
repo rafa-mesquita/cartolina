@@ -16,7 +16,7 @@ const CLICK_GUARD_MS = 100;
 export interface PhoneDrag {
   /** Carta sendo arrastada por mim, ou null. */
   dragging: string | null;
-  /** Posição visual do vão do meu arrasto (pra `PhoneRow.gaps`), ou null. */
+  /** Posição do vão do meu arrasto na fila mostrada (pra `PhoneRow.gaps`; 0 = embaixo de tudo), ou null. */
   pos: number | null;
   /** Carta da fila sendo arrastada sobre a mão: soltar ali devolve ela (a mão mostra o realce). */
   overHand: boolean;
@@ -92,7 +92,7 @@ function createController(
     return s.y >= r.top && s.y <= r.bottom;
   };
 
-  /** Alvo pela altura do dedo: posição visual (pra o vão) e índice do servidor (pra o `place`). */
+  /** Alvo pela altura do dedo: posição na fila mostrada (pra o vão) e índice do servidor (pra o `place`). */
   const targetFor = (cardId: string, y: number): { visual: number | null; index: number | null } => {
     const { container, row, serverRow } = live.current;
     const box = container.current;
@@ -106,7 +106,7 @@ function createController(
           .filter((el) => el.dataset.card !== cardId && row.includes(el.dataset.card ?? ''))
           .map((el) => el.getBoundingClientRect())
       : [];
-    // posFromY conta as faixas sem a arrastada: converte pra posição visual na fila com ela.
+    // posFromY conta as faixas sem a arrastada (as de baixo do dedo, a fila é invertida): converte pra posição na fila com ela.
     const without = posFromY(y, rects);
     const at = row.indexOf(cardId);
     const visual = at >= 0 && without > at ? without + 1 : without;

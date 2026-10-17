@@ -149,7 +149,7 @@ describe('mesa do celular', () => {
     let room = sortingRoom(2);
     room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
     room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
-    // Fila de 0 a 400; a faixa do p1 em 0..40: soltar em y=95 põe a minha depois dela (índice 1).
+    // Fila de 0 a 400; a faixa do p1 (a maior, em cima) em 0..40: soltar em y=5, acima dela, põe a minha depois dela (índice 1).
     const box = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 300, height: bottom - top, width: 300, x: 0, y: top, toJSON() {} }) as DOMRect;
     const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
       if (this.classList.contains('p-row')) return box(0, 400);
@@ -158,8 +158,8 @@ describe('mesa do celular', () => {
     });
     try {
       const { rerender } = render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
-      fireEvent.pointerDown(strip('p0:0')!, { pointerType: 'mouse', button: 0, clientX: 0, clientY: 20 });
-      fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+      fireEvent.pointerDown(strip('p0:0')!, { pointerType: 'mouse', button: 0, clientX: 0, clientY: 60 });
+      fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 5 });
       expect(c.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: { cardId: 'p0:0', index: 1 } }));
       expect(document.querySelector('.p-gap')).toBeTruthy();
       room = act(room, 'p0', { type: 'forceReveal' });
@@ -167,7 +167,7 @@ describe('mesa do celular', () => {
       // fora da escolha, meu arrasto não abre vão nem apaga a faixa
       expect(document.querySelector('.p-gap')).toBeNull();
       expect(document.querySelector('.p-strip.carried')).toBeNull();
-      fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+      fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 5 });
       expect(c.sendAction).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'place' }));
     } finally {
       spy.mockRestore();
@@ -195,14 +195,15 @@ describe('mesa do celular', () => {
     room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
     room = act(room, 'p2', { type: 'place', cardId: 'p2:0', index: 1 });
     const { rerender } = render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
-    const order = () => Array.from(document.querySelectorAll('.p-strip')).map((el) => el.getAttribute('data-card'));
-    // A: a minha no fim.
+    // Ordem da fila (do 1 ao 100) = a tela de baixo pra cima.
+    const order = () => Array.from(document.querySelectorAll('.p-strip')).map((el) => el.getAttribute('data-card')).reverse();
+    // A: a minha no fim (o "aqui" de cima).
     fireEvent.click(handCard('p0:0'));
-    fireEvent.click(heres().at(-1)!);
+    fireEvent.click(heres()[0]!);
     expect(order()).toEqual(['p1:0', 'p2:0', 'p0:0']);
     // B: a do p1 logo depois da minha, que o servidor ainda nem conhece.
     fireEvent.click(strip('p1:0')!);
-    fireEvent.click(heres().at(-1)!);
+    fireEvent.click(heres()[0]!);
     expect(c.sendAction.mock.calls.map(([a]) => a)).toEqual([
       { type: 'place', cardId: 'p0:0', index: 2 },
       { type: 'place', cardId: 'p1:0', index: 2 },
@@ -227,10 +228,10 @@ describe('mesa do celular', () => {
     room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
     render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
     fireEvent.click(handCard('p0:0'));
-    fireEvent.click(heres().at(-1)!);
+    fireEvent.click(heres()[0]!);
     rtlAct(() => void vi.advanceTimersByTime(1000));
     fireEvent.click(strip('p1:0')!);
-    fireEvent.click(heres().at(-1)!);
+    fireEvent.click(heres()[0]!);
     expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'place', cardId: 'p1:0', index: 1 });
     expect(strip('p0:0')).toBeTruthy();
     // A passou do prazo (1,5 s) e sai; B (mais nova) não segura A na tela.
@@ -319,6 +320,38 @@ describe('mesa do celular', () => {
       }
     });
 
+    it('a altura do dedo na fila invertida dá o índice do servidor: em cima = maior, embaixo = menor', () => {
+      const c = conn();
+      let room = sortingRoom(3);
+      room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
+      room = act(room, 'p2', { type: 'place', cardId: 'p2:0', index: 1 });
+      // Servidor: p1:0, p2:0. Na tela: p2:0 em cima (0..40), p1:0 embaixo (50..90).
+      const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        if (this.classList.contains('p-row')) return box(0, 400);
+        if (this.classList.contains('p-foot')) return box(400, 600);
+        if (this.getAttribute('data-card') === 'p2:0' && this.classList.contains('p-strip')) return box(0, 40);
+        if (this.getAttribute('data-card') === 'p1:0' && this.classList.contains('p-strip')) return box(50, 90);
+        return box(450, 530);
+      });
+      try {
+        render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+        const dragIndex = () => (c.sendCursor as Mock).mock.calls.at(-1)![0].drag?.index;
+        fireEvent.pointerDown(handCard('p0:0'), { pointerType: 'mouse', button: 0, clientX: 100, clientY: 480 });
+        fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 5 });
+        expect(dragIndex()).toBe(2); // acima de tudo: fim do servidor
+        fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 200 });
+        expect(dragIndex()).toBe(0); // embaixo de tudo, logo acima da mão: começo do servidor
+        fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 45 });
+        expect(dragIndex()).toBe(1); // entre as duas
+        fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 45 });
+        expect(c.sendAction).toHaveBeenCalledWith({ type: 'place', cardId: 'p0:0', index: 1 });
+        // E a faixa pendente aparece entre as duas na tela.
+        expect(Array.from(document.querySelectorAll('.p-strip')).map((el) => el.getAttribute('data-card'))).toEqual(['p2:0', 'p0:0', 'p1:0']);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it('faixa de outra pessoa solta sobre a mão não volta (só o dono devolve)', () => {
       const c = conn();
       const room = act(sortingRoom(2), 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
@@ -359,8 +392,8 @@ describe('mesa do celular', () => {
     c.fx({ t: 'fx.cursor', from: 'p1', zone: 'table', x: 0.5, y: 0.5, drag: { cardId: 'p1:0', index: 0 } });
     const gap = document.querySelector('.p-gap');
     expect(gap).toBeTruthy();
-    // o vão fica antes da minha faixa (índice 0 do servidor)
-    expect(gap!.compareDocumentPosition(strip('p0:0')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // índice 0 do servidor = antes da minha carta na fila: na tela, embaixo da minha faixa
+    expect(gap!.compareDocumentPosition(strip('p0:0')!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
     c.fx({ t: 'fx.cursor', from: 'p1', zone: 'table', x: 0.5, y: 0.5, drag: null });
     expect(document.querySelector('.p-gap')).toBeNull();
     expect(playSound).toHaveBeenCalledWith('slide');

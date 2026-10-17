@@ -24,7 +24,9 @@ beforeAll(() => {
 afterEach(() => vi.useRealTimers());
 
 const rect = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 300, height: bottom - top, width: 300, x: 0, y: top, toJSON() {} }) as DOMRect;
-const SPOTS: Record<string, DOMRect> = { a: rect(0, 40), b: rect(50, 90), c: rect(100, 140), h: rect(150, 190) };
+// A fila em pé é invertida (100 no topo): a menor (a) fica embaixo e a maior (c) em cima.
+// Dedo de quem não está na fila: y < 20 → posição 3 (topo), 20..70 → 2, 70..120 → 1, 120..400 → 0 (embaixo de tudo).
+const SPOTS: Record<string, DOMRect> = { c: rect(0, 40), b: rect(50, 90), a: rect(100, 140), h: rect(150, 190) };
 
 type Conn = { sendCursor: Mock<GameConn['sendCursor']>; sendActivity: Mock<GameConn['sendActivity']> };
 
@@ -101,11 +103,11 @@ describe('arrastar no celular', () => {
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 197 });
     expect(state()).toBe('-|-'); // ainda dentro dos 6 px
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     expect(state()).toBe('h|2');
     expect(conn.sendActivity).toHaveBeenCalledWith('dragging');
     expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ zone: 'table', drag: { cardId: 'h', index: 2 } }));
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     expect(onDrop).toHaveBeenCalledWith('h', 2);
     expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
     expect(conn.sendActivity).toHaveBeenLastCalledWith('thinking');
@@ -116,8 +118,8 @@ describe('arrastar no celular', () => {
     const conn = mkConn();
     render(<Harness conn={conn} onDrop={vi.fn()} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     expect(PARKED_CURSOR).toEqual({ zone: 'hand', x: 0, y: 0, drag: null });
     // Uma única mensagem de soltar, e ela já é a estacionada (o PC solta a carta sem olhar a zona).
     const released = conn.sendCursor.mock.calls.map(([c]) => c).filter((c) => !c.drag);
@@ -130,8 +132,8 @@ describe('arrastar no celular', () => {
     conn.sendCursor.mockImplementation((c) => void order.push(c.drag ? 'cursor' : 'cursor:null'));
     render(<Harness conn={conn} onDrop={() => order.push('drop')} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     expect(order.slice(-2)).toEqual(['drop', 'cursor:null']);
   });
 
@@ -143,9 +145,11 @@ describe('arrastar no celular', () => {
     rtlAct(() => void vi.advanceTimersByTime(219));
     expect(state()).toBe('-|-');
     rtlAct(() => void vi.advanceTimersByTime(2));
-    expect(state()).toBe('h|3'); // o vão já aparece sob o dedo
+    expect(state()).toBe('h|0'); // o vão já aparece sob o dedo (embaixo de tudo)
     fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 30 });
-    expect(state()).toBe('h|1');
+    expect(state()).toBe('h|2'); // entre b (embaixo) e c (em cima)
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 95 });
+    expect(state()).toBe('h|1'); // entre a (embaixo) e b (em cima)
   });
 
   it('o guarda de touchmove existe desde a montagem; só segura o gesto com o arrasto ativo', () => {
@@ -179,7 +183,7 @@ describe('arrastar no celular', () => {
   it('arrastar com o mouse não segura touchmove', () => {
     render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     const ev = new Event('touchmove', { cancelable: true, bubbles: true });
     document.body.dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(false);
@@ -206,8 +210,8 @@ describe('arrastar no celular', () => {
     const onDrop = vi.fn();
     render(<Harness conn={conn} onDrop={onDrop} canPick={() => false} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     expect(onDrop).not.toHaveBeenCalled();
     expect(conn.sendCursor).not.toHaveBeenCalled();
     expect(state()).toBe('-|-');
@@ -226,13 +230,13 @@ describe('arrastar no celular', () => {
     expect(conn.sendActivity).toHaveBeenLastCalledWith('thinking');
   });
 
-  it('carta da fila arrastada pro fim: o índice é o do servidor (sem contar ela mesma)', () => {
+  it('carta da fila arrastada pro topo (o fim, lado do 100): o índice é o do servidor (sem contar ela mesma)', () => {
     const onDrop = vi.fn();
     render(<Harness conn={mkConn()} onDrop={onDrop} />);
     fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 70 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 160 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 10 });
     expect(state()).toBe('b|3');
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 160 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 10 });
     expect(onDrop).toHaveBeenCalledWith('b', 2);
   });
 
@@ -241,7 +245,7 @@ describe('arrastar no celular', () => {
     // Mostro [a, h, b, c] (h minha, ainda não confirmada); o servidor só tem [a, b, c].
     render(<Harness conn={conn} row={['a', 'h', 'b', 'c']} serverRow={['a', 'b', 'c']} onDrop={vi.fn()} />);
     fireEvent.pointerDown(screen.getAllByTestId('h')[0]!, { pointerType: 'mouse', button: 0, clientX: 0, clientY: 70 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 160 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 10 });
     expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: { cardId: 'h', index: 3 } }));
   });
 
@@ -251,8 +255,8 @@ describe('arrastar no celular', () => {
     render(<Harness conn={mkConn()} onDrop={vi.fn()} onClick={onClick} />);
     const h = screen.getByTestId('h');
     fireEvent.pointerDown(h, { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     fireEvent.click(h);
     expect(onClick).not.toHaveBeenCalled();
     rtlAct(() => void vi.advanceTimersByTime(200));
@@ -291,8 +295,8 @@ describe('arrastar no celular', () => {
     const conn = mkConn();
     render(<Harness conn={conn} onDrop={vi.fn()} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     const calls = conn.sendCursor.mock.calls.length;
     const acts = conn.sendActivity.mock.calls.length;
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 10 });
@@ -307,7 +311,7 @@ describe('arrastar no celular', () => {
     const conn = mkConn();
     const { unmount } = render(<Harness conn={conn} onDrop={vi.fn()} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     unmount();
     expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR); // o PC não fica com a carta no ar
     const calls = conn.sendCursor.mock.calls.length;
@@ -320,7 +324,7 @@ describe('arrastar no celular', () => {
     const onDrop = vi.fn();
     render(<Harness conn={conn} onDrop={onDrop} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     expect(state()).toBe('h|2');
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 450 });
     expect(state()).toBe('h|-');
@@ -330,8 +334,8 @@ describe('arrastar no celular', () => {
 
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 450 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
-    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     expect(onDrop).toHaveBeenCalledWith('h', 2);
   });
 
@@ -348,14 +352,14 @@ describe('arrastar no celular', () => {
     const conn = mkConn();
     render(<Harness conn={conn} onDrop={vi.fn()} />);
     fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 70 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 160 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 10 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 78 });
     expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'b', 1), drag: { cardId: 'b', index: null } });
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 78 });
     expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
 
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 450 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 45 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
     expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'h', 3), drag: { cardId: 'h', index: null } });
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
@@ -380,12 +384,12 @@ describe('arrastar no celular', () => {
     render(<Harness conn={mkConn()} onDrop={onDrop} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 200 });
     rtlAct(() => void vi.advanceTimersByTime(230));
-    fireEvent.pointerMove(window, { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 45 });
     fireEvent.pointerDown(screen.getByTestId('a'), { pointerType: 'touch', pointerId: 2, clientX: 0, clientY: 20 });
     rtlAct(() => void vi.advanceTimersByTime(300));
     fireEvent.pointerUp(window, { pointerType: 'touch', pointerId: 2, clientX: 0, clientY: 20 });
     expect(state()).toBe('h|2');
-    fireEvent.pointerUp(window, { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 95 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 45 });
     expect(onDrop).toHaveBeenCalledTimes(1);
     expect(onDrop).toHaveBeenCalledWith('h', 2);
   });
@@ -406,7 +410,7 @@ describe('arrastar no celular', () => {
     render(<Harness conn={conn} onDrop={onDrop} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 0, clientY: 200 });
     rtlAct(() => void vi.advanceTimersByTime(230));
-    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 45 });
     fireEvent(window, new PointerEvent('pointercancel', { pointerType: 'touch' }));
     expect(onDrop).not.toHaveBeenCalled();
     expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
@@ -436,11 +440,11 @@ describe('arrastar no celular', () => {
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 100, clientY: 200 });
     rtlAct(() => void vi.advanceTimersByTime(40));
     fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 104, clientY: 170 });
-    expect(state()).toBe('h|3');
+    expect(state()).toBe('h|0'); // logo acima da mão: embaixo de tudo
     expect(conn.sendActivity).toHaveBeenCalledWith('dragging');
-    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 104, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 104, clientY: 45 });
     expect(state()).toBe('h|2');
-    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 104, clientY: 95 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 104, clientY: 45 });
     expect(onDrop).toHaveBeenCalledWith('h', 2);
     expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
   });
@@ -472,9 +476,9 @@ describe('arrastar no celular', () => {
     rtlAct(() => void vi.advanceTimersByTime(40));
     fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 74 });
     expect(state()).toBe('b|-'); // ainda no lugar dela: sem alvo
-    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 10 });
     expect(state()).toBe('b|3');
-    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 130, clientY: 10 });
     expect(onDrop).toHaveBeenCalledWith('b', 2);
   });
 
@@ -502,7 +506,7 @@ describe('arrastar no celular', () => {
     onReturn.mockImplementation(() => void order.push('return'));
     render(<Harness conn={conn} onDrop={onDrop} onReturn={onReturn} />);
     fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 100, clientY: 70 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 160 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 10 });
     expect(over()).toBe('false');
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 450 });
     expect(over()).toBe('true');
@@ -525,10 +529,10 @@ describe('arrastar no celular', () => {
     expect(over()).toBe('false');
     fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 460 });
     expect(over()).toBe('true');
-    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 10 });
     expect(over()).toBe('false');
     expect(state()).toBe('b|3');
-    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 130, clientY: 10 });
     expect(onReturn).not.toHaveBeenCalled();
     expect(onDrop).toHaveBeenCalledWith('b', 2);
   });
@@ -550,7 +554,7 @@ describe('arrastar no celular', () => {
     const onReturn = vi.fn();
     render(<Harness conn={mkConn()} onDrop={onDrop} onReturn={onReturn} />);
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 100, clientY: 450 });
-    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 45 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 460 });
     expect(over()).toBe('false');
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 460 });
@@ -602,8 +606,8 @@ describe('arrastar no celular', () => {
     render(<Harness conn={mkConn()} onDrop={vi.fn()} onClick={onClick} />);
     const h = screen.getByTestId('h');
     fireEvent.pointerDown(h, { pointerType: 'touch', clientX: 100, clientY: 200 });
-    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 100, clientY: 95 });
-    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 100, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 100, clientY: 45 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 100, clientY: 45 });
     fireEvent.click(h);
     expect(onClick).not.toHaveBeenCalled();
     rtlAct(() => void vi.advanceTimersByTime(200));
