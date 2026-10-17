@@ -1,12 +1,10 @@
 import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse } from '@cartolina/shared';
 import { CODE_RE, randomCode } from './codes';
 import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
-import { allRounds, listRounds } from './history-db';
+import { HISTORY_PAGE_SIZE, allRounds, listRounds } from './history-db';
 import { RoomDO } from './room-do';
 
 export { RoomDO };
-
-const PAGE_SIZE = 20;
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
@@ -62,14 +60,14 @@ function parseBefore(raw: string | null): number | null | undefined {
 
 async function getHistoryPage(env: Env, game: GameId, before: number | null): Promise<HistoryResponse> {
   // Uma a mais que a página só para saber se existe próxima.
-  const fetched = await listRounds(env.DB, game, before, PAGE_SIZE + 1);
-  const rounds = fetched.slice(0, PAGE_SIZE);
+  const fetched = await listRounds(env.DB, game, before, HISTORY_PAGE_SIZE + 1);
+  const rounds = fetched.slice(0, HISTORY_PAGE_SIZE);
   return {
     game,
     rounds,
     // Estatísticas só na primeira página: leem até STATS_ROUNDS_CAP rodadas, caro demais para repetir a cada "ver mais".
     stats: before === null ? summarizeHistory(await allRounds(env.DB, game)) : null,
-    nextBefore: fetched.length > PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
+    nextBefore: fetched.length > HISTORY_PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
   };
 }
 
