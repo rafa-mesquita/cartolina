@@ -229,7 +229,8 @@ export function nextAlarmAt(room: Room, now: number): number {
     .map((s) => s.disconnectedAt! + DISCONNECT_GRACE_MS + 1000)
     .filter((at) => at > now);
   const deadline = GAMES[room.gameId].module.nextDeadline?.(room.game) ?? null;
-  if (deadline !== null && deadline > now) pending.push(deadline);
+  // Prazo vencido acorda na hora. Não entra em loop: o tick fecha a fase e zera o prazo.
+  if (deadline !== null) pending.push(Math.max(deadline, now));
   return Math.min(room.lastActivity + ROOM_TTL_MS, ...pending);
 }
 

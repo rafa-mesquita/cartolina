@@ -182,6 +182,18 @@ describe('sala de Retratim', () => {
     expect(game().phase).toBe('guessing');
   });
 
+  it('prazo vencido do jogo acorda a sala na hora', () => {
+    let room = picturesRoom(3);
+    room = step(room, 'p0', { type: 'start' }, 10);
+    const game = () => room.game as PicturesState;
+    for (const p of ['p0', 'p1']) {
+      room = step(room, p, { type: 'draft', work: sampleWork(game().kits[p]!) }, 10);
+      room = step(room, p, { type: 'ready', on: true }, 10);
+    }
+    const prazo = game().countdownEndsAt!;
+    expect(nextAlarmAt(room, prazo + 1)).toBe(prazo + 1);
+  });
+
   it('sala de ITO continua acordando só pela presença e expiração', () => {
     const room = createRoom('ABCD', 0);
     expect(nextAlarmAt(room, 0)).toBe(room.lastActivity + 6 * 60 * 60 * 1000);
