@@ -70,12 +70,19 @@ button{font:inherit;color:inherit;cursor:pointer}
 #page{position:absolute;top:84px;bottom:0;left:50%;width:1440px;margin-left:-720px}
 
 /* grade 4×4 */
+/* duas colunas (grade | divisor | lado direito); larguras vêm do layout() em px do palco */
+#page{--pw:164px;--ph:126px;--grid-w:732px;--side-x:800px;--side-w:600px;--div-x:772px;--bw:600px}
 #gridWrap{position:absolute;left:40px;top:22px}
-#grid{display:grid;grid-template-columns:28px repeat(4,164px);grid-template-rows:30px repeat(4,126px);gap:12px}
+#grid{display:grid;grid-template-columns:28px repeat(4,var(--pw));grid-template-rows:30px repeat(4,var(--ph));gap:12px}
 #grid .lbl{display:grid;place-items:center;font:700 26px/1 var(--hand);color:var(--ink-soft)}
-.photo{position:relative;width:164px;height:126px;padding:6px;background:var(--photo-border);box-shadow:var(--shadow);border-radius:1px}
+.photo{position:relative;width:var(--pw);height:var(--ph);padding:6px;background:var(--photo-border);box-shadow:var(--shadow);border-radius:1px}
+.building-phase #grid .photo{cursor:zoom-in}
+.zoom-btn{position:absolute;right:10px;top:10px;width:28px;height:28px;padding:0;border-radius:50%;border:1px solid var(--edge);background:var(--paper);
+  color:var(--ink-soft);display:grid;place-items:center;font-size:16px;box-shadow:var(--shadow);opacity:0;transition:opacity .15s;z-index:2}
+.photo:hover .zoom-btn{opacity:1}
+.zoom-btn:hover{color:var(--blue);border-color:var(--blue)}
 .photo.secret{outline:3px dashed var(--blue);outline-offset:4px}
-#gridNote{margin:16px 0 0 40px;max-width:680px;font:500 21px/1.15 var(--hand);color:var(--ink-soft)}
+#gridNote{margin:16px 0 0 40px;max-width:calc(var(--grid-w) - 40px);font:500 21px/1.15 var(--hand);color:var(--ink-soft)}
 
 /* foto provisória (photos.js) */
 .ph{position:relative;width:100%;height:100%;overflow:hidden;display:grid;place-items:center;color:rgba(59,47,47,.55);container-type:size}
@@ -84,17 +91,28 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ph-cap{position:absolute;left:6px;bottom:4px;font:600 10px var(--ui);color:rgba(59,47,47,.6)}
 
 /* lado direito */
-#side{position:absolute;left:800px;top:22px;width:600px}
-.secret-card{position:relative;display:flex;align-items:center;gap:16px;width:max-content;padding:12px 22px 12px 12px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(-1deg);margin-left:6px}
+#side{position:absolute;left:var(--side-x);top:22px;width:var(--side-w)}
+
+/* divisor arrastável (alça de papel com 3 risquinhos) */
+#divider{position:absolute;left:var(--div-x);top:0;bottom:0;width:24px;cursor:col-resize;z-index:5;touch-action:none}
+#divider::before{content:'';position:absolute;left:11px;top:22px;bottom:22px;border-left:1px dashed rgba(125,106,88,.4)}
+#divider .grip{position:absolute;left:3px;top:50%;width:18px;height:64px;margin-top:-32px;border-radius:9px;background:var(--paper);
+  box-shadow:0 0 0 1px var(--edge),var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:box-shadow .15s}
+#divider .grip i{display:block;width:8px;height:1.5px;border-radius:1px;background:var(--ink-soft)}
+#divider:hover .grip,#divider.on .grip{box-shadow:0 0 0 1.5px var(--blue),var(--shadow)}
+#divider:hover .grip i,#divider.on .grip i{background:var(--blue)}
+#divider:hover::before,#divider.on::before{border-left-color:var(--blue)}
+body.resizing,body.resizing *{cursor:col-resize !important}
+.secret-card{position:relative;cursor:zoom-in;display:flex;align-items:center;gap:16px;width:max-content;padding:12px 22px 12px 12px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(-1deg);margin-left:6px}
 .tape{position:absolute;width:86px;height:24px;background:var(--tape);left:-18px;top:-9px;transform:rotate(-8deg);box-shadow:0 1px 1px rgba(59,47,47,.1)}
 .secret-card .mini{width:96px;height:74px;padding:4px;background:var(--photo-border);box-shadow:var(--shadow)}
 .secret-card .lab{font:500 26px/1 var(--hand);color:var(--ink-soft)}
 .secret-card .co{font:700 52px/.9 var(--hand);color:var(--blue);margin-left:6px}
 .secret-card .shh{display:block;font:400 11px/1.3 var(--ui);color:var(--ink-soft);margin-top:4px}
-#bench{position:relative;width:600px;height:450px;margin-top:18px;background:var(--paper);box-shadow:0 0 0 1px var(--edge),0 2px 6px rgba(59,47,47,.18);border-radius:3px;transition:opacity .25s}
+#bench{position:relative;width:var(--bw);height:calc(var(--bw) * .75);margin-top:18px;background:var(--paper);box-shadow:0 0 0 1px var(--edge),0 2px 6px rgba(59,47,47,.18);border-radius:3px;transition:opacity .25s}
 #bench.ready{opacity:.6;pointer-events:none}
 #bench .sheet{position:absolute;inset:0}
-.bench-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px}
+.bench-foot{width:var(--bw);display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px}
 .bench-foot .hint{font:500 20px/1.1 var(--hand);color:var(--ink-soft)}
 .bench-foot .hint b{color:var(--blue);font-weight:700}
 .btn-big{font:700 28px/1 var(--hand);padding:10px 30px 9px;border-radius:999px;border:1.5px solid var(--blue);background:var(--blue);color:var(--paper);box-shadow:var(--shadow);white-space:nowrap}
@@ -118,6 +136,21 @@ button{font:inherit;color:inherit;cursor:pointer}
 #banner .scores{font-size:13px;color:var(--ink-soft);margin:0 0 18px}
 #banner .scores b{color:var(--ink)}
 #banner .acts{display:flex;gap:10px;flex-wrap:wrap}
+
+/* zoom das fotos */
+#zoom{position:absolute;inset:0;z-index:35;background:rgba(43,34,30,.62);display:flex;align-items:center;justify-content:center}
+#zoom .frame{position:relative;padding:14px 14px 54px;background:var(--photo-border);box-shadow:0 10px 34px rgba(0,0,0,.35);transform:rotate(-.6deg)}
+#zoom .pic{width:720px;height:540px}
+#zoom .co{position:absolute;left:18px;bottom:6px;font:700 46px/1 var(--hand);color:var(--blue)}
+#zoom .cap{position:absolute;right:20px;bottom:16px;font:500 22px/1 var(--hand);color:var(--ink-soft)}
+#zoom .mine{position:absolute;right:-22px;top:-20px;padding:10px 18px 8px;border-radius:999px;background:var(--blue);color:var(--paper);
+  font:700 28px/1 var(--hand);transform:rotate(8deg);box-shadow:var(--shadow)}
+#zoom .zx{position:absolute;right:28px;top:22px;width:44px;height:44px;border-radius:50%;border:1px solid var(--edge);background:var(--paper);
+  font-size:20px;color:var(--ink-soft);display:grid;place-items:center;box-shadow:var(--shadow)}
+#zoom .nav{position:absolute;top:50%;width:52px;height:52px;margin-top:-26px;border-radius:50%;border:1px solid var(--edge);background:rgba(246,238,221,.9);
+  font-size:24px;color:var(--ink-soft);display:grid;place-items:center;box-shadow:var(--shadow)}
+#zoom .nav.l{left:60px}#zoom .nav.r{right:60px}
+#zoom .zx:hover,#zoom .nav:hover{color:var(--blue);border-color:var(--blue)}
 
 #toast{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--ink);color:var(--paper);font:600 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1}
@@ -145,6 +178,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   </div>
   <main id="page">
     <section id="gridWrap"><div id="grid"></div><p id="gridNote"></p></section>
+    <div id="divider" title="arraste pra mudar o espaço de trabalho · clique duplo volta ao padrão"><span class="grip"><i></i><i></i><i></i></span></div>
     <section id="side">
       <div id="building">
         <div class="secret-card"><span class="tape"></span><div class="mini" id="secretMini"></div>
@@ -155,6 +189,7 @@ button{font:inherit;color:inherit;cursor:pointer}
       <div id="banner" hidden></div>
     </section>
   </main>
+  <div id="zoom" hidden></div>
   <div id="toast"></div>
 </div>
 <script src="../dixit/critters.js"></script>
@@ -225,7 +260,7 @@ setInterval(() => { if (!state) return; const next = Retratim.settlePictures(sta
 
 let slowBot = null;
 function newGame() {
-  for (const t of timers) clearTimeout(t); timers.clear(); plannedFor.clear();
+  for (const t of timers) clearTimeout(t); timers.clear(); plannedFor.clear(); closePhotoZoom();
   destroyBench(); resetDraft(); gridKey = ''; secretKey = '';
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
   slowBot = ids[1 + Math.floor(Math.random() * (N - 1))];
@@ -372,7 +407,7 @@ function renderGrid(v) {
     let h = '<span></span>' + ['A', 'B', 'C', 'D'].map((c) => `<span class="lbl">${c}</span>`).join('');
     for (let row = 0; row < 4; row++) {
       h += `<span class="lbl">${row + 1}</span>`;
-      for (let col = 0; col < 4; col++) { const i = row * 4 + col; h += `<div class="photo" data-i="${i}">${photoHTML(v.grid[i])}</div>`; }
+      for (let col = 0; col < 4; col++) { const i = row * 4 + col; h += `<div class="photo" data-i="${i}">${photoHTML(v.grid[i])}<button class="zoom-btn" title="ver grande"><i class="ti ti-zoom-in"></i></button></div>`; }
     }
     $('#grid').innerHTML = h;
   }
@@ -429,6 +464,7 @@ function render(v = view()) {
   renderTop(v); renderGrid(v);
   const building = v.phase === 'building';
   $('#building').hidden = !building; $('#banner').hidden = building;
+  $('#page').classList.toggle('building-phase', building);
   if (building) renderBuilding(v); else renderBanner(v);
   renderDevKits(v);
 }
@@ -464,7 +500,99 @@ $('#devBtn').onclick = () => $('#dev').classList.toggle('on');
 $('#hurryBtn').onclick = () => act(ME, { type: 'hurry' });
 $('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
 
-fit(); renderDev(); newGame();
+/* ---------- duas colunas: grade | divisor | lado direito (montagem agora, galeria na Task 6) ---------- */
+const PAGE_H = 900 - 84, PAD = 40;
+const SIDE_DEFAULT = 600, SIDE_MIN = Math.round(1440 * .35), SIDE_MAX = Math.round(1440 * .75);
+const SIDE_KEY = 'retratim-prototipo:lado-direito';
+let sideW = SIDE_DEFAULT;
+try { const w = Number(localStorage.getItem(SIDE_KEY)); if (w >= SIDE_MIN && w <= SIDE_MAX) sideW = w; } catch (err) { /* sem localStorage: fica o padrão */ }
+function saveSide() { try { localStorage.setItem(SIDE_KEY, String(sideW)); } catch (err) { /* ignora */ } }
+/** Recalcula as larguras (px do palco): fotos 4:3 na sobra da esquerda, bancada 4:3 na coluna da direita. */
+function layout() {
+  const sideX = 1440 - PAD - sideW, divX = sideX - 28, gridW = divX - 4 - PAD;
+  // grade = rótulo 28 + 4 fotos + 4 vãos de 12; na altura: topo 22 + rótulos 30 + 4 vãos + nota ~80
+  const byW = (gridW - 28 - 48) / 4, byH = ((PAGE_H - 22 - 30 - 48 - 80) / 4 - 12) * 4 / 3 + 12;
+  const pw = Math.max(36, Math.min(byW, byH)), ph = (pw - 12) * .75 + 12; // borda de 6 px em volta da foto 4:3
+  // bancada: largura da coluna, limitada pela altura (cartão da secreta ~104 + 18 + pé ~70 + folga)
+  const bw = Math.min(sideW, (PAGE_H - 22 - 104 - 18 - 70 - 16) * 4 / 3);
+  const st = $('#page').style;
+  for (const [k, v] of Object.entries({ '--pw': pw, '--ph': ph, '--grid-w': gridW, '--side-x': sideX, '--side-w': sideW, '--div-x': divX, '--bw': bw })) st.setProperty(k, v.toFixed(2) + 'px');
+}
+/** Recria a bancada com o rascunho atual (depois de mudar o tamanho). Não manda rascunho nem conta como mexida. */
+function rebuildBench() {
+  if (!bench || !state || state.phase !== 'building') return;
+  const kit = state.kits[ME];
+  try { bench.handle && bench.handle.destroy(); } catch (err) { console.error('kit quebrou no destroy', err); }
+  bench.sheet.innerHTML = '';
+  const k = window.Kits[kit] || fallbackKit(kit);
+  try { bench.handle = k.build(bench.sheet, myWork && myWork.kit === kit ? myWork : null, onBenchChange); } catch (err) { bench.handle = null; console.error('kit quebrou no build', kit, err); }
+}
+const divider = $('#divider');
+let resizing = null;
+divider.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault(); divider.setPointerCapture(e.pointerId);
+  resizing = { pid: e.pointerId, x0: e.clientX, w0: sideW, sc: app.getBoundingClientRect().width / APPW, moved: false };
+  divider.classList.add('on'); document.body.classList.add('resizing');
+});
+divider.addEventListener('pointermove', (e) => {
+  if (!resizing || e.pointerId !== resizing.pid) return;
+  // durante o arraste só muda o tamanho (os kits escalam pela folha); ao soltar a bancada é recriada
+  const w = Math.round(Math.min(SIDE_MAX, Math.max(SIDE_MIN, resizing.w0 - (e.clientX - resizing.x0) / resizing.sc)));
+  if (w !== sideW) { sideW = w; resizing.moved = true; layout(); }
+});
+function endResize(e) {
+  if (!resizing || e.pointerId !== resizing.pid) return;
+  const moved = resizing.moved; resizing = null;
+  divider.classList.remove('on'); document.body.classList.remove('resizing');
+  if (moved) { saveSide(); rebuildBench(); }
+}
+divider.addEventListener('pointerup', endResize);
+divider.addEventListener('pointercancel', endResize);
+divider.addEventListener('dblclick', () => { if (sideW === SIDE_DEFAULT) return; sideW = SIDE_DEFAULT; layout(); saveSide(); rebuildBench(); });
+
+/* ---------- zoom das fotos (a galeria da Task 6 usa a lupinha; o clique na foto vira palpite lá) ---------- */
+let zoomAt = -1;
+/** Abre a foto da coordenada ("B3") grande. */
+function openPhotoZoom(coord) {
+  const i = Retratim.COORDS.indexOf(coord);
+  if (!state || i < 0 || !view().grid[i]) return;
+  zoomAt = i; renderZoom();
+}
+function renderZoom() {
+  const v = view(), coord = Retratim.COORDS[zoomAt];
+  const mine = (v.phase === 'building' || v.phase === 'guessing') && v.mySecret === coord;
+  const z = $('#zoom');
+  z.innerHTML = `<button class="nav l" data-z="-1" title="anterior (←)"><i class="ti ti-chevron-left"></i></button>`
+    + `<div class="frame"><div class="pic">${photoHTML(v.grid[zoomAt])}</div><span class="co">${coord}</span><span class="cap">← → pra ver as outras · Esc fecha</span>${mine ? '<span class="mine">sua foto</span>' : ''}</div>`
+    + `<button class="nav r" data-z="1" title="próxima (→)"><i class="ti ti-chevron-right"></i></button>`
+    + `<button class="zx" data-z="x" title="fechar (Esc)">✕</button>`;
+  z.hidden = false;
+}
+function stepZoom(d) { zoomAt = (zoomAt + d + 16) % 16; renderZoom(); }
+function closePhotoZoom() { zoomAt = -1; const z = $('#zoom'); z.hidden = true; z.innerHTML = ''; }
+window.openPhotoZoom = openPhotoZoom;
+$('#zoom').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-z]');
+  if (b) { if (b.dataset.z === 'x') closePhotoZoom(); else stepZoom(Number(b.dataset.z)); return; }
+  if (!e.target.closest('.frame')) closePhotoZoom();
+});
+document.addEventListener('keydown', (e) => {
+  if (zoomAt < 0) return;
+  if (e.key === 'Escape') closePhotoZoom();
+  else if (e.key === 'ArrowLeft') stepZoom(-1);
+  else if (e.key === 'ArrowRight') stepZoom(1);
+  else return;
+  e.preventDefault();
+});
+$('#grid').addEventListener('click', (e) => {
+  const ph = e.target.closest('.photo'); if (!ph) return;
+  // na montagem a foto inteira abre o zoom; nas outras fases só a lupinha (o clique na foto fica pro palpite)
+  if (e.target.closest('.zoom-btn') || (state && state.phase === 'building')) openPhotoZoom(Retratim.COORDS[Number(ph.dataset.i)]);
+});
+$('.secret-card').addEventListener('click', () => { const v = state && view(); if (v && v.mySecret) openPhotoZoom(v.mySecret); });
+
+fit(); layout(); renderDev(); newGame();
 </script>
 </body>
 </html>
