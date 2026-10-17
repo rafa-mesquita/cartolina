@@ -141,6 +141,7 @@
 
 /* divisor arrastável (alça de papel com 3 risquinhos) */
 .pictures .pc-divider { position: absolute; left: var(--div-x); top: 0; bottom: 0; width: 24px; cursor: col-resize; z-index: 5; touch-action: none; }
+.pictures .pc-divider:focus-visible { outline: none; } /* a alça acende no lugar do contorno */
 .pictures .pc-divider::before { content: ''; position: absolute; left: 12px; top: 22px; bottom: 22px; border-left: 1px dashed rgba(125, 106, 88, .4); }
 .pictures .pc-divider .grip {
   position: absolute; left: 3px; top: 50%; width: 18px; height: 64px; margin-top: -32px; border-radius: 9px; background: var(--paper);
@@ -148,8 +149,8 @@
   transition: box-shadow .15s;
 }
 .pictures .pc-divider .grip i { display: block; width: 8px; height: 1.5px; border-radius: 1px; background: var(--ink-soft); }
-.pictures .pc-divider:hover .grip, .pictures.pc-resizing .pc-divider .grip { box-shadow: 0 0 0 1.5px var(--blue), var(--shadow); }
-.pictures .pc-divider:hover .grip i, .pictures.pc-resizing .pc-divider .grip i { background: var(--blue); }
+.pictures .pc-divider:hover .grip, .pictures .pc-divider:focus-visible .grip, .pictures.pc-resizing .pc-divider .grip { box-shadow: 0 0 0 1.5px var(--blue), var(--shadow); }
+.pictures .pc-divider:hover .grip i, .pictures .pc-divider:focus-visible .grip i, .pictures.pc-resizing .pc-divider .grip i { background: var(--blue); }
 .pictures .pc-divider:hover::before, .pictures.pc-resizing .pc-divider::before { border-left-color: var(--blue); }
 
 /* montagem: cartão da secreta, bancada e pé */
@@ -180,6 +181,7 @@
 }
 .pictures .pc-btn-big:hover { filter: brightness(1.08); }
 .pictures .pc-btn-big.off { background: none; color: var(--blue); }
+.pictures .pc-btn-big:disabled { opacity: .6; cursor: default; filter: none; }
 .pictures .pc-show { position: absolute; inset: 0; }
 
 /* faixa das fases que ainda não têm tela (e de quem assiste a rodada) */

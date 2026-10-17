@@ -352,3 +352,113 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(screen.queryByText('de quem é qual foto?')).toBeNull();
   });
 });
+
+describe('mesa do Retratim: montagem sem perder rascunho', () => {
+  const cubeWork = (cells: number[]) => ({ kit: 'cubes' as const, cells: Array.from({ length: 16 }, (_, i) => (cells.includes(i) ? 0 : null)) });
+  const actions = (c: Conn, type: string) => c.sendAction.mock.calls.map(([a]) => a).filter((a) => a.type === type);
+
+  it('recarregou com rascunho e sem estar pronto: a bancada abre com a obra do servidor (sem reenviar)', () => {
+    const c = conn();
+    const room = play(started(3), 'p0', { type: 'draft', work: cubeWork([2, 7]) });
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(container.querySelector('.pc-bench')!.classList.contains('ready')).toBe(false);
+    expect(container.querySelector('.pc-kc-cell[data-i="2"]')!.classList.contains('pc-kc-cube')).toBe(true);
+    expect(container.querySelector('.pc-kc-cell[data-i="7"]')!.classList.contains('pc-kc-cube')).toBe(true);
+    rtlAct(() => vi.advanceTimersByTime(5000));
+    expect(c.sendAction).not.toHaveBeenCalled();
+  });
+
+  it('depois de uma recusa do "pronto", a próxima mexida volta a mandar draft', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={c} serverOffset={0} />);
+    paintCube(container, 1);
+    fireEvent.click(screen.getByRole('button', { name: 'estou pronto' }));
+    expect(actions(c, 'ready')).toHaveLength(1);
+    fail(c, 'bad_phase', 'Agora não dá pra fazer isso.');
+    expect(container.querySelector('.pc-bench')!.classList.contains('ready')).toBe(false);
+    paintCube(container, 2);
+    rtlAct(() => vi.advanceTimersByTime(2000));
+    expect(actions(c, 'draft')).toHaveLength(2);
+  });
+
+  it('outro erro (que não é recusa do "pronto") não solta o pedido em voo', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={c} serverOffset={0} />);
+    paintCube(container, 1);
+    fireEvent.click(screen.getByRole('button', { name: 'estou pronto' }));
+    fail(c, 'not_host', 'Só o host pode fazer isso.');
+    expect(container.querySelector('.pc-bench')!.classList.contains('ready')).toBe(true);
+    expect((screen.getByRole('button', { name: 'estou pronto' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('pedido em voo: botão desabilitado e bancada já esmaecida; clique duplo manda um ready só', () => {
+    const c = conn();
+    let room = started(3);
+    const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    paintCube(container, 4);
+    const btn = screen.getByRole('button', { name: 'estou pronto' });
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(actions(c, 'ready')).toHaveLength(1);
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelector('.pc-bench')!.classList.contains('ready')).toBe(true);
+    room = play(room, 'p0', actions(c, 'ready')[0]!);
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect((screen.getByRole('button', { name: 'desmarcar pronto' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('"pronto" perdido (a visão não me marca pronto): em 1,5 s o botão volta e a mexida sai', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={c} serverOffset={0} />);
+    paintCube(container, 1);
+    fireEvent.click(screen.getByRole('button', { name: 'estou pronto' }));
+    rtlAct(() => vi.advanceTimersByTime(1500));
+    expect((screen.getByRole('button', { name: 'estou pronto' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(container.querySelector('.pc-bench')!.classList.contains('ready')).toBe(false);
+    paintCube(container, 2);
+    rtlAct(() => vi.advanceTimersByTime(2000));
+    expect(actions(c, 'draft').at(-1)).toMatchObject({ work: { kit: 'cubes' } });
+    expect(actions(c, 'draft').length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('mesa do Retratim: foco e teclado', () => {
+  it('o zoom foca o ✕, é modal e, ao fechar, devolve o foco pra lupinha que abriu', () => {
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={conn()} serverOffset={0} />);
+    const lupa = container.querySelector<HTMLButtonElement>('.pc-photo[data-coord="C2"] .pc-zoom-btn')!;
+    lupa.focus();
+    fireEvent.click(lupa);
+    const dialog = screen.getByRole('dialog', { name: 'foto C2' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'fechar' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(lupa);
+  });
+
+  it('o divisor tem valor e anda ~2% com as setas (recriando a bancada)', () => {
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={conn()} serverOffset={0} />);
+    const sep = screen.getByRole('separator', { name: 'divisor' });
+    expect(sep.tabIndex).toBe(0);
+    expect(sep.getAttribute('aria-valuemin')).toBe('35');
+    expect(sep.getAttribute('aria-valuemax')).toBe('75');
+    expect(sep.getAttribute('aria-valuenow')).toBe('42');
+    const sheet = container.querySelector('.pc-bench-sheet');
+    fireEvent.keyDown(sep, { key: 'ArrowLeft' });
+    expect(sep.getAttribute('aria-valuenow')).toBe('44');
+    expect(container.querySelector('.pc-bench-sheet')).not.toBe(sheet);
+    fireEvent.keyDown(sep, { key: 'ArrowRight' });
+    fireEvent.keyDown(sep, { key: 'ArrowRight' });
+    expect(sep.getAttribute('aria-valuenow')).toBe('40');
+  });
+
+  it('desmontar no meio do arraste do divisor tira o cursor de arraste da mesa', () => {
+    const room = started(3);
+    const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+    fireEvent.pointerDown(screen.getByRole('separator', { name: 'divisor' }), { button: 0, clientX: 700, pointerId: 3 });
+    const root = container.querySelector('.pictures')!;
+    expect(root.classList.contains('pc-resizing')).toBe(true);
+    rerender(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={conn()} serverOffset={0} />);
+    expect(root.classList.contains('pc-resizing')).toBe(false);
+  });
+});

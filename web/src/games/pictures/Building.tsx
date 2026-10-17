@@ -14,26 +14,38 @@ interface Props {
   onZoom: (coord: Coord) => void;
   /** Aviso no palco (com o som de erro). */
   onWarn: (text: string) => void;
+  /** Hora do servidor menos a do PC (a contagem acelera o envio do rascunho). */
+  serverOffset: number;
 }
 
+/** Recusas do "pronto": a bancada volta a mandar rascunho (outros erros não mexem no pedido). */
+const READY_REFUSALS: ReadonlySet<string> = new Set(['empty_work', 'icons_too_few', 'wrong_kit', 'bad_work', 'bad_phase']);
+
 /** Montagem: grade à esquerda; à direita a foto secreta, a bancada do kit e "estou pronto". */
-export function Building({ view, conn, onZoom, onWarn }: Props) {
+export function Building({ view, conn, onZoom, onWarn, serverOffset }: Props) {
   const g = view.game, me = view.you;
   const kit = me !== null ? g.kits[me] : undefined;
   const secret = g.mySecret;
   const playing = me !== null && g.inRound.includes(me) && kit !== undefined && secret !== null;
   const ready = me !== null && g.ready.includes(me);
+  const serverWork = me !== null && Object.hasOwn(g.works, me) ? g.works[me]! : null;
   // `sendAction` é método da conexão: chamar sempre pela conexão (solto, perde o `this`).
-  const draft = useDraft(`${g.round}:${kit ?? ''}`, (a) => conn.sendAction(a));
+  const draft = useDraft(`${g.round}:${kit ?? ''}`, (a) => conn.sendAction(a), {
+    ready,
+    work: serverWork,
+    countdownEndsAt: g.paused ? null : g.countdownEndsAt,
+    serverOffset,
+  });
   const [rebuild, setRebuild] = useState(0);
   const { release } = draft;
 
-  // Recusa do servidor (ex.: "pronto" com a obra vazia): a bancada volta a mandar rascunho.
-  useEffect(() => conn.onError(() => release()), [conn, release]);
-
-  const serverWork = me !== null && Object.hasOwn(g.works, me) ? g.works[me]! : null;
+  // Recusa do "pronto" (ex.: obra vazia): a bancada volta a mandar rascunho.
+  useEffect(() => conn.onError((code) => void (READY_REFUSALS.has(code) && release())), [conn, release]);
+  /** Pronto na visão, ou pedido em voo (otimista: a bancada já esmaece e não aceita mexida). */
+  const shownReady = ready || draft.held;
 
   function toggleReady() {
+    if (draft.pending) return;
     if (ready) return draft.unready();
     const e = readyError(draft.local ?? serverWork ?? undefined);
     if (e) return onWarn(errorMessage(e));
@@ -61,10 +73,10 @@ export function Building({ view, conn, onZoom, onWarn }: Props) {
           <span className="shh">só você vê o contorno azul na grade</span>
         </span>
       </button>
-      <KitBench kit={kit} round={g.round} rebuild={rebuild} work={() => draft.local ?? serverWork} onChange={draft.onChange} ready={ready} />
+      <KitBench kit={kit} round={g.round} rebuild={rebuild} work={() => draft.local ?? serverWork} onChange={draft.onChange} ready={shownReady} />
       <div className="pc-bench-foot">
         <span className="hint">
-          {ready ? (
+          {shownReady ? (
             'pronto ✓ — esperando os outros'
           ) : (
             <>
@@ -72,7 +84,7 @@ export function Building({ view, conn, onZoom, onWarn }: Props) {
             </>
           )}
         </span>
-        <button className={`pc-btn-big${ready ? ' off' : ''}`} type="button" onClick={toggleReady}>
+        <button className={`pc-btn-big${ready ? ' off' : ''}`} type="button" disabled={draft.pending} onClick={toggleReady}>
           {ready ? 'desmarcar pronto' : 'estou pronto'}
         </button>
       </div>

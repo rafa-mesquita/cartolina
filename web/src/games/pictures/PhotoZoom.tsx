@@ -1,5 +1,5 @@
 import { COORDS, type Coord } from '@cartolina/shared';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Photo } from './Photo';
 
 interface Props {
@@ -12,9 +12,20 @@ interface Props {
   onClose: () => void;
 }
 
-/** Foto da grade grande: ← → (e ‹ ›) passam pelas 16, Esc / clique fora / ✕ fecham. */
+/**
+ * Foto da grade grande: ← → (e ‹ ›) passam pelas 16, Esc / clique fora / ✕ fecham. Ao abrir, o foco vai pro ✕;
+ * ao fechar, volta pra quem abriu.
+ */
 export function PhotoZoom({ grid, index, secret, onIndex, onClose }: Props) {
   const step = (d: number) => onIndex((index + d + COORDS.length) % COORDS.length);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement;
+    closeRef.current?.focus();
+    return () => {
+      if (opener instanceof HTMLElement && opener !== document.body && opener.isConnected) opener.focus();
+    };
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -32,6 +43,7 @@ export function PhotoZoom({ grid, index, secret, onIndex, onClose }: Props) {
     <div
       className="pc-zoom"
       role="dialog"
+      aria-modal="true"
       aria-label={`foto ${coord}`}
       onClick={(e) => {
         if (!(e.target as Element).closest('.pc-zoom-frame, button')) onClose();
@@ -49,7 +61,7 @@ export function PhotoZoom({ grid, index, secret, onIndex, onClose }: Props) {
       <button className="pc-zoom-nav r" type="button" title="próxima (→)" aria-label="próxima foto" onClick={() => step(1)}>
         <i className="ti ti-chevron-right" />
       </button>
-      <button className="pc-zoom-x" type="button" title="fechar (Esc)" aria-label="fechar" onClick={onClose}>
+      <button ref={closeRef} className="pc-zoom-x" type="button" title="fechar (Esc)" aria-label="fechar" onClick={onClose}>
         ✕
       </button>
     </div>

@@ -69,7 +69,7 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
       <div className="pc-stage" style={stage}>
         <TopBar view={view} serverOffset={serverOffset} host={host} onHurry={() => conn.sendAction({ type: 'hurry' })} />
         {g.phase === 'building' ? (
-          <Building view={view} conn={conn} onZoom={openZoom} onWarn={warn} />
+          <Building view={view} conn={conn} onZoom={openZoom} onWarn={warn} serverOffset={serverOffset} />
         ) : g.phase === 'guessing' ? (
           <Gallery key={g.round} view={view} conn={conn} zoomOpen={zoomAt !== null} onZoom={openZoom} onWarn={warn} />
         ) : (

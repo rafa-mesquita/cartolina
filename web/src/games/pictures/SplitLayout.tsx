@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 
 /* Duas colunas na página de 1440 px do palco: grade | divisor | lado direito (bancada ou obras). */
 const PAGE_W = 1440, PAGE_H = 900 - 84, PAD = 40, GAP = 48;
@@ -6,6 +6,9 @@ export const SIDE_DEFAULT = 600;
 export const SIDE_MIN = Math.round(PAGE_W * 0.35);
 export const SIDE_MAX = Math.round(PAGE_W * 0.75);
 const SIDE_KEY = 'retratim:lado-direito';
+/** Setas no divisor mexem ~2% da página. */
+const KEY_STEP = Math.round(PAGE_W * 0.02);
+const pct = (w: number) => Math.round((w / PAGE_W) * 100);
 
 function loadSide(): number {
   try {
@@ -44,13 +47,37 @@ interface Props {
   onResizeEnd?: () => void;
 }
 
-/** Página em duas colunas com divisor arrastável (35%–75% pra direita); clique duplo volta ao padrão. */
+/**
+ * Página em duas colunas com divisor arrastável (35%–75% pra direita); clique duplo volta ao padrão.
+ * No teclado, com o divisor focado, ← e → mexem ~2%.
+ */
 export function SplitLayout({ left, right, onResizeEnd }: Props) {
   const [sideW, setSideW] = useState(loadSide);
   const pageRef = useRef<HTMLElement>(null);
   const drag = useRef<{ pid: number; x0: number; w0: number; sc: number; moved: boolean } | null>(null);
 
-  const resizing = (on: boolean) => pageRef.current?.closest('.pictures')?.classList.toggle('pc-resizing', on);
+  /** A raiz que ganha o cursor de arraste (guardada: no desmontar a ref já pode ter sumido). */
+  const root = useRef<Element | null>(null);
+  const resizing = (on: boolean) => {
+    if (on) root.current = pageRef.current?.closest('.pictures') ?? null;
+    root.current?.classList.toggle('pc-resizing', on);
+  };
+  // desmontou no meio do arraste (ex.: a fase mudou): o cursor de arraste não fica preso na mesa
+  useEffect(() => () => void root.current?.classList.remove('pc-resizing'), []);
+
+  /** Novo tamanho de uma vez (duplo clique, teclado): guarda e avisa. */
+  function setNow(w: number) {
+    if (w === sideW) return;
+    setSideW(w);
+    saveSide(w);
+    onResizeEnd?.();
+  }
+  function key(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    e.stopPropagation();
+    setNow(clampSide(sideW + (e.key === 'ArrowLeft' ? KEY_STEP : -KEY_STEP)));
+  }
 
   function down(e: PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
@@ -90,17 +117,18 @@ export function SplitLayout({ left, right, onResizeEnd }: Props) {
         role="separator"
         aria-orientation="vertical"
         aria-label="divisor"
+        aria-valuenow={pct(sideW)}
+        aria-valuemin={pct(SIDE_MIN)}
+        aria-valuemax={pct(SIDE_MAX)}
+        aria-valuetext={`lado direito com ${pct(sideW)}% da página`}
+        tabIndex={0}
+        onKeyDown={key}
         title="arraste pra mudar o espaço de trabalho · clique duplo volta ao padrão"
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
         onPointerCancel={up}
-        onDoubleClick={() => {
-          if (sideW === SIDE_DEFAULT) return;
-          setSideW(SIDE_DEFAULT);
-          saveSide(SIDE_DEFAULT);
-          onResizeEnd?.();
-        }}
+        onDoubleClick={() => setNow(SIDE_DEFAULT)}
       >
         <span className="grip">
           <i />
