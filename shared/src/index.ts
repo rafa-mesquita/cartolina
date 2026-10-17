@@ -10,6 +10,7 @@ export { applyItoAction, initialItoState, ito, itoViewFor, maybeReveal } from '.
 export * from './history';
 export { itoActionSchema } from './games/ito/schema';
 export * from './games/dixit/types';
+export * from './games/dixit/record';
 export { DIXIT_DECK_SIZE, dixitCardIds } from './games/dixit/deck';
 export { scoreRound } from './games/dixit/scoring';
 export {

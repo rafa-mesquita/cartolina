@@ -74,6 +74,11 @@ export function itoStateOf(room: Room): ItoState | null {
   return room.gameId === 'ito' ? (room.game as ItoState) : null;
 }
 
+/** Estado do Diquisti, ou null se a sala é de outro jogo. */
+export function dixitStateOf(room: Room): DixitState | null {
+  return room.gameId === 'dixit' ? (room.game as DixitState) : null;
+}
+
 type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &
   Partial<Pick<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'>> & {
     /** Salas gravadas antes da estante de jogos tinham grupo; o campo é ignorado. */

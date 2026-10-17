@@ -1,3 +1,4 @@
+import { pendingDixitRecord, type DixitRoundRecord } from './games/dixit/record';
 import { GAMES, type GameId } from './games/registry';
 import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
 import type { PlayerColor } from './players';
@@ -148,4 +149,20 @@ export function summarizeHistory(rounds: readonly RoundRecord[]): HistoryStats {
     .sort((a, b) => b.count - a.count || a.titulo.localeCompare(b.titulo, 'pt-BR'))
     .slice(0, 5);
   return { rounds: ordered.length, livreRounds, livreWins, campaigns, campaignsWon, bestStreak, sharpest, topThemes };
+}
+
+/** Rodada a gravar, já com o jogo: o servidor escolhe a tabela por ele. */
+export type PendingHistoryRecord =
+  | { game: 'ito'; key: string; record: RoundRecord }
+  | { game: 'dixit'; key: string; record: DixitRoundRecord };
+
+/** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação nova. */
+export function pendingHistoryRecord(room: Room, now: number, id: string): PendingHistoryRecord | null {
+  if (!GAMES[room.gameId].recordsHistory) return null;
+  if (room.gameId === 'dixit') {
+    const pending = pendingDixitRecord(room, now, id);
+    return pending ? { game: 'dixit', ...pending } : null;
+  }
+  const pending = pendingRecord(room, now, id);
+  return pending ? { game: 'ito', ...pending } : null;
 }
