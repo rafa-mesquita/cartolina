@@ -20,6 +20,7 @@ export {
   dixitOnPresenceChange,
   dixitPicksPerPlayer,
   initialDixitState,
+  withDixitCounters,
 } from './games/dixit/rules';
 export { dixit, dixitViewFor } from './games/dixit/view';
 export { dixitActionSchema } from './games/dixit/schema';

@@ -50,6 +50,10 @@ export interface DixitState {
   winners: string[];
   /** Menos de 3 ativos na rodada: ninguém joga até voltar gente. */
   paused: boolean;
+  /** Partida da sala: 0 no lobby, +1 a cada `start` e `again` (identifica a partida no histórico). */
+  match: number;
+  /** Narrações começadas nesta partida: zera na partida nova e soma 1 a cada narração (chave da revelação no histórico). */
+  round: number;
 }
 
 export type DixitAction =

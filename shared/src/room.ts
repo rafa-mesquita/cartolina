@@ -1,5 +1,6 @@
 import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
-import type { DixitView } from './games/dixit/types';
+import { withDixitCounters } from './games/dixit/rules';
+import type { DixitState, DixitView } from './games/dixit/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
 import type { Rng } from './rng';
@@ -82,9 +83,12 @@ type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &
 /** Sala lida do storage: salas antigas não têm `gameId` (eram todas ITO) e podem ter `group` (ignorado). */
 export function restoreRoom(stored: StoredRoom): Room {
   const { group: _legacyGroup, ...rest } = stored;
+  const gameId = stored.gameId ?? 'ito';
   return {
     ...rest,
-    gameId: stored.gameId ?? 'ito',
+    gameId,
+    // Diquisti gravado antes do histórico não tem `match`/`round`.
+    game: gameId === 'dixit' ? withDixitCounters(rest.game as DixitState) : rest.game,
     runStartedAt: stored.runStartedAt ?? null,
     recordedRevealKey: stored.recordedRevealKey ?? null,
   };
