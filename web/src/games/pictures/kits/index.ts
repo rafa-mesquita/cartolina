@@ -11,3 +11,6 @@ import type { KitModule } from './types';
 export const KITS_UI: { [K in KitId]: KitModule<K> } = { cubes, laces, sticks, blocks, icons, dots };
 
 export type { KitModule } from './types';
+
+/** O módulo do kit, sem o tipo da obra amarrado (quem chama garante que a obra é desse kit). */
+export const kitModule = (kit: KitId): KitModule<KitId> => KITS_UI[kit] as unknown as KitModule<KitId>;

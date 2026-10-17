@@ -111,6 +111,6 @@ describe('rota da sala de Retratim', () => {
     const playing = picturesView(started(3), 'p0');
     rerender(<Game conn={conn()} snap={snap(playing)} view={playing} />);
     expect(screen.queryByRole('button', { name: 'começar' })).toBeNull();
-    expect(screen.getByText('mesa em construção')).toBeTruthy();
+    expect(screen.getByText('sua foto secreta')).toBeTruthy();
   });
 });
