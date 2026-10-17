@@ -11,7 +11,7 @@ import {
   type PicturesPhase,
   type PicturesState,
 } from './types';
-import { readyError, workError } from './works';
+import { isBlankWork, readyError, workError } from './works';
 
 const fail = (error: string): ActionResult<PicturesState> => ({ ok: false, error });
 const ok = (state: PicturesState): ActionResult<PicturesState> => ({ ok: true, state });
@@ -79,9 +79,15 @@ function startMatch(ctx: GameContext): ActionResult<PicturesState> {
   return ok(beginRound(fresh, ctx, 0));
 }
 
-/** As obras congelam como estão (quem nunca mandou rascunho fica em branco). */
+/** Sem obra em branco: quem só tem rascunho vazio fica como quem nunca mandou. */
+function withoutBlankWorks(state: PicturesState): PicturesState {
+  const kept = Object.entries(state.works).filter(([, w]) => !isBlankWork(w));
+  return kept.length === Object.keys(state.works).length ? state : { ...state, works: Object.fromEntries(kept) };
+}
+
+/** As obras congelam como estão (quem nunca mandou rascunho, ou só mandou obra em branco, fica de fora). */
 function toGuessing(state: PicturesState): PicturesState {
-  return { ...state, phase: 'guessing', guesses: {}, confirmed: [], countdownEndsAt: null };
+  return { ...withoutBlankWorks(state), phase: 'guessing', guesses: {}, confirmed: [], countdownEndsAt: null };
 }
 
 /** Valem os palpites colados, confirmados ou não. A revelação segue a ordem dos assentos. */
@@ -130,8 +136,9 @@ export function settlePictures(input: PicturesState, ctx: GameContext): Pictures
   const timeUp = resumed.countdownEndsAt !== null && ctx.now >= resumed.countdownEndsAt;
   if (doneHere === people.length || timeUp) {
     if (resumed.phase === 'guessing') return toReveal(resumed);
-    // Ninguém montou nada: não há o que palpitar, vai direto pra revelação (vazia).
-    return Object.keys(resumed.works).length === 0 ? toReveal(resumed) : toGuessing(resumed);
+    // Ninguém montou nada (obra em branco não conta): não há o que palpitar, vai direto pra revelação (vazia).
+    const closed = withoutBlankWorks(resumed);
+    return Object.keys(closed.works).length === 0 ? toReveal(closed) : toGuessing(closed);
   }
   if (resumed.countdownEndsAt === null && doneHere >= Math.ceil(people.length / 2)) {
     return { ...resumed, countdownEndsAt: ctx.now + PICTURES_COUNTDOWN_MS };

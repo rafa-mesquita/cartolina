@@ -109,9 +109,28 @@ export function workError(work: Work): 'bad_work' | null {
   }
 }
 
+/**
+ * Obra em branco = não mostra nada, vale como "nunca mandou rascunho" (fica fora da galeria e sem ponto de artista).
+ * Palito/pedra com x ou y fora de 0–1 está guardado de lado. Laços e blocos nunca são em branco: a corda e a mesa sempre aparecem.
+ */
+export function isBlankWork(work: Work): boolean {
+  switch (work.kit) {
+    case 'cubes':
+      return work.cells.every((c) => c === null);
+    case 'icons':
+      return work.ids.length === 0;
+    case 'dots':
+      return work.points.length === 0;
+    case 'sticks':
+      return ![...work.sticks, ...work.stones].some((q) => q.x >= 0 && q.x <= 1 && q.y >= 0 && q.y <= 1);
+    default:
+      return false;
+  }
+}
+
 /** Por que essa obra ainda não pode ficar "pronta" (`null` = pode). Quando o tempo acaba, vale como está. */
 export function readyError(work: Work | undefined): 'empty_work' | 'cubes_incomplete' | 'icons_too_few' | null {
-  if (work === undefined) return 'empty_work';
+  if (work === undefined || isBlankWork(work)) return 'empty_work';
   if (work.kit === 'cubes' && work.cells.some((c) => c === null)) return 'cubes_incomplete';
   if (work.kit === 'icons' && work.ids.length < ICONS_MIN) return 'icons_too_few';
   return null;

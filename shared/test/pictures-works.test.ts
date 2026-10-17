@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KITS, readyError, workError, workSchema, type Work } from '../src/games/pictures/works';
+import { KITS, isBlankWork, readyError, workError, workSchema, type Work } from '../src/games/pictures/works';
 import { sampleWork } from './pictures-helpers';
 
 const parse = (w: unknown) => workSchema.safeParse(w).success;
@@ -83,5 +83,35 @@ describe('Retratim: obras dos kits', () => {
 
   it('sem rascunho não dá pra ficar pronto', () => {
     expect(readyError(undefined)).toBe('empty_work');
+  });
+
+  it('obra em branco: cubos, símbolos e pontos sem nada', () => {
+    expect(isBlankWork({ kit: 'cubes', cells: Array<null>(16).fill(null) })).toBe(true);
+    expect(isBlankWork({ kit: 'cubes', cells: [0, ...Array<null>(15).fill(null)] })).toBe(false);
+    expect(isBlankWork({ kit: 'icons', ids: [] })).toBe(true);
+    expect(isBlankWork({ kit: 'icons', ids: [3] })).toBe(false);
+    expect(isBlankWork({ kit: 'dots', points: [], lines: [] })).toBe(true);
+    expect(isBlankWork({ kit: 'dots', points: [[0.5, 0.5]], lines: [] })).toBe(false);
+  });
+
+  it('obra em branco: palitos e pedras todos guardados de lado', () => {
+    const away = { x: 1.4, y: -0.4, rot: 0 };
+    const aside: Work = { kit: 'sticks', sticks: Array(4).fill(away), stones: Array(4).fill(away) };
+    expect(isBlankWork(aside)).toBe(true);
+    const wide = { x: 1.4, y: 0.5, rot: 0 };
+    expect(isBlankWork({ kit: 'sticks', sticks: Array(4).fill(wide), stones: Array(4).fill(wide) })).toBe(true);
+    expect(isBlankWork({ ...aside, sticks: [{ x: 0.5, y: 0.5, rot: 0 }, away, away, away] })).toBe(false);
+    expect(isBlankWork({ ...aside, stones: [away, away, away, { x: 0, y: 1, rot: 0 }] })).toBe(false);
+  });
+
+  it('laços e blocos nunca são em branco', () => {
+    expect(isBlankWork(sampleWork('laces'))).toBe(false);
+    expect(isBlankWork(sampleWork('blocks'))).toBe(false);
+  });
+
+  it('obra em branco não pode ficar pronta', () => {
+    expect(readyError({ kit: 'cubes', cells: Array<null>(16).fill(null) })).toBe('empty_work');
+    expect(readyError({ kit: 'icons', ids: [] })).toBe('empty_work');
+    expect(readyError({ kit: 'dots', points: [], lines: [] })).toBe('empty_work');
   });
 });

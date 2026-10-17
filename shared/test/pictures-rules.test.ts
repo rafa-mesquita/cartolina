@@ -137,6 +137,32 @@ describe('Retratim: montagem', () => {
     expect(Object.keys(after.works).sort()).toEqual(['p0', 'p1', 'p2']);
   });
 
+  it('obra em branco não vai pra galeria: ao fechar a montagem, só ficam as obras com conteúdo', () => {
+    const { state, ctx } = started(3);
+    expect(state.kits.p2).toBe('sticks');
+    const away = { x: 1.4, y: -0.4, rot: 0 };
+    let s = drafted(state, ['p0', 'p1'], ctx);
+    s = act(s, 'p2', { type: 'draft', work: { kit: 'sticks', sticks: Array(4).fill(away), stones: Array(4).fill(away) } }, ctx);
+    s = act(s, 'p0', { type: 'ready', on: true }, ctx);
+    s = act(s, 'p1', { type: 'ready', on: true }, ctx);
+    s = act(s, 'p0', { type: 'hurry' }, ctx);
+    const after = settlePictures(s, ctxOf(ids(3), { now: T0 + PICTURES_COUNTDOWN_MS }));
+    expect(after.phase).toBe('guessing');
+    expect(Object.keys(after.works).sort()).toEqual(['p0', 'p1']);
+  });
+
+  it('só obras em branco (ou nenhuma) e o tempo acaba: vai direto pra revelação, sem obras', () => {
+    // Laços e blocos nunca são em branco, então quem tem esses kits (p1 na rodada 0) não manda nada.
+    const { state, ctx } = started(3);
+    const away = { x: 1.4, y: -0.4, rot: 0 };
+    let s = act(state, 'p0', { type: 'draft', work: { kit: 'cubes', cells: Array<null>(16).fill(null) } }, ctx);
+    s = act(s, 'p2', { type: 'draft', work: { kit: 'sticks', sticks: Array(4).fill(away), stones: Array(4).fill(away) } }, ctx);
+    s = act(s, 'p0', { type: 'hurry' }, ctx);
+    const after = settlePictures(s, ctxOf(ids(3), { now: T0 + PICTURES_COUNTDOWN_MS }));
+    expect(after.phase).toBe('reveal');
+    expect(after.result?.order).toEqual([]);
+  });
+
   it('host apressa: a contagem dispara na hora; só o host, só na montagem ou no palpite', () => {
     const { state, ctx } = started(4);
     const s = act(state, 'p0', { type: 'hurry' }, ctx);
