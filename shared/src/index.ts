@@ -11,6 +11,7 @@ export * from './history';
 export { itoActionSchema } from './games/ito/schema';
 export * from './games/dixit/types';
 export * from './games/dixit/record';
+export * from './games/dixit/summary';
 export { DIXIT_DECK_SIZE, dixitCardIds } from './games/dixit/deck';
 export { scoreRound } from './games/dixit/scoring';
 export {

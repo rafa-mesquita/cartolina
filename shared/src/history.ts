@@ -1,4 +1,5 @@
 import { pendingDixitRecord, type DixitRoundRecord } from './games/dixit/record';
+import type { DixitHistoryStats, DixitMatch } from './games/dixit/summary';
 import { GAMES, type GameId } from './games/registry';
 import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
 import type { PlayerColor } from './players';
@@ -64,6 +65,23 @@ export interface HistoryResponse {
   stats: HistoryStats | null;
   nextBefore: number | null;
 }
+
+/** Resposta de `GET /history/dixit`: 20 partidas por página; estatísticas e cartas famosas só na primeira. */
+export interface DixitHistoryResponse {
+  game: 'dixit';
+  matches: DixitMatch[];
+  /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
+  stats: DixitHistoryStats | null;
+  /** Início da última partida da página (exclusivo na próxima), ou null se acabou. */
+  nextBefore: number | null;
+}
+
+/** Resposta de `GET /history/:game`, por jogo (todo jogo do registro precisa estar aqui). */
+export interface HistoryResponses {
+  ito: HistoryResponse;
+  dixit: DixitHistoryResponse;
+}
+export type HistoryResponseOf<G extends GameId> = HistoryResponses[G];
 
 /** Identifica uma revelação (ids das cartas se repetem entre rodadas: entram nível, vidas, tema e valores). */
 export function revealKey(game: ItoState): string | null {

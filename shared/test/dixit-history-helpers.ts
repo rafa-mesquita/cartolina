@@ -1,6 +1,7 @@
 import type { GameContext } from '../src/game';
 import { dixitPicksPerPlayer } from '../src/games/dixit/rules';
-import type { DixitState } from '../src/games/dixit/types';
+import type { DixitPerson, DixitRoundRecord } from '../src/games/dixit/record';
+import type { DixitState, DixitTarget } from '../src/games/dixit/types';
 import { PLAYER_COLORS } from '../src/players';
 import { createRoom, joinRoom, type Room } from '../src/room';
 import { act, ids, others } from './dixit-helpers';
@@ -36,4 +37,49 @@ export function playToReveal(state: DixitState, ctx: GameContext, clue = 'eco'):
     s = act(s, p, { type: 'confirm' }, ctx);
   }
   return s;
+}
+
+export const PEOPLE = {
+  Ana: { name: 'Ana', color: PLAYER_COLORS[0] },
+  Bia: { name: 'Bia', color: PLAYER_COLORS[1] },
+  Caio: { name: 'Caio', color: PLAYER_COLORS[2] },
+  Duda: { name: 'Duda', color: PLAYER_COLORS[3] },
+} satisfies Record<string, DixitPerson>;
+export type Who = keyof typeof PEOPLE;
+
+export interface RoundSpec {
+  at: number;
+  teller: Who;
+  /** Carta do narrador (padrão `d001`). */
+  story?: string;
+  clue?: string;
+  /** Outras cartas da mesa: carta → dono. */
+  cards?: Record<string, Who>;
+  /** Votante → carta. */
+  votes?: Partial<Record<Who, string>>;
+  /** Placar depois da rodada. */
+  scores?: Partial<Record<Who, number>>;
+  match?: string;
+  target?: DixitTarget;
+}
+
+/** Rodada gravada de mentira, só com o que cada teste precisa. Id `r<at>`, partida padrão `ABCD-1-1`. */
+export function dixitRound(s: RoundSpec): DixitRoundRecord {
+  const story = s.story ?? 'd001';
+  const votes = (Object.entries(s.votes ?? {}) as [Who, string][]).map(([voter, card]) => ({ voter: PEOPLE[voter], card }));
+  const scores = (Object.entries(s.scores ?? {}) as [Who, number][]).map(([name, score]) => ({ ...PEOPLE[name], gained: 0, score }));
+  return {
+    id: `r${s.at}`,
+    matchId: s.match ?? 'ABCD-1-1',
+    roomCode: 'ABCD',
+    playedAt: s.at,
+    target: s.target ?? 30,
+    round: 1,
+    storyteller: PEOPLE[s.teller],
+    clue: s.clue ?? '',
+    storyCard: story,
+    cards: [{ card: story, owner: PEOPLE[s.teller] }, ...Object.entries(s.cards ?? {}).map(([card, owner]) => ({ card, owner: PEOPLE[owner] }))],
+    votes,
+    scores,
+  };
 }
