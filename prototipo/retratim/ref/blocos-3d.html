@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ref · blocos 3D v3 (aprovado)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+#tb{position:absolute;display:none;gap:4px;background:var(--surface-2);border:.5px solid var(--border-strong);border-radius:8px;padding:4px;z-index:2}
+#tb button{font-size:12px;padding:4px 8px;height:30px}
+#lg{position:absolute;left:10px;bottom:10px;display:flex;flex-direction:column;gap:3px;font-size:11px;color:#E1F5EE;pointer-events:none;line-height:1.3}
+#lg span{background:rgba(4,52,44,.55);padding:3px 8px;border-radius:6px;width:max-content}
+#rs{position:absolute;right:10px;top:10px;width:32px;height:32px;padding:0;background:var(--surface-2);z-index:2}
+</style>
+</head>
+<body>
+<h1>Referência aprovada: blocos 3D (v3)</h1>
+<p class="nota">Pedido do usuário: sem comandos fora da cena. Ao soltar uma peça, menu flutuante junto dela (girar ↺/↻ de 15°, deitar/levantar); legendas no canto; rodinha do mouse gira a mesa; arrastar o fundo inclina. Depois deste protótipo: são <b>6 blocos</b> (cubo, tijolo, prancha, pilar, telhado, arco), e o <b>ângulo da câmera faz parte da obra</b>.</p>
+<div id="w3" style="position:relative;height:420px;border-radius:12px;overflow:hidden;background:var(--surface-1);touch-action:none">
+<div id="tb"><button id="rl" aria-label="girar pra esquerda">↺</button><button id="rr" aria-label="girar pra direita">↻</button><button id="lay"><span id="layt">deitar</span></button></div>
+<button id="rs" aria-label="espalhar as peças de novo">⟳</button>
+<div id="lg"><span>segure e arraste uma peça pra mover</span><span>solte pra ver as opções de girar</span><span>rodinha do mouse gira a mesa</span><span>arraste o fundo pra inclinar a vista</span></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const el=document.getElementById('w3'),W=el.clientWidth,H=420,tb=document.getElementById('tb');
+const R=new THREE.WebGLRenderer({antialias:true,alpha:true});R.setPixelRatio(Math.min(2,devicePixelRatio));R.setSize(W,H);R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;el.insertBefore(R.domElement,el.firstChild);
+const S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(38,W/H,.1,100);
+let th=.5,ph=.95,di=11.5;function upd(){cam.position.set(di*Math.sin(ph)*Math.sin(th),di*Math.cos(ph),di*Math.sin(ph)*Math.cos(th));cam.lookAt(0,.6,0);draw()}
+S.add(new THREE.HemisphereLight(0xffffff,0x8a8070,.75));const sun=new THREE.DirectionalLight(0xfff4e0,.85);sun.position.set(5,9,4);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-7,right:7,top:7,bottom:-7});sun.shadow.bias=-.0005;S.add(sun);
+const felt=new THREE.Mesh(new THREE.PlaneGeometry(16,16),new THREE.MeshStandardMaterial({color:0x3f6e55,roughness:1}));felt.rotation.x=-Math.PI/2;felt.receiveShadow=true;S.add(felt);
+const mat=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshStandardMaterial({color:0xece3d0,roughness:.95}));mat.rotation.x=-Math.PI/2;mat.position.y=.005;mat.receiveShadow=true;S.add(mat);
+function ext(s,d){const g=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false});g.center();return g}
+const tri=new THREE.Shape();tri.moveTo(-1,0);tri.lineTo(1,0);tri.lineTo(0,1);tri.lineTo(-1,0);
+const arc=new THREE.Shape();arc.moveTo(-1,0);arc.lineTo(-1,1.1);arc.lineTo(1,1.1);arc.lineTo(1,0);arc.lineTo(.6,0);arc.absarc(0,0,.6,0,Math.PI,false);arc.lineTo(-1,0);
+const half=new THREE.Shape();half.moveTo(-.9,0);half.absarc(0,0,.9,Math.PI,0,true);half.lineTo(-.9,0);
+const DEF=[[()=>new THREE.BoxGeometry(1,1,1),0xd9a066],[()=>new THREE.BoxGeometry(2,.6,1),0xc98b4f],[()=>new THREE.BoxGeometry(3.2,.25,.8),0xe3b67a],[()=>new THREE.CylinderGeometry(.35,.35,2.2,28),0xd29a5c],[()=>new THREE.CylinderGeometry(.65,.65,.55,36),0xc2854a],[()=>ext(tri,1),0xdba870],[()=>ext(arc,.8),0xcf9358],[()=>ext(half,.7),0xe0ae73],[()=>new THREE.CylinderGeometry(0,.55,1.1,32),0xd8a065]];
+const B=DEF.map(([gf,c])=>{const geo=gf(),m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:c,roughness:.7}));m.castShadow=m.receiveShadow=true;m.rotation.order='YXZ';m.userData={ry:0,lay:0};m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,30),new THREE.LineBasicMaterial({color:0x6b4423,transparent:true,opacity:.35})));S.add(m);return m});
+const START=[[-3,-3],[-1,-3.1],[2,-3],[-3.1,-.5],[-3,1.8],[3,-.6],[3,1.8],[0,3],[-2,3.1]];
+function orient(b){b.rotation.set(b.userData.lay*Math.PI/2,b.userData.ry,0)}
+function scatter(){B.forEach((b,i)=>{b.userData.ry=0;b.userData.lay=0;orient(b);b.position.set(START[i][0],0,START[i][1])});settle(null)}
+function ov(a,b){const e=.04;return a.min.x<b.max.x-e&&a.max.x>b.min.x+e&&a.min.z<b.max.z-e&&a.max.z>b.min.z+e}
+const by=b=>new THREE.Box3().setFromObject(b).min.y;
+function settle(top){const bx=new Map(),order=B.filter(b=>b!==top).sort((a,b)=>by(a)-by(b));if(top)order.push(top);const done=[];order.forEach(b=>{b.position.y=0;b.updateMatrixWorld(true);const x=new THREE.Box3().setFromObject(b);let base=0;done.forEach(o=>{if(ov(x,bx.get(o)))base=Math.max(base,bx.get(o).max.y)});b.position.y=base-x.min.y;b.updateMatrixWorld(true);bx.set(b,new THREE.Box3().setFromObject(b));done.push(b)});draw()}
+let sel=null,showTb=false;function pick(b){if(sel)sel.material.emissive.setHex(0);sel=b;if(sel)sel.material.emissive.setHex(0x3a2408);if(!b)showTb=false;draw()}
+function placeTb(){if(!sel||!showTb){tb.style.display='none';return}const x=new THREE.Box3().setFromObject(sel),c=new THREE.Vector3((x.min.x+x.max.x)/2,x.max.y+.35,(x.min.z+x.max.z)/2).project(cam);tb.style.display='flex';document.getElementById('layt').textContent=sel.userData.lay?'levantar':'deitar';const w=tb.offsetWidth,h=tb.offsetHeight;let px=(c.x+1)/2*W-w/2,py=(1-c.y)/2*H-h-6;px=Math.max(6,Math.min(W-w-6,px));py=Math.max(6,Math.min(H-h-6,py));tb.style.left=px+'px';tb.style.top=py+'px'}
+const ray=new THREE.Raycaster(),mv=new THREE.Vector2(),pl=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3();
+function setM(e){const r=R.domElement.getBoundingClientRect();mv.x=(e.clientX-r.left)/r.width*2-1;mv.y=-(e.clientY-r.top)/r.height*2+1;ray.setFromCamera(mv,cam)}
+let mode=null,off={x:0,z:0},lx=0,ly=0;const cv=R.domElement;
+cv.addEventListener('pointerdown',e=>{setM(e);const hs=ray.intersectObjects(B,false);cv.setPointerCapture(e.pointerId);showTb=false;if(hs.length){pick(hs[0].object);mode='drag';ray.ray.intersectPlane(pl,hit);off.x=sel.position.x-hit.x;off.z=sel.position.z-hit.z;cv.style.cursor='grabbing'}else{pick(null);mode='orbit';lx=e.clientX;ly=e.clientY}});
+cv.addEventListener('pointermove',e=>{if(mode==='drag'){setM(e);if(ray.ray.intersectPlane(pl,hit)){sel.position.x=Math.max(-5.5,Math.min(5.5,hit.x+off.x));sel.position.z=Math.max(-5.5,Math.min(5.5,hit.z+off.z));settle(sel)}}else if(mode==='orbit'){th-=(e.clientX-lx)*.008;ph=Math.max(.02,Math.min(1.4,ph-(e.clientY-ly)*.006));lx=e.clientX;ly=e.clientY;upd()}else{setM(e);cv.style.cursor=ray.intersectObjects(B,false).length?'grab':'default'}});
+cv.addEventListener('pointerup',()=>{if(mode==='drag'&&sel)showTb=true;mode=null;cv.style.cursor='default';draw()});
+cv.addEventListener('wheel',e=>{e.preventDefault();th+=e.deltaY*.004;upd()},{passive:false});
+const turn=d=>{if(!sel)return;sel.userData.ry+=d;orient(sel);settle(sel)};
+document.getElementById('rl').onclick=()=>turn(Math.PI/12);document.getElementById('rr').onclick=()=>turn(-Math.PI/12);
+document.getElementById('lay').onclick=()=>{if(!sel)return;sel.userData.lay=1-sel.userData.lay;orient(sel);settle(sel)};
+document.getElementById('rs').onclick=()=>{pick(null);scatter()};
+function draw(){R.render(S,cam);placeTb()}
+scatter();upd();
+</script>
+</body>
+</html>
