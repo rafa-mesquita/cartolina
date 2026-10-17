@@ -77,6 +77,14 @@ export const ERROR_CODES = [
   'already_confirmed',
   'paused',
   'deck_too_small',
+  'wrong_kit',
+  'bad_work',
+  'empty_work',
+  'cubes_incomplete',
+  'icons_too_few',
+  'already_ready',
+  'own_work',
+  'no_work',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -92,7 +100,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   theme_random_only: 'No modo campanha o tema é sempre sorteado.',
   not_player: 'Você está assistindo esta rodada.',
   bad_action: 'Ação inválida.',
-  room_full: 'A sala está cheia (máx. 10).',
+  room_full: 'A sala está cheia.',
   bad_name: 'Escolha um nome de 1 a 16 letras.',
   bad_color: 'Personagem inválido.',
   color_taken: 'Esse personagem já foi escolhido.',
@@ -110,6 +118,14 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   already_confirmed: 'Você já confirmou.',
   paused: 'Esperando gente: precisa de 3 pessoas na mesa.',
   deck_too_small: 'O baralho tem poucas cartas pra tanta gente.',
+  wrong_kit: 'Esse não é o seu kit nesta rodada.',
+  bad_work: 'Essa obra não vale com esse kit.',
+  empty_work: 'Monte alguma coisa antes de ficar pronto.',
+  cubes_incomplete: 'Preencha todas as casas antes.',
+  icons_too_few: 'Escolha pelo menos 2 cartas.',
+  already_ready: 'Você já está pronto. Desmarque pra mexer.',
+  own_work: 'Não dá pra palpitar na própria obra.',
+  no_work: 'Essa pessoa não tem obra nesta rodada.',
 };
 
 export function errorMessage(code: string): string {

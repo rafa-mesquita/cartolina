@@ -1,5 +1,6 @@
 import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
 import type { DixitView } from './games/dixit/types';
+import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
 import type { Rng } from './rng';
@@ -56,6 +57,12 @@ export function isItoRoomView(view: RoomView): view is ItoRoomView {
 
 export function isDixitRoomView(view: RoomView): view is DixitRoomView {
   return view.gameId === 'dixit';
+}
+
+export type PicturesRoomView = RoomView<PicturesView> & { gameId: 'pictures' };
+
+export function isPicturesRoomView(view: RoomView): view is PicturesRoomView {
+  return view.gameId === 'pictures';
 }
 
 export interface RoomSummary {
@@ -215,12 +222,14 @@ export function isExpired(room: Room, now: number): boolean {
   return now - room.lastActivity >= ROOM_TTL_MS;
 }
 
-/** Próximo momento em que o servidor precisa acordar: fim de uma tolerância de desconexão ou expiração. */
+/** Próximo momento em que o servidor precisa acordar: fim de uma tolerância de desconexão, prazo do jogo ou expiração. */
 export function nextAlarmAt(room: Room, now: number): number {
   const pending = room.seats
     .filter((s) => !s.connected && s.disconnectedAt !== null)
     .map((s) => s.disconnectedAt! + DISCONNECT_GRACE_MS + 1000)
     .filter((at) => at > now);
+  const deadline = GAMES[room.gameId].module.nextDeadline?.(room.game) ?? null;
+  if (deadline !== null && deadline > now) pending.push(deadline);
   return Math.min(room.lastActivity + ROOM_TTL_MS, ...pending);
 }
 

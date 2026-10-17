@@ -23,4 +23,13 @@ export {
 } from './games/dixit/rules';
 export { dixit, dixitViewFor } from './games/dixit/view';
 export { dixitActionSchema } from './games/dixit/schema';
+export * from './games/pictures/types';
+export * from './games/pictures/works';
+export { PICTURES_DECK, PICTURES_THEMES, type PicturesPhoto, type PicturesTheme } from './games/pictures/photos';
+export { drawGrid } from './games/pictures/grid';
+export { kitFor, kitsForRound } from './games/pictures/rotation';
+export { scorePicturesRound } from './games/pictures/scoring';
+export { applyPicturesAction, initialPicturesState, settlePictures } from './games/pictures/rules';
+export { pictures, picturesNextDeadline, picturesViewFor } from './games/pictures/view';
+export { picturesActionSchema } from './games/pictures/schema';
 export * from './games/registry';
