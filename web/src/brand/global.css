@@ -116,3 +116,14 @@ button, input, textarea { font: inherit; color: inherit; }
 
 /* Só pra leitor de tela. */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Celular em pé (até 640px): telas de entrada e lobby numa coluna só, alvos de toque de 44px. */
+@media (max-width: 640px) {
+  .screen { padding: 24px 12px; gap: 14px; }
+  .logo.big { font-size: 46px; }
+  .panel { width: 100%; padding: 18px 16px; }
+  .swatches { gap: 10px; }
+  .swatch { width: 44px; height: 44px; }
+  .modes { flex-direction: column; }
+  .mode { flex: none; padding: 14px 16px; }
+}

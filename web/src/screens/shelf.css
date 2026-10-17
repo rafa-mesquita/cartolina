@@ -50,3 +50,13 @@
 @media (prefers-reduced-motion: reduce) {
   .cover { transition: none; }
 }
+/* Celular em pé: duas capas lado a lado; a página do jogo ocupa a largura toda. */
+@media (max-width: 640px) {
+  .shelf { gap: 14px; padding-top: 10px; }
+  .cover { width: 150px; height: 200px; padding: 12px; }
+  .cover b { font-size: 26px; }
+  .cover-dixit b { font-size: 24px; }
+  .cover span { font-size: 15px; }
+  .shelf .cover-ito::after { font-size: 15px; min-width: 26px; right: 8px; top: 8px; }
+  .game-page .panel, .game-head, .tabs { width: 100%; }
+}
