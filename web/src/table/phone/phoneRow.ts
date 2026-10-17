@@ -1,0 +1,49 @@
+import type { ItoRoomView } from '@cartolina/shared';
+import { isPlaying } from '../../game/derive';
+import { FH, FW, ROW_Y } from '../constants';
+import { rowEntries } from '../rowLayout';
+
+/** Um espaço "aqui" na fila em pé: `pos` = posição visual (0 = antes da 1ª faixa); `index` = índice do `place` no servidor. */
+export interface SlotTarget {
+  pos: number;
+  index: number;
+}
+
+/**
+ * Espaços onde `movingId` pode cair. O índice do servidor ignora a própria carta. Se ela já está na fila,
+ * os espaços colados nela (antes e depois) somem: soltar ali não muda nada.
+ */
+export function slotTargets(row: readonly string[], movingId: string): SlotTarget[] {
+  const at = row.indexOf(movingId);
+  const out: SlotTarget[] = [];
+  for (let pos = 0; pos <= row.length; pos++) {
+    if (at >= 0 && (pos === at || pos === at + 1)) continue;
+    out.push({ pos, index: row.slice(0, pos).filter((id) => id !== movingId).length });
+  }
+  return out;
+}
+
+/**
+ * Pode pegar a carta agora? Só na escolha e só quem joga a rodada. Carta da fila: qualquer um move.
+ * Carta fora da fila: só o dono (a mão é dele).
+ */
+export function canPick(view: ItoRoomView, cardId: string): boolean {
+  if (view.game.phase !== 'sorting' || !isPlaying(view)) return false;
+  const card = view.game.cards[cardId];
+  if (!card) return false;
+  return view.game.row.includes(cardId) || card.owner === view.you;
+}
+
+/** Onde estaria o vão na fila deitada do PC (pra quem está no computador ver o arrasto do celular no lugar certo). */
+export function deskCursor(row: readonly string[], cardId: string, index: number): { zone: 'table'; x: number; y: number } {
+  const base = row.filter((id) => id !== cardId);
+  const gap = rowEntries(base, [{ owner: '_', index }]).find((e) => e.kind === 'gap');
+  return { zone: 'table', x: (gap?.x ?? FW / 2) / FW, y: ROW_Y / FH };
+}
+
+/** Posição visual (0..n) pelo y do dedo: conta quantas faixas têm o meio acima dele. */
+export function posFromY(y: number, rects: ReadonlyArray<{ top: number; bottom: number }>): number {
+  let n = 0;
+  for (const r of rects) if ((r.top + r.bottom) / 2 < y) n++;
+  return n;
+}
