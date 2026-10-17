@@ -1,8 +1,8 @@
 /**
- * Bots SÓ PARA DESENVOLVIMENTO: deixam testar a mesa sozinho no localhost.
+ * Bots do modo teste: deixam testar a mesa sozinho (no localhost e no site no ar). Rodada com bot não vai pro histórico.
  * Cada bot abre o próprio WebSocket (token novo) e joga como uma pessoa: escreve pista,
  * arrasta a carta até a fila com o cursor, solta e fica pronto. Nunca faz ações de host.
- * Este módulo só é importado via `import()` atrás de `import.meta.env.DEV` — não vai pro build de produção.
+ * Importado via `import()` (chunk à parte): só baixa quando o lobby do DITU abre.
  */
 import { CLUE_MAX, PLAYER_COLORS, isItoRoomView, type CursorFx, type ItoView } from '@cartolina/shared';
 import { getRoomInfo, type RoomInfo } from '../net/api';
