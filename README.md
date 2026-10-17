@@ -38,6 +38,17 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 - Em desenvolvimento, `npm run dev:server` aplica as migrações no D1 local antes de subir (`npm run db:migrate -w server`).
 - API: `GET /history/:game[?before=<ms>]` → 20 rodadas, estatísticas (`stats`, só na primeira página) e cursor (`nextBefore`). Jogo desconhecido: 404 `not_found`; jogo sem histórico: 404 `no_history`. Limite de 60 pedidos por minuto por IP e `Cache-Control: no-cache` (a rodada recém-jogada aparece na hora).
 
+## Celular
+
+- O **DITU** joga no celular **em pé**. A fila fica na vertical (1 em cima, 100 embaixo). A carta vai pra fila tocando nela e depois no "colocar aqui", ou arrastando (segura um instante e arrasta). A dica se escreve numa folha que sobe de baixo.
+- Celular deitado mostra "vira o celular em pé".
+- Mesa mista funciona: quem está no computador vê o arrasto de quem está no celular no lugar certo.
+- O **Diquisti** vem na etapa 2 do Plano 5; até lá, no celular, ele mostra o aviso de jogar no computador. O **Pictures** fica só no computador por enquanto.
+- No código:
+  - `useLayout()` (`web/src/lib/device.ts`) retorna `'phone'` até 640px de largura;
+  - o campo `mobile` em `web/src/games/catalog.ts` diz quais jogos abrem no celular;
+  - a mesa do celular fica em `web/src/table/phone/` e não mexe na mesa do computador (`engine.ts`).
+
 ## API do servidor
 
 - `POST /rooms [{ game: "ito" | "dixit" }]` → `{ code }` (sem corpo: ITO; jogo desconhecido: 400 `bad_game`)

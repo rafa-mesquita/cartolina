@@ -2,7 +2,9 @@ import { isDixitRoomView, isItoRoomView, type DixitPhase, type RoomView } from '
 import { useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
+import { useLayout } from '../lib/device';
 import type { ConnSnapshot, GameConn } from '../net/connection';
+import { PhoneTable } from '../table/phone/PhoneTable';
 import { Table } from '../table/Table';
 import { Lobby } from './Lobby';
 import { Toasts } from './Toasts';
@@ -15,6 +17,8 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
   useEffect(() => {
     lastDixitPhase.current = dixitPhase;
   });
+  // Celular em pé (tela estreita): o DITU usa a mesa em pé.
+  const layout = useLayout();
   const reconnecting = snap.status === 'reconnecting' && (
     <div className="banner-reconnect" role="status">
       reconectando…
@@ -33,7 +37,13 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
   return (
     <>
       {reconnecting}
-      {view.game.phase === 'lobby' ? <Lobby view={view} conn={conn} /> : <Table view={view} conn={conn} />}
+      {view.game.phase === 'lobby' ? (
+        <Lobby view={view} conn={conn} />
+      ) : layout === 'phone' ? (
+        <PhoneTable view={view} conn={conn} />
+      ) : (
+        <Table view={view} conn={conn} />
+      )}
       <Toasts conn={conn} />
     </>
   );
