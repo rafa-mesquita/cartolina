@@ -104,13 +104,13 @@ describe('lobby do Retratim', () => {
 describe('rota da sala de Retratim', () => {
   const snap = (view: ReturnType<typeof picturesView>): ConnSnapshot => ({ status: 'joined', playerId: view.you, view, joinError: null, serverOffset: 0 });
 
-  it('no lobby mostra o lobby; começada, a mesa', () => {
+  it('no lobby mostra o lobby; começada, a mesa', async () => {
     const lobby = picturesView(picturesRoom(3), 'p0');
     const { rerender } = render(<Game conn={conn()} snap={snap(lobby)} view={lobby} />);
-    expect(screen.getByRole('button', { name: 'começar' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'começar' })).toBeTruthy();
     const playing = picturesView(started(3), 'p0');
     rerender(<Game conn={conn()} snap={snap(playing)} view={playing} />);
+    expect(await screen.findByText('sua foto secreta')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'começar' })).toBeNull();
-    expect(screen.getByText('sua foto secreta')).toBeTruthy();
   });
 });
