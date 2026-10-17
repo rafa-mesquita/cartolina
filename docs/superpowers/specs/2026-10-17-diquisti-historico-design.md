@@ -32,7 +32,9 @@ vê diz "Diquisti".
   muda ao sair do lobby, e o "jogar de novo" (`again`) começa outra partida direto
   do fim de jogo. Por isso o estado do Diquisti ganha:
   - `match: number`: começa em 0 no lobby e soma 1 a cada `start` e `again`;
-  - `round: number`: zera em cada partida nova e soma 1 a cada narração começada.
+  - `round: number`: zera em cada partida nova e soma 1 a cada narração começada (narração refeita ou pulada
+    também conta, então pode pular números; a tela numera as rodadas pela ordem dentro da partida).
+  - Estado gravado antes desta versão (sala em andamento na publicação) ganha `match: 1, round: 0` ao ser lido.
   - Id da partida: `${room.code}-${room.runStartedAt}-${match}`.
   - Chave da revelação (anti-duplicata): id da partida + `round`.
 - **Linha gravada (`DixitRoundRecord`):**
@@ -48,7 +50,7 @@ vê diz "Diquisti".
 - **Banco:** migração nova `0003_dixit_rounds.sql`, só cria a tabela
   `dixit_rounds` (colunas: `id`, `match_id`, `room_code`, `reveal_key`, `played_at`,
   `target`, `round`, `story_card`, `clue`, `record_json`; `UNIQUE (room_code,
-  reveal_key)`; índice por `played_at DESC` e por `match_id`). Não toca na tabela
+  reveal_key)`; índice por `played_at DESC` e por `(match_id, played_at)`). Não toca na tabela
   `rounds` do DITU. Segura para aplicar sozinha na publicação.
 - `GAMES.dixit.recordsHistory` passa a `true`. A gravação no servidor escolhe a
   tabela e o registro pelo jogo da sala.
@@ -100,8 +102,8 @@ recente daquele nome).
 
 ## 5. A aba na tela
 
-- Em `#/dixit/historico`, no lugar do "vem em breve". As entradas que a estante já
-  tem (lobby, mesa, sala que acabou) levam para lá.
+- Em `#/dixit/historico`, no lugar do "vem em breve". A "sala que acabou" já levava para lá; o lobby
+  ("📜 histórico do Diquisti") e a mesa ("📜 histórico", embaixo do logo) ganharam o link, que abre em outra aba.
 - **Visual conto ilustrado**: tokens e fontes do `dixit.css` (verde-floresta
   `#233D36`, superfície `#2F5046`, creme `#F6EAD2`, mostarda `#F2A541`, DM Serif
   Display + Nunito), moldura fina, fundo de pinceladas suave. O topo da página do
@@ -119,7 +121,12 @@ recente daquele nome).
      "carregar mais" no fim.
 - **Cartas:** pinturas reais (`CardArt`, com a pintura SVG de reserva). Clicar ou
   rodinha pra cima abre a carta ampliada (`CardViewer`), como na mesa.
-- **Celular:** quadros em 2 colunas; faixas de cartas rolam pro lado.
+  - Diferente da mesa, a página do histórico rola. Por isso a rodinha pra cima só amplia com o ponteiro parado
+    (sem rolagem da página ou de uma faixa nos últimos 300 ms) e nunca com deslize horizontal; com a carta
+    aberta, a página não rola por trás.
+- **Celular:** quadros em 2 colunas; faixas de cartas rolam pro lado. Enquanto o `mobile` do Diquisti no
+  catálogo for `false`, o histórico vazio mostra, no celular, o aviso de jogar no computador no lugar de
+  "criar sala".
 - **Sem dados:** "Ainda não tem partida de Diquisti. Bora jogar a primeira!" com o
   botão de criar sala.
 - Erros de carga como no DITU ("tentar de novo"; 429 com "Calma!").
@@ -149,3 +156,8 @@ recente daquele nome).
 ## 8. Fora desta versão
 
 Apagar partidas, filtro por pessoa, exportar, conquistas.
+
+## 9. Notas da implementação (2026-10-17)
+
+- Plano: `docs/superpowers/plans/2026-10-17-diquisti-historico.md`.
+- A versão de celular do DITU já está na `main` (PR #11) e o README foi atualizado nesta branch.
