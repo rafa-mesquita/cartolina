@@ -91,7 +91,7 @@ export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: Gam
       {legacy && <p className="hint">Os grupos acabaram: agora todo o histórico fica aqui, dentro de cada jogo.</p>}
       {tab === 'jogar' ? (
         <PlayTab game={game} />
-      ) : entry.hasHistory ? (
+      ) : game === 'ito' ? (
         <HistoryPanel game={game} />
       ) : (
         <section className="panel">
