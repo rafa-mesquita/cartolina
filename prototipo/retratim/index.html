@@ -542,7 +542,7 @@ function botDraft(p, key) {
 function botReady(p, key) {
   if (botKey(p) !== key || state.ready.includes(p)) return;
   if (!state.works[p]) botDraft(p, key);
-  if (!act(p, { type: 'ready', on: true }, true)) console.warn('bot não conseguiu ficar pronto', p, state.kits[p]);
+  if (act(p, { type: 'ready', on: true }, true)) play('ready'); else console.warn('bot não conseguiu ficar pronto', p, state.kits[p]);
 }
 /** Palpite dos bots: um por rodada (sorteado) só confirma depois de 40 s, pra a contagem dos 30 s aparecer. */
 let slowGuesser = { round: -1, p: null };
@@ -571,7 +571,7 @@ function botGuess(p, key) {
 function botConfirm(p, key) {
   if (botKey(p) !== key || state.confirmed.includes(p)) return;
   if (!state.guesses[p]) botGuess(p, key);
-  if (!act(p, { type: 'confirm' }, true)) console.warn('bot não conseguiu confirmar', p);
+  if (act(p, { type: 'confirm' }, true)) play('ready'); else console.warn('bot não conseguiu confirmar', p);
 }
 
 /* ---------- topo ---------- */
@@ -593,11 +593,13 @@ function renderTop(v) {
   }).join('');
   renderClock();
 }
+let lastTick = '';
 function renderClock() {
   const el = $('#clock'), end = state && state.countdownEndsAt;
   if (state && state.paused) { el.textContent = 'esperando gente'; el.classList.add('on'); el.classList.remove('hurry'); return; }
-  if (!end) { el.classList.remove('on', 'hurry'); return; }
+  if (!end) { el.classList.remove('on', 'hurry'); lastTick = ''; return; }
   const s = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+  if (s >= 1 && s <= 5 && lastTick !== `${end}:${s}`) { lastTick = `${end}:${s}`; play('tick'); } // uma vez por segundo, nos 5 s finais
   el.textContent = `faltam ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   el.classList.add('on'); el.classList.toggle('hurry', s <= 10);
 }
@@ -920,6 +922,7 @@ function renderFinal(v) {
   finalFor = v.winners;
   const rows = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0));
   const win = v.winners;
+  if (win.includes(ME)) play('win');
   const sub = win.length > 1
     ? `empate! <b>${list(win)}</b> dividem o álbum`
     : win[0] === ME ? '<b>você</b> venceu!' : `<b>${nameOf(win[0])}</b> venceu!`;
@@ -1011,8 +1014,12 @@ function swapKit(target) {
   if (other) plannedFor.delete(botKey(other)); // o bot refaz a obra com o kit novo
   changed();
 }
+const SOUND_KEY = 'retratim.sound';
 let soundOn = true;
-$('#soundBtn').onclick = () => { soundOn = !soundOn; setSound(soundOn); $('#soundBtn').innerHTML = `<i class="ti ${soundOn ? 'ti-volume' : 'ti-volume-off'}"></i>`; };
+try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (err) { /* sem localStorage: som ligado */ }
+function paintSound() { setSound(soundOn); $('#soundBtn').innerHTML = `<i class="ti ${soundOn ? 'ti-volume' : 'ti-volume-off'}"></i>`; $('#soundBtn').title = soundOn ? 'som ligado' : 'som desligado'; }
+paintSound();
+$('#soundBtn').onclick = () => { soundOn = !soundOn; paintSound(); try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (err) { /* ignora */ } };
 $('#devBtn').onclick = () => $('#dev').classList.toggle('on');
 $('#hurryBtn').onclick = () => act(ME, { type: 'hurry' });
 $('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
