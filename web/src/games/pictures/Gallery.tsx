@@ -5,6 +5,7 @@ import { Critter } from '../../screens/Critter';
 import { KitShow } from './KitShow';
 import { PhotoGrid, type PhotoMark } from './PhotoGrid';
 import { SplitLayout } from './SplitLayout';
+import { playPicturesSound } from './sounds';
 import { KIT_NAMES } from './status';
 
 interface Props {
@@ -46,6 +47,7 @@ function GuessTape({ coord, rot, pop, onRemove }: { coord: Coord; rot: number; p
     <button
       className={`pc-gtape${pop ? ' pop' : ''}`}
       type="button"
+      data-sound="none"
       style={style}
       title="tirar o palpite"
       aria-label={`tirar o palpite ${coord}`}
@@ -145,11 +147,13 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
     if (guesses[sel] === coord) return;
     popped.current = `${sel}:${coord}`;
     conn.sendAction({ type: 'guess', artist: sel, coord });
+    playPicturesSound('tape');
   }
   function unguess(artist: string) {
     if (locked || confirmSent.current) return;
     setPicked(artist);
     conn.sendAction({ type: 'guess', artist, coord: null });
+    playPicturesSound('peel');
   }
   function select(artist: string) {
     if (locked || confirmSent.current || artist === sel) return;

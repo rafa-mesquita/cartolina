@@ -1,7 +1,5 @@
 import { COORDS, type Coord, type PicturesRoomView } from '@cartolina/shared';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { installButtonSounds } from '../../brand/buttonSounds';
-import { playSound } from '../../brand/sounds';
 import { JOIN_ERRORS, type GameConn } from '../../net/connection';
 import { confetti } from '../../table/confetti';
 import { colorer, namer } from '../dixit/status';
@@ -14,10 +12,12 @@ import { PhotoGrid, type PhotoMark } from './PhotoGrid';
 import { PhotoZoom } from './PhotoZoom';
 import { RevealStage } from './RevealStage';
 import { RoundScore } from './RoundScore';
-import { playPicturesSfx } from './sfx';
 import { SplitLayout } from './SplitLayout';
+import { playPicturesSound } from './sounds';
 import { TopBar, type SealPlus } from './TopBar';
+import { usePicturesSounds } from './useButtonSounds';
 import { useReveal } from './useReveal';
+import { useTableSounds } from './useTableSounds';
 import './pictures.css';
 
 const TOAST_MS = 2400;
@@ -56,19 +56,20 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
     const from = prevPhase.current;
     prevPhase.current = g.phase;
     if (from === g.phase || g.phase !== 'gameover') return undefined;
-    if (won) playPicturesSfx('win');
+    if (won) playPicturesSound('win');
     return confetti(confettiRef.current, CONFETTI);
     // Só na troca de fase: `won` é o do render em que a fase mudou (de propósito fora da lista).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [g.phase]);
 
-  // Os sons próprios do Retratim chegam depois; por ora os botões da mesa usam o clique do site.
-  useEffect(() => (rootRef.current ? installButtonSounds(rootRef.current) : undefined), []);
+  // Cliques baixinhos nos botões da mesa, e os sons que vêm só da mudança da visão (pronto/confirmou, rodada nova).
+  usePicturesSounds(rootRef);
+  useTableSounds(g);
 
   const warn = useCallback(
     (text: string) => {
       say(text);
-      playSound('error');
+      playPicturesSound('error');
     },
     [say],
   );

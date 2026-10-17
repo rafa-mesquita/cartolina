@@ -1,6 +1,6 @@
 import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { playSound } from '../src/brand/sounds';
+import { playPicturesSound } from '../src/games/pictures/sounds';
 import { PicturesTable } from '../src/games/pictures/PicturesTable';
 import { randomWork } from '../src/games/pictures/random';
 import { KIT_NAMES } from '../src/games/pictures/status';
@@ -10,7 +10,7 @@ import { KITS_UI } from '../src/games/pictures/kits';
 import { confetti } from '../src/table/confetti';
 import { finished, guessing, lastReveal, picturesView, play, revealed, started, stateOf } from './pictures-fixtures';
 
-vi.mock('../src/brand/sounds', () => ({ playSound: vi.fn() }));
+vi.mock('../src/games/pictures/sounds', async (original) => ({ ...(await original<typeof import('../src/games/pictures/sounds')>()), playPicturesSound: vi.fn() }));
 vi.mock('../src/table/confetti', () => ({ confetti: vi.fn(() => () => {}) }));
 // Os blocos carregam o three.js sob demanda: aqui não precisa (ninguém monta blocos na rodada 0 com 3).
 vi.mock('../src/games/pictures/kits/blocks', () => ({ blocks: { build: () => ({ destroy() {} }), show() {} } }));
@@ -89,7 +89,7 @@ describe('mesa do Retratim: montagem', () => {
     fireEvent.click(screen.getByRole('button', { name: 'estou pronto' }));
     expect(c.sendAction).not.toHaveBeenCalled();
     expect(screen.getByText('Monte alguma coisa antes de ficar pronto.')).toBeTruthy();
-    expect(vi.mocked(playSound)).toHaveBeenCalledWith('error');
+    expect(vi.mocked(playPicturesSound)).toHaveBeenCalledWith('error');
   });
 
   it('recusa do servidor vira aviso no palco (erro de entrada na sala não)', () => {
@@ -759,5 +759,92 @@ describe('mesa do Retratim: fim de jogo', () => {
     rerender(<PicturesTable view={picturesView(finished(3), 'p0')} conn={c} serverOffset={0} />);
     expect(vi.mocked(confetti)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(confetti).mock.calls[0]![1]).toContain('#2f5aa8');
+  });
+});
+
+describe('mesa do Retratim: sons', () => {
+  const sons = () => vi.mocked(playPicturesSound).mock.calls.map(([n]) => n);
+  const photo = (container: HTMLElement, coord: string) => container.querySelector<HTMLElement>(`.pc-photo[data-coord="${coord}"]`)!;
+
+  it('abrir a mesa na rodada 0 toca "round"; outra pessoa ficar pronta toca "ready" (desfazer, não)', () => {
+    const c = conn();
+    let room = started(3);
+    const { rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(sons()).toEqual(['round']);
+    const show = () => rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    show(); // a mesma visão de novo: quieto
+    room = play(room, 'p1', { type: 'ready', on: true, work: randomWork('laces') });
+    show();
+    expect(sons()).toEqual(['round', 'ready']);
+    room = play(room, 'p1', { type: 'ready', on: false });
+    show();
+    expect(sons()).toEqual(['round', 'ready']);
+  });
+
+  it('abrir a mesa já no meio da partida (palpites) não toca "round"; confirmar toca "ready"', () => {
+    const c = conn();
+    let room = guessing(3);
+    const { rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(sons()).toEqual([]);
+    room = play(room, 'p1', { type: 'confirm' });
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(sons()).toEqual(['ready']);
+  });
+
+  it('a rodada seguinte (de volta à montagem) toca "round"', () => {
+    const c = conn();
+    const { rerender } = render(<PicturesTable view={picturesView(lastReveal(3), 'p0')} conn={c} serverOffset={0} />);
+    expect(sons()).toEqual([]);
+    const next = play(revealed(3), 'p0', { type: 'next' });
+    rerender(<PicturesTable view={picturesView(next, 'p0')} conn={c} serverOffset={0} />);
+    expect(sons()).toContain('round');
+  });
+
+  it('fitinha colando e saindo na galeria: "tape" e "peel"', () => {
+    const c = conn();
+    const room = guessing(3);
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(photo(container, 'B2'));
+    expect(sons()).toEqual(['tape']);
+    // sem eco a fitinha não aparece; com ela na visão, tirar toca "peel"
+    const withTape = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'B2' });
+    const { container: c2 } = render(<PicturesTable view={picturesView(withTape, 'p0')} conn={conn()} serverOffset={0} />);
+    fireEvent.click(c2.querySelector('.pc-gtape')!);
+    expect(sons()).toEqual(['tape', 'peel']);
+  });
+
+  it('"tick" nos 5 s finais da contagem, uma vez por segundo', () => {
+    vi.setSystemTime(1_000_000);
+    const hurried = play(started(3), 'p0', { type: 'hurry' }, 1_000_000);
+    render(<PicturesTable view={picturesView(hurried, 'p0')} conn={conn()} serverOffset={0} />);
+    vi.mocked(playPicturesSound).mockClear();
+    // um segundo por vez: o relógio do navegador renderiza a cada batida
+    const wait = (s: number) => {
+      for (let i = 0; i < s; i++) rtlAct(() => vi.advanceTimersByTime(1000));
+    };
+    wait(24);
+    expect(sons()).toEqual([]);
+    wait(7);
+    expect(sons()).toEqual(['tick', 'tick', 'tick', 'tick', 'tick']);
+  });
+
+  it('erro do servidor e aviso do palco tocam "error"; botão da mesa toca o clique baixinho, o zoom da foto secreta não', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={c} serverOffset={0} />);
+    vi.mocked(playPicturesSound).mockClear();
+    fail(c, 'empty_work', 'Monte alguma coisa antes de ficar pronto.');
+    expect(sons()).toEqual(['error']);
+    vi.mocked(playPicturesSound).mockClear();
+    fireEvent.click(container.querySelector('.pc-secret-card')!);
+    expect(sons()).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'fechar' }));
+    expect(sons()).toEqual(['click']);
+  });
+
+  it('fim de jogo: quem venceu ouve "win" (uma vez, só na troca de fase)', () => {
+    const c = conn();
+    const { rerender } = render(<PicturesTable view={picturesView(lastReveal(3), 'p0')} conn={c} serverOffset={0} />);
+    rerender(<PicturesTable view={picturesView(finished(3), 'p0')} conn={c} serverOffset={0} />);
+    expect(sons().filter((n) => n === 'win')).toEqual(['win']);
   });
 });

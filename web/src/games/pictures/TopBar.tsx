@@ -1,7 +1,8 @@
 import type { PicturesRoomView } from '@cartolina/shared';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { loadSoundPref, saveSoundPref } from '../../net/identity';
 import { Critter } from '../../screens/Critter';
+import { playPicturesSound } from './sounds';
 import { KIT_NAMES, pts, seatLabel } from './status';
 import { useCountdown } from './useCountdown';
 
@@ -50,6 +51,15 @@ export function TopBar({ view, serverOffset, host, onHurry, scores, plus = [] }:
   const myKit = me !== null ? g.kits[me] : undefined;
   const open = g.phase === 'building' || g.phase === 'guessing';
   const canHurry = host && open && !g.paused && g.countdownEndsAt === null;
+  // Tique baixinho nos 5 s finais da contagem, uma vez por segundo.
+  const lastTick = useRef('');
+  useEffect(() => {
+    if (!open || left === null || left < 1 || left > 5) return;
+    const key = `${g.countdownEndsAt}:${left}`;
+    if (lastTick.current === key) return;
+    lastTick.current = key;
+    playPicturesSound('tick');
+  }, [open, left, g.countdownEndsAt]);
   return (
     <header className="pc-top">
       <div className="pc-top-logo">

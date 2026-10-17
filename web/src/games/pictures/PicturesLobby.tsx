@@ -1,11 +1,12 @@
 import { PICTURES_MAX_PLAYERS, PICTURES_MIN_PLAYERS, PICTURES_ROUNDS, type PicturesRoomView } from '@cartolina/shared';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { playSound } from '../../brand/sounds';
 import { goHome, roomLink } from '../../lib/router';
 import { JOIN_ERRORS, type GameConn } from '../../net/connection';
 import { Critter } from '../../screens/Critter';
 import { SoundPill } from '../dixit/DixitTopBar';
 import { useToast } from '../dixit/useToast';
+import { playPicturesSound } from './sounds';
+import { usePicturesSounds } from './useButtonSounds';
 import './pictures.css';
 
 /** Bots para testar sozinho: só existe em dev; em produção o import some e o código não vai pro bundle. */
@@ -22,6 +23,8 @@ export function PicturesLobby({ view, conn }: { view: PicturesRoomView; conn: Ga
   /** Tentou começar: o aviso de gente faltando aparece (e some sozinho quando a mesa completa). */
   const [tried, setTried] = useState(false);
   const { toast, say } = useToast(TOAST_MS);
+  const rootRef = useRef<HTMLDivElement>(null);
+  usePicturesSounds(rootRef);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
   const link = roomLink(view.code);
@@ -33,7 +36,7 @@ export function PicturesLobby({ view, conn }: { view: PicturesRoomView; conn: Ga
       conn.onError((code, message) => {
         if (JOIN_ERRORS.has(code)) return;
         say(message);
-        playSound('error');
+        playPicturesSound('error');
       }),
     [conn, say],
   );
@@ -53,12 +56,12 @@ export function PicturesLobby({ view, conn }: { view: PicturesRoomView; conn: Ga
 
   function start() {
     setTried(true);
-    if (connected < PICTURES_MIN_PLAYERS) return playSound('error');
+    if (connected < PICTURES_MIN_PLAYERS) return playPicturesSound('error');
     conn.sendAction({ type: 'start' });
   }
 
   return (
-    <div className="pictures">
+    <div className="pictures" ref={rootRef} data-button-sounds="">
       <main className="pc-lobby">
         <h1 className="pc-logo">
           Retratim <small>sala {view.code} · cartolina~</small>

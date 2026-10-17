@@ -1,16 +1,16 @@
 import type { PicturesRoundResult } from '@cartolina/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildRevealTimeline, frameAt, scoresBefore, type RevealEvent, type RevealFrame } from './reveal';
-import { playPicturesSfx } from './sfx';
+import { playPicturesSound } from './sounds';
 
 /** Evento mais velho que isso (ms) não toca mais: o navegador segurou o relógio (aba em segundo plano) e o salto não pode virar uma rajada de sons. */
 const SOUND_MAX_AGE = 300;
 
 /** O som de cada evento (o único lugar que liga evento a som). */
 function onEvent(e: RevealEvent): void {
-  if (e.kind === 'tape') playPicturesSfx('tape');
-  else if (e.kind === 'photo') playPicturesSfx('shutter');
-  else if (e.kind === 'plus') playPicturesSfx('plim');
+  if (e.kind === 'tape') playPicturesSound('tape');
+  else if (e.kind === 'photo') playPicturesSound('shutter');
+  else if (e.kind === 'plus') playPicturesSound('plim');
 }
 
 /** Chave da revelação: a rodada e a ordem dos artistas (um re-render nunca recomeça; uma rodada nova sempre). */
