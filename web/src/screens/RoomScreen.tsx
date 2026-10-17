@@ -100,6 +100,8 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
   const hasInfo = useRef(false);
   const snap = useConnSnapshot(conn);
   const phone = useIsPhone();
+  // Aparelho de toque só entra em jogo com versão de celular (o resto abre no computador).
+  const blocked = phone && !!info && !catalogEntry(info.game)?.mobile;
 
   const refresh = useCallback(() => {
     getRoomInfo(code)
@@ -126,12 +128,12 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
 
   // Recarregou a página numa sala em que esta aba já tinha entrado: entra de novo com o perfil DESTA aba.
   useEffect(() => {
-    if (!info || conn) return;
+    if (!info || conn || blocked) return;
     const profile = joinedProfile(code);
     if (!profile) return;
     usedProfile.current = profile;
     setConn(connect(code, profile, createSocket));
-  }, [info, conn, code, createSocket]);
+  }, [info, conn, blocked, code, createSocket]);
 
   const status = snap?.status;
   useEffect(() => {
@@ -159,8 +161,7 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
   if (info === null) {
     return <Message title="sala não encontrada" text="Essa sala não existe ou expirou. Crie uma nova no início." />;
   }
-  // Aparelho de toque só entra em jogo com versão de celular (o resto abre no computador).
-  if (phone && !catalogEntry(info.game)?.mobile) return <PhoneNotice />;
+  if (blocked) return <PhoneNotice />;
   if (status === 'replaced') {
     return <Message title="você abriu a sala em outra aba" text="Continue jogando na outra aba, ou recarregue esta pra voltar." />;
   }

@@ -1,6 +1,6 @@
 import { goHome } from '../lib/router';
 
-export const PHONE_TEXT = 'o cartolina por enquanto é pra jogar no computador 💻';
+export const PHONE_TEXT = 'esse jogo por enquanto é pra jogar no computador 💻';
 
 /** Sala aberta no celular: o jogo ainda não funciona com toque/tela pequena. */
 export function PhoneNotice() {

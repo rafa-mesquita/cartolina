@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 /** Aparelho de toque (sem hover, ponteiro grosso): só jogos `mobile` do catálogo ficam liberados nele. */
 export const PHONE_QUERY = '(hover: none) and (pointer: coarse)';
@@ -13,12 +13,16 @@ function mediaOf(query: string): MediaQueryList | null {
 
 /** Acompanha uma media query; sem `matchMedia`, é sempre falso. */
 export function useMedia(query: string): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
       const m = mediaOf(query);
       m?.addEventListener('change', onChange);
       return () => m?.removeEventListener('change', onChange);
     },
+    [query],
+  );
+  return useSyncExternalStore(
+    subscribe,
     () => mediaOf(query)?.matches ?? false,
     () => false,
   );
