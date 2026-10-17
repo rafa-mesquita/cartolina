@@ -732,8 +732,9 @@ describe('mesa do Retratim: fim de jogo', () => {
     expect(container.querySelectorAll('.pc-fin-row .star')).toHaveLength(3);
     expect(container.querySelector('.pc-grid')).toBeNull(); // no fim a grade some
     fireEvent.click(screen.getByRole('button', { name: 'jogar de novo' }));
+    // mandou: as duas travam até a visão nova (ver "botões do host não mandam ação duplicada")
     fireEvent.click(screen.getByRole('button', { name: 'voltar pro lobby' }));
-    expect(c.sendAction.mock.calls.map(([a]) => a)).toEqual([{ type: 'again' }, { type: 'lobby' }]);
+    expect(c.sendAction.mock.calls.map(([a]) => a)).toEqual([{ type: 'again' }]);
     // abriu a mesa já no fim: sem confete
     expect(vi.mocked(confetti)).not.toHaveBeenCalled();
   });
@@ -846,5 +847,148 @@ describe('mesa do Retratim: sons', () => {
     const { rerender } = render(<PicturesTable view={picturesView(lastReveal(3), 'p0')} conn={c} serverOffset={0} />);
     rerender(<PicturesTable view={picturesView(finished(3), 'p0')} conn={c} serverOffset={0} />);
     expect(sons().filter((n) => n === 'win')).toEqual(['win']);
+  });
+});
+
+describe('mesa do Retratim: sons e relógio da revelação', () => {
+  const tick = (ms: number) => rtlAct(() => vi.advanceTimersByTime(ms));
+  const REVEAL = ['tape', 'shutter', 'plim'];
+  const revealSounds = () => vi.mocked(playPicturesSound).mock.calls.map(([n]) => n).filter((n) => REVEAL.includes(n));
+
+  it('"tape" a cada fitinha e "shutter" quando a foto sai da grade, na hora certa', () => {
+    render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    tick(1150); // a obra já cresceu; a 1ª fitinha sai em 1200
+    expect(revealSounds()).toEqual([]);
+    tick(100);
+    expect(revealSounds()).toEqual(['tape']);
+    tick(400);
+    expect(revealSounds()).toEqual(['tape', 'tape']);
+    tick(650); // a foto sai em 2400
+    expect(revealSounds()).toEqual(['tape', 'tape']);
+    tick(100);
+    expect(revealSounds()).toEqual(['tape', 'tape', 'shutter']);
+    tick(2050); // os pontos: +2 pra você, +1 pra P1, +1 pra P2 (4400, 4620, 4840)
+    expect(revealSounds()).toEqual(['tape', 'tape', 'shutter', 'plim']);
+    tick(220);
+    tick(220);
+    expect(revealSounds()).toEqual(['tape', 'tape', 'shutter', 'plim', 'plim', 'plim']);
+  });
+
+  it('depois de "pular", nenhum som da revelação', () => {
+    render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    tick(1300);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    vi.mocked(playPicturesSound).mockClear();
+    tick(20_000);
+    expect(revealSounds()).toEqual([]);
+  });
+
+  it('um salto grande de tempo não vira uma rajada com os sons atrasados', () => {
+    render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    tick(4300); // tudo de uma vez: fitinhas e foto já ficaram pra trás
+    expect(revealSounds()).toEqual([]);
+  });
+
+  it('re-render com outro estado (alguém saiu) não recomeça a revelação nem repete os sons', () => {
+    const c = conn();
+    const v = picturesView(revealed(3), 'p0');
+    const { container, rerender } = render(<PicturesTable view={v} conn={c} serverOffset={0} />);
+    tick(1250);
+    tick(400);
+    tick(800);
+    expect(container.querySelector('.pc-rv-t')!.textContent).toMatch(/^a foto era a /);
+    const left: PicturesRoomView = {
+      ...v,
+      seats: v.seats.map((s) => (s.id === 'p2' ? { ...s, connected: false } : s)),
+      game: { ...v.game, result: { ...v.game.result! } },
+    };
+    rerender(<PicturesTable view={left} conn={c} serverOffset={0} />);
+    tick(100);
+    expect(container.querySelector('.pc-rv-t')!.textContent).toMatch(/^a foto era a /);
+    expect(container.querySelector('.pc-rv-n')!.textContent).toBe('obra 1 de 3');
+    expect(revealSounds()).toEqual(['tape', 'tape', 'shutter']);
+  });
+
+  it('nenhum relógio sobra depois de desmontar no meio da revelação', () => {
+    const { unmount } = render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    tick(500);
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('nenhum relógio sobra depois de "pular"', () => {
+    render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    tick(500);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    tick(100);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('mesa do Retratim: botões do host não mandam ação duplicada', () => {
+  const sent = (c: Conn) => c.sendAction.mock.calls.map(([a]) => a.type);
+
+  it('"próxima rodada": clique duplo manda um next só; visão nova destrava', () => {
+    const c = conn();
+    const room = revealed(3);
+    const { rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    const btn = screen.getByRole('button', { name: 'próxima rodada' }) as HTMLButtonElement;
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(sent(c)).toEqual(['next']);
+    expect(btn.disabled).toBe(true);
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect((screen.getByRole('button', { name: 'próxima rodada' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('recusa do servidor (gente de menos) destrava o botão', () => {
+    const c = conn();
+    render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    fireEvent.click(screen.getByRole('button', { name: 'próxima rodada' }));
+    fail(c, 'need_3_players', 'Precisa de pelo menos 3 jogadores.');
+    const btn = screen.getByRole('button', { name: 'próxima rodada' }) as HTMLButtonElement;
+    expect(btn.disabled).toBe(false);
+    fireEvent.click(btn);
+    expect(sent(c)).toEqual(['next', 'next']);
+  });
+
+  it('fim de jogo: "jogar de novo" e "voltar pro lobby" mandam uma ação só (as duas travam juntas)', () => {
+    const c = conn();
+    const room = finished(3);
+    const { rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    const again = screen.getByRole('button', { name: 'jogar de novo' }) as HTMLButtonElement;
+    const lobby = screen.getByRole('button', { name: 'voltar pro lobby' }) as HTMLButtonElement;
+    fireEvent.click(again);
+    fireEvent.click(again);
+    fireEvent.click(lobby);
+    expect(sent(c)).toEqual(['again']);
+    expect(again.disabled && lobby.disabled).toBe(true);
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'voltar pro lobby' }));
+    fireEvent.click(screen.getByRole('button', { name: 'voltar pro lobby' }));
+    expect(sent(c)).toEqual(['again', 'lobby']);
+  });
+});
+
+describe('mesa do Retratim: divisor durante o voo da foto', () => {
+  it('o divisor mudou o tamanho com a foto voando: ela pousa direto no lugar novo', () => {
+    const proto = HTMLElement.prototype as unknown as { animate?: unknown };
+    const real = proto.animate;
+    // um voo que nunca termina sozinho
+    proto.animate = vi.fn(() => ({ finished: new Promise(() => {}), cancel() {} }));
+    try {
+      const { container } = render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+      rtlAct(() => vi.advanceTimersByTime(2450));
+      expect(container.querySelector('.pc-fly')).toBeTruthy();
+      expect(container.querySelector('.pc-rv-slot')!.classList.contains('on')).toBe(false);
+      fireEvent.keyDown(screen.getByRole('separator', { name: 'divisor' }), { key: 'ArrowLeft' });
+      expect(container.querySelector('.pc-fly')).toBeNull();
+      expect(container.querySelector('.pc-rv-slot')!.classList.contains('on')).toBe(true);
+    } finally {
+      proto.animate = real;
+    }
   });
 });

@@ -10,6 +10,8 @@ interface Props {
   name: (id: string) => string;
   color: (id: string) => string;
   host: boolean;
+  /** O host já mandou a ação: botões travados até chegar uma visão nova. */
+  busy: boolean;
   onAgain: () => void;
   onLobby: () => void;
 }
@@ -25,7 +27,7 @@ export function standings(players: readonly string[], scores: Readonly<Record<st
 }
 
 /** Fim de jogo: a página final do álbum. Só o host joga de novo ou volta pro lobby. */
-export function GameOver({ players, scores, winners, me, name, color, host, onAgain, onLobby }: Props) {
+export function GameOver({ players, scores, winners, me, name, color, host, busy, onAgain, onLobby }: Props) {
   const titleId = useId();
   const sub =
     winners.length > 1 ? (
@@ -66,10 +68,10 @@ export function GameOver({ players, scores, winners, me, name, color, host, onAg
         <div className="acts">
           {host ? (
             <>
-              <button className="pc-btn-big" type="button" onClick={onAgain}>
+              <button className="pc-btn-big" type="button" disabled={busy} onClick={onAgain}>
                 jogar de novo
               </button>
-              <button className="pc-btn-soft" type="button" onClick={onLobby}>
+              <button className="pc-btn-soft" type="button" disabled={busy} onClick={onLobby}>
                 voltar pro lobby
               </button>
             </>

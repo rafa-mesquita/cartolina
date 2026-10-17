@@ -17,6 +17,8 @@ interface Props {
   me: string | null;
   name: (id: string) => string;
   color: (id: string) => string;
+  /** Sobe quando o divisor muda o tamanho das colunas: a foto em voo pousa direto (o destino medido ficou velho). */
+  resized?: number;
   onSkip: () => void;
 }
 
@@ -121,7 +123,7 @@ function FlyingPhoto({ id, from, to, onLanded }: { id: string; from: Box; to: Bo
  * Revelação narrada (coluna da direita): uma obra por vez cresce, ganha as fitinhas de palpite, a foto verdadeira
  * voa da grade até o lado dela, as fitinhas certas ganham ✓ e os pontos sobem (nos selinhos do topo). "pular ›" vai pro placar.
  */
-export function RevealStage({ result: r, frame: f, inRound, players, grid, me, name, color, onSkip }: Props) {
+export function RevealStage({ result: r, frame: f, inRound, players, grid, me, name, color, resized = 0, onSkip }: Props) {
   const k = f.artistIndex, artist = r.order[k];
   const coord: Coord | undefined = artist !== undefined ? r.secrets[artist] : undefined;
   const guessers = artist !== undefined ? inRound.filter((p) => p !== artist).length : 0;
@@ -149,6 +151,14 @@ export function RevealStage({ result: r, frame: f, inRound, players, grid, me, n
     const to = { x: s.x, y: s.y + (s.h - pol.offsetHeight) / 2, w: pol.offsetWidth, h: pol.offsetHeight };
     setFly({ k, from: box(src.getBoundingClientRect()), to });
   }, [f.photoShown, k, coord, landed, fly]);
+
+  // O tamanho mudou no meio do voo: pousa já no lugar novo.
+  const seenResize = useRef(resized);
+  useLayoutEffect(() => {
+    if (seenResize.current === resized) return;
+    seenResize.current = resized;
+    if (fly?.k === k && landed !== k) setLanded(k);
+  }, [resized, fly, k, landed]);
 
   const on = landed === k;
   const n = r.order.length;

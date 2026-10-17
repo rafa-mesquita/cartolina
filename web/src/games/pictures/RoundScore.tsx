@@ -13,11 +13,13 @@ interface Props {
   name: (id: string) => string;
   color: (id: string) => string;
   host: boolean;
+  /** O host já mandou a ação: botão travado até chegar uma visão nova. */
+  busy: boolean;
   onNext: () => void;
 }
 
 /** Placar da rodada (cartão de álbum), pelo total; só o host passa pra próxima (ou pro fim). */
-export function RoundScore({ result: r, players, scores, round, rounds, me, name, color, host, onNext }: Props) {
+export function RoundScore({ result: r, players, scores, round, rounds, me, name, color, host, busy, onNext }: Props) {
   const titleId = useId();
   const rows = [...players].sort((a, b) => (scores[b] ?? 0) - (scores[a] ?? 0) || (r.gained[b] ?? 0) - (r.gained[a] ?? 0));
   const hits = r.order.reduce((s, a) => s + (r.correct[a]?.length ?? 0), 0);
@@ -54,7 +56,7 @@ export function RoundScore({ result: r, players, scores, round, rounds, me, name
         })}
         <div className="acts">
           {host ? (
-            <button className="pc-btn-big" type="button" onClick={onNext}>
+            <button className="pc-btn-big" type="button" disabled={busy} onClick={onNext}>
               {last ? 'ver o fim do jogo' : 'próxima rodada'}
             </button>
           ) : (

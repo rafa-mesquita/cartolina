@@ -21,6 +21,8 @@ import { useTableSounds } from './useTableSounds';
 import './pictures.css';
 
 const TOAST_MS = 2400;
+/** Botão do host travado no máximo isso (ms), se nem visão nova nem recusa chegarem. */
+const UNLOCK_MS = 4000;
 /** Confete de papel picado nas cores do álbum. */
 const CONFETTI = ['#2f5aa8', '#f2a541', '#fbf7ef', '#d3bf99', '#3b6d11', '#c8644f'];
 
@@ -39,6 +41,11 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { toast, say } = useToast(TOAST_MS);
   const [zoomAt, setZoomAt] = useState<number | null>(null);
+  // O host clicou em "próxima rodada" / "jogar de novo" / "voltar pro lobby": travado até chegar uma visão nova.
+  const [sentFor, setSentFor] = useState<PicturesRoomView | null>(null);
+  const busy = sentFor === view;
+  // O divisor mudou de tamanho (a foto em voo pousa direto no lugar novo).
+  const [resized, setResized] = useState(0);
   const confettiRef = useRef<HTMLCanvasElement>(null);
   const name = useMemo(() => namer(view), [view]);
   const color = useMemo(() => colorer(view), [view]);
@@ -82,6 +89,22 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
     [conn, warn],
   );
 
+  // Destrava se o servidor recusar (ex.: gente de menos) ou, por garantia, se nada chegar em alguns segundos.
+  useEffect(() => {
+    if (!busy) return undefined;
+    const t = window.setTimeout(() => setSentFor(null), UNLOCK_MS);
+    const off = conn.onError(() => setSentFor(null));
+    return () => {
+      clearTimeout(t);
+      off();
+    };
+  }, [busy, conn]);
+  const hostSend = (type: 'next' | 'again' | 'lobby') => {
+    if (busy) return;
+    setSentFor(view);
+    conn.sendAction({ type });
+  };
+
   // No fim de jogo a grade some: a foto ampliada fecha junto.
   if (g.phase === 'gameover' && zoomAt !== null) setZoomAt(null);
 
@@ -120,6 +143,7 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
           <Gallery key={g.round} view={view} conn={conn} zoomOpen={zoomAt !== null} onZoom={openZoom} onWarn={warn} />
         ) : g.phase === 'reveal' && result && frame ? (
           <SplitLayout
+            onResizeEnd={() => setResized((n) => n + 1)}
             left={
               <>
                 <PhotoGrid grid={g.grid} secret={null} onPhoto={openZoom} onZoom={openZoom} marks={revealMarks} lifted={lifted} />
@@ -138,10 +162,11 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
                   name={name}
                   color={color}
                   host={host}
-                  onNext={() => conn.sendAction({ type: 'next' })}
+                  busy={busy}
+                  onNext={() => hostSend('next')}
                 />
               ) : (
-                <RevealStage result={result} frame={frame} inRound={g.inRound} players={g.players} grid={g.grid} me={me} name={name} color={color} onSkip={skip} />
+                <RevealStage result={result} frame={frame} inRound={g.inRound} players={g.players} grid={g.grid} me={me} name={name} color={color} resized={resized} onSkip={skip} />
               )
             }
           />
@@ -154,8 +179,9 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
             name={name}
             color={color}
             host={host}
-            onAgain={() => conn.sendAction({ type: 'again' })}
-            onLobby={() => conn.sendAction({ type: 'lobby' })}
+            busy={busy}
+            onAgain={() => hostSend('again')}
+            onLobby={() => hostSend('lobby')}
           />
         ) : null}
         {zoomAt !== null && (
