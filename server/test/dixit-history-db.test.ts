@@ -61,12 +61,27 @@ describe('dixit-history-db', () => {
     expect(await listDixitMatchIds(env.DB, 50_020, 1)).toEqual([{ matchId: 'DBTS-m1', startedAt: 50_010 }]);
   });
 
-  it('rodadas das partidas pedidas, em ordem cronológica; nenhuma partida, nenhuma consulta', async () => {
+  it('rodadas das partidas pedidas, em ordem cronológica; sem partidas devolve vazio', async () => {
     await insertDixitRound(env.DB, rec('DBTS-m1', 50_042, 'segunda'), 'a');
     await insertDixitRound(env.DB, rec('DBTS-m1', 50_041, 'primeira'), 'b');
     await insertDixitRound(env.DB, rec('DBTS-m2', 50_043, 'outra'), 'c');
     expect((await dixitRoundsOfMatches(env.DB, ['DBTS-m1'])).map((r) => r.clue)).toEqual(['primeira', 'segunda']);
     expect(await dixitRoundsOfMatches(env.DB, [])).toEqual([]);
+  });
+
+  it('várias partidas de uma vez: todas as rodadas delas, em ordem cronológica', async () => {
+    await insertDixitRound(env.DB, rec('DBTS-m1', 50_052, 'm1 segunda'), 'a');
+    await insertDixitRound(env.DB, rec('DBTS-m2', 50_051, 'm2 primeira'), 'b');
+    await insertDixitRound(env.DB, rec('DBTS-m1', 50_050, 'm1 primeira'), 'c');
+    await insertDixitRound(env.DB, rec('DBTS-m3', 50_053, 'fora do pedido'), 'd');
+    const clues = (await dixitRoundsOfMatches(env.DB, ['DBTS-m2', 'DBTS-m1'])).map((r) => r.clue);
+    expect(clues).toEqual(['m1 primeira', 'm2 primeira', 'm1 segunda']);
+  });
+
+  it('no mesmo instante, a narração mais baixa vem primeiro', async () => {
+    await insertDixitRound(env.DB, { ...rec('DBTS-m1', 50_060, 'terceira'), round: 3 }, 'a');
+    await insertDixitRound(env.DB, { ...rec('DBTS-m1', 50_060, 'segunda'), round: 2 }, 'b');
+    expect((await dixitRoundsOfMatches(env.DB, ['DBTS-m1'])).map((r) => r.clue)).toEqual(['segunda', 'terceira']);
   });
 
   it('estatísticas leem as rodadas MAIS RECENTES até o limite, em ordem cronológica', async () => {

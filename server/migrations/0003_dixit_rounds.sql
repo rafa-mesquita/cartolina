@@ -17,4 +17,4 @@ CREATE TABLE IF NOT EXISTS dixit_rounds (
 );
 
 CREATE INDEX IF NOT EXISTS dixit_rounds_played ON dixit_rounds (played_at DESC);
-CREATE INDEX IF NOT EXISTS dixit_rounds_match ON dixit_rounds (match_id);
+CREATE INDEX IF NOT EXISTS dixit_rounds_match ON dixit_rounds (match_id, played_at);
