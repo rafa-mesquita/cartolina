@@ -1,6 +1,6 @@
 import { GAMES, type GameId } from './games/registry';
 import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
-import type { PlayerColor } from './players';
+import { isBotName, type PlayerColor } from './players';
 import { itoStateOf, type Room } from './room';
 
 export const SHARPEST_MIN_CARDS = 3;
@@ -84,6 +84,8 @@ export function pendingRecord(room: Room, now: number, id: string): { key: strin
     const seat = seatOf(playerId);
     return seat ? [{ name: seat.name, color: seat.color }] : [];
   });
+  // Rodada de teste com bot não suja o histórico (aberto a todos) nem as estatísticas da galera.
+  if (players.some((p) => isBotName(p.name))) return null;
   const cards = game.reveal.flatMap((entry) => {
     const seat = seatOf(entry.owner);
     if (!seat) return [];

@@ -1,4 +1,4 @@
-/** Controles de bots — SÓ em dev (carregado via lazy atrás de `import.meta.env.DEV`). */
+/** Controles de bots (modo teste). No DITU aparecem também no site no ar; no Diquisti, só em dev. */
 import { MAX_PLAYERS } from '@cartolina/shared';
 import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
@@ -29,7 +29,7 @@ export default function BotControls({ code, seats, game = 'ito' }: { code: strin
         opacity: 0.9,
       }}
     >
-      <p className="hint">modo teste (só no localhost)</p>
+      <p className="hint">modo teste: os bots jogam daqui do seu aparelho e a rodada não entra no histórico</p>
       <div className="row-inline">
         <button className="sbtn" type="button" disabled={seats >= MAX_PLAYERS} onClick={() => api.add(code)}>
           🤖 adicionar bot
