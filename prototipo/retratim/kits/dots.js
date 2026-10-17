@@ -11,10 +11,10 @@
 .kd{position:absolute;inset:0;container-type:size;font-family:var(--ui)}
 .kd svg{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .kd svg circle{cursor:grab}
-.kd-st{position:absolute;left:3cqw;right:15cqw;bottom:2.4cqw;pointer-events:none;font:600 4.2cqw/1 var(--hand);color:var(--ink-soft)}
-.kd-st small{display:block;margin-top:.8cqw;font:400 2cqw/1.3 var(--ui)}
+.kd-st{position:absolute;left:3cqw;right:15cqw;bottom:2.4cqw;pointer-events:none;font:700 3cqw/1.1 var(--ui);color:var(--ink-soft)}
+.kd-st small{display:block;margin-top:1cqw;font:500 2cqw/1.35 var(--ui)}
 .kd-clr{position:absolute;right:2.4cqw;bottom:2.4cqw;padding:.9cqw 2.2cqw;border-radius:999px;border:1px solid var(--edge);background:var(--paper);
-  font:600 2.2cqw/1 var(--ui);color:var(--ink-soft);box-shadow:0 1px 2px rgba(59,47,47,.2)}
+  font:700 2.2cqw/1 var(--ui);color:var(--ink-soft);box-shadow:0 1px 2px rgba(59,47,47,.2)}
 .kd-clr:hover{color:var(--blue);border-color:var(--blue)}
 .kd-show{position:absolute;inset:0;width:100%;height:100%;display:block}`;
   function injectCSS() {

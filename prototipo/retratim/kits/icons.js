@@ -11,7 +11,7 @@
 
   const CSS = `
 .ki{position:absolute;inset:0;container-type:size;font-family:var(--ui);color:var(--ink)}
-.ki-lab{position:absolute;left:4.6cqw;font:700 4cqw/1 var(--hand);color:var(--ink-soft)}
+.ki-lab{position:absolute;left:4.6cqw;font:700 2.8cqw/1 var(--ui);color:var(--ink-soft)}
 .ki-hand{position:absolute;left:4.6cqw;right:4.6cqw;top:7.4cqw;display:grid;grid-template-columns:repeat(10,1fr);gap:1.2cqw 1.1cqw}
 .ki-card{position:relative;display:grid;place-items:center;background:var(--photo-border);border:1px solid var(--edge);border-radius:.9cqw;
   box-shadow:0 1px 2px rgba(59,47,47,.25);color:var(--ink)}
@@ -21,7 +21,7 @@
 .ki-hand .ki-card.used{background:rgba(234,219,192,.6);box-shadow:none;transform:translateY(.4cqw)}
 .ki-hand .ki-card.used i{opacity:.3}
 .ki-hand .ki-card.used b{position:absolute;right:-.8cqw;top:-.8cqw;width:3.6cqw;height:3.6cqw;border-radius:50%;background:var(--blue);color:var(--paper);
-  font:600 2.1cqw/3.6cqw var(--ui);text-align:center}
+  font:700 2.1cqw/3.6cqw var(--ui);text-align:center}
 .ki-hand .ki-card.shake{animation:kiShake .3s}
 @keyframes kiShake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 .ki-row{position:absolute;left:0;right:0;top:36cqw;display:flex;justify-content:center;gap:2.4cqw;touch-action:none}
@@ -33,9 +33,9 @@
   color:var(--ink-soft);font:600 2.6cqw/1 var(--ui);display:grid;place-items:center;box-shadow:0 1px 2px rgba(59,47,47,.2)}
 .ki-x:hover{color:var(--blue);border-color:var(--blue)}
 .ki-foot{position:absolute;left:0;right:0;top:62cqw;text-align:center}
-.ki-foot .t{font:600 4.4cqw/1 var(--hand);color:var(--ink-soft)}
+.ki-foot .t{font:700 3.2cqw/1 var(--ui);color:var(--ink-soft)}
 .ki-foot .t.ok{color:var(--ok)}
-.ki-foot .s{display:block;margin-top:1cqw;font:400 2.2cqw/1.3 var(--ui);color:var(--ink-soft)}
+.ki-foot .s{display:block;margin-top:1.4cqw;font:500 2.2cqw/1.35 var(--ui);color:var(--ink-soft)}
 .ki-show{position:absolute;inset:0;container-type:size;display:flex;align-items:center;justify-content:center;gap:2.6cqw}
 .ki-show .ki-card{width:16cqw;height:21.3cqw;border-radius:1.3cqw}
 .ki-show .ki-card i{font-size:10cqw;line-height:1}`;

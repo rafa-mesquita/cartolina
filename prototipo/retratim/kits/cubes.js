@@ -16,18 +16,18 @@
 .kc-cell.empty:hover{border-color:var(--blue)}
 .kc-cube{box-shadow:0 0 0 1px rgba(59,47,47,.28),0 2px 3px rgba(59,47,47,.3)}
 .kc-pal{position:absolute;left:67cqw;top:4cqw;width:28cqw}
-.kc-pal h5{margin:0 0 1.4cqw;font:700 4.6cqw/1 var(--hand);color:var(--ink)}
+.kc-pal h5{margin:0 0 1.8cqw;font:700 3.4cqw/1 var(--ui);color:var(--ink)}
 .kc-sw{display:grid;grid-template-columns:repeat(2,1fr);gap:1.8cqw}
 .kc-btn{position:relative;display:flex;align-items:center;gap:1.4cqw;padding:1cqw 1.4cqw;border:1px solid var(--edge);border-radius:999px;background:rgba(255,255,255,.35)}
 .kc-btn .sq{width:5.4cqw;height:5.4cqw;border-radius:.9cqw;flex:none}
-.kc-btn .n{font:700 4.4cqw/1 var(--hand);color:var(--ink)}
+.kc-btn .n{font:700 3cqw/1 var(--ui);color:var(--ink)}
 .kc-btn.on{border-color:var(--blue);box-shadow:0 0 0 1.5px var(--blue)}
 .kc-btn.out{opacity:.38}
 .kc-btn.out .n{text-decoration:line-through}
 .kc-btn.shake{animation:kcShake .3s}
 @keyframes kcShake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
-.kc-tip{margin:2.6cqw 0 0;font:400 2.2cqw/1.4 var(--ui);color:var(--ink-soft)}
-.kc-left{position:absolute;left:5cqw;width:57cqw;top:66cqw;text-align:center;font:600 4.4cqw/1 var(--hand);color:var(--ink-soft)}
+.kc-tip{margin:2.6cqw 0 0;font:500 2.2cqw/1.45 var(--ui);color:var(--ink-soft)}
+.kc-left{position:absolute;left:5cqw;width:57cqw;top:66cqw;text-align:center;font:700 3.2cqw/1 var(--ui);color:var(--ink-soft)}
 .kc-left.full{color:var(--ok)}
 .kc-show{position:absolute;inset:0;width:100%;height:100%;display:block}`;
   function injectCSS() {
