@@ -34,7 +34,7 @@
 }
 ```
 
-Fontes: Google Fonts `Caveat:wght@500;700` e `Nunito:wght@300;400;600`. Fundo do palco = página de álbum em kraft; fotos com borda branca de 6 px (`--photo-border`) e sombrinha de papel `0 1px 2px rgba(59,47,47,.25)`; fitinha (`--tape`) levemente girada; títulos em `--hand`; destaques em tinta azul `--blue`. Bichinhos (critters) dos jogadores: reaproveite `prototipo/dixit/critters.js` (`window.CRITTERS`, cor → SVG).
+Fontes: Google Fonts `Caveat:wght@700` **só no logo "Retratim"** e `Quicksand:wght@500;600;700` em todo o resto (decisão do usuário em 2026-10-17: o Caveat repetido nos textos ficou estilizado demais). Fundo do palco = página de álbum em kraft; fotos com borda branca de 6 px (`--photo-border`) e sombrinha de papel `0 1px 2px rgba(59,47,47,.25)`; fitinha (`--tape`) levemente girada; títulos em `--hand`; destaques em tinta azul `--blue`. Bichinhos (critters) dos jogadores: reaproveite `prototipo/dixit/critters.js` (`window.CRITTERS`, cor → SVG).
 
 ### Unidades da obra (validadas pelo `workSchema`; fora disso a ação é recusada)
 
@@ -295,6 +295,15 @@ Cada arquivo segue o **contrato dos kits**. Visual na identidade álbum (papel, 
 - [ ] **Step 3: `kits/dots.js`.** Referência: `ref/pontos-e-linhas.html`, igual, com pontos em tinta azul e linhas em tinta. Coordenadas convertidas pra 0–1 e **presas dentro da folha** durante o arraste. `show`: pontos e linhas.
 - [ ] **Step 4:** incluir os 3 scripts no `index.html`. Conferir à mão com "trocar meu kit" (painel de dev): cada kit monta, manda rascunho válido (sem toast de "ação inválida"), fica pronto, e a obra do bot no mesmo kit aparece certa quando a galeria existir (por ora, confira o `show` chamando `Kits.cubes.show(el, RandomWork.cubes())` no console).
 - [ ] **Step 5: Commit** `feat(prototipo): Retratim — kits de cubos, símbolos e pontos`.
+
+---
+
+### Task 2b: divisor da bancada e zoom das fotos (pedido do usuário, 2026-10-17)
+
+Pedido depois de testar a Task 1: "um controle pra aumentar ou diminuir seu espaço de trabalho, e ter como clicar pra ver o zoom das fotos".
+
+- **Divisor arrastável** entre a grade e a coluna da direita (bancada/galeria): largura da direita entre ~35% e ~75% do palco, duplo clique volta ao padrão, lembrado no `localStorage`. Ao soltar, a bancada é recriada com o rascunho atual (sem mandar rascunho). Vale pra montagem e galeria.
+- **Zoom das fotos**: na montagem, clicar numa foto abre ela grande (Esc/clique fora/✕ fecham, ← → navegam, selo "sua foto" na secreta); o cartão da foto secreta também abre. Na galeria (Task 6), o clique na foto cola a fitinha, então o zoom vem de uma **lupinha** que aparece no canto da foto ao passar o mouse (`openPhotoZoom(coord)`).
 
 ---
 
