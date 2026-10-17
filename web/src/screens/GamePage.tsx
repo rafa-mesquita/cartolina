@@ -1,6 +1,7 @@
 import type { GameId } from '@cartolina/shared';
 import { useState } from 'react';
 import { catalogEntry } from '../games/catalog';
+import { DixitHistory } from '../games/dixit/history/DixitHistory';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goToRoom, type GameTab } from '../lib/router';
 import { createRoom } from '../net/api';
@@ -94,9 +95,7 @@ export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: Gam
       ) : game === 'ito' ? (
         <HistoryPanel game={game} />
       ) : (
-        <section className="panel">
-          <p>O histórico do {entry.name} vem em breve.</p>
-        </section>
+        <DixitHistory />
       )}
     </main>
   );

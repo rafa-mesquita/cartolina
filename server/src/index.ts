@@ -1,5 +1,6 @@
 import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse } from '@cartolina/shared';
 import { CODE_RE, randomCode } from './codes';
+import { dixitHistoryPage } from './dixit-history-page';
 import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
 import { HISTORY_PAGE_SIZE, allRounds, listRounds } from './history-db';
 import { RoomDO } from './room-do';
@@ -58,15 +59,16 @@ function parseBefore(raw: string | null): number | null | undefined {
   return Number.isSafeInteger(n) ? n : undefined;
 }
 
-async function getHistoryPage(env: Env, game: GameId, before: number | null): Promise<HistoryResponse> {
+/** Página do histórico do DITU (id `ito`): 20 rodadas; estatísticas só na primeira. */
+async function getHistoryPage(env: Env, before: number | null): Promise<HistoryResponse> {
   // Uma a mais que a página só para saber se existe próxima.
-  const fetched = await listRounds(env.DB, game, before, HISTORY_PAGE_SIZE + 1);
+  const fetched = await listRounds(env.DB, 'ito', before, HISTORY_PAGE_SIZE + 1);
   const rounds = fetched.slice(0, HISTORY_PAGE_SIZE);
   return {
-    game,
+    game: 'ito',
     rounds,
     // Estatísticas só na primeira página: leem até STATS_ROUNDS_CAP rodadas, caro demais para repetir a cada "ver mais".
-    stats: before === null ? summarizeHistory(await allRounds(env.DB, game)) : null,
+    stats: before === null ? summarizeHistory(await allRounds(env.DB, 'ito')) : null,
     nextBefore: fetched.length > HISTORY_PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
   };
 }
@@ -105,7 +107,8 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
     if (before === undefined) return json({ error: 'bad_before' }, 400);
     // Público e caro na primeira página (lê até 5000 rodadas): limite por IP. Sem cache: a rodada recém-jogada tem que aparecer.
     if (!(await underLimit(limiterOf(env, 'HISTORY_LIMITER'), ip))) return tooMany();
-    return json(await getHistoryPage(env, game, before), 200, { 'Cache-Control': 'no-cache' });
+    const page = game === 'dixit' ? await dixitHistoryPage(env.DB, before) : await getHistoryPage(env, before);
+    return json(page, 200, { 'Cache-Control': 'no-cache' });
   }
 
   const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)(\/ws)?$/);

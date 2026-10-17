@@ -57,9 +57,9 @@ export interface HistoryStats {
   topThemes: { titulo: string; count: number }[];
 }
 
-/** Resposta de `GET /history/:game`. */
+/** Resposta de `GET /history/ito` (o DITU). */
 export interface HistoryResponse {
-  game: GameId;
+  game: 'ito';
   rounds: RoundRecord[];
   /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
   stats: HistoryStats | null;
@@ -92,7 +92,7 @@ export function revealKey(game: ItoState): string | null {
 
 /** Registro a gravar se o jogo da sala grava histórico e ela está numa revelação ainda não gravada. */
 export function pendingRecord(room: Room, now: number, id: string): { key: string; record: RoundRecord } | null {
-  // Só jogos que gravam histórico (hoje, o ITO).
+  // Só jogos que gravam histórico; aqui só o DITU monta registro (o Diquisti é `pendingDixitRecord`).
   if (!GAMES[room.gameId].recordsHistory) return null;
   const game = itoStateOf(room);
   if (!game) return null;

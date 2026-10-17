@@ -129,8 +129,11 @@ describe('chave da revelação e id da partida', () => {
 });
 
 describe('pendingHistoryRecord', () => {
-  it('sala de Diquisti segue o registro: enquanto não grava histórico, nada', () => {
-    expect(pendingHistoryRecord(roomOf(revealed(4, (s) => s.storyCard!).state), 1, 'r')).toBeNull();
+  it('sala de Diquisti na revelação: pendente do Diquisti', () => {
+    const pending = pendingHistoryRecord(roomOf(revealed(4, (s) => s.storyCard!).state), 1, 'r');
+    expect(pending?.game).toBe('dixit');
+    expect(pending?.key).toBe('ABCD-50-1|1');
+    expect(pending?.record.id).toBe('r');
   });
 
   it('sala fora da revelação: nada', () => {
