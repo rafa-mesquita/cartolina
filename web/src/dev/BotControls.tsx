@@ -4,14 +4,28 @@ import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
 import { addDixitBot, dixitBotsIn, dixitBotsVersion, removeAllDixitBots, subscribeDixitBots } from './dixitBots';
 
-/** Cada jogo tem o seu registro de bots; o componente só escolhe qual usar. */
-const API = {
+type GameKey = 'ito' | 'dixit' | 'pictures';
+interface Api {
+  subscribe: (fn: () => void) => () => void;
+  version: () => number;
+  count: (code: string) => number;
+  add: (code: string) => void;
+  removeAll: () => void;
+}
+
+/** Cada jogo tem o seu registro de bots; o componente só escolhe qual usar. O Retratim ainda não tem entrada (Task 10). */
+const API: Partial<Record<GameKey, Api>> = {
   ito: { subscribe: subscribeBots, version: botsVersion, count: (code: string) => botsIn(code).length, add: (code: string) => void addBot(code), removeAll: removeAllBots },
   dixit: { subscribe: subscribeDixitBots, version: dixitBotsVersion, count: dixitBotsIn, add: addDixitBot, removeAll: removeAllDixitBots },
 };
 
-export default function BotControls({ code, seats, game = 'ito' }: { code: string; seats: number; game?: 'ito' | 'dixit' }) {
+/** Jogo sem entrada em `API` não mostra nada. */
+export default function BotControls({ code, seats, game = 'ito' }: { code: string; seats: number; game?: GameKey }) {
   const api = API[game];
+  return api ? <Controls api={api} code={code} seats={seats} /> : null;
+}
+
+function Controls({ api, code, seats }: { api: Api; code: string; seats: number }) {
   useSyncExternalStore(api.subscribe, api.version);
   const count = api.count(code);
   // estilo inline de propósito: nada disso entra no CSS de produção

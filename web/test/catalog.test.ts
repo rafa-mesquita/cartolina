@@ -23,11 +23,11 @@ describe('catálogo de jogos do site', () => {
     expect(catalogEntry('xyz')).toBeNull();
   });
 
-  it('Retratim (o Pictures) aparece na estante, mas ainda "em breve"', () => {
+  it('Retratim (o Pictures) aparece na estante e já dá pra jogar', () => {
     const entry = catalogEntry('pictures');
     expect(entry?.name).toBe('Retratim');
     expect(entry?.players).toBe('3 a 6 pessoas');
-    expect(entry?.playable).toBe(false);
+    expect(entry?.playable).toBe(true);
     expect(entry?.hasHistory).toBe(false);
   });
 });

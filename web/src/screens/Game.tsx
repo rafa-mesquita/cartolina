@@ -1,7 +1,9 @@
-import { isDixitRoomView, isItoRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
+import { isDixitRoomView, isItoRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
 import { useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
+import { PicturesLobby } from '../games/pictures/PicturesLobby';
+import { PicturesTable } from '../games/pictures/PicturesTable';
 import type { ConnSnapshot, GameConn } from '../net/connection';
 import { Table } from '../table/Table';
 import { Lobby } from './Lobby';
@@ -26,6 +28,15 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
       <>
         {reconnecting}
         {view.game.phase === 'lobby' ? <DixitLobby view={view} conn={conn} /> : <DixitTable view={view} conn={conn} status={snap.status} fromPhase={lastDixitPhase.current} />}
+      </>
+    );
+  }
+  if (isPicturesRoomView(view)) {
+    // Sala de Retratim (id interno `pictures`): como o Diquisti, a mesa tem os próprios avisos.
+    return (
+      <>
+        {reconnecting}
+        {view.game.phase === 'lobby' ? <PicturesLobby view={view} conn={conn} /> : <PicturesTable view={view} conn={conn} serverOffset={snap.serverOffset} />}
       </>
     );
   }

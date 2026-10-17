@@ -87,6 +87,12 @@ describe('BotControls (dev)', () => {
     expect(removeAllBots).not.toHaveBeenCalled();
   });
 
+  it('jogo sem bots (o Retratim, até a Task 10) não mostra nada', () => {
+    const { container } = render(<BotControls code="ABCD" seats={2} game="pictures" />);
+    expect(container.textContent).toBe('');
+    expect(screen.queryByRole('button', { name: /adicionar bot/ })).toBeNull();
+  });
+
   it('sala cheia desabilita "adicionar bot"', () => {
     render(<BotControls code="ABCD" seats={MAX_PLAYERS} />);
     expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);

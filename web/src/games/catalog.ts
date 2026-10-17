@@ -47,8 +47,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Depois, todo mundo palpita qual foto cada um montou: +1 por acerto, e +1 pro artista por cada um que acertou a dele.',
       '6 rodadas: cada um usa cada kit uma vez.',
     ],
-    // A mesa vem no Plano R2.
-    playable: false,
+    playable: true,
   },
 };
 
