@@ -1,7 +1,7 @@
 import type { ItoRoomView } from '@cartolina/shared';
 import { isPlaying } from '../../game/derive';
 import { FH, FW, ROW_Y } from '../constants';
-import { rowEntries } from '../rowLayout';
+import { rowEntries, toServerIndex } from '../rowLayout';
 
 /** Um espaço "aqui" na fila em pé: `pos` = posição visual (0 = antes da 1ª faixa); `index` = índice do `place` no servidor. */
 export interface SlotTarget {
@@ -10,15 +10,18 @@ export interface SlotTarget {
 }
 
 /**
- * Espaços onde `movingId` pode cair. O índice do servidor ignora a própria carta. Se ela já está na fila,
- * os espaços colados nela (antes e depois) somem: soltar ali não muda nada.
+ * Espaços onde `movingId` pode cair. `row` é a fila mostrada (com minha intenção pendente); `serverRow` é a do
+ * servidor, que dá o índice do `place` (igual ao computador, via `toServerIndex`). O índice ignora a própria carta.
+ * Se ela já está na fila, os espaços colados nela (antes e depois) somem: soltar ali não muda nada.
  */
-export function slotTargets(row: readonly string[], movingId: string): SlotTarget[] {
+export function slotTargets(row: readonly string[], movingId: string, serverRow: readonly string[] = row): SlotTarget[] {
   const at = row.indexOf(movingId);
+  const others = row.filter((id) => id !== movingId);
   const out: SlotTarget[] = [];
   for (let pos = 0; pos <= row.length; pos++) {
     if (at >= 0 && (pos === at || pos === at + 1)) continue;
-    out.push({ pos, index: row.slice(0, pos).filter((id) => id !== movingId).length });
+    const visibleIndex = row.slice(0, pos).filter((id) => id !== movingId).length;
+    out.push({ pos, index: toServerIndex(others, serverRow, movingId, visibleIndex) });
   }
   return out;
 }
@@ -34,7 +37,7 @@ export function canPick(view: ItoRoomView, cardId: string): boolean {
   return view.game.row.includes(cardId) || card.owner === view.you;
 }
 
-/** Onde estaria o vão na fila deitada do PC (pra quem está no computador ver o arrasto do celular no lugar certo). */
+/** `index` é o índice do servidor (o mesmo do `place`). Onde estaria o vão na fila deitada do PC (pra quem está no computador ver o arrasto do celular no lugar certo). */
 export function deskCursor(row: readonly string[], cardId: string, index: number): { zone: 'table'; x: number; y: number } {
   const base = row.filter((id) => id !== cardId);
   const gap = rowEntries(base, [{ owner: '_', index }]).find((e) => e.kind === 'gap');

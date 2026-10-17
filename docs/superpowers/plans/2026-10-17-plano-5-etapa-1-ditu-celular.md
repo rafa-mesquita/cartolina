@@ -299,6 +299,10 @@ git commit -m "feat(web): catálogo diz quem joga no celular; DITU liberado no c
 - Create: `web/src/table/phone/phoneRowLogic.ts`
 - Create: `web/test/phone-row-logic.test.ts`
 
+> **Nome do arquivo:** `phoneRowLogic.ts`, e não `phoneRow.ts`: ao lado de `PhoneRow.tsx`, os dois nomes colidem em sistemas de arquivos sem diferença de maiúsculas (Windows) e o import do componente resolve para o arquivo errado.
+>
+> **Índice do servidor:** `slotTargets(row, movingId, serverRow = row)` recebe a fila mostrada (com a minha intenção pendente) e a do servidor (`view.game.row`); o `index` sai de `toServerIndex`, igual ao computador. É esse índice do servidor que `deskCursor` espera: chame `deskCursor(serverRow, cardId, index)`, com a fila do servidor, que é a que o PC desenha.
+
 - [ ] **Step 1: Testes que falham**
 
 Crie `web/test/phone-row-logic.test.ts`:
@@ -327,6 +331,32 @@ describe('alvos "aqui" da fila em pé', () => {
     ]);
   });
 
+  it('mover a primeira e a última carta', () => {
+    expect(slotTargets(['a', 'b', 'c'], 'a')).toEqual([
+      { pos: 2, index: 1 },
+      { pos: 3, index: 2 },
+    ]);
+    expect(slotTargets(['a', 'b', 'c'], 'c')).toEqual([
+      { pos: 0, index: 0 },
+      { pos: 1, index: 1 },
+    ]);
+  });
+
+  it('o índice é do servidor: carta pendente só minha (h) não conta', () => {
+    // vejo a h b, mas o servidor só tem a b (h é minha intenção pendente): entre h e b vale "depois do a" = 1; no fim = 2.
+    expect(slotTargets(['a', 'h', 'b'], 'x', ['a', 'b'])).toEqual([
+      { pos: 0, index: 0 },
+      { pos: 1, index: 1 },
+      { pos: 2, index: 1 },
+      { pos: 3, index: 2 },
+    ]);
+    // movendo uma carta que já está na fila: o índice ignora ela e a pendente
+    expect(slotTargets(['a', 'h', 'b'], 'a', ['a', 'b'])).toEqual([
+      { pos: 2, index: 0 },
+      { pos: 3, index: 1 },
+    ]);
+  });
+
   it('fila vazia: um alvo só', () => {
     expect(slotTargets([], 'h')).toEqual([{ pos: 0, index: 0 }]);
   });
@@ -341,7 +371,8 @@ describe('quem pode pegar o quê', () => {
     expect(canPick(v, 'p1:0')).toBe(true);
   });
 
-  it('fora da escolha, ou assistindo, ninguém pega nada', () => {
+  it('carta da mão dos outros não; fora da escolha, ou assistindo, ninguém pega nada', () => {
+    expect(canPick(viewOf(sortingRoom(2), 'p0'), 'p1:0')).toBe(false);
     const watching = viewOf(sortingRoom(2), null);
     expect(canPick(watching, 'p0:0')).toBe(false);
     let room = sortingRoom(2);
@@ -387,7 +418,7 @@ Crie `web/src/table/phone/phoneRowLogic.ts`:
 import type { ItoRoomView } from '@cartolina/shared';
 import { isPlaying } from '../../game/derive';
 import { FH, FW, ROW_Y } from '../constants';
-import { rowEntries } from '../rowLayout';
+import { rowEntries, toServerIndex } from '../rowLayout';
 
 /** Um espaço "aqui" na fila em pé: `pos` = posição visual (0 = antes da 1ª faixa); `index` = índice do `place` no servidor. */
 export interface SlotTarget {
@@ -396,15 +427,18 @@ export interface SlotTarget {
 }
 
 /**
- * Espaços onde `movingId` pode cair. O índice do servidor ignora a própria carta. Se ela já está na fila,
- * os espaços colados nela (antes e depois) somem: soltar ali não muda nada.
+ * Espaços onde `movingId` pode cair. `row` é a fila mostrada (com minha intenção pendente); `serverRow` é a do
+ * servidor, que dá o índice do `place` (igual ao computador, via `toServerIndex`). O índice ignora a própria carta.
+ * Se ela já está na fila, os espaços colados nela (antes e depois) somem: soltar ali não muda nada.
  */
-export function slotTargets(row: readonly string[], movingId: string): SlotTarget[] {
+export function slotTargets(row: readonly string[], movingId: string, serverRow: readonly string[] = row): SlotTarget[] {
   const at = row.indexOf(movingId);
+  const others = row.filter((id) => id !== movingId);
   const out: SlotTarget[] = [];
   for (let pos = 0; pos <= row.length; pos++) {
     if (at >= 0 && (pos === at || pos === at + 1)) continue;
-    out.push({ pos, index: row.slice(0, pos).filter((id) => id !== movingId).length });
+    const visibleIndex = row.slice(0, pos).filter((id) => id !== movingId).length;
+    out.push({ pos, index: toServerIndex(others, serverRow, movingId, visibleIndex) });
   }
   return out;
 }
@@ -420,7 +454,7 @@ export function canPick(view: ItoRoomView, cardId: string): boolean {
   return view.game.row.includes(cardId) || card.owner === view.you;
 }
 
-/** Onde estaria o vão na fila deitada do PC (pra quem está no computador ver o arrasto do celular no lugar certo). */
+/** `index` é o índice do servidor (o mesmo do `place`). Onde estaria o vão na fila deitada do PC (pra quem está no computador ver o arrasto do celular no lugar certo). */
 export function deskCursor(row: readonly string[], cardId: string, index: number): { zone: 'table'; x: number; y: number } {
   const base = row.filter((id) => id !== cardId);
   const gap = rowEntries(base, [{ owner: '_', index }]).find((e) => e.kind === 'gap');
@@ -458,9 +492,33 @@ git commit -m "feat(web): lógica da fila em pé do celular (alvos, permissões,
 Ritmo igual ao computador (`engine.ts`, `syncReveal`/`flipCard`):
 - a primeira carta vira em 750 ms e cada uma das seguintes 620 ms depois, com o som `flip` (índice i);
 - carta errada: som `error` 330 ms depois de virar;
-- no fim, mais 500 ms, som `win`/`lose` e `done`.
+- no fim, 500 ms depois do passo seguinte à última carta (750 + 620·n + 500 ms, como o `later(t + 500, …)` do motor, em que `t` já avançou depois da última carta), som `win`/`lose` e `done`.
 
 Se a tela monta já com a revelação pronta (recarregou no meio), tudo aparece de uma vez, sem som.
+
+Os testes usam a fábrica `revealedItoView(wrong?)`. Acrescente-a ao fim de `web/test/fixtures.ts` (a Task 5 usa a mesma) e inclua esse arquivo no `git add` da Task 4:
+
+```ts
+/**
+ * Revelação de 2 cartas (com dicas "dica0"/"dica1"). `wrong` = procura um sorteio/ordem em que alguma carta
+ * fique fora de ordem (true) ou toda certa (false); `undefined` aceita o primeiro.
+ */
+export function revealedItoView(wrong?: boolean): ItoRoomView {
+  for (let seed = 1; seed < 60; seed++) {
+    for (const order of [[0, 1], [1, 0]] as const) {
+      let room = act(act(makeRoom(2), 'p0', { type: 'start' }, seed), 'p0', { type: 'beginRound' }, seed);
+      for (const [slot, who] of order.entries()) {
+        room = act(room, `p${who}`, { type: 'clue', cardId: `p${who}:0`, text: `dica${who}` }, seed);
+        room = act(room, `p${who}`, { type: 'place', cardId: `p${who}:0`, index: slot }, seed);
+      }
+      room = act(room, 'p0', { type: 'forceReveal' }, seed);
+      const view = viewOf(room, 'p0');
+      if (wrong === undefined || (view.game.reveal ?? []).some((e) => e.error) === wrong) return view;
+    }
+  }
+  throw new Error('sem sorteio com esse resultado');
+}
+```
 
 - [ ] **Step 1: Testes que falham**
 
@@ -468,21 +526,14 @@ Crie `web/test/phone-reveal.test.tsx`:
 
 ```tsx
 import { act as rtlAct, render, screen } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ItoRoomView } from '@cartolina/shared';
 import { usePhoneReveal } from '../src/table/phone/usePhoneReveal';
-import { act, sortingRoom, viewOf } from './fixtures';
+import { revealedItoView as revealedView, sortingRoom, viewOf } from './fixtures';
 
-function revealedView(): ItoRoomView {
-  let room = sortingRoom(2);
-  room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
-  room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
-  room = act(room, 'p0', { type: 'forceReveal' });
-  return viewOf(room, 'p0') as ItoRoomView;
-}
-
-function Probe({ view, sound }: { view: ItoRoomView; sound: (n: string, i?: number) => void }) {
-  const r = usePhoneReveal(view, sound, false);
+function Probe({ view, sound, instant = false }: { view: ItoRoomView; sound: (n: string, i?: number) => void; instant?: boolean }) {
+  const r = usePhoneReveal(view, sound, instant);
   return <p>{`${r.shown}|${r.done}`}</p>;
 }
 
@@ -499,7 +550,11 @@ describe('revelação no celular', () => {
       expect(sound).toHaveBeenCalledWith('flip', 0);
       rtlAct(() => void vi.advanceTimersByTime(620));
       expect(screen.getByText('2|false')).toBeTruthy();
+      expect(sound).toHaveBeenCalledWith('flip', 1);
+      // mesmo ritmo do computador: o fim cai 620 + 500 ms depois da última carta virar
       rtlAct(() => void vi.advanceTimersByTime(1000));
+      expect(screen.getByText('2|false')).toBeTruthy();
+      rtlAct(() => void vi.advanceTimersByTime(130));
       expect(screen.getByText('2|true')).toBeTruthy();
       const won = view.game.outcome === 'round_won';
       expect(sound).toHaveBeenCalledWith(won ? 'win' : 'lose');
@@ -508,15 +563,87 @@ describe('revelação no celular', () => {
     }
   });
 
-  it('montou já revelado (recarregou): tudo de uma vez, sem som', () => {
-    const sound = vi.fn();
-    function Instant({ view }: { view: ItoRoomView }) {
-      const r = usePhoneReveal(view, sound, true);
-      return <p>{`${r.shown}|${r.done}`}</p>;
+  it('carta errada: som de erro 330 ms depois de virar', () => {
+    vi.useFakeTimers();
+    try {
+      const sound = vi.fn();
+      const view = revealedView(true);
+      const wrong = (view.game.reveal ?? []).findIndex((e) => e.error);
+      render(<Probe view={view} sound={sound} />);
+      rtlAct(() => void vi.advanceTimersByTime(750 + 620 * wrong + 329));
+      expect(sound).not.toHaveBeenCalledWith('error');
+      rtlAct(() => void vi.advanceTimersByTime(1));
+      expect(sound).toHaveBeenCalledWith('error');
+    } finally {
+      vi.useRealTimers();
     }
-    render(<Instant view={revealedView()} />);
-    expect(screen.getByText('2|true')).toBeTruthy();
-    expect(sound).not.toHaveBeenCalled();
+  });
+
+  it('no StrictMode (efeito rodado duas vezes) a sequência não duplica sons', () => {
+    vi.useFakeTimers();
+    try {
+      const sound = vi.fn();
+      render(
+        <StrictMode>
+          <Probe view={revealedView()} sound={sound} />
+        </StrictMode>,
+      );
+      rtlAct(() => void vi.advanceTimersByTime(3000));
+      expect(screen.getByText('2|true')).toBeTruthy();
+      expect(sound.mock.calls.filter((c) => c[0] === 'flip')).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('montou já revelado (recarregou): tudo de uma vez, sem som', () => {
+    vi.useFakeTimers();
+    try {
+      const sound = vi.fn();
+      render(<Probe view={revealedView()} sound={sound} instant />);
+      expect(screen.getByText('2|true')).toBeTruthy();
+      rtlAct(() => void vi.advanceTimersByTime(5000));
+      expect(sound).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('desmontar no meio da sequência: nenhum som depois', () => {
+    vi.useFakeTimers();
+    try {
+      const sound = vi.fn();
+      const { unmount } = render(<Probe view={revealedView()} sound={sound} />);
+      rtlAct(() => void vi.advanceTimersByTime(750));
+      expect(sound).toHaveBeenCalledTimes(1);
+      unmount();
+      rtlAct(() => void vi.advanceTimersByTime(5000));
+      expect(sound).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('revelação → escolha → revelação com os mesmos ids: toca de novo desde o começo', () => {
+    vi.useFakeTimers();
+    try {
+      const sound = vi.fn();
+      const view = revealedView();
+      const { rerender } = render(<Probe view={view} sound={sound} />);
+      rtlAct(() => void vi.advanceTimersByTime(3000));
+      expect(screen.getByText('2|true')).toBeTruthy();
+      rerender(<Probe view={viewOf(sortingRoom(2), 'p0')} sound={sound} />);
+      expect(screen.getByText('0|false')).toBeTruthy();
+      rerender(<Probe view={view} sound={sound} />);
+      expect(screen.getByText('0|false')).toBeTruthy();
+      rtlAct(() => void vi.advanceTimersByTime(750));
+      expect(screen.getByText('1|false')).toBeTruthy();
+      rtlAct(() => void vi.advanceTimersByTime(2000));
+      expect(screen.getByText('2|true')).toBeTruthy();
+      expect(sound.mock.calls.filter((c) => c[0] === 'flip')).toHaveLength(4);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 ```
@@ -532,12 +659,15 @@ Crie `web/src/table/phone/usePhoneReveal.ts`:
 
 ```ts
 import type { ItoRoomView } from '@cartolina/shared';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+// Mesmo ritmo do motor do computador (`engine.ts`, `syncReveal`/`flipCard`).
 const FIRST_MS = 750;
 const STEP_MS = 620;
 const ERROR_MS = 330;
 const END_MS = 500;
+
+export type RevealSound = 'flip' | 'error' | 'win' | 'lose';
 
 export interface PhoneReveal {
   /** Quantas cartas da revelação já viraram (na ordem de `game.reveal`). */
@@ -550,49 +680,61 @@ export interface PhoneReveal {
  * Revelação passo a passo, com o ritmo e os sons do computador. `instant`: a tela montou já com a revelação
  * pronta (recarregou), então mostra tudo sem som.
  */
-export function usePhoneReveal(view: ItoRoomView, sound: (name: 'flip' | 'error' | 'win' | 'lose', index?: number) => void, instant: boolean): PhoneReveal {
+export function usePhoneReveal(view: ItoRoomView, sound: (name: RevealSound, index?: number) => void, instant: boolean): PhoneReveal {
   const reveal = view.game.phase === 'reveal' ? (view.game.reveal ?? []) : [];
   // Ids se repetem entre rodadas: a chave leva o valor também (igual à mesa do computador).
   const key = reveal.map((e) => `${e.cardId}=${e.value}`).join('|');
   const [state, setState] = useState<{ key: string; shown: number; done: boolean }>(() =>
     instant && key ? { key, shown: reveal.length, done: true } : { key: '', shown: 0, done: false },
   );
+  // Chave que já nasceu pronta (recarregou no meio): não toca a sequência. Fica no ref pra valer também
+  // quando o StrictMode roda o efeito duas vezes.
+  const instantKey = useRef(instant ? key : '');
+  const soundRef = useRef(sound);
+  soundRef.current = sound;
+  const outcome = view.game.outcome;
+  const outcomeRef = useRef(outcome);
+  outcomeRef.current = outcome;
+  const revealRef = useRef(reveal);
+  revealRef.current = reveal;
 
   useEffect(() => {
     if (!key) {
-      setState({ key: '', shown: 0, done: false });
+      instantKey.current = '';
+      setState((s) => (s.key === '' && s.shown === 0 && !s.done ? s : { key: '', shown: 0, done: false }));
       return;
     }
-    if (state.key === key) return;
+    if (key === instantKey.current) return;
     setState({ key, shown: 0, done: false });
-    const won = view.game.outcome === 'round_won' || view.game.outcome === 'level_cleared' || view.game.outcome === 'won';
+    const entries = revealRef.current;
+    const o = outcomeRef.current;
+    const won = o === 'round_won' || o === 'level_cleared' || o === 'won';
     const timers: number[] = [];
     let t = FIRST_MS;
-    reveal.forEach((e, i) => {
+    entries.forEach((e, i) => {
       timers.push(
         window.setTimeout(() => {
           setState((s) => (s.key === key ? { ...s, shown: i + 1 } : s));
-          sound('flip', i);
+          soundRef.current('flip', i);
         }, t),
       );
-      if (e.error) timers.push(window.setTimeout(() => sound('error'), t + ERROR_MS));
+      if (e.error) timers.push(window.setTimeout(() => soundRef.current('error'), t + ERROR_MS));
       t += STEP_MS;
     });
     timers.push(
       window.setTimeout(() => {
         setState((s) => (s.key === key ? { ...s, done: true } : s));
-        sound(won ? 'win' : 'lose');
-      }, t - STEP_MS + END_MS),
+        soundRef.current(won ? 'win' : 'lose');
+      }, t + END_MS),
     );
     return () => timers.forEach((id) => clearTimeout(id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- só a chave da revelação reinicia a sequência
   }, [key]);
 
   return state.key === key ? { shown: state.shown, done: state.done } : { shown: 0, done: false };
 }
 ```
 
-> **Conferência do teste:** com 2 cartas, o fim cai em 750 + 620 + 500 = 1870 ms, e o teste avança 750 + 620 + 1000. Se o `useEffect` com `state.key` der problema no StrictMode (duas montagens), o teste mostra; ajuste para um `useRef` com a chave já iniciada.
+> **Conferência do teste:** com 2 cartas, o fim cai em 750 + 2·620 + 500 = 2490 ms, igual ao motor do computador. O código acima usa `useRef` (chave que nasceu pronta; `sound`, desfecho e entradas lidos por ref) em vez de comparar `state.key` dentro do efeito, que dava problema no StrictMode (efeito rodado duas vezes). Os testes cobrem StrictMode, desmontar no meio e revelação → escolha → revelação com os mesmos ids.
 
 - [ ] **Step 4: Rodar e ver passar**
 
@@ -602,7 +744,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/table/phone/usePhoneReveal.ts web/test/phone-reveal.test.tsx
+git add web/src/table/phone/usePhoneReveal.ts web/test/phone-reveal.test.tsx web/test/fixtures.ts
 git commit -m "feat(web): revelação passo a passo da mesa do celular"
 ```
 
@@ -614,6 +756,7 @@ git commit -m "feat(web): revelação passo a passo da mesa do celular"
 - Create: `web/src/table/phone/PhoneRow.tsx`
 - Create: `web/src/table/phone/phone.css`
 - Create: `web/test/phone-row.test.tsx`
+- Modify: `web/src/brand/global.css` (classe `.sr-only`, que não existia)
 
 A fila é só apresentação. Quem decide o que mandar ao servidor é a `PhoneTable` (Task 8), via callbacks.
 
@@ -642,11 +785,11 @@ export interface PhoneRowProps {
 Crie `web/test/phone-row.test.tsx`:
 
 ```tsx
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ItoRoomView } from '@cartolina/shared';
 import { PhoneRow } from '../src/table/phone/PhoneRow';
-import { act, sortingRoom, viewOf } from './fixtures';
+import { act, revealedItoView, sortingRoom, viewOf } from './fixtures';
 
 function placedView() {
   let room = sortingRoom(3);
@@ -661,7 +804,7 @@ const base = (view: ItoRoomView) => ({
   view,
   row: view.game.row,
   selected: null as string | null,
-  gaps: [],
+  gaps: [] as Array<{ owner: string; pos: number }>,
   carried: new Set<string>(),
   shown: 0,
   onPick: vi.fn(),
@@ -675,8 +818,11 @@ describe('fila em pé', () => {
     render(<PhoneRow {...base(view)} />);
     const strips = screen.getAllByRole('button', { name: /gato|chuva/ });
     expect(strips.map((s) => s.textContent)).toEqual([expect.stringContaining('gato'), expect.stringContaining('chuva')]);
-    expect(screen.getByText('1')).toBeTruthy();
-    expect(screen.getByText('100')).toBeTruthy();
+    expect(screen.getByText('1', { selector: 'b' })).toBeTruthy();
+    expect(screen.getByText('100', { selector: 'b' })).toBeTruthy();
+    const ends = document.querySelectorAll('.p-end');
+    expect(ends[0]?.textContent).toContain(view.game.theme!.min);
+    expect(ends[1]?.textContent).toContain(view.game.theme!.max);
   });
 
   it('tocar numa faixa avisa quem foi tocado', () => {
@@ -686,10 +832,45 @@ describe('fila em pé', () => {
     expect(p.onPick).toHaveBeenCalledWith('p1:0');
   });
 
+  it('sem carta selecionada: nenhum "aqui"', () => {
+    render(<PhoneRow {...base(placedView())} />);
+    expect(screen.queryAllByRole('button', { name: /colocar aqui/ })).toHaveLength(0);
+  });
+
+  it('"aqui" diz onde fica: no começo ou depois de qual carta', () => {
+    render(<PhoneRow {...base(placedView())} selected="p2:0" />);
+    const names = screen.getAllByRole('button', { name: /colocar aqui/ }).map((b) => b.getAttribute('aria-label'));
+    expect(names).toEqual(['colocar aqui, no começo', 'colocar aqui, depois de gato', 'colocar aqui, depois de chuva']);
+    expect(screen.getAllByRole('button', { name: /colocar aqui/ })[0]!.textContent).toBe('aqui');
+  });
+
+  it('faixa diz de quem é e se está selecionada', () => {
+    render(<PhoneRow {...base(placedView())} selected="p1:0" />);
+    const mine = screen.getByRole('button', { name: /gato/ });
+    expect(mine.textContent).toContain('sua carta');
+    expect(mine.getAttribute('aria-pressed')).toBe('false');
+    const other = screen.getByRole('button', { name: /chuva/ });
+    expect(other.textContent).toContain('de P1');
+    expect(other.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('o índice do "aqui" é do servidor, mesmo com minha carta pendente na fila mostrada', () => {
+    const view = placedView(); // servidor: p0:0, p1:0
+    // eu vejo p0:0, p2:0 (pendente, só minha), p1:0 e estou movendo p0:0
+    const p = { ...base(view), row: ['p0:0', 'p2:0', 'p1:0'], selected: 'p0:0' };
+    render(<PhoneRow {...p} />);
+    const here = screen.getAllByRole('button', { name: /colocar aqui/ });
+    expect(here).toHaveLength(2);
+    fireEvent.click(here[0]!); // entre p2:0 e p1:0 → antes de p1:0 no servidor
+    expect(p.onTarget).toHaveBeenCalledWith(0);
+    fireEvent.click(here[1]!);
+    expect(p.onTarget).toHaveBeenLastCalledWith(1);
+  });
+
   it('com carta selecionada: aparecem os "aqui" com o índice do servidor', () => {
     const p = { ...base(placedView()), selected: 'p2:0' };
     render(<PhoneRow {...p} />);
-    const here = screen.getAllByRole('button', { name: 'aqui' });
+    const here = screen.getAllByRole('button', { name: /colocar aqui/ });
     expect(here).toHaveLength(3);
     fireEvent.click(here[2]!);
     expect(p.onTarget).toHaveBeenCalledWith(2);
@@ -711,12 +892,42 @@ describe('fila em pé', () => {
     const view = placedView();
     const { container } = render(<PhoneRow {...base(view)} gaps={[{ owner: 'p1', pos: 1 }]} carried={new Set(['p1:0'])} />);
     expect(container.querySelectorAll('.p-gap')).toHaveLength(1);
+    // o vão fica logo depois da 1ª faixa e antes da 2ª
+    const order = Array.from(container.querySelectorAll('.p-row > .p-strip, .p-row > .p-gap')).map((el) => el.getAttribute('data-card') ?? 'gap');
+    expect(order).toEqual(['p0:0', 'gap', 'p1:0']);
     expect(container.querySelector('[data-card="p1:0"]')?.classList.contains('carried')).toBe(true);
+  });
+});
+
+describe('fila em pé na revelação', () => {
+  it('só as cartas já viradas mostram o número', () => {
+    const view = revealedItoView(false);
+    const [first, second] = view.game.reveal!;
+    const { container } = render(<PhoneRow {...base(view)} shown={1} />);
+    const a = container.querySelector(`[data-card="${first!.cardId}"]`)!;
+    const b = container.querySelector(`[data-card="${second!.cardId}"]`)!;
+    expect(within(a as HTMLElement).getByText(String(first!.value))).toBeTruthy();
+    expect(b.querySelector('.p-num')).toBeNull();
+  });
+
+  it('carta fora de ordem ganha o ✕ quando vira', () => {
+    const view = revealedItoView(true);
+    const entries = view.game.reveal!;
+    const { container } = render(<PhoneRow {...base(view)} shown={entries.length} />);
+    const wrong = entries.filter((e) => e.error);
+    expect(container.querySelectorAll('.p-x')).toHaveLength(wrong.length);
+    expect(container.querySelector(`[data-card="${wrong[0]!.cardId}"]`)?.classList.contains('err')).toBe(true);
+  });
+
+  it('antes de virar, sem número nem ✕', () => {
+    const { container } = render(<PhoneRow {...base(revealedItoView(true))} shown={0} />);
+    expect(container.querySelectorAll('.p-num')).toHaveLength(0);
+    expect(container.querySelectorAll('.p-x')).toHaveLength(0);
   });
 });
 ```
 
-> Na revelação, as faixas mostram o número das cartas já viradas (`shown`) e um ✕ nas erradas. Acrescente um teste: com uma `view` revelada e `shown=1`, a primeira faixa tem o número e a segunda não. Use o `revealedView` da Task 4, copiado para este arquivo.
+> Na revelação, as faixas mostram o número das cartas já viradas (`shown`) e um ✕ nas erradas. Os testes usam `revealedItoView` de `web/test/fixtures.ts` (criada na Task 4).
 
 - [ ] **Step 2: Rodar e ver falhar**
 
@@ -732,49 +943,69 @@ import type { ItoRoomView } from '@cartolina/shared';
 import { Fragment, type CSSProperties } from 'react';
 import { Critter } from '../../screens/Critter';
 import { slotTargets } from './phoneRowLogic';
+import './phone.css';
 
 export interface PhoneRowProps {
   view: ItoRoomView;
+  /** Fila mostrada (do servidor + minha intenção pendente). */
   row: readonly string[];
+  /** Carta selecionada pra mover/colocar (da mão ou da fila), ou null. */
   selected: string | null;
+  /** Vãos de arrastos (meu ou de outros), em posição visual. */
   gaps: ReadonlyArray<{ owner: string; pos: number }>;
+  /** Cartas sendo carregadas (ficam translúcidas). */
   carried: ReadonlySet<string>;
+  /** Quantas cartas da revelação já viraram (0 fora da revelação). */
   shown: number;
   onPick(cardId: string): void;
   onTarget(index: number): void;
+  /** "voltar pra mão" (só aparece com uma carta minha da fila selecionada). */
   onReturn(cardId: string): void;
 }
 
 /** Fila em pé: 1 no topo, 100 embaixo. Cada carta é uma faixa com o bichinho do dono e a dica. */
 export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, onTarget, onReturn }: PhoneRowProps) {
   const colorOf = (owner: string) => view.seats.find((s) => s.id === owner)?.color ?? '#D9C2A0';
-  const reveal = view.game.reveal ?? [];
+  const reveal = view.game.phase === 'reveal' ? (view.game.reveal ?? []) : [];
   const revealed = new Map(reveal.slice(0, shown).map((e) => [e.cardId, e]));
-  const targets = selected ? slotTargets(row, selected) : [];
+  const targets = selected ? slotTargets(row, selected, view.game.row) : [];
   const targetAt = (pos: number) => targets.find((t) => t.pos === pos);
   const gapsAt = (pos: number) => gaps.filter((g) => g.pos === pos);
   const mineSelectedInRow = selected !== null && row.includes(selected) && view.game.cards[selected]?.owner === view.you;
 
-  const slot = (pos: number) => (
-    <Fragment key={`s${pos}`}>
-      {gapsAt(pos).map((g) => (
-        <div key={g.owner} className="p-gap" style={{ '--c': colorOf(g.owner) } as CSSProperties} aria-hidden="true" />
-      ))}
-      {targetAt(pos) && (
-        <button type="button" className="p-here" data-sound="click" onClick={() => onTarget(targetAt(pos)!.index)}>
-          aqui
-        </button>
-      )}
-    </Fragment>
-  );
+  const nameOf = (owner: string) => view.seats.find((s) => s.id === owner)?.name ?? '';
+  // Pra leitor de tela: depois de qual carta o "aqui" fica.
+  const hintAt = (pos: number) => {
+    const prev = pos > 0 ? view.game.cards[row[pos - 1] ?? ''] : undefined;
+    if (!prev) return 'no começo';
+    return `depois de ${prev.clue.trim() || `carta de ${nameOf(prev.owner)}`}`;
+  };
+
+  const slot = (pos: number) => {
+    const target = targetAt(pos);
+    return (
+      <Fragment key={`s${pos}`}>
+        {gapsAt(pos).map((g) => (
+          <div key={g.owner} className="p-gap" style={{ '--c': colorOf(g.owner) } as CSSProperties} aria-hidden="true" />
+        ))}
+        {target && (
+          <button type="button" className="p-here" data-sound="click" aria-label={`colocar aqui, ${hintAt(pos)}`} onClick={() => onTarget(target.index)}>
+            aqui
+          </button>
+        )}
+      </Fragment>
+    );
+  };
 
   return (
-    <div className="p-row" aria-label="fila de cartas">
-      <div className="p-end">1 · {view.game.theme?.min ?? ''}</div>
+    <div className="p-row" role="group" aria-label="fila de cartas">
+      <p className="p-end">
+        <b>1</b> · {view.game.theme?.min ?? ''}
+      </p>
       {slot(0)}
       {row.map((id, i) => {
         const card = view.game.cards[id];
-        if (!card) return null;
+        if (!card) return slot(i + 1);
         const r = revealed.get(id);
         return (
           <Fragment key={id}>
@@ -782,14 +1013,16 @@ export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, on
               type="button"
               data-card={id}
               data-sound="none"
-              className={`p-strip ${selected === id ? 'sel' : ''} ${carried.has(id) ? 'carried' : ''} ${card.owner === view.you ? 'mine' : ''} ${r?.error ? 'err' : ''}`}
+              className={`p-strip${selected === id ? ' sel' : ''}${carried.has(id) ? ' carried' : ''}${card.owner === view.you ? ' mine' : ''}${r?.error ? ' err' : ''}`}
               style={{ '--c': colorOf(card.owner) } as CSSProperties}
+              aria-pressed={selected === id}
               onClick={() => onPick(id)}
             >
               <span className="p-badge">
                 <Critter color={colorOf(card.owner)} />
               </span>
               <span className="p-clue">{card.clue.trim() || '…'}</span>
+              <span className="sr-only">{card.owner === view.you ? 'sua carta' : `de ${nameOf(card.owner)}`}</span>
               {r && <span className="p-num">{r.value}</span>}
               {r?.error && (
                 <span className="p-x" role="img" aria-label="fora de ordem">
@@ -801,9 +1034,11 @@ export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, on
           </Fragment>
         );
       })}
-      <div className="p-end">100 · {view.game.theme?.max ?? ''}</div>
+      <p className="p-end">
+        <b>100</b> · {view.game.theme?.max ?? ''}
+      </p>
       {mineSelectedInRow && (
-        <button type="button" className="sbtn p-return" onClick={() => onReturn(selected!)}>
+        <button type="button" className="sbtn p-return" onClick={() => onReturn(selected)}>
           voltar pra mão
         </button>
       )}
@@ -812,24 +1047,34 @@ export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, on
 }
 ```
 
-> **Detalhes de nome acessível:**
-> - O `aria-label` da fila não deve cobrir os nomes das faixas: o nome de cada faixa é o texto dela (a dica e, revelada, o número).
-> - Os textos "1"/"100" dos extremos aparecem como "1 · …" e "100 · …".
-> - O teste usa `getByText('1')` e `getByText('100')`. Se ficar ambíguo, ponha os números num `<b>` próprio e ajuste o teste para `getByText('1', { selector: 'b' })`.
+> **Detalhes de acessibilidade:**
+> - O nome da faixa é o texto dela: a dica, "sua carta" / "de {nome}" (`.sr-only`) e, revelada, o número. A faixa tem `aria-pressed` quando selecionada.
+> - O botão "aqui" mostra só "aqui", mas o `aria-label` é "colocar aqui, no começo" ou "colocar aqui, depois de {dica, ou 'carta de X'}".
+> - Os extremos "1" e "100" ficam em `<b>` próprio (`getByText('1', { selector: 'b' })`).
+> - O índice do "aqui" é do servidor: `PhoneRow` passa `view.game.row` como `serverRow` para `slotTargets`.
+> - `touch-action: pan-y` nas faixas deixa o dedo rolar a fila; o arrasto (Task 7) bloqueia a rolagem depois que ativa.
+> - Acrescente ao fim de `web/src/brand/global.css`:
+>
+>   ```css
+>   /* Só pra leitor de tela. */
+>   .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+>   ```
 
 Crie `web/src/table/phone/phone.css` (importado pela `PhoneTable` na Task 8; neste task, importe no `PhoneRow.tsx` com `import './phone.css';` para o build pegar):
 
 ```css
 /* Mesa do celular (DITU em pé). */
-.p-row { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow-y: auto; overscroll-behavior: contain; }
-.p-end { font: 600 13px/1.2 var(--font-ui); opacity: 0.65; text-align: center; }
+.p-row { display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow-y: auto; overflow-x: clip; overscroll-behavior: contain; }
+.p-end { margin: 0; font: 600 13px/1.2 var(--font-ui); opacity: 0.65; text-align: center; }
 .p-strip {
   position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 10px; text-align: left;
   border: 2px solid var(--ink); border-radius: var(--r); background: var(--c); color: var(--ink); box-shadow: 2px 3px 0 var(--ink);
-  font: 19px/1.1 var(--font-hand); touch-action: none; user-select: none; -webkit-user-select: none;
+  font: 19px/1.1 var(--font-hand); touch-action: pan-y; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
 }
-.p-strip.mine { outline: 3px solid var(--paper); outline-offset: -5px; }
+.p-strip.mine { box-shadow: 2px 3px 0 var(--ink), inset 0 0 0 3px var(--paper); }
+.p-strip:focus-visible, .p-here:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .p-strip.sel { transform: translateX(6px); box-shadow: 4px 5px 0 var(--ink); }
+.p-strip.mine.sel { box-shadow: 4px 5px 0 var(--ink), inset 0 0 0 3px var(--paper); }
 .p-strip.carried { opacity: 0.35; }
 .p-strip.err { border-color: var(--pink2); }
 .p-badge { width: 30px; height: 30px; flex: none; }
@@ -837,7 +1082,7 @@ Crie `web/src/table/phone/phone.css` (importado pela `PhoneTable` na Task 8; nes
 .p-num { flex: none; min-width: 40px; text-align: center; font: 700 22px/1 var(--font-ui); background: var(--paper); border: 2px solid var(--ink); border-radius: 8px 6px 7px 5px; padding: 4px; }
 .p-x { position: absolute; right: -6px; top: -8px; font: 700 22px/1 var(--font-ui); color: var(--pink2); }
 .p-gap { height: 46px; border: 3px dashed var(--c); border-radius: var(--r); }
-.p-here { height: 36px; border: 2px dashed var(--ink); border-radius: var(--r); background: transparent; font: 600 15px/1 var(--font-ui); }
+.p-here { height: 44px; border: 2px dashed var(--ink); border-radius: var(--r); background: transparent; font: 600 15px/1 var(--font-ui); }
 .p-return { align-self: center; }
 ```
 
@@ -849,7 +1094,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add web/src/table/phone/PhoneRow.tsx web/src/table/phone/phone.css web/test/phone-row.test.tsx
+git add web/src/table/phone/PhoneRow.tsx web/src/table/phone/phone.css web/test/phone-row.test.tsx web/src/brand/global.css
 git commit -m "feat(web): fila em pé do celular (faixas, alvos 'aqui', vão de arrasto e revelação)"
 ```
 
@@ -1106,16 +1351,17 @@ git commit -m "feat(web): mão do celular e painel da dica"
 Regras:
 - **Início do arrasto:** o `pointerdown` numa carta que pode ser pega (`canPick`) prepara o arrasto.
   - Mouse: começa depois de mover 6 px.
-  - Toque: começa depois de segurar 220 ms sem mover mais de 10 px. Se mover antes, é rolagem: cancela e deixa rolar.
+  - Toque: começa depois de segurar 220 ms sem mover mais de 10 px. Se mover antes, é rolagem: cancela e deixa rolar (as faixas têm `touch-action: pan-y`).
+  - Depois que os 220 ms ativam o arrasto, o navegador ainda poderia tratar o gesto como rolagem e disparar `pointercancel`. Por isso o `usePhoneDrag` adiciona um listener **não passivo** de `touchmove` no `window` que chama `preventDefault()`, e o remove ao terminar (`finish`). Trocar o `touch-action` no meio do gesto não funciona.
 - **Durante o arrasto:**
   - A posição visual alvo vem de `posFromY(clientY, rects das faixas)`. As faixas são `[data-card]` dentro do container da fila, sem a carta arrastada.
-  - O índice do servidor sai de `slotTargets(row, cardId)` pela posição. Posição sem alvo (colada na própria carta) vira "nenhum".
-  - Manda `conn.sendActivity('dragging')` uma vez, e `conn.sendCursor({ ...deskCursor(row, cardId, index), drag: { cardId, index } })` a cada mudança de alvo.
+  - O índice do servidor sai de `slotTargets(row, cardId, serverRow)` pela posição (`row` = fila mostrada, `serverRow` = `view.game.row`). Posição sem alvo (colada na própria carta) vira "nenhum".
+  - Manda `conn.sendActivity('dragging')` uma vez, e `conn.sendCursor({ ...deskCursor(serverRow, cardId, index), drag: { cardId, index } })` a cada mudança de alvo (o `index` é o do servidor, então `deskCursor` recebe a fila do servidor).
   - Com o dedo a menos de 56 px da borda de cima ou de baixo do container, rola 8 px por quadro (`requestAnimationFrame`).
 - **Ao soltar:**
   - Com alvo: `onDrop(cardId, index)`.
   - Sem alvo: nada; a carta volta.
-  - Em ambos os casos manda `sendCursor({ ...deskCursor(…), drag: null })` e `sendActivity('thinking')`.
+  - Em ambos os casos manda `sendCursor({ ...deskCursor(serverRow, …), drag: null })` e `sendActivity('thinking')`.
 - **Clique:** um toque curto, sem arrasto, continua sendo clique (seleção, Task 5/6). O hook não chama `preventDefault` no `pointerdown` antes de decidir.
 
 Interface:
@@ -1132,6 +1378,8 @@ export interface PhoneDrag {
 export function usePhoneDrag(opts: {
   container: React.RefObject<HTMLElement | null>;
   row: readonly string[];
+  /** Fila do servidor (`view.game.row`): dá o índice do `place` e o cursor do PC. */
+  serverRow: readonly string[];
   canPick(cardId: string): boolean;
   conn: Pick<GameConn, 'sendCursor' | 'sendActivity'>;
   onDrop(cardId: string, index: number): void;
@@ -1188,6 +1436,8 @@ export interface PhoneDrag {
 export function usePhoneDrag(opts: {
   container: RefObject<HTMLElement | null>;
   row: readonly string[];
+  /** Fila do servidor (`view.game.row`): dá o índice do `place` e o cursor do PC. */
+  serverRow: readonly string[];
   canPick(cardId: string): boolean;
   conn: Pick<GameConn, 'sendCursor' | 'sendActivity'>;
   onDrop(cardId: string, index: number): void;
@@ -1209,7 +1459,7 @@ export function usePhoneDrag(opts: {
     const withoutPos = posFromY(y, rects);
     const at = live.current.row.indexOf(cardId);
     const visual = at >= 0 && withoutPos > at ? withoutPos + 1 : withoutPos;
-    const t = slotTargets(live.current.row, cardId).find((s) => s.pos === visual);
+    const t = slotTargets(live.current.row, cardId, live.current.serverRow).find((s) => s.pos === visual);
     return { visual, index: t ? t.index : null };
   }, []);
 
@@ -1219,12 +1469,13 @@ export function usePhoneDrag(opts: {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
     window.removeEventListener('pointercancel', onCancel);
+    window.removeEventListener('touchmove', blockScroll);
     if (!s) return;
     clearTimeout(s.hold);
     cancelAnimationFrame(s.raf);
     if (s.active) {
-      const { conn, row, onDrop } = live.current;
-      conn.sendCursor({ ...deskCursor(row, s.cardId, s.index ?? 0), drag: null });
+      const { conn, serverRow, onDrop } = live.current;
+      conn.sendCursor({ ...deskCursor(serverRow, s.cardId, s.index ?? 0), drag: null });
       conn.sendActivity('thinking');
       if (drop && s.index !== null) onDrop(s.cardId, s.index);
     }
@@ -1239,6 +1490,8 @@ export function usePhoneDrag(opts: {
     s.active = true;
     setDragging(s.cardId);
     live.current.conn.sendActivity('dragging');
+    // Já é arrasto: o navegador não pode tomar o gesto como rolagem (senão vem `pointercancel`).
+    if (s.touch) window.addEventListener('touchmove', blockScroll, { passive: false });
     const edge = () => {
       const cur = state.current;
       const box = live.current.container.current;
@@ -1269,8 +1522,11 @@ export function usePhoneDrag(opts: {
     setPos(index === null ? null : visual);
     if (index !== s.index) {
       s.index = index;
-      live.current.conn.sendCursor({ ...deskCursor(live.current.row, s.cardId, index ?? 0), drag: { cardId: s.cardId, index: index ?? null } });
+      live.current.conn.sendCursor({ ...deskCursor(live.current.serverRow, s.cardId, index ?? 0), drag: { cardId: s.cardId, index: index ?? null } });
     }
+  }
+  function blockScroll(e: TouchEvent) {
+    if (e.cancelable) e.preventDefault();
   }
   function onUp() {
     finish(true);
@@ -1331,6 +1587,7 @@ git commit -m "feat(web): arrastar cartas na fila em pé (dedo e mouse) com curs
 - **Fila:**
   - A fila mostrada é `effectiveRow(view.game.row, pending, carriedByOthers)`, com `pending: Intent | null` (de `rowLayout.ts`).
   - O `pending` é limpo quando `intentSettled(view.game.row, pending, Date.now())`, verificado a cada `view` nova.
+  - `PhoneRow` e `usePhoneDrag` recebem `serverRow = view.game.row`. O `index` que sai do "aqui" e do arrasto já é o do servidor e vai direto no `place`; o cursor do PC usa `deskCursor(view.game.row, cardId, index)`.
   - Ao colocar a carta (seleção + "aqui" ou arrasto):
     1. faz o `flush` do `ClueSheet` aberto, se houver;
     2. cria `pending = { kind: 'place', cardId, index, after: <carta antes na fila do servidor sem a minha> , at: Date.now() }`;

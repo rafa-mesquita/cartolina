@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ItoRoomView } from '@cartolina/shared';
 import { PhoneRow } from '../src/table/phone/PhoneRow';
-import { act, makeRoom, sortingRoom, viewOf } from './fixtures';
+import { act, revealedItoView, sortingRoom, viewOf } from './fixtures';
 
 function placedView() {
   let room = sortingRoom(3);
@@ -11,23 +11,6 @@ function placedView() {
   room = act(room, 'p1', { type: 'clue', cardId: 'p1:0', text: 'chuva' });
   room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 1 });
   return viewOf(room, 'p0') as ItoRoomView;
-}
-
-/** Revelação de 2 cartas; `wrong` procura um sorteio com carta fora de ordem. */
-function revealedView(wrong: boolean): ItoRoomView {
-  for (let seed = 1; seed < 60; seed++) {
-    for (const order of [[0, 1], [1, 0]] as const) {
-      let room = act(act(makeRoom(2), 'p0', { type: 'start' }, seed), 'p0', { type: 'beginRound' }, seed);
-      room = act(room, `p${order[0]}`, { type: 'clue', cardId: `p${order[0]}:0`, text: `dica${order[0]}` }, seed);
-      room = act(room, `p${order[0]}`, { type: 'place', cardId: `p${order[0]}:0`, index: 0 }, seed);
-      room = act(room, `p${order[1]}`, { type: 'clue', cardId: `p${order[1]}:0`, text: `dica${order[1]}` }, seed);
-      room = act(room, `p${order[1]}`, { type: 'place', cardId: `p${order[1]}:0`, index: 1 }, seed);
-      room = act(room, 'p0', { type: 'forceReveal' }, seed);
-      const view = viewOf(room, 'p0') as ItoRoomView;
-      if ((view.game.reveal ?? []).some((e) => e.error) === wrong) return view;
-    }
-  }
-  throw new Error('sem sorteio');
 }
 
 const base = (view: ItoRoomView) => ({
@@ -64,13 +47,43 @@ describe('fila em pé', () => {
 
   it('sem carta selecionada: nenhum "aqui"', () => {
     render(<PhoneRow {...base(placedView())} />);
-    expect(screen.queryAllByRole('button', { name: 'aqui' })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /colocar aqui/ })).toHaveLength(0);
+  });
+
+  it('"aqui" diz onde fica: no começo ou depois de qual carta', () => {
+    render(<PhoneRow {...base(placedView())} selected="p2:0" />);
+    const names = screen.getAllByRole('button', { name: /colocar aqui/ }).map((b) => b.getAttribute('aria-label'));
+    expect(names).toEqual(['colocar aqui, no começo', 'colocar aqui, depois de gato', 'colocar aqui, depois de chuva']);
+    expect(screen.getAllByRole('button', { name: /colocar aqui/ })[0]!.textContent).toBe('aqui');
+  });
+
+  it('faixa diz de quem é e se está selecionada', () => {
+    render(<PhoneRow {...base(placedView())} selected="p1:0" />);
+    const mine = screen.getByRole('button', { name: /gato/ });
+    expect(mine.textContent).toContain('sua carta');
+    expect(mine.getAttribute('aria-pressed')).toBe('false');
+    const other = screen.getByRole('button', { name: /chuva/ });
+    expect(other.textContent).toContain('de P1');
+    expect(other.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('o índice do "aqui" é do servidor, mesmo com minha carta pendente na fila mostrada', () => {
+    const view = placedView(); // servidor: p0:0, p1:0
+    // eu vejo p0:0, p2:0 (pendente, só minha), p1:0 e estou movendo p0:0
+    const p = { ...base(view), row: ['p0:0', 'p2:0', 'p1:0'], selected: 'p0:0' };
+    render(<PhoneRow {...p} />);
+    const here = screen.getAllByRole('button', { name: /colocar aqui/ });
+    expect(here).toHaveLength(2);
+    fireEvent.click(here[0]!); // entre p2:0 e p1:0 → antes de p1:0 no servidor
+    expect(p.onTarget).toHaveBeenCalledWith(0);
+    fireEvent.click(here[1]!);
+    expect(p.onTarget).toHaveBeenLastCalledWith(1);
   });
 
   it('com carta selecionada: aparecem os "aqui" com o índice do servidor', () => {
     const p = { ...base(placedView()), selected: 'p2:0' };
     render(<PhoneRow {...p} />);
-    const here = screen.getAllByRole('button', { name: 'aqui' });
+    const here = screen.getAllByRole('button', { name: /colocar aqui/ });
     expect(here).toHaveLength(3);
     fireEvent.click(here[2]!);
     expect(p.onTarget).toHaveBeenCalledWith(2);
@@ -92,13 +105,16 @@ describe('fila em pé', () => {
     const view = placedView();
     const { container } = render(<PhoneRow {...base(view)} gaps={[{ owner: 'p1', pos: 1 }]} carried={new Set(['p1:0'])} />);
     expect(container.querySelectorAll('.p-gap')).toHaveLength(1);
+    // o vão fica logo depois da 1ª faixa e antes da 2ª
+    const order = Array.from(container.querySelectorAll('.p-row > .p-strip, .p-row > .p-gap')).map((el) => el.getAttribute('data-card') ?? 'gap');
+    expect(order).toEqual(['p0:0', 'gap', 'p1:0']);
     expect(container.querySelector('[data-card="p1:0"]')?.classList.contains('carried')).toBe(true);
   });
 });
 
 describe('fila em pé na revelação', () => {
   it('só as cartas já viradas mostram o número', () => {
-    const view = revealedView(false);
+    const view = revealedItoView(false);
     const [first, second] = view.game.reveal!;
     const { container } = render(<PhoneRow {...base(view)} shown={1} />);
     const a = container.querySelector(`[data-card="${first!.cardId}"]`)!;
@@ -108,7 +124,7 @@ describe('fila em pé na revelação', () => {
   });
 
   it('carta fora de ordem ganha o ✕ quando vira', () => {
-    const view = revealedView(true);
+    const view = revealedItoView(true);
     const entries = view.game.reveal!;
     const { container } = render(<PhoneRow {...base(view)} shown={entries.length} />);
     const wrong = entries.filter((e) => e.error);
@@ -117,7 +133,7 @@ describe('fila em pé na revelação', () => {
   });
 
   it('antes de virar, sem número nem ✕', () => {
-    const { container } = render(<PhoneRow {...base(revealedView(true))} shown={0} />);
+    const { container } = render(<PhoneRow {...base(revealedItoView(true))} shown={0} />);
     expect(container.querySelectorAll('.p-num')).toHaveLength(0);
     expect(container.querySelectorAll('.p-x')).toHaveLength(0);
   });

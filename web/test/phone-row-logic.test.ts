@@ -21,6 +21,32 @@ describe('alvos "aqui" da fila em pé', () => {
     ]);
   });
 
+  it('mover a primeira e a última carta', () => {
+    expect(slotTargets(['a', 'b', 'c'], 'a')).toEqual([
+      { pos: 2, index: 1 },
+      { pos: 3, index: 2 },
+    ]);
+    expect(slotTargets(['a', 'b', 'c'], 'c')).toEqual([
+      { pos: 0, index: 0 },
+      { pos: 1, index: 1 },
+    ]);
+  });
+
+  it('o índice é do servidor: carta pendente só minha (h) não conta', () => {
+    // vejo a h b, mas o servidor só tem a b (h é minha intenção pendente): entre h e b vale "depois do a" = 1; no fim = 2.
+    expect(slotTargets(['a', 'h', 'b'], 'x', ['a', 'b'])).toEqual([
+      { pos: 0, index: 0 },
+      { pos: 1, index: 1 },
+      { pos: 2, index: 1 },
+      { pos: 3, index: 2 },
+    ]);
+    // movendo uma carta que já está na fila: o índice ignora ela e a pendente
+    expect(slotTargets(['a', 'h', 'b'], 'a', ['a', 'b'])).toEqual([
+      { pos: 2, index: 0 },
+      { pos: 3, index: 1 },
+    ]);
+  });
+
   it('fila vazia: um alvo só', () => {
     expect(slotTargets([], 'h')).toEqual([{ pos: 0, index: 0 }]);
   });

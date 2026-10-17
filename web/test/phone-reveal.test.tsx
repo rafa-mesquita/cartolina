@@ -3,22 +3,7 @@ import { StrictMode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ItoRoomView } from '@cartolina/shared';
 import { usePhoneReveal } from '../src/table/phone/usePhoneReveal';
-import { act, makeRoom, viewOf } from './fixtures';
-
-/** Revelação de 2 cartas. `wrong`: procura um sorteio/ordem em que alguma carta fique fora de ordem. */
-function revealedView(wrong = false): ItoRoomView {
-  for (let seed = 1; seed < 60; seed++) {
-    for (const order of [[0, 1], [1, 0]] as const) {
-      let room = act(act(makeRoom(2), 'p0', { type: 'start' }, seed), 'p0', { type: 'beginRound' }, seed);
-      room = act(room, `p${order[0]}`, { type: 'place', cardId: `p${order[0]}:0`, index: 0 }, seed);
-      room = act(room, `p${order[1]}`, { type: 'place', cardId: `p${order[1]}:0`, index: 1 }, seed);
-      room = act(room, 'p0', { type: 'forceReveal' }, seed);
-      const view = viewOf(room, 'p0') as ItoRoomView;
-      if (!wrong || (view.game.reveal ?? []).some((e) => e.error)) return view;
-    }
-  }
-  throw new Error('sem sorteio com erro');
-}
+import { revealedItoView as revealedView, sortingRoom, viewOf } from './fixtures';
 
 function Probe({ view, sound, instant = false }: { view: ItoRoomView; sound: (n: string, i?: number) => void; instant?: boolean }) {
   const r = usePhoneReveal(view, sound, instant);
@@ -92,6 +77,43 @@ describe('revelação no celular', () => {
       expect(screen.getByText('2|true')).toBeTruthy();
       rtlAct(() => void vi.advanceTimersByTime(5000));
       expect(sound).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('desmontar no meio da sequência: nenhum som depois', () => {
+    vi.useFakeTimers();
+    try {
+      const sound = vi.fn();
+      const { unmount } = render(<Probe view={revealedView()} sound={sound} />);
+      rtlAct(() => void vi.advanceTimersByTime(750));
+      expect(sound).toHaveBeenCalledTimes(1);
+      unmount();
+      rtlAct(() => void vi.advanceTimersByTime(5000));
+      expect(sound).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('revelação → escolha → revelação com os mesmos ids: toca de novo desde o começo', () => {
+    vi.useFakeTimers();
+    try {
+      const sound = vi.fn();
+      const view = revealedView();
+      const { rerender } = render(<Probe view={view} sound={sound} />);
+      rtlAct(() => void vi.advanceTimersByTime(3000));
+      expect(screen.getByText('2|true')).toBeTruthy();
+      rerender(<Probe view={viewOf(sortingRoom(2), 'p0')} sound={sound} />);
+      expect(screen.getByText('0|false')).toBeTruthy();
+      rerender(<Probe view={view} sound={sound} />);
+      expect(screen.getByText('0|false')).toBeTruthy();
+      rtlAct(() => void vi.advanceTimersByTime(750));
+      expect(screen.getByText('1|false')).toBeTruthy();
+      rtlAct(() => void vi.advanceTimersByTime(2000));
+      expect(screen.getByText('2|true')).toBeTruthy();
+      expect(sound.mock.calls.filter((c) => c[0] === 'flip')).toHaveLength(4);
     } finally {
       vi.useRealTimers();
     }
