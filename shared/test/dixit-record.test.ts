@@ -89,6 +89,30 @@ describe('pendingDixitRecord', () => {
     expect(pendingDixitRecord(createRoom('ABCD', 0), 1, 'r')).toBeNull();
   });
 
+  it('rodada com bot (modo teste) não vai pro histórico: narrador, quem jogou e votou, ou só no placar', () => {
+    const asBot = (room: Room, playerId: string): Room => ({
+      ...room,
+      seats: room.seats.map((s) => (s.id === playerId ? { ...s, name: `Bot ${s.name}` } : s)),
+    });
+    const { state } = revealed(4, (s) => s.storyCard!);
+    const room = roomOf(state);
+    expect(pendingDixitRecord(room, 1, 'r')).not.toBeNull();
+    expect(pendingDixitRecord(asBot(room, state.result!.storyteller), 1, 'r')).toBeNull();
+    expect(pendingDixitRecord(asBot(room, others(state)[0]!), 1, 'r')).toBeNull();
+
+    // Quem saiu antes de votar só aparece no placar (e na carta que jogou).
+    const { state: v } = voting(4);
+    const leaver = others(v).at(-1)!;
+    const staying = ctxOf(ids(4).filter((p) => p !== leaver));
+    let s = dixitOnPresenceChange(v, staying);
+    for (const p of others(s).filter((p) => p !== leaver)) {
+      s = act(s, p, { type: 'vote', cardId: s.storyCard! }, staying);
+      s = act(s, p, { type: 'confirm' }, staying);
+    }
+    expect(s.result!.votes[leaver]).toBeUndefined();
+    expect(pendingDixitRecord(asBot(roomOf(s), leaver), 1, 'r')).toBeNull();
+  });
+
   it('não grava de novo a mesma revelação', () => {
     const room = roomOf(revealed(4, (s) => s.storyCard!).state);
     const key = pendingDixitRecord(room, 1, 'r')!.key;

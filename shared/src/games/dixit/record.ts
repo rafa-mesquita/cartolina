@@ -1,4 +1,4 @@
-import type { PlayerColor } from '../../players';
+import { isBotName, type PlayerColor } from '../../players';
 import { dixitStateOf, type Room } from '../../room';
 import type { DixitState, DixitTarget } from './types';
 
@@ -85,6 +85,9 @@ export function pendingDixitRecord(room: Room, now: number, id: string): { key: 
     const p = person(playerId);
     return p ? [{ ...p, gained: result.gained[playerId] ?? 0, score: state.scores[playerId] ?? 0 }] : [];
   });
+  // Rodada de teste com bot não suja o histórico (aberto a todos) nem as estatísticas da galera.
+  const people = [storyteller, ...cards.map((c) => c.owner), ...votes.map((v) => v.voter), ...scores];
+  if (people.some((p) => isBotName(p.name))) return null;
   return {
     key,
     record: {
