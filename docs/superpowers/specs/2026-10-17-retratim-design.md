@@ -331,8 +331,8 @@ Os números mínimos são ponto de partida.
 3. **Plano R1 — regras e base** (feito,
    `docs/superpowers/plans/2026-10-17-plano-r1-retratim-regras.md`): módulo em `shared/`, prazo do jogo na sala,
    servidor aceitando `pictures`.
-4. **Plano R2 — mesa no site:** kits (montar/mostrar), telas, sons, bots,
-   catálogo jogável, E2E.
+4. **Plano R2 — mesa no site** (feito, `docs/superpowers/plans/2026-10-17-plano-r2-retratim-mesa.md`): kits
+   (montar/mostrar), telas, sons, bots, catálogo jogável, E2E.
 5. **Plano R3 — fotos:** 100 prompts, geração, script.
 6. **Plano R4 — histórico e museu** (com o hook de histórico genérico).
 
