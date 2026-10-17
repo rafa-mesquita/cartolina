@@ -89,7 +89,7 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
           </button>
           {showLink && <input className="dx-link" readOnly value={link} aria-label="link da sala" onFocus={(e) => e.currentTarget.select()} />}
           <a className="dx-btn ghost" href={gameHash('dixit', 'historico')} target="_blank" rel="noopener">
-            📜 histórico do Diquisti
+            <span aria-hidden="true">📜</span> histórico do Diquisti
           </a>
           <SoundPill />
         </section>

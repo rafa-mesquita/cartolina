@@ -393,5 +393,21 @@ describe('mesa do Diquisti: topo', () => {
     const link = screen.getByRole('link', { name: /histórico/ });
     expect(link.getAttribute('href')).toBe('#/dixit/historico');
     expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener');
+  });
+
+  it('o link fica fora das pílulas e o emoji não entra no nome', () => {
+    render(<DixitTable view={dixitView(started(4), 'p0')} conn={conn()} />);
+    const link = screen.getByRole('link', { name: 'histórico' });
+    expect(link.closest('.dx-pills')).toBeNull();
+    expect(link.querySelector('[aria-hidden="true"]')!.textContent).toBe('📜');
+  });
+
+  it('no fim de jogo o link continua lá', () => {
+    let room = revealed(4);
+    room = { ...room, game: { ...room.game, phase: 'gameover' } as typeof room.game };
+    render(<DixitTable view={dixitView(room, 'p0')} conn={conn()} />);
+    expect(screen.getByText('fim de jogo')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'histórico' }).getAttribute('href')).toBe('#/dixit/historico');
   });
 });

@@ -44,7 +44,7 @@ export function DixitTopBar({ view, name, color, tilt, onTilt, host, onForce }: 
       </h1>
       {/* Embaixo do logo, e não nas pílulas: ali ele apertaria a dica do narrador. */}
       <a className="dx-histlink" href={gameHash('dixit', 'historico')} target="_blank" rel="noopener" title="histórico do Diquisti">
-        📜 histórico
+        <span aria-hidden="true">📜</span> histórico
       </a>
       <div className="dx-clue">
         {st && g.phase !== 'gameover' && (
