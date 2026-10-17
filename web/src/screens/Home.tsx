@@ -1,11 +1,9 @@
 import { playHover } from '../brand/hoverSound';
 import { CATALOG } from '../games/catalog';
-import { useIsPhone } from '../lib/device';
 import { JoinByCode } from './JoinByCode';
 import './shelf.css';
 
 export function Home() {
-  const phone = useIsPhone();
   return (
     <main className="screen">
       <h1 className="logo big">
@@ -21,13 +19,10 @@ export function Home() {
           </a>
         ))}
       </nav>
-      {/* No celular a sala não abre (só o computador joga), então sem a linha do código. */}
-      {!phone && (
-        <div className="join-line">
-          <span>tem um código?</span>
-          <JoinByCode compact />
-        </div>
-      )}
+      <div className="join-line">
+        <span>tem um código?</span>
+        <JoinByCode compact />
+      </div>
     </main>
   );
 }
