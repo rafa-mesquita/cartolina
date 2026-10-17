@@ -126,17 +126,21 @@ precisa refazer o empilhamento.
 ### 4.1 Módulo do Retratim (`shared/src/games/pictures/`)
 
 - `types.ts`: fases `lobby → building → guessing → reveal → (building |
-  gameover)`; estado com `players`, `scores`, `round`, `grid` (16 ids de
-  foto), `bag` (fichas restantes), `secret` (coordenada por jogador),
-  `kitOf` (kit por jogador na rodada), `works` (rascunho/obra por jogador),
-  `ready`, `guesses` (por jogador: obra-alvo → coordenada), `confirmed`,
-  `countdownEndsAt`, `lastRound` (resultado pra animar).
+  gameover)`; estado com `players`, `inRound`, `scores`, `round`, `grid` (16
+  ids de foto), `bag` (fichas restantes), `secrets` (coordenada por jogador),
+  `kits` (kit por jogador na rodada), `works` (rascunho/obra por jogador),
+  `ready`, `guesses` (palpiteiro → artista → coordenada), `confirmed`,
+  `countdownEndsAt`, `result` (resultado da rodada pra animar), `winners`,
+  `paused`.
 - Ações: `start`, `draft { work }`, `ready { on }`, `guess { artist, coord |
   null }`, `confirm`, `hurry` (host), `next`, `again`, `lobby`.
-- `kits/*.ts`: tipo da obra + `validate` de cada kit. Rascunho inválido →
-  erro `bad_work`, estado inalterado.
-- `rotation.ts`: rodízio de kits; `bag.ts`: saquinho; `scoring.ts`:
-  `scoreRound(...)` pura.
+- `works.ts`: schema zod da obra de cada kit (`workSchema`), `workError`
+  (regras que o schema não pega → `bad_work`), `readyError` (o que impede
+  "pronto") e `isBlankWork` (obra que não mostra nada conta como em branco).
+- `rotation.ts`: rodízio de kits; `bag.ts`: saquinho; `grid.ts`: sorteio da
+  grade; `scoring.ts`: `scorePicturesRound(...)` pura; `rules.ts`:
+  `applyPicturesAction` + `settlePictures`; `view.ts`: visão e prazo;
+  `schema.ts`: ações.
 - `photos.ts`: `PICTURES_DECK` (ids `p001…p100` + tema).
 
 ### 4.2 Mudanças na base
@@ -155,7 +159,8 @@ Duas coisas que a sala genérica ainda não tem:
    mesma coisa; quem chegar primeiro faz a generalização e o outro reaproveita.
 
 `GAMES.pictures`: `minPlayers: 3`, `maxPlayers: 6`, `liveCursors: false` (um
-cursor na foto entregaria o palpite), `recordsHistory: true`. `fx.activity`
+cursor na foto entregaria o palpite), `recordsHistory: true` a partir do
+Plano R4 (no R1 fica `false`). `fx.activity`
 mostra "mexendo…" (montar) e "palpitando…".
 
 ### 4.3 Segredos (`viewFor`)
@@ -169,8 +174,9 @@ mostra "mexendo…" (montar) e "palpitando…".
 ### 4.4 Servidor (`server/`)
 
 - `POST /rooms { game: 'pictures' }` como os outros jogos.
-- Rascunho limitado em tamanho (ex.: 8 KB) e em frequência (o cliente manda a
-  cada ~2 s; o servidor ignora o excesso).
+- Rascunho limitado em tamanho pelo próprio schema (cadarço ≤ 60 pontos etc.,
+  ~5 KB no pior caso). Limite de frequência fica pro Plano R2, sem nunca
+  descartar o último rascunho antes do "pronto" (ex.: `ready` levando a obra).
 - Grava a rodada no D1 uma vez, no fim da revelação (idempotente, mesma lógica
   de `recordedRevealKey`), na tabela da §7.1.
 - `GET /history/pictures` público, no-cache, mesmo limite por IP dos outros.
@@ -301,10 +307,10 @@ Os números mínimos são ponto de partida.
 
 - **`shared/`:** rodízio de kits (sem repetição em 3–6 jogadores), saquinho
   (36 tiradas sem faltar, repetição possível), regra da metade arredondada pra
-  cima + 30 s nas duas fases, `scoreRound` (ninguém/alguns/todos acertaram,
+  cima + 30 s nas duas fases, `scorePicturesRound` (ninguém/alguns/todos acertaram,
   obra em branco), validação de cada kit, segredos do `viewFor` por fase,
   presença (queda com rascunho, saída de vez, < 3 ativos), fim e empate.
-- **Base:** prazo do jogo no alarme (`nextDeadline`/`onDeadline`); ITO e
+- **Base:** prazo do jogo no alarme (`nextDeadline`); ITO e
   Diquisti sem mudança de comportamento.
 - **`server/`:** `POST /rooms { game: 'pictures' }`, limite de rascunho,
   gravação idempotente no D1, `GET /history/pictures`.
