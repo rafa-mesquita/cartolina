@@ -43,7 +43,7 @@ var Dixit = (() => {
   }
 
   // shared/src/games/dixit/deck.ts
-  var DIXIT_DECK_SIZE = 100;
+  var DIXIT_DECK_SIZE = 113;
   function dixitCardIds(size = DIXIT_DECK_SIZE) {
     return Array.from({ length: size }, (_, i) => `d${String(i + 1).padStart(3, "0")}`);
   }
