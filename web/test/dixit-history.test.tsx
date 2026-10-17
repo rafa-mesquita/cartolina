@@ -106,7 +106,8 @@ describe('aba histórico do Diquisti', () => {
     const wall = await screen.findByRole('region', { name: 'mural de dicas' });
     const card = within(wall).getAllByRole('button')[0]!;
     const now = vi.spyOn(Date, 'now').mockReturnValue(10_000);
-    fireEvent.scroll(window);
+    // no navegador, a rolagem da página dispara `scroll` no document (e ele sobe até a janela)
+    fireEvent.scroll(document);
     now.mockReturnValue(10_200);
     expect(fireEvent.wheel(card, { deltaY: -120 })).toBe(true);
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -132,7 +133,51 @@ describe('aba histórico do Diquisti', () => {
     expect(src()).toContain('d001');
   });
 
-  it('clique duplo em "carregar mais" pede a página seguinte uma vez só', async () => {
+  it('deslizar a faixa pro lado (deltaX maior que deltaY) não abre nem trava o deslize', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    const wall = await screen.findByRole('region', { name: 'mural de dicas' });
+    expect(fireEvent.wheel(within(wall).getAllByRole('button')[0]!, { deltaX: 40, deltaY: -1 })).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('a faixa acabou de rolar pro lado: rodinha pra cima numa carta dela não abre', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    const { container } = render(<DixitHistory />);
+    const wall = await screen.findByRole('region', { name: 'mural de dicas' });
+    const now = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+    // `scroll` de elemento não sobe até a janela: é pego na captura do document
+    fireEvent.scroll(container.querySelector('.dxh-strip')!);
+    now.mockReturnValue(10_100);
+    expect(fireEvent.wheel(within(wall).getAllByRole('button')[0]!, { deltaY: -120 })).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('o resto do giro que abriu a carta, ainda em cima de uma carta, não rola a página', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    render(<DixitHistory />);
+    const wall = await screen.findByRole('region', { name: 'mural de dicas' });
+    const card = within(wall).getAllByRole('button', { hidden: true })[0]!;
+    fireEvent.wheel(card, { deltaY: -120 });
+    expect(fireEvent.wheel(card, { deltaY: -120 })).toBe(false);
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  it('ao desmontar, tira os listeners de rodinha e de rolagem', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(dixitResponse(SAMPLE));
+    const { container, unmount } = render(<DixitHistory />);
+    await screen.findByRole('heading', { name: 'a galera' });
+    const root = container.querySelector('.dxh')!;
+    const remove = vi.spyOn(EventTarget.prototype, 'removeEventListener');
+    unmount();
+    const removed = remove.mock.contexts.map((ctx, i) => [ctx, ...remove.mock.calls[i]!] as const);
+    expect(removed.some(([ctx, type]) => ctx === root && type === 'wheel')).toBe(true);
+    expect(
+      removed.some(([ctx, type, , opts]) => ctx === document && type === 'scroll' && typeof opts === 'object' && opts.capture === true),
+    ).toBe(true);
+  });
+
+  it('clique duplo em "carregar mais": o botão desabilitado segura o segundo clique', async () => {
     const more = deferred<DixitHistoryResponse | null>();
     vi.mocked(api.getHistory).mockResolvedValueOnce(dixitResponse([SAMPLE[2]!], 5_000)).mockReturnValueOnce(more.promise);
     render(<DixitHistory />);

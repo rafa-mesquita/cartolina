@@ -11,7 +11,7 @@ import { useDixitHistory } from './useDixitHistory';
 import '../dixit.css';
 import './dixit-history.css';
 
-/** Rodinha até esse tempo depois de a página rolar é rolagem, não pedido de ampliar. */
+/** Rodinha até esse tempo depois de uma rolagem (página ou faixa) é rolagem, não pedido de ampliar. */
 const WHEEL_AFTER_SCROLL_MS = 300;
 
 /** Aba histórico do Diquisti: a galera, cartas famosas e partidas, no visual da mesa. */
@@ -41,14 +41,17 @@ export function DixitHistory() {
     viewerOpen.current = viewer !== null;
     openRef.current = open;
   });
-  /** Horário do último `scroll` da janela: a rodinha só amplia com o ponteiro parado. */
+  /**
+   * Horário da última rolagem (da página ou de uma faixa de cartas): a rodinha só amplia com o ponteiro parado.
+   * `scroll` de elemento não sobe até a janela, então escuta na captura do document.
+   */
   const lastScroll = useRef(-Infinity);
   useEffect(() => {
     const onScroll = () => {
       lastScroll.current = Date.now();
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener('scroll', onScroll, { capture: true });
   }, []);
 
   /**
@@ -62,10 +65,13 @@ export function DixitHistory() {
     const onWheel = (e: globalThis.WheelEvent) => {
       const target = e.target instanceof Element ? e.target : null;
       if (viewerOpen.current) {
-        if (target?.closest('.dx-viewer')) e.preventDefault();
+        // no overlay, ou numa carta pelo resto do giro que abriu (antes de o overlay aparecer): a página não anda
+        if (target?.closest('.dx-viewer, [data-card-id]')) e.preventDefault();
         return;
       }
-      if (e.deltaY >= 0 || Date.now() - lastScroll.current < WHEEL_AFTER_SCROLL_MS) return;
+      // deslize pro lado no trackpad (faixa de cartas) traz um deltaY pequeno e às vezes negativo: não é pedido de ampliar
+      if (e.deltaY >= 0 || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+      if (Date.now() - lastScroll.current < WHEEL_AFTER_SCROLL_MS) return;
       const card = target?.closest<HTMLElement>('[data-card-id][data-group]');
       if (!card?.dataset.group) return;
       if (openRef.current(card.dataset.group, Number(card.dataset.index))) {
