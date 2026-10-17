@@ -187,11 +187,15 @@ Plano R4 (no R1 fica `false`). Os selinhos ("montando…", "pronto ✓",
 
 ### 4.5 Web (`web/src/games/pictures/`)
 
-- `kits/<kit>/Build.tsx` e `kits/<kit>/Show.tsx` por kit.
+- `kits/<kit>.ts` por kit, **imperativos** (DOM/SVG/canvas/WebGL, portados do
+  protótipo) com o contrato `build(el, obra, onChange) → {destroy}` /
+  `show(el, obra)`; o React os embrulha em `KitBench` (montagem) e `KitShow`
+  (galeria, revelação, museu).
 - `blocks` carrega o three.js com `import()` só quando alguém pega o kit ou
   abre uma obra 3D. Se falhar: aviso + "tentar de novo".
-- Telas: `PicturesLobby`, `PicturesTable` (fases), `Gallery`, `Reveal`,
-  `RoundScore`.
+- Telas: `PicturesLobby`, `PicturesTable` (fases), `Building`, `Gallery`,
+  `RevealStage`, `RoundScore`, `GameOver`; o jogo inteiro é carregado sob
+  demanda (só quando a sala é do Retratim).
 - Bots só em desenvolvimento (como no Diquisti), montando obras aleatórias
   válidas e palpitando ao acaso.
 
@@ -204,7 +208,7 @@ com um contorno pontilhado em tinta azul, só pra você). Ao lado: cartão
 "sua foto secreta **B3**" com fitinha, a **bancada** (folha 4:3 com o kit) e
 o botão "estou pronto". No topo: "Retratim · rodada 2 de 6 · kit: palitos e
 pedras" e os selinhos de cada um ("Ana pronta", "Caio mexendo…"). Quando a
-contagem dispara, todos veem o relógio ("metade pronta · faltam 0:24").
+contagem dispara, todos veem o relógio ("faltam 0:24").
 
 ### 5.2 Palpitar (galeria)
 

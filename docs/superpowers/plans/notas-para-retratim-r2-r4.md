@@ -44,6 +44,27 @@ Saíram das revisões do Plano R1 (2026-10-17). Ler antes de escrever cada plano
 - Depois que o script reescrever `photos.ts`, testar o baralho real: precisa
   de pelo menos 4 temas com 4+ fotos, senão `drawGrid` lança erro no
   "começar".
+- `PICTURES_PHOTOS_READY` (`web/src/games/pictures/photos.ts`) é um `Set` à
+  mão: gerar a partir de um manifesto do script (ou tirar o filtro quando as
+  100 existirem). `Photo.tsx` sem `loading`/`decoding`: considerar miniatura
+  (grade) + grande (zoom) e pré-carregar a foto que voa na revelação.
+- Fotos reais prontas → trocar o webfont inteiro do Tabler por SVG só dos
+  ícones usados (os 19 símbolos), pra pesar menos.
+
+## Antes de mergear (revisão final do R2)
+
+- O PR #14 (histórico do Diquisti) conflita com esta branch em `room-do.ts`,
+  `Game.tsx`, `BotControls.tsx`, `catalog.ts`, `shelf.css`, `index.html` e
+  testes. Lá, `pendingHistoryRecord` (`shared/src/history.ts`) tem um `switch`
+  com `never` em `room.gameId`: acrescentar `case 'pictures': return null` até
+  o R4. O `Lobby.tsx` de lá carrega o `BotControls` sem filtro de `DEV`
+  (levaria `picturesBots` pro bundle; nada aparece). O campo `mobile?` do
+  catálogo de lá: confirmar o valor do Retratim (só computador).
+- Retratim importa coisas do Diquisti (`useStageFit`, `useToast`,
+  `namer`/`colorer`, `SoundPill`): mover pra `web/src/games/common/` quando
+  der.
+- `serverOffset` recalculado a cada `state` (com a latência embutida): o
+  relógio pode pular ±1 s; guardar o maior offset recente.
 
 ## R4 — histórico
 
@@ -53,3 +74,18 @@ Saíram das revisões do Plano R1 (2026-10-17). Ler antes de escrever cada plano
 - `pendingRecord` ainda é só do ITO: ligar `recordsHistory: true` sem o hook
   genérico (spec §4.2) não grava nada.
 - Decidir se a revelação vazia (ninguém montou) entra no histórico.
+- O PR #14 NÃO traz o hook genérico `historyRecord?(state)` da spec §4.2: tem
+  um `switch` por jogo em `history.ts`, união `PendingRound` e
+  `insertPending` com `else` caindo no ITO (um pendente de `pictures` seria
+  gravado como ITO!). O R4 escolhe: virar hook do `GameModule` ou acrescentar
+  `pictures` nos três lugares.
+- O CSS dos kits usa variáveis que só existem dentro de `.pictures`
+  (`--ink`, `--paper`, `--edge`, `--ok`, `--kraft`, `--blue`, `--ui`). Um
+  `KitShow` no museu (fora de `.pictures`) herdaria tokens do site com o mesmo
+  nome e outras cores: definir as variáveis numa classe própria (ex.: `.pc-kit`).
+- O museu vai desenhar muitas obras de blocos: o renderer compartilhado + cache
+  do `show` ajuda; conferir que o chunk do three só carrega com obra de blocos
+  na tela.
+- A revelação recomeça do zero se a pessoa recarrega no meio (relógio local,
+  igual ao Diquisti); pra sincronizar, o servidor teria que mandar
+  `revealStartedAt`.
