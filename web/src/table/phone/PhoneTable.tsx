@@ -54,6 +54,8 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   const remotesRef = useRef<Remotes>({});
   const sheet = useRef<ClueSheetHandle>(null);
   const rowBox = useRef<HTMLDivElement>(null);
+  /** A barra de baixo (mão): soltar uma carta minha da fila ali devolve ela. */
+  const footBox = useRef<HTMLDivElement>(null);
   // Montou já na revelação (recarregou a página): mostra o resultado direto, sem a sequência.
   const mountedInReveal = useRef(phase === 'reveal');
   const live = useRef(view);
@@ -188,7 +190,18 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     setSelected((s) => (s === cardId ? null : cardId));
   };
 
-  const drag = usePhoneDrag({ container: rowBox, row, serverRow: placeBase, canPick: pickable, conn, onDrop: place });
+  const drag = usePhoneDrag({
+    container: rowBox,
+    hand: footBox,
+    row,
+    serverRow: placeBase,
+    canPick: pickable,
+    conn,
+    onDrop: place,
+    onReturn: ret,
+    // Só o dono devolve (o servidor recusaria o `return` de carta alheia).
+    canReturn: (id) => view.game.cards[id]?.owner === view.you,
+  });
   const reveal = usePhoneReveal(view, (name, index) => playSound(name, index), mountedInReveal.current);
 
   const gaps = Object.entries(remotes)
@@ -197,6 +210,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   // Meu arrasto só conta na escolha (se a fase virou no meio dele, o `place` nem sai).
   const sorting = phase === 'sorting';
   if (sorting && drag.pos !== null && view.you) gaps.push({ owner: view.you, pos: drag.pos });
+  const handDrop = sorting && drag.overHand;
   const carried = sorting && drag.dragging ? new Set([...carriedByOthers, drag.dragging]) : carriedByOthers;
   // Carta minha que outra pessoa está carregando continua "na mesa" pra mão.
   const handRow = carriedByOthers.size ? [...row, ...carriedByOthers] : row;
@@ -258,7 +272,13 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
         {phase === 'reveal' && reveal.done && <ResultBanner view={view} conn={conn} />}
       </div>
 
-      <div className="p-foot">
+      <div ref={footBox} className={`p-foot${handDrop ? ' p-hand-drop' : ''}`}>
+        {handDrop && (
+          // Por cima da barra (sem mexer na altura dela, o que mudaria a fila sob o dedo).
+          <p className="p-hand-note" role="status">
+            solta aqui pra voltar pra mão
+          </p>
+        )}
         {phase === 'sorting' && (
           <PhoneHand view={view} row={handRow} selected={sel} onPick={pick} onEdit={setEditing} onPointerDown={drag.onPointerDown} />
         )}

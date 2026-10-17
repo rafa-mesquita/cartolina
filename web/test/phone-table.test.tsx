@@ -265,6 +265,78 @@ describe('mesa do celular', () => {
     expect(strip('p0:0')).toBeNull();
   });
 
+  describe('arrastar com o dedo', () => {
+    const box = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 300, height: bottom - top, width: 300, x: 0, y: top, toJSON() {} }) as DOMRect;
+    // Fila de 0 a 400; barra de baixo (mão) de 400 a 600; a faixa do p0 em 0..40.
+    const layout = () =>
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+        if (this.classList.contains('p-row')) return box(0, 400);
+        if (this.classList.contains('p-foot')) return box(400, 600);
+        if (this.classList.contains('p-strip') && this.getAttribute('data-card') === 'p0:0') return box(0, 40);
+        return box(450, 530);
+      });
+
+    it('carta da mão puxada pra cima na hora (sem segurar) vai pra fila', () => {
+      const c = conn();
+      const spy = layout();
+      try {
+        render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={c} />);
+        fireEvent.pointerDown(handCard('p0:0'), { pointerType: 'touch', clientX: 100, clientY: 480 });
+        fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 102, clientY: 450 });
+        fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 102, clientY: 100 });
+        expect(document.querySelector('.p-gap')).toBeTruthy();
+        expect(document.querySelector('.p-hand-drop')).toBeNull(); // carta da mão: a mão não vira alvo
+        fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 102, clientY: 100 });
+        expect(c.sendAction).toHaveBeenCalledWith({ type: 'place', cardId: 'p0:0', index: 0 });
+        expect(strip('p0:0')).toBeTruthy();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('faixa minha arrastada de lado e solta sobre a mão volta pra mão', () => {
+      const c = conn();
+      const room = act(sortingRoom(2), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
+      const spy = layout();
+      try {
+        render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+        fireEvent.pointerDown(strip('p0:0')!, { pointerType: 'touch', clientX: 100, clientY: 20 });
+        fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 140, clientY: 24 });
+        expect(document.querySelector('.p-strip.carried')).toBeTruthy();
+        expect(document.querySelector('.p-hand-drop')).toBeNull();
+        fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 140, clientY: 480 });
+        expect(document.querySelector('.p-hand-drop')).toBeTruthy();
+        expect(screen.getByText('solta aqui pra voltar pra mão')).toBeTruthy();
+        expect(document.querySelector('.p-gap')).toBeNull();
+        fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 140, clientY: 480 });
+        expect(c.sendAction).toHaveBeenCalledWith({ type: 'return', cardId: 'p0:0' });
+        expect(c.sendAction).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'place' }));
+        expect(c.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+        expect(strip('p0:0')).toBeNull();
+        expect(document.querySelector('.p-hand-drop')).toBeNull();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('faixa de outra pessoa solta sobre a mão não volta (só o dono devolve)', () => {
+      const c = conn();
+      const room = act(sortingRoom(2), 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
+      const spy = layout();
+      try {
+        render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+        fireEvent.pointerDown(strip('p1:0')!, { pointerType: 'mouse', button: 0, clientX: 100, clientY: 20 });
+        fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 480 });
+        expect(document.querySelector('.p-hand-drop')).toBeNull();
+        fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 480 });
+        expect(c.sendAction).not.toHaveBeenCalled();
+        expect(strip('p1:0')).toBeTruthy();
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  });
+
   it('a dica pendente vai antes do place', () => {
     const c = conn();
     render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={c} />);

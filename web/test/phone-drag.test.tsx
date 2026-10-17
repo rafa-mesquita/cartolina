@@ -24,7 +24,7 @@ beforeAll(() => {
 afterEach(() => vi.useRealTimers());
 
 const rect = (top: number, bottom: number) => ({ top, bottom, left: 0, right: 300, height: bottom - top, width: 300, x: 0, y: top, toJSON() {} }) as DOMRect;
-const SPOTS: Record<string, DOMRect> = { a: rect(0, 40), b: rect(50, 90), c: rect(100, 140) };
+const SPOTS: Record<string, DOMRect> = { a: rect(0, 40), b: rect(50, 90), c: rect(100, 140), h: rect(150, 190) };
 
 type Conn = { sendCursor: Mock<GameConn['sendCursor']>; sendActivity: Mock<GameConn['sendActivity']> };
 
@@ -35,6 +35,8 @@ function Harness({
   conn,
   onDrop,
   onClick,
+  onReturn = () => {},
+  canReturn,
 }: {
   row?: string[];
   serverRow?: string[];
@@ -42,9 +44,12 @@ function Harness({
   conn: Conn;
   onDrop: (id: string, index: number) => void;
   onClick?: (id: string) => void;
+  onReturn?: (id: string) => void;
+  canReturn?: (id: string) => boolean;
 }) {
   const box = useRef<HTMLDivElement | null>(null);
-  const drag = usePhoneDrag({ container: box, row, serverRow, canPick, conn, onDrop });
+  const hand = useRef<HTMLDivElement | null>(null);
+  const drag = usePhoneDrag({ container: box, hand, row, serverRow, canPick, conn, onDrop, onReturn, canReturn });
   return (
     <div>
       <div
@@ -67,16 +72,26 @@ function Harness({
           />
         ))}
       </div>
-      <button data-testid="h" onPointerDown={(e) => drag.onPointerDown(e, 'h')} onClick={() => onClick?.('h')}>
-        h
-      </button>
+      <div
+        ref={(el) => {
+          hand.current = el;
+          if (el) el.getBoundingClientRect = () => rect(400, 500); // a barra da mão, logo abaixo da fila
+        }}
+        data-testid="hand"
+      >
+        <button data-testid="h" onPointerDown={(e) => drag.onPointerDown(e, 'h')} onClick={() => onClick?.('h')}>
+          h
+        </button>
+      </div>
       <output data-testid="state">{`${drag.dragging ?? '-'}|${drag.pos ?? '-'}`}</output>
+      <output data-testid="over">{String(drag.overHand)}</output>
     </div>
   );
 }
 
 const mkConn = (): Conn => ({ sendCursor: vi.fn<GameConn['sendCursor']>(), sendActivity: vi.fn<GameConn['sendActivity']>() });
 const state = () => screen.getByTestId('state').textContent;
+const over = () => screen.getByTestId('over').textContent;
 
 describe('arrastar no celular', () => {
   it('mouse: começa depois de 6 px, solta na posição 2 e avisa o PC', () => {
@@ -170,15 +185,15 @@ describe('arrastar no celular', () => {
     expect(ev.defaultPrevented).toBe(false);
   });
 
-  it('toque que mexe antes dos 220 ms é rolagem: nada acontece', () => {
+  it('toque na mão que anda de lado antes dos 220 ms é rolagem da mão: nada acontece', () => {
     vi.useFakeTimers();
     const conn = mkConn();
     const onDrop = vi.fn();
     render(<Harness conn={conn} onDrop={onDrop} />);
-    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 0, clientY: 200 });
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 100, clientY: 450 });
     rtlAct(() => void vi.advanceTimersByTime(50));
-    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 180 });
-    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 0, clientY: 180 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 452 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 130, clientY: 452 });
     rtlAct(() => void vi.advanceTimersByTime(500));
     expect(state()).toBe('-|-');
     expect(onDrop).not.toHaveBeenCalled();
@@ -411,5 +426,188 @@ describe('arrastar no celular', () => {
     } finally {
       delete (navigator as unknown as { vibrate?: unknown }).vibrate;
     }
+  });
+
+  it('toque na mão que sobe na vertical já arrasta, sem segurar (a mão só rola de lado)', () => {
+    vi.useFakeTimers();
+    const conn = mkConn();
+    const onDrop = vi.fn();
+    render(<Harness conn={conn} onDrop={onDrop} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 100, clientY: 200 });
+    rtlAct(() => void vi.advanceTimersByTime(40));
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 104, clientY: 170 });
+    expect(state()).toBe('h|3');
+    expect(conn.sendActivity).toHaveBeenCalledWith('dragging');
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 104, clientY: 95 });
+    expect(state()).toBe('h|2');
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 104, clientY: 95 });
+    expect(onDrop).toHaveBeenCalledWith('h', 2);
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
+  });
+
+  it('o arrasto imediato segura o touchmove (a página não rola junto)', () => {
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 100, clientY: 450 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 100, clientY: 420 });
+    const ev = new Event('touchmove', { cancelable: true, bubbles: true });
+    document.body.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it('toque na mão que mexe pouco (dentro da folga) ainda espera o segurar', () => {
+    vi.useFakeTimers();
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'touch', clientX: 100, clientY: 450 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 100, clientY: 444 });
+    expect(state()).toBe('-|-');
+    rtlAct(() => void vi.advanceTimersByTime(230));
+    expect(state().startsWith('h|')).toBe(true);
+  });
+
+  it('toque na faixa da fila que anda de lado já arrasta, sem segurar (a fila só rola na vertical)', () => {
+    vi.useFakeTimers();
+    const onDrop = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={onDrop} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'touch', clientX: 100, clientY: 70 });
+    rtlAct(() => void vi.advanceTimersByTime(40));
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 74 });
+    expect(state()).toBe('b|-'); // ainda no lugar dela: sem alvo
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    expect(state()).toBe('b|3');
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    expect(onDrop).toHaveBeenCalledWith('b', 2);
+  });
+
+  it('toque na faixa da fila que anda na vertical antes dos 220 ms é rolagem da fila: nada acontece', () => {
+    vi.useFakeTimers();
+    const conn = mkConn();
+    const onDrop = vi.fn();
+    render(<Harness conn={conn} onDrop={onDrop} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'touch', clientX: 100, clientY: 70 });
+    rtlAct(() => void vi.advanceTimersByTime(40));
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 104, clientY: 100 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 104, clientY: 100 });
+    rtlAct(() => void vi.advanceTimersByTime(500));
+    expect(state()).toBe('-|-');
+    expect(onDrop).not.toHaveBeenCalled();
+    expect(conn.sendActivity).not.toHaveBeenCalled();
+  });
+
+  it('carta da fila solta sobre a mão volta pra mão (return, não place)', () => {
+    const conn = mkConn();
+    const onDrop = vi.fn();
+    const onReturn = vi.fn();
+    const order: string[] = [];
+    conn.sendCursor.mockImplementation((c) => void order.push(c.drag ? 'cursor' : 'cursor:null'));
+    onReturn.mockImplementation(() => void order.push('return'));
+    render(<Harness conn={conn} onDrop={onDrop} onReturn={onReturn} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 100, clientY: 70 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 160 });
+    expect(over()).toBe('false');
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 450 });
+    expect(over()).toBe('true');
+    expect(state()).toBe('b|-'); // sobre a mão não há vão na fila
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 450 });
+    expect(onReturn).toHaveBeenCalledWith('b');
+    expect(onDrop).not.toHaveBeenCalled();
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
+    expect(order.slice(-2)).toEqual(['return', 'cursor:null']);
+    expect(over()).toBe('false');
+  });
+
+  it('o realce da mão liga e desliga conforme o dedo entra e sai dela', () => {
+    vi.useFakeTimers();
+    const onReturn = vi.fn();
+    const onDrop = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={onDrop} onReturn={onReturn} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'touch', clientX: 100, clientY: 70 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 72 });
+    expect(over()).toBe('false');
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 460 });
+    expect(over()).toBe('true');
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    expect(over()).toBe('false');
+    expect(state()).toBe('b|3');
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 130, clientY: 160 });
+    expect(onReturn).not.toHaveBeenCalled();
+    expect(onDrop).toHaveBeenCalledWith('b', 2);
+  });
+
+  it('cancelar sobre a mão não devolve a carta', () => {
+    vi.useFakeTimers();
+    const onReturn = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} onReturn={onReturn} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'touch', clientX: 100, clientY: 70 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 72 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 130, clientY: 460 });
+    fireEvent(window, new PointerEvent('pointercancel', { pointerType: 'touch' }));
+    expect(onReturn).not.toHaveBeenCalled();
+    expect(over()).toBe('false');
+  });
+
+  it('carta da mão solta sobre a mão: nada acontece', () => {
+    const onDrop = vi.fn();
+    const onReturn = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={onDrop} onReturn={onReturn} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 100, clientY: 450 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 95 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 460 });
+    expect(over()).toBe('false');
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 460 });
+    expect(onReturn).not.toHaveBeenCalled();
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
+  it('ficha da mão de carta que já está na fila: segurar e soltar ali mesmo não devolve', () => {
+    const onDrop = vi.fn();
+    const onReturn = vi.fn();
+    render(<Harness conn={mkConn()} row={['a', 'b', 'c', 'h']} onDrop={onDrop} onReturn={onReturn} />);
+    const chip = screen.getAllByTestId('h')[1]!; // a da mão (a 1ª é a faixa)
+    fireEvent.pointerDown(chip, { pointerType: 'mouse', button: 0, clientX: 100, clientY: 450 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 460 });
+    expect(state().startsWith('h|')).toBe(true);
+    expect(over()).toBe('false');
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 460 });
+    expect(onReturn).not.toHaveBeenCalled();
+  });
+
+  it('carta da fila que não pode voltar (de outra pessoa) não realça a mão nem volta', () => {
+    const onDrop = vi.fn();
+    const onReturn = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={onDrop} onReturn={onReturn} canReturn={(id) => id !== 'b'} />);
+    fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 100, clientY: 70 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 100, clientY: 450 });
+    expect(over()).toBe('false');
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 100, clientY: 450 });
+    expect(onReturn).not.toHaveBeenCalled();
+    expect(onDrop).not.toHaveBeenCalled();
+  });
+
+  it('toque rápido sem mexer continua sendo clique (tocar e confirmar)', () => {
+    vi.useFakeTimers();
+    const onClick = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} onClick={onClick} />);
+    const b = screen.getByTestId('b');
+    fireEvent.pointerDown(b, { pointerType: 'touch', clientX: 100, clientY: 70 });
+    rtlAct(() => void vi.advanceTimersByTime(80));
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 100, clientY: 70 });
+    fireEvent.click(b);
+    expect(onClick).toHaveBeenCalledWith('b');
+    expect(state()).toBe('-|-');
+  });
+
+  it('depois de um arrasto imediato de toque, o clique do navegador é engolido', () => {
+    vi.useFakeTimers();
+    const onClick = vi.fn();
+    render(<Harness conn={mkConn()} onDrop={vi.fn()} onClick={onClick} />);
+    const h = screen.getByTestId('h');
+    fireEvent.pointerDown(h, { pointerType: 'touch', clientX: 100, clientY: 200 });
+    fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 100, clientY: 95 });
+    fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 100, clientY: 95 });
+    fireEvent.click(h);
+    expect(onClick).not.toHaveBeenCalled();
+    rtlAct(() => void vi.advanceTimersByTime(200));
+    fireEvent.click(h);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });
