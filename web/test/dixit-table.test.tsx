@@ -378,3 +378,12 @@ describe('Game com sala de Diquisti', () => {
     expect(screen.queryByText(/sendo montada/)).toBeNull();
   });
 });
+
+describe('mesa do Diquisti: topo', () => {
+  it('embaixo do logo tem o link pro histórico do Diquisti, numa aba nova', () => {
+    render(<DixitTable view={dixitView(started(4), 'p0')} conn={conn()} />);
+    const link = screen.getByRole('link', { name: /histórico/ });
+    expect(link.getAttribute('href')).toBe('#/dixit/historico');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+});

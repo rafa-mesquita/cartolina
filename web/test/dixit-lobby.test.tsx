@@ -103,4 +103,11 @@ describe('lobby do Diquisti', () => {
     render(<DixitLobby view={dixitView(dixitRoom(3), 'p0')} conn={conn()} />);
     expect(await screen.findByRole('button', { name: /adicionar bot/ })).toBeTruthy();
   });
+
+  it('leva pro histórico do Diquisti numa aba nova', () => {
+    render(<DixitLobby view={dixitView(dixitRoom(3), 'p0')} conn={conn()} />);
+    const link = screen.getByRole('link', { name: /histórico do Diquisti/ });
+    expect(link.getAttribute('href')).toBe('#/dixit/historico');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
 });

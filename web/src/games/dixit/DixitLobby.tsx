@@ -1,6 +1,6 @@
 import { DIXIT_MIN_PLAYERS, DIXIT_TARGETS, type DixitRoomView } from '@cartolina/shared';
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { goHome, roomLink } from '../../lib/router';
+import { gameHash, goHome, roomLink } from '../../lib/router';
 import { JOIN_ERRORS, type GameConn } from '../../net/connection';
 import { Critter } from '../../screens/Critter';
 import { Brushes } from './Brushes';
@@ -88,6 +88,9 @@ export function DixitLobby({ view, conn }: { view: DixitRoomView; conn: GameConn
             {copied ? 'link copiado!' : 'copiar link da sala'}
           </button>
           {showLink && <input className="dx-link" readOnly value={link} aria-label="link da sala" onFocus={(e) => e.currentTarget.select()} />}
+          <a className="dx-btn ghost" href={gameHash('dixit', 'historico')} target="_blank" rel="noopener">
+            📜 histórico do Diquisti
+          </a>
           <SoundPill />
         </section>
         <section className="dx-sheet">
