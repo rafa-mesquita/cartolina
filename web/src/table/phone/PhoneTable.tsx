@@ -1,8 +1,9 @@
 import type { Activity, ItoRoomView } from '@cartolina/shared';
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { playSound } from '../../brand/sounds';
-import { isHost, seatStatus } from '../../game/derive';
+import { cardsOf, isHost, seatStatus } from '../../game/derive';
 import type { FxEvent, GameConn } from '../../net/connection';
+import { safeGet, safeSet } from '../../net/identity';
 import { Avatar } from '../../screens/Avatar';
 import { SoundToggle } from '../../screens/SoundToggle';
 import type { EngineSnapshot } from '../engine';
@@ -25,6 +26,9 @@ const ACTIVITY_TTL_MS = 4000;
 const REMOTE_STALE_MS = 6000;
 const ROLLBACK_ERRORS = new Set(['not_owner', 'unknown_card', 'bad_phase']);
 const NO_IDS: ReadonlySet<string> = new Set();
+/** Barra de baixo escondida ('1') ou aberta ('0'), por aba: quem recarrega no meio da rodada volta como estava. */
+const FOLD_KEY = 'cartolina:mao-escondida';
+const tabStore = () => sessionStorage;
 
 /** Arrasto de outra pessoa: `index` é o índice do servidor (null = sem alvo, carta no ar). */
 interface RemoteDrag {
@@ -52,8 +56,12 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   const [remotes, setRemotes] = useState<Remotes>({});
   // Espelho síncrono de `remotes`: o ouvinte de `fx` decide o som sem efeito colateral dentro do `setState`.
   const remotesRef = useRef<Remotes>({});
+  /** Barra de baixo recolhida pra dar espaço à fila (só a alça com "tô pronto" e o som). */
+  const [folded, setFolded] = useState(() => safeGet(tabStore, FOLD_KEY) === '1');
   const sheet = useRef<ClueSheetHandle>(null);
   const rowBox = useRef<HTMLDivElement>(null);
+  /** A barra de baixo (mão): soltar uma carta minha da fila ali devolve ela. */
+  const footBox = useRef<HTMLDivElement>(null);
   // Montou já na revelação (recarregou a página): mostra o resultado direto, sem a sequência.
   const mountedInReveal = useRef(phase === 'reveal');
   const live = useRef(view);
@@ -188,7 +196,18 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     setSelected((s) => (s === cardId ? null : cardId));
   };
 
-  const drag = usePhoneDrag({ container: rowBox, row, serverRow: placeBase, canPick: pickable, conn, onDrop: place });
+  const drag = usePhoneDrag({
+    container: rowBox,
+    hand: footBox,
+    row,
+    serverRow: placeBase,
+    canPick: pickable,
+    conn,
+    onDrop: place,
+    onReturn: ret,
+    // Só o dono devolve (o servidor recusaria o `return` de carta alheia).
+    canReturn: (id) => view.game.cards[id]?.owner === view.you,
+  });
   const reveal = usePhoneReveal(view, (name, index) => playSound(name, index), mountedInReveal.current);
 
   const gaps = Object.entries(remotes)
@@ -197,6 +216,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   // Meu arrasto só conta na escolha (se a fase virou no meio dele, o `place` nem sai).
   const sorting = phase === 'sorting';
   if (sorting && drag.pos !== null && view.you) gaps.push({ owner: view.you, pos: drag.pos });
+  const handDrop = sorting && drag.overHand;
   const carried = sorting && drag.dragging ? new Set([...carriedByOthers, drag.dragging]) : carriedByOthers;
   // Carta minha que outra pessoa está carregando continua "na mesa" pra mão.
   const handRow = carriedByOthers.size ? [...row, ...carriedByOthers] : row;
@@ -205,9 +225,24 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   const hostSorting = isHost(view) && phase === 'sorting';
   const activityOf = (id: string): Activity | undefined => activities[id]?.a;
 
-  // Tocar fora da fila (e fora das cartas da mão) desseleciona.
+  // A barra abre sozinha quando a mão precisa de atenção: quantas cartas minhas estão fora da fila só cresce com
+  // rodada nova (cartas dadas) ou carta voltando pra mão (soltei na barra, intenção desfeita). Ajustado no render
+  // (e não num efeito) pra não pintar um quadro com a barra fechada.
+  const unplaced = sorting && view.you ? cardsOf(view, view.you).filter((c) => !handRow.includes(c.id)).length : 0;
+  const [seenUnplaced, setSeenUnplaced] = useState(unplaced);
+  if (unplaced !== seenUnplaced) {
+    setSeenUnplaced(unplaced);
+    if (unplaced > seenUnplaced && folded) setFolded(false);
+  }
+  useEffect(() => safeSet(tabStore, FOLD_KEY, folded ? '1' : '0'), [folded]);
+  /** Só na escolha há mão pra esconder. */
+  const canFold = sorting && !!view.you;
+  const isFolded = canFold && folded;
+
+  // Tocar fora da fila (e fora das cartas da mão) desseleciona. Esconder a mão não: dá pra escolher a carta,
+  // recolher a barra pra ver a fila inteira e tocar no "aqui".
   const onTableClick = (e: MouseEvent) => {
-    if (e.target instanceof Element && !e.target.closest('.p-row, .p-hnum')) setSelected(null);
+    if (e.target instanceof Element && !e.target.closest('.p-row, .p-hnum, .p-fold')) setSelected(null);
   };
 
   return (
@@ -258,15 +293,33 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
         {phase === 'reveal' && reveal.done && <ResultBanner view={view} conn={conn} />}
       </div>
 
-      <div className="p-foot">
-        {phase === 'sorting' && (
+      {/* Recolhida, a barra continua sendo a área de soltar pra voltar pra mão (o `hand` do arrasto). */}
+      <div ref={footBox} className={`p-foot${handDrop ? ' p-hand-drop' : ''}${isFolded ? ' p-folded' : ''}`}>
+        {handDrop && (
+          // Por cima da barra (sem mexer na altura dela, o que mudaria a fila sob o dedo).
+          <p className="p-hand-note" role="status">
+            solta aqui pra voltar pra mão
+          </p>
+        )}
+        {phase === 'sorting' && !isFolded && (
           <PhoneHand view={view} row={handRow} selected={sel} onPick={pick} onEdit={setEditing} onPointerDown={drag.onPointerDown} />
         )}
         <div className="p-actions">
+          {canFold && (
+            <button
+              type="button"
+              className="sbtn p-fold"
+              aria-expanded={!isFolded}
+              aria-label={isFolded ? 'mostrar sua mão' : 'esconder sua mão'}
+              onClick={() => setFolded(!isFolded)}
+            >
+              <span aria-hidden="true">{isFolded ? '▴' : '▾'}</span> {isFolded ? 'sua mão' : 'esconder'}
+            </button>
+          )}
           {phase !== 'theme' && <ReadyColumn view={view} snap={snap} conn={conn} />}
           <SoundToggle />
         </div>
-        {hostSorting && (
+        {hostSorting && !isFolded && (
           <div className="p-host">
             <button
               className="sbtn"

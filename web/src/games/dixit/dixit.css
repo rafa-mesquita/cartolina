@@ -8,6 +8,7 @@
 .dixit button { font: inherit; color: inherit; cursor: pointer; }
 .dx-stage { position: absolute; left: 50%; top: 50%; height: 900px; transform-origin: 50% 50%; background: var(--bg); overflow: hidden; }
 .dx-bg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.dx-paint { background: #233D36 center / cover no-repeat; }
 
 /* topo */
 .dx-logo { position: absolute; left: 30px; top: 20px; margin: 0; font: 400 34px/1 var(--serif); letter-spacing: .5px; z-index: 8; }

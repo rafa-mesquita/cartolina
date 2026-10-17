@@ -30,7 +30,7 @@ test('rodada de DITU com um jogador no celular e outro no PC', async ({ browser 
   const card = cel.getByRole('button', { name: /^\d+, iglu$/ });
   await card.tap();
   await expect(card).toHaveAttribute('aria-pressed', 'true');
-  await cel.getByRole('button', { name: 'colocar aqui, no começo' }).tap();
+  await cel.getByRole('button', { name: 'colocar aqui, embaixo de tudo (menor)' }).tap();
   await expect(cel.getByRole('button', { name: /^\d+, na fila$/ })).toBeVisible();
   await expect(pc.locator('.row .rcard', { hasText: 'iglu' })).toHaveCount(1);
 
