@@ -32,11 +32,11 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 
 - A tela inicial é a **estante**: uma capa por jogo, mais "tem um código?" pra entrar numa sala que já existe.
 - Cada jogo tem a própria página, `#/<jogo>` (`#/ito`, `#/dixit`), com duas abas: **jogar** (criar sala, entrar com código, como jogar) e **histórico** (`#/<jogo>/historico`).
-- O histórico é **aberto a todos**, sem login, e é **um por jogo**: toda rodada revelada de uma sala de ITO (tema, quem jogou, a fila com números e dicas, resultado) é gravada no banco **Cloudflare D1** `cartolina`. Só o ITO grava por enquanto (`recordsHistory` em `shared/src/games/registry.ts`).
-- A aba mostra números (rodadas, % de vitórias no livre, campanhas zeradas, maior sequência sem erro), quem mais acerta a posição, os temas mais jogados e as partidas (clique pra ver a fila revelada).
+- O histórico é **aberto a todos**, sem login, e é **um por jogo**: toda rodada revelada de uma sala de ITO (tema, quem jogou, a fila com números e dicas, resultado) é gravada no banco **Cloudflare D1** `cartolina`. O DITU (`ito`) e o Diquisti (`dixit`) gravam (`recordsHistory` em `shared/src/games/registry.ts`). O Diquisti grava cada rodada revelada na tabela própria `dixit_rounds` (migração `0003`), e a aba dele mostra a galera, as cartas famosas e as partidas.
+- A aba do DITU mostra números (rodadas, % de vitórias no livre, campanhas zeradas, maior sequência sem erro), quem mais acerta a posição, os temas mais jogados e as partidas (clique pra ver a fila revelada).
 - Não existem mais grupos: `#/g/<slug>` e as rotas `/groups*` saíram. Os links antigos caem no histórico do ITO, com um aviso.
 - Em desenvolvimento, `npm run dev:server` aplica as migrações no D1 local antes de subir (`npm run db:migrate -w server`).
-- API: `GET /history/:game[?before=<ms>]` → 20 rodadas, estatísticas (`stats`, só na primeira página) e cursor (`nextBefore`). Jogo desconhecido: 404 `not_found`; jogo sem histórico: 404 `no_history`. Limite de 60 pedidos por minuto por IP e `Cache-Control: no-cache` (a rodada recém-jogada aparece na hora).
+- API: `GET /history/:game[?before=<ms>]` → 20 rodadas (no Diquisti, 20 partidas), estatísticas (`stats`, só na primeira página) e cursor (`nextBefore`). Jogo desconhecido: 404 `not_found`; jogo sem histórico: 404 `no_history`. Limite de 60 pedidos por minuto por IP e `Cache-Control: no-cache` (a rodada recém-jogada aparece na hora).
 
 ## Celular
 
