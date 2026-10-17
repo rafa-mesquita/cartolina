@@ -1,4 +1,5 @@
 import type { DixitHistoryStats } from '@cartolina/shared';
+import { useId } from 'react';
 import { Critter } from '../../../screens/Critter';
 import { percent, plural } from './format';
 
@@ -9,9 +10,10 @@ interface Row {
 }
 
 function Board({ title, rows }: { title: string; rows: Row[] }) {
+  const titleId = useId();
   return (
-    <section className="dxh-board" aria-label={title}>
-      <h3>{title}</h3>
+    <section className="dxh-board" aria-labelledby={titleId}>
+      <h3 id={titleId}>{title}</h3>
       {rows.length === 0 ? (
         <p className="muted">jogue mais umas rodadas</p>
       ) : (
@@ -33,9 +35,10 @@ function Board({ title, rows }: { title: string; rows: Row[] }) {
 
 /** Quatro quadros com o top 3 de cada estatística (abaixo do mínimo, o quadro pede mais rodadas). */
 export function GaleraBoards({ stats }: { stats: DixitHistoryStats }) {
+  const titleId = useId();
   return (
-    <section>
-      <h2>a galera</h2>
+    <section aria-labelledby={titleId}>
+      <h2 id={titleId}>a galera</h2>
       <div className="dxh-boards">
         <Board title="quem mais venceu" rows={stats.mostWins.map((e) => ({ ...e, detail: plural(e.wins, 'vitória', 'vitórias') }))} />
         <Board
