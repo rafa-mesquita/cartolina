@@ -91,6 +91,17 @@ describe('RoomConnection', () => {
     expect(spy).toHaveBeenCalled();
   });
 
+  it('state com hora do servidor calcula serverOffset; sem hora, fica 0', () => {
+    const conn = make();
+    last().open();
+    last().receive({ t: 'welcome', playerId: 'p1', code: 'ABCD' });
+    expect(conn.getSnapshot().serverOffset).toBe(0);
+    last().receive({ t: 'state', room: { code: 'ABCD', you: 'p1', gameId: 'ito' } });
+    expect(conn.getSnapshot().serverOffset).toBe(0);
+    last().receive({ t: 'state', room: { code: 'ABCD', you: 'p1', gameId: 'ito' }, now: Date.now() + 10_000 });
+    expect(Math.abs(conn.getSnapshot().serverOffset - 10_000)).toBeLessThan(200);
+  });
+
   it('state sem gameId (servidor antigo) vira sala de ITO', () => {
     const conn = make();
     last().open();

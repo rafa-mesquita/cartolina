@@ -19,6 +19,8 @@ export interface ConnSnapshot {
   playerId: string | null;
   view: RoomView | null;
   joinError: string | null;
+  /** Hora do servidor menos a do PC (ms), medida na última mensagem `state` que trouxe `now`; 0 se nunca veio. */
+  serverOffset: number;
 }
 
 export type FxEvent = Extract<ServerMessage, { t: 'fx.cursor' | 'fx.activity' | 'fx.ping' }>;
@@ -69,7 +71,7 @@ const defaultSocket = (url: string): SocketLike => new WebSocket(url) as unknown
 
 export class RoomConnection {
   private ws: SocketLike | null = null;
-  private snap: ConnSnapshot = { status: 'connecting', playerId: null, view: null, joinError: null };
+  private snap: ConnSnapshot = { status: 'connecting', playerId: null, view: null, joinError: null, serverOffset: 0 };
   private listeners = new Set<() => void>();
   private fxListeners = new Set<(fx: FxEvent) => void>();
   private errorListeners = new Set<(code: string, message: string) => void>();
@@ -280,7 +282,10 @@ export class RoomConnection {
         return;
       case 'state':
         // Servidor antigo (rollback do Worker) não manda `gameId`: sala sem ele é de ITO.
-        this.setSnap({ view: msg.room.gameId ? msg.room : { ...msg.room, gameId: 'ito' } });
+        this.setSnap({
+          view: msg.room.gameId ? msg.room : { ...msg.room, gameId: 'ito' },
+          ...(typeof msg.now === 'number' ? { serverOffset: msg.now - Date.now() } : {}),
+        });
         return;
       case 'error':
         if (this.snap.status === 'joining' && JOIN_ERRORS.has(msg.code)) {

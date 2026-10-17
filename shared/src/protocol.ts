@@ -32,7 +32,7 @@ export type CursorFx = Omit<Extract<ClientMessage, { t: 'fx.cursor' }>, 't'>;
 
 export type ServerMessage =
   | { t: 'welcome'; playerId: string; code: string }
-  | { t: 'state'; room: RoomView }
+  | { t: 'state'; room: RoomView; /** Hora do servidor (ms) quando a visão saiu: o cliente mede a diferença pro próprio relógio. */ now?: number }
   | ({ t: 'fx.cursor'; from: string } & CursorFx)
   | { t: 'fx.activity'; from: string; activity: Activity }
   | { t: 'fx.ping'; from: string; x: number; y: number }

@@ -336,7 +336,7 @@ describe('mesa do Diquisti: carta ampliada e sons', () => {
 });
 
 describe('Game com sala de Diquisti', () => {
-  const snap = (view: RoomView): ConnSnapshot => ({ status: 'joined', playerId: view.you, view, joinError: null });
+  const snap = (view: RoomView): ConnSnapshot => ({ status: 'joined', playerId: view.you, view, joinError: null, serverOffset: 0 });
 
   it('vindo do lobby, quem narra a 1ª rodada ouve o "plim"', () => {
     const room = started(4);

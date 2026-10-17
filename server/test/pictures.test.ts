@@ -38,6 +38,14 @@ describe('Retratim no servidor', () => {
     expect(mine.game.works[players[0]!.id]).toEqual(cubes);
   });
 
+  it('a mensagem state leva a hora do servidor', async () => {
+    const code = await newGameRoom('pictures');
+    const [p] = await joined(code, 1);
+    const msg = await p!.client.next('state');
+    expect(typeof msg.now).toBe('number');
+    expect(Math.abs(msg.now! - Date.now())).toBeLessThan(5000);
+  });
+
   it('kit errado volta como erro em português', async () => {
     const code = await newGameRoom('pictures');
     const players = await joined(code, 3);
