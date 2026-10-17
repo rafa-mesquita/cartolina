@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { catalogEntry } from '../../catalog';
 import { useIsPhone } from '../../../lib/device';
 import { goToRoom } from '../../../lib/router';
 import { createRoom } from '../../../net/api';
@@ -8,10 +9,10 @@ import { PHONE_TEXT } from '../../../screens/PhoneNotice';
 /**
  * Histórico ainda vazio: convida a jogar a primeira partida. Mesmo comportamento do "criar sala" da aba jogar
  * (a `PlayTab` não é extraída para não mexer na aba jogar, que a versão de celular está mudando).
- * No celular o jogo não funciona, então o aviso toma o lugar do botão.
+ * No celular, enquanto o Diquisti não joga no celular (`mobile` do catálogo), o aviso toma o lugar do botão.
  */
 export function EmptyHistory() {
-  const phone = useIsPhone();
+  const phoneBlocked = useIsPhone() && !catalogEntry('dixit')?.mobile;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +31,7 @@ export function EmptyHistory() {
   return (
     <section className="dxh-empty">
       <h2>Ainda não tem partida de Diquisti. Bora jogar a primeira!</h2>
-      {phone ? (
+      {phoneBlocked ? (
         <p className="muted">{PHONE_TEXT}</p>
       ) : (
         <button className="dx-btn" type="button" onClick={() => void create()} disabled={busy}>
