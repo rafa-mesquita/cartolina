@@ -128,14 +128,10 @@ body.resizing,body.resizing *{cursor:col-resize !important}
 .nokit p{margin:0;max-width:380px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
 .nokit .st{min-height:18px;color:var(--ok);font-weight:700}
 
-/* faixa das fases sem tela */
+/* faixa das fases sem tela (só o saguão, que o protótipo pula) */
 #banner{position:relative;margin-top:30px;padding:26px 30px 28px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(.6deg)}
 #banner h2{margin:0;font:700 32px/1.05 var(--ui)}
-#banner .sub{margin:8px 0 16px;font:500 16px/1.3 var(--ui);color:var(--ink-soft)}
-#banner ul{margin:0 0 14px;padding-left:18px;font-size:13px;line-height:1.6}
-#banner .scores{font-size:13px;color:var(--ink-soft);margin:0 0 18px}
-#banner .scores b{color:var(--ink);font-weight:700}
-#banner .acts{display:flex;gap:10px;flex-wrap:wrap}
+#banner .sub{margin:8px 0 0;font:500 16px/1.3 var(--ui);color:var(--ink-soft)}
 
 /* zoom das fotos */
 #zoom{position:absolute;inset:0;z-index:35;background:rgba(43,34,30,.62);display:flex;align-items:center;justify-content:center}
@@ -172,7 +168,7 @@ body.resizing,body.resizing *{cursor:col-resize !important}
 .wf:hover{transform:rotate(var(--tilt,0deg)) translateY(-2px)}
 .wf.sel{box-shadow:0 0 0 3px var(--blue),0 4px 12px rgba(47,90,168,.25)}
 /* a folha é contêiner de tamanho: unidades cq* dos kits (ex.: o vão das cartas de símbolos) medem a folha, não a janela */
-.wf .sheet{position:relative;width:100%;aspect-ratio:4/3;container-type:size;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(211,191,153,.7);overflow:hidden}
+.wf .sheet,.rv-work .sheet{position:relative;width:100%;aspect-ratio:4/3;container-type:size;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(211,191,153,.7);overflow:hidden}
 .wf .cap{display:flex;align-items:center;gap:8px;padding:7px 2px 8px}
 .wf .cap .cr{width:30px;height:30px;flex:none}
 .wf .cap .cr svg{width:100%;height:100%;display:block}
@@ -213,6 +209,103 @@ body.resizing,body.resizing *{cursor:col-resize !important}
 #zoom .frame.work .gtape:hover{filter:none}
 #zoom .frame.work .gtape:hover::after{display:none}
 
+/* ---------- revelação narrada ---------- */
+#reveal{display:flex;flex-direction:column;height:calc(900px - 84px - 22px - 20px);width:var(--side-w)}
+.rv-head{display:flex;align-items:center;gap:14px;min-height:46px;padding:0 4px 10px;border-bottom:1px dashed rgba(125,106,88,.35)}
+.rv-n{font:700 12.5px/1 var(--ui);color:var(--ink-soft);letter-spacing:.8px;white-space:nowrap}
+.rv-t{flex:1;font:700 22px/1.2 var(--ui);transition:opacity .16s ease}
+.rv-t b{color:var(--blue);font-weight:700}
+.rv-t.swap{opacity:0}
+.rv-skip{flex:none;border:none;background:none;padding:4px 2px;font:600 13px/1 var(--ui);color:var(--ink-soft);text-decoration:underline dotted;text-underline-offset:3px}
+.rv-skip:hover{color:var(--blue)}
+.rv-stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;transition:opacity .3s,transform .3s}
+.rv-stage.out{opacity:0;transform:translateY(-10px)}
+.rv-pair{display:flex;align-items:center;justify-content:center;gap:calc(var(--side-w) * .045)}
+.rv-work{position:relative;width:min(calc(var(--side-w) * .56),560px);padding:9px 9px 0;background:var(--photo-border);box-shadow:0 2px 10px rgba(59,47,47,.26);transform:rotate(-1.2deg)}
+.rv-work.in{animation:rvgrow .6s cubic-bezier(.3,1.35,.5,1) both}
+@keyframes rvgrow{from{transform:rotate(-6deg) scale(.25);opacity:0}}
+.rv-work .cap{display:flex;align-items:center;gap:10px;padding:9px 2px 10px}
+.rv-work .cap .cr{width:36px;height:36px;flex:none}
+.rv-work .cap .cr svg{width:100%;height:100%;display:block}
+.rv-work .cap .nm{font:700 18px/1.1 var(--ui)}
+.rv-work .cap .kt{display:block;font:500 13px/1.2 var(--ui);color:var(--ink-soft)}
+/* lugar da foto verdadeira: tracejado até a foto pousar */
+.rv-slot{position:relative;width:min(calc(var(--side-w) * .35),340px);flex:none}
+.rv-slot::before{content:'?';position:absolute;inset:0;display:grid;place-items:center;border:2px dashed var(--edge);border-radius:3px;font:700 46px/1 var(--ui);color:var(--edge);transition:opacity .2s}
+.rv-slot.on::before{opacity:0}
+.rv-polaroid{position:relative;padding:7px 7px 38px;background:var(--photo-border);box-shadow:0 2px 8px rgba(59,47,47,.25);transform:rotate(3deg);visibility:hidden}
+.rv-slot.on .rv-polaroid{visibility:visible}
+.rv-pic{width:100%;aspect-ratio:4/3}
+.rv-co{position:absolute;left:12px;bottom:8px;font:700 22px/1 var(--ui);color:var(--blue);opacity:0;transition:opacity .3s .1s}
+.rv-co small{font:600 12px/1 var(--ui);color:var(--ink-soft);margin-right:5px}
+.rv-slot.on .rv-co{opacity:1}
+.fly{position:absolute;z-index:20;background:var(--photo-border);pointer-events:none}
+.fly .rv-pic{width:100%;height:100%;aspect-ratio:auto}
+#grid .photo.lifted .ph{opacity:.14}
+#grid .photo.lifted{box-shadow:inset 0 0 0 2px var(--edge);background:transparent}
+/* fitinhas dos palpites ao redor da obra */
+.rv-guesses{display:flex;flex-wrap:wrap;justify-content:center;gap:26px 22px;min-height:64px;max-width:var(--side-w)}
+.rv-g{position:relative;display:flex;align-items:center;gap:8px;padding:17px 14px 9px 9px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(var(--tilt,0deg));transition:filter .35s,opacity .35s,box-shadow .35s}
+.rv-g.in{animation:rvpop .3s ease-out both}
+@keyframes rvpop{from{transform:rotate(var(--tilt,0deg)) scale(1.4);opacity:0}}
+.rv-g .cr{width:32px;height:32px;flex:none}
+.rv-g .cr svg{width:100%;height:100%;display:block}
+.rv-g .nm{font:700 14px/1.1 var(--ui);white-space:nowrap}
+.rv-tape{position:absolute;left:-10px;top:-14px;min-width:56px;height:27px;padding:0 10px;display:grid;place-items:center;background:var(--tape);box-shadow:0 1px 2px rgba(59,47,47,.18);
+  font:700 17px/1 var(--ui);color:var(--blue);letter-spacing:.5px;transform:rotate(var(--rot,-7deg))}
+.rv-tape.none{background:rgba(211,191,153,.75);color:var(--ink-soft);font-size:12px;font-weight:600;letter-spacing:0}
+.rv-g.ok{box-shadow:0 0 0 2px var(--ok),var(--shadow)}
+.rv-g .tick{position:absolute;right:-10px;top:-10px;width:25px;height:25px;border-radius:50%;background:var(--ok);color:var(--paper);display:grid;place-items:center;font:700 15px/1 var(--ui);box-shadow:var(--shadow);animation:tickin .3s ease-out both}
+@keyframes tickin{from{transform:scale(1.8);opacity:0}}
+.rv-g.no{filter:grayscale(1);opacity:.45}
+.rv-empty{margin:auto;max-width:420px;text-align:center;font:600 20px/1.4 var(--ui);color:var(--ink-soft)}
+.rv-empty i{display:block;font-size:54px;color:var(--edge);margin-bottom:10px}
+/* os pontos sobem por cima dos selinhos */
+.plus{position:absolute;z-index:25;pointer-events:none;padding:4px 9px;border-radius:999px;background:var(--blue);color:var(--paper);
+  font:700 15px/1 var(--ui);box-shadow:0 2px 6px rgba(47,90,168,.35);transform:translate(-50%,-50%);animation:plusup 1.5s ease-out forwards}
+@keyframes plusup{0%{opacity:0;transform:translate(-50%,-10%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}30%{transform:translate(-50%,-60%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
+.seal.bump{animation:bump .45s ease-out}
+@keyframes bump{40%{transform:scale(1.12)}}
+
+/* placar da rodada (cartão de álbum) */
+.rv-board{position:relative;width:min(var(--side-w),560px);margin:auto;padding:30px 30px 24px;background:var(--paper);box-shadow:0 2px 10px rgba(59,47,47,.22);transform:rotate(-.6deg);animation:rvin .45s cubic-bezier(.3,1.3,.5,1) both}
+@keyframes rvin{from{transform:rotate(-3deg) translateY(16px) scale(.94);opacity:0}}
+.rv-board h2{margin:0;font:700 28px/1.1 var(--ui)}
+.rv-board .sum{margin:6px 0 16px;font:500 14.5px/1.4 var(--ui);color:var(--ink-soft)}
+.rv-board .sum b{color:var(--blue);font-weight:700}
+.board-row{display:grid;grid-template-columns:40px 1fr auto 76px;align-items:center;gap:12px;padding:8px 4px;border-top:1px dashed rgba(125,106,88,.3)}
+.board-row .cr{width:38px;height:38px}
+.board-row .cr svg{width:100%;height:100%;display:block}
+.board-row .nm{font:700 17px/1.1 var(--ui)}
+.board-row.me .nm{color:var(--blue)}
+.board-row .g{font:700 19px/1 var(--ui);color:var(--blue);text-align:right}
+.board-row .g.zero{color:var(--no)}
+.board-row .tot{font:700 17px/1 var(--ui);text-align:right}
+.board-row .tot small{font:500 12px/1 var(--ui);color:var(--ink-soft);margin-left:3px}
+.rv-board .acts{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:18px}
+
+/* ---------- fim de jogo: página final do álbum ---------- */
+.final-phase #gridWrap,.final-phase #divider,.final-phase #side{display:none}
+#final{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.fin{position:relative;width:660px;padding:40px 48px 34px;background:var(--paper);box-shadow:0 4px 18px rgba(59,47,47,.25);transform:rotate(-.7deg);animation:rvin .6s cubic-bezier(.3,1.3,.5,1) both}
+.fin .tape{left:-14px;top:-12px}
+.fin .tape.r{left:auto;right:-14px;transform:rotate(9deg)}
+.fin h2{margin:0;font:700 40px/1.05 var(--ui)}
+.fin .sub{margin:8px 0 22px;font:500 17px/1.35 var(--ui);color:var(--ink-soft)}
+.fin .sub b{color:var(--blue);font-weight:700}
+.fin-row{display:grid;grid-template-columns:34px 48px 1fr auto;align-items:center;gap:14px;padding:10px 12px;border-top:1px dashed rgba(125,106,88,.3)}
+.fin-row.win{background:rgba(242,165,65,.16);border-radius:4px}
+.fin-row .pos{font:700 18px/1 var(--ui);color:var(--ink-soft);text-align:center}
+.fin-row .cr{width:46px;height:46px}
+.fin-row .cr svg{width:100%;height:100%;display:block}
+.fin-row .nm{font:700 20px/1.1 var(--ui);display:flex;align-items:center;gap:8px}
+.fin-row.me .nm{color:var(--blue)}
+.fin-row .star{color:#e39a2d;font-size:22px}
+.fin-row .pts{font:700 22px/1 var(--ui)}
+.fin-row .pts small{font:500 13px/1 var(--ui);color:var(--ink-soft);margin-left:4px}
+.fin .acts{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:26px}
+#confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:45}
+
 #toast{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--ink);color:var(--paper);font:700 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1}
 </style>
@@ -252,10 +345,13 @@ body.resizing,body.resizing *{cursor:col-resize !important}
         <div id="works"></div>
         <div class="gal-foot"><span class="hint" id="galFoot"></span><button class="btn-big" id="confirmBtn">confirmar palpites</button></div>
       </div>
+      <div id="reveal" hidden></div>
       <div id="banner" hidden></div>
     </section>
+    <section id="final" hidden></section>
   </main>
   <div id="zoom" hidden></div>
+  <canvas id="confetti"></canvas>
   <div id="toast"></div>
 </div>
 <script src="../dixit/critters.js"></script>
@@ -300,6 +396,7 @@ const view = () => Retratim.picturesViewFor(state, ME);
 const timers = new Set();
 const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
 const between = (a, b) => a + Math.random() * (b - a);
+const ptsWord = (n) => (n === 1 ? 'pt' : 'pts');
 const nameOf = (p) => NAMES[Number(p.slice(1))];
 const critter = (p) => window.CRITTERS[COLORS[Number(p.slice(1)) % COLORS.length]];
 function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2400); }
@@ -327,9 +424,15 @@ function act(pid, action, quiet) {
 setInterval(() => { if (!state) return; const next = Retratim.settlePictures(state, ctx()); if (next !== state) { state = next; changed(); } else renderClock(); }, 200);
 
 let slowBot = null;
-function newGame() {
+/** Zera o que é só da tela/dos bots (timers, planos dos bots, revelação, confete) antes de uma partida nova. */
+function resetLocal() {
   for (const t of timers) clearTimeout(t); timers.clear(); plannedFor.clear(); closePhotoZoom();
-  destroyBench(); resetDraft(); clearGallery(); gridKey = ''; secretKey = ''; slowGuesser = { round: -1, p: null };
+  slowGuesser = { round: -1, p: null };
+  leaveReveal(); revealFor = null; finalFor = null; stopConfetti();
+}
+function newGame() {
+  resetLocal();
+  destroyBench(); resetDraft(); clearGallery(); gridKey = ''; secretKey = '';
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
   slowBot = ids[1 + Math.floor(Math.random() * (N - 1))];
   state = Retratim.initialPicturesState(); prevPhase = null;
@@ -341,7 +444,9 @@ function changed() {
   if (v.phase !== prevPhase) {
     if (prevPhase === 'building') { resetDraft(); destroyBench(); }
     if (prevPhase === 'guessing' || v.phase === 'guessing') { if (workZoom) closePhotoZoom(); clearGallery(); }
+    if (prevPhase === 'reveal') leaveReveal();
     if (v.phase === 'building') play('round');
+    if (v.phase === 'gameover') { closePhotoZoom(); launchConfetti(); }
   }
   prevPhase = v.phase;
   render(v); scheduleBots();
@@ -418,7 +523,7 @@ function scheduleBots() {
   const st = state;
   if (st.paused) return;
   if (st.phase === 'guessing') { scheduleGuessBots(); return; }
-  if (st.phase !== 'building') return; // revelação dos bots: Task 7
+  if (st.phase !== 'building') return; // na revelação e no fim os bots não fazem nada (só o host avança)
   for (const p of st.inRound) {
     if (p === ME) continue;
     const key = botKey(p);
@@ -474,7 +579,9 @@ function statusOf(v, p) {
   if (!v.inRound.includes(p)) return ['assistindo', ''];
   if (v.phase === 'building') return v.ready.includes(p) ? ['pronto ✓', 'ok'] : ['mexendo…', ''];
   if (v.phase === 'guessing') return v.confirmed.includes(p) ? ['confirmou ✓', 'ok'] : ['palpitando…', ''];
-  return [`${v.scores[p] ?? 0} pts`, ''];
+  // na revelação o placar dos selinhos anda junto com a narração (shown); fora dela vale o placar real
+  const pts = v.phase === 'reveal' && shown ? shown[p] : v.scores[p];
+  return [`${pts ?? 0} ${ptsWord(pts ?? 0)}`, ''];
 }
 function renderTop(v) {
   $('#info').innerHTML = v.phase === 'gameover'
@@ -482,7 +589,7 @@ function renderTop(v) {
     : `rodada <b>${v.round + 1}</b> de ${v.rounds} · seu kit<span class="kit">${KIT_NAMES[v.kits[ME]] || '—'}</span>`;
   $('#seals').innerHTML = v.players.map((p) => {
     const [txt, cls] = statusOf(v, p);
-    return `<div class="seal${p === ME ? ' me' : ''}"><span class="cr">${critter(p)}</span><span><span class="nm">${nameOf(p)}</span><span class="stt ${cls}">${txt}</span></span></div>`;
+    return `<div class="seal${p === ME ? ' me' : ''}" data-p="${p}"><span class="cr">${critter(p)}</span><span><span class="nm">${nameOf(p)}</span><span class="stt ${cls}">${txt}</span></span></div>`;
   }).join('');
   renderClock();
 }
@@ -636,38 +743,246 @@ $('#confirmBtn').onclick = () => {
   if (act(ME, { type: 'confirm' })) play('ready');
 };
 
-/* ---------- fases que ainda não têm tela ---------- */
-const PHASE_TODO = { reveal: ['revelação', 'tela vem na Task 7'], gameover: ['fim de jogo', 'tela vem na Task 7'], lobby: ['saguão', 'o protótipo começa direto'] };
-function renderBanner(v) {
-  const [title, sub] = PHASE_TODO[v.phase] || [v.phase, ''];
-  const who = (p) => (p === ME ? 'você' : nameOf(p));
-  const scores = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0)).map((p) => `<b>${who(p)}</b> ${v.scores[p] ?? 0}`).join(' · ');
-  let body = '';
-  if ((v.phase === 'reveal' || v.phase === 'gameover') && v.result) {
-    const R = v.result;
-    body = R.order.length
-      ? `<ul>${R.order.map((a) => `<li><b>${who(a)}</b> (${KIT_NAMES[R.kits[a]]}) era <b>${R.secrets[a]}</b> — ${R.correct[a].length ? 'acertaram: ' + R.correct[a].map(who).join(', ') : 'ninguém acertou'}</li>`).join('')}</ul>`
-      : '<ul><li>ninguém montou nada nesta rodada</li></ul>';
-  }
-  if (v.phase === 'gameover') body += `<p class="scores">ganhou: <b>${v.winners.map(who).join(', ')}</b></p>`;
-  let acts = '';
-  if (v.phase === 'reveal') acts += '<button class="btn-big" data-a="next">próxima rodada</button>';
-  if (v.phase === 'gameover') acts += '<button class="btn-big" data-a="new">nova partida</button>';
-  $('#banner').innerHTML = `<span class="tape"></span><h2>${title}</h2><p class="sub">${sub}</p>${body}<p class="scores">placar: ${scores}</p><div class="acts">${acts}</div>`;
+/* ---------- saguão (o protótipo pula direto pra partida; só aparece se algo travar lá) ---------- */
+function renderBanner() {
+  $('#banner').innerHTML = '<span class="tape"></span><h2>saguão</h2><p class="sub">o protótipo começa a partida direto</p>';
 }
-$('#banner').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-a]'); if (!b) return;
-  if (b.dataset.a === 'next') act(ME, { type: 'next' });
-  if (b.dataset.a === 'new') newGame();
+
+/* ---------- revelação narrada (uma obra por vez, avança sozinha; disparada uma vez por rodada) ---------- */
+let revealFor = null, revealRun = 0, revealDone = false, shown = null;
+const pause = (ms) => new Promise((r) => later(ms * SPEED, r));
+/** A execução `run` ainda é a da vez? (pular, sair da fase ou partida nova cancelam) */
+const alive = (run) => run === revealRun && state && state.phase === 'reveal';
+const list = (ps) => (ps.length <= 1 ? ps.map(nameOf).join('') : ps.slice(0, -1).map(nameOf).join(', ') + ' e ' + nameOf(ps[ps.length - 1]));
+const workOf = (a) => (a === ME ? 'a <b>sua</b> obra' : `a obra de <b>${nameOf(a)}</b>`);
+/** Posição de um elemento em px do palco (o #app é escalado). */
+function stageBox(el) {
+  const ar = app.getBoundingClientRect(), sc = ar.width / APPW, r = el.getBoundingClientRect();
+  return { x: (r.left - ar.left) / sc, y: (r.top - ar.top) / sc, w: r.width / sc, h: r.height / sc };
+}
+const gridPhoto = (coord) => document.querySelector(`#grid .photo[data-i="${Retratim.COORDS.indexOf(coord)}"]`);
+/** Troca a frase da narração com um fade (a caixa fica parada). */
+function say(n, html) {
+  const t = $('#reveal .rv-t'), nn = $('#reveal .rv-n'); if (!t) return;
+  clearTimeout(say.t); t.classList.add('swap');
+  say.t = setTimeout(() => { t.innerHTML = html; nn.textContent = n; t.classList.remove('swap'); }, 160);
+}
+function startReveal(v) {
+  const R = v.result;
+  revealFor = R; revealDone = false;
+  const run = ++revealRun;
+  // os selinhos começam no placar de antes da rodada e sobem junto com a narração
+  shown = Object.fromEntries(v.players.map((p) => [p, (v.scores[p] ?? 0) - (R.gained[p] ?? 0)]));
+  renderTop(v);
+  $('#reveal').innerHTML = '<div class="rv-head"><span class="rv-n"></span><span class="rv-t"></span><button class="rv-skip" title="vai direto pro placar da rodada">pular ›</button></div><div class="rv-stage"></div>';
+  runReveal(run, R);
+}
+async function runReveal(run, R) {
+  const stage = $('#reveal .rv-stage');
+  if (!R.order.length) {
+    say('', 'revelação');
+    stage.innerHTML = '<p class="rv-empty"><i class="ti ti-photo-off"></i>Ninguém montou nada nesta rodada, então não tem obra pra revelar.</p>';
+    await pause(2400); if (!alive(run)) return;
+    finishReveal(); return;
+  }
+  await pause(300); if (!alive(run)) return;
+  const total = R.order.length;
+  for (let k = 0; k < total; k++) {
+    const a = R.order[k], coord = R.secrets[a], right = R.correct[a] || [];
+    const n = `obra ${k + 1} de ${total}`;
+    if (k) { stage.classList.add('out'); await pause(380); if (!alive(run)) return; stage.classList.remove('out'); settleGridPhoto(R.order[k - 1], R); }
+    // 1 · a obra cresce no centro, numa moldura grande, com o artista e o kit
+    stage.innerHTML = `<div class="rv-pair"><div class="rv-work in"><div class="sheet"></div>`
+      + `<div class="cap"><span class="cr">${critter(a)}</span><span><span class="nm">${nameOf(a)}</span><span class="kt">${KIT_NAMES[R.kits[a]]}</span></span></div></div>`
+      + `<div class="rv-slot"><div class="rv-polaroid"><div class="rv-pic"></div><span class="rv-co"><small>era a</small>${coord}</span></div></div></div>`
+      + '<div class="rv-guesses"></div>';
+    showWork(stage.querySelector('.rv-work .sheet'), R.works[a]);
+    say(n, `${workOf(a)} · ${KIT_NAMES[R.kits[a]]}`);
+    await pause(900); if (!alive(run)) return;
+    // 2 · as fitinhas de quem palpitou, uma a uma
+    const guessers = state.inRound.filter((p) => p !== a);
+    say(n, 'os palpites…');
+    const box = stage.querySelector('.rv-guesses'), step = 1200 / (guessers.length + 1);
+    for (const g of guessers) {
+      const c = R.guesses[g] && R.guesses[g][a];
+      box.insertAdjacentHTML('beforeend', `<div class="rv-g in" data-g="${g}" style="--tilt:${tiltOf(g) * 2}deg">`
+        + `<span class="rv-tape${c ? '' : ' none'}" style="--rot:${tapeRot(g)}deg">${c || 'sem palpite'}</span>`
+        + `<span class="cr">${critter(g)}</span><span class="nm">${nameOf(g)}</span></div>`);
+      play('tape');
+      await pause(step); if (!alive(run)) return;
+    }
+    if (!guessers.some((g) => R.guesses[g] && R.guesses[g][a])) say(n, 'ninguém palpitou nesta obra');
+    await pause(step); if (!alive(run)) return;
+    // 3 · a foto verdadeira descola da grade e voa até o lado da obra
+    say(n, `a foto era a <b>${coord}</b>!`);
+    play('shutter');
+    flyPhoto(run, coord, stage.querySelector('.rv-slot'));
+    await pause(1200); if (!alive(run)) return;
+    // 4 · fitinhas certas ganham ✓; erradas ficam cinza
+    box.querySelectorAll('.rv-g').forEach((el) => {
+      const ok = right.includes(el.dataset.g);
+      el.classList.remove('in'); el.classList.add(ok ? 'ok' : 'no');
+      if (ok) el.insertAdjacentHTML('beforeend', '<span class="tick">✓</span>');
+    });
+    say(n, right.length ? `<b>${list(right)}</b> ${right.length === 1 ? 'acertou' : 'acertaram'}` : 'ninguém acertou');
+    await pause(800); if (!alive(run)) return;
+    // 5 · os pontos sobem por cima dos selinhos (+1 por acerto; o artista ganha +1 por quem acertou)
+    const pts = right.length ? [[a, right.length], ...right.map((g) => [g, 1])] : [];
+    say(n, pts.length ? pts.map(([p, x]) => `<b>+${x}</b> pra ${nameOf(p)}`).join(' · ') : 'ninguém pontua com esta obra');
+    for (const [p, x] of pts) {
+      shown[p] = (shown[p] ?? 0) + x;
+      renderTop(view()); floatPlus(p, x); play('plim');
+      await pause(Math.min(220, 700 / pts.length)); if (!alive(run)) return;
+    }
+    await pause(pts.length ? 650 : 1000); if (!alive(run)) return;
+  }
+  await pause(500); if (!alive(run)) return;
+  finishReveal();
+}
+/** A miniatura voa da posição real na grade até o lado da obra, cresce e gira um pouco (papel). */
+function flyPhoto(run, coord, slot) {
+  const id = view().grid[Retratim.COORDS.indexOf(coord)];
+  slot.querySelector('.rv-pic').innerHTML = photoHTML(id);
+  const src = gridPhoto(coord), pol = slot.querySelector('.rv-polaroid');
+  if (!src) { slot.classList.add('on'); return; }
+  const a = stageBox(src);
+  // o destino é o polaroide sem o giro (o slot não gira): mede a caixa dele "de pé"
+  const s = stageBox(slot), b = { x: s.x, y: s.y + (s.h - pol.offsetHeight) / 2, w: pol.offsetWidth, h: pol.offsetHeight };
+  src.classList.add('lifted');
+  const fly = document.createElement('div');
+  fly.className = 'fly'; fly.innerHTML = `<div class="rv-pic">${photoHTML(id)}</div>`;
+  app.appendChild(fly);
+  const anim = fly.animate([
+    { left: a.x + 'px', top: a.y + 'px', width: a.w + 'px', height: a.h + 'px', padding: '6px', transform: 'rotate(0deg) scale(1)', boxShadow: '0 1px 2px rgba(59,47,47,.25)' },
+    { offset: .35, transform: 'rotate(-5deg) scale(1.14)', boxShadow: '0 22px 34px rgba(43,34,30,.32)' },
+    { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px', padding: '7px 7px 38px', transform: 'rotate(3deg) scale(1)', boxShadow: '0 2px 8px rgba(59,47,47,.25)' },
+  ], { duration: 820 * SPEED, easing: 'cubic-bezier(.45,.05,.25,1)', fill: 'forwards' });
+  anim.finished.then(() => { fly.remove(); if (run === revealRun) slot.classList.add('on'); }, () => fly.remove());
+}
+/** A foto volta pro lugar na grade com o bichinho do artista (fica marcada até o fim da revelação). */
+function settleGridPhoto(a, R) {
+  const el = gridPhoto(R.secrets[a]); if (!el) return;
+  el.classList.remove('lifted');
+  let used = el.querySelector('.used.rv');
+  if (!used) { used = document.createElement('div'); used.className = 'used rv'; el.appendChild(used); }
+  if (!used.querySelector(`[data-p="${a}"]`)) used.insertAdjacentHTML('beforeend', `<span data-p="${a}" title="${nameOf(a)}">${critter(a)}</span>`);
+}
+function floatPlus(p, x) {
+  const seal = document.querySelector(`#seals .seal[data-p="${p}"]`); if (!seal) return;
+  seal.classList.add('bump');
+  const r = stageBox(seal), el = document.createElement('div');
+  el.className = 'plus'; el.textContent = '+' + x;
+  el.style.left = (r.x + r.w - 12) + 'px'; el.style.top = (r.y + 4) + 'px'; // adesivo no canto de cima do selinho, subindo
+  app.appendChild(el); el.addEventListener('animationend', () => el.remove());
+}
+/** Fim da revelação (ou "pular"): placar real nos selinhos, todas as fotos marcadas na grade, placar da rodada. */
+function finishReveal() {
+  if (!state || state.phase !== 'reveal') return;
+  revealRun++; revealDone = true; shown = null;
+  document.querySelectorAll('#app > .fly, #app > .plus').forEach((e) => e.remove());
+  const R = view().result;
+  for (const a of R.order) settleGridPhoto(a, R);
+  renderTop(view()); renderBoard(view());
+}
+/** Sai da revelação: cancela o que estiver rodando e limpa a grade. */
+function leaveReveal() {
+  revealRun++; revealDone = false; shown = null; clearTimeout(say.t);
+  document.querySelectorAll('#app > .fly, #app > .plus').forEach((e) => e.remove());
+  document.querySelectorAll('#grid .photo').forEach((el) => { el.classList.remove('lifted'); const u = el.querySelector('.used.rv'); if (u) u.remove(); });
+  $('#reveal').innerHTML = '';
+}
+/** Placar da rodada: cartão de álbum ordenado pelo total. Só o host (você) avança; os bots não clicam. */
+function renderBoard(v) {
+  const R = v.result;
+  const rows = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0) || (R.gained[b] ?? 0) - (R.gained[a] ?? 0));
+  const hits = R.order.reduce((s, a) => s + (R.correct[a] || []).length, 0);
+  const sum = R.order.length
+    ? `${R.order.length} ${R.order.length === 1 ? 'obra' : 'obras'} · <b>${hits}</b> ${hits === 1 ? 'acerto' : 'acertos'}`
+    : 'ninguém montou nada nesta rodada';
+  const last = v.round + 1 >= v.rounds;
+  $('#reveal').innerHTML = `<div class="rv-board"><span class="tape"></span><h2>placar da rodada ${v.round + 1}</h2><p class="sum">${sum}</p>`
+    + rows.map((p) => {
+      const g = R.gained[p] ?? 0;
+      return `<div class="board-row${p === ME ? ' me' : ''}"><span class="cr">${critter(p)}</span><span class="nm">${nameOf(p)}</span>`
+        + `<span class="g${g ? '' : ' zero'}">+${g}</span><span class="tot">${v.scores[p] ?? 0}<small>${ptsWord(v.scores[p] ?? 0)}</small></span></div>`;
+    }).join('')
+    + `<div class="acts"><button class="btn-big" data-a="next">${last ? 'ver o fim do jogo' : 'próxima rodada'}</button></div></div>`;
+}
+$('#reveal').addEventListener('click', (e) => {
+  if (e.target.closest('.rv-skip')) { finishReveal(); return; }
+  if (e.target.closest('[data-a="next"]')) act(ME, { type: 'next' });
 });
 
+/* ---------- fim de jogo: página final do álbum ---------- */
+let finalFor = null;
+function renderFinal(v) {
+  if (finalFor === v.winners) return; // monta uma vez por fim de jogo (a animação de entrada não repete)
+  finalFor = v.winners;
+  const rows = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0));
+  const win = v.winners;
+  const sub = win.length > 1
+    ? `empate! <b>${list(win)}</b> dividem o álbum`
+    : win[0] === ME ? '<b>você</b> venceu!' : `<b>${nameOf(win[0])}</b> venceu!`;
+  let pos = 0;
+  $('#final').innerHTML = `<div class="fin"><span class="tape"></span><span class="tape r"></span><h2>fim de jogo</h2><p class="sub">${sub}</p>`
+    + rows.map((p, i) => {
+      if (i === 0 || (v.scores[p] ?? 0) !== (v.scores[rows[i - 1]] ?? 0)) pos = i + 1; // empate divide a posição
+      const w = win.includes(p);
+      return `<div class="fin-row${w ? ' win' : ''}${p === ME ? ' me' : ''}"><span class="pos">${pos}º</span><span class="cr">${critter(p)}</span>`
+        + `<span class="nm">${nameOf(p)}${w ? '<i class="ti ti-star-filled star" title="venceu"></i>' : ''}</span><span class="pts">${v.scores[p] ?? 0}<small>${ptsWord(v.scores[p] ?? 0)}</small></span></div>`;
+    }).join('')
+    + '<div class="acts"><button class="btn-big" data-a="again">jogar de novo</button><button class="btn-soft" data-a="lobby">voltar pro lobby</button></div></div>';
+}
+$('#final').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-a]'); if (!b || !state || state.phase !== 'gameover') return;
+  resetLocal();
+  if (b.dataset.a === 'again') act(ME, { type: 'again' });
+  // no protótipo o lobby não tem tela: volta pro saguão e já recomeça
+  if (b.dataset.a === 'lobby' && act(ME, { type: 'lobby' })) act(ME, { type: 'start' });
+});
+
+/* ---------- confete de papel picado (porte do Diquisti, mais leve e com cara de papel) ---------- */
+const cv = $('#confetti'), cx = cv.getContext('2d');
+const PAPER = ['#2f5aa8', '#f2a541', '#fbf7ef', '#d3bf99', '#3b6d11', '#c8644f'];
+let bits = [], raf = 0;
+function launchConfetti() {
+  cv.width = APPW; cv.height = 900;
+  bits = Array.from({ length: 110 }, () => ({
+    x: APPW / 2 + (Math.random() - .5) * 360, y: 250, vx: (Math.random() - .5) * 12, vy: -Math.random() * 11 - 3,
+    w: 6 + Math.random() * 5, h: 3 + Math.random() * 3, c: PAPER[Math.floor(Math.random() * PAPER.length)],
+    a: Math.random() * 6, s: Math.random() * 6, f: .05 + Math.random() * .08,
+  }));
+  cancelAnimationFrame(raf);
+  const tick = () => {
+    cx.clearRect(0, 0, cv.width, cv.height); let live = 0;
+    for (const b of bits) {
+      // cai devagar e balança, como papel (velocidade-limite baixa)
+      b.vy = Math.min(b.vy + .22, 3.1); b.vx *= .985; b.s += b.f; b.a += .05;
+      b.x += b.vx + Math.sin(b.s) * .9; b.y += b.vy;
+      if (b.y < 920) live++;
+      cx.save(); cx.translate(b.x, b.y); cx.rotate(b.a); cx.scale(1, Math.cos(b.s * 1.7));
+      cx.fillStyle = b.c; cx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); cx.restore();
+    }
+    raf = live ? requestAnimationFrame(tick) : 0;
+  };
+  tick();
+}
+function stopConfetti() { cancelAnimationFrame(raf); raf = 0; bits = []; cx.clearRect(0, 0, cv.width, cv.height); }
+
 function render(v = view()) {
-  renderTop(v); renderGrid(v);
-  const building = v.phase === 'building', guessing = v.phase === 'guessing';
-  $('#building').hidden = !building; $('#gallery').hidden = !guessing; $('#banner').hidden = building || guessing;
+  renderTop(v);
+  const building = v.phase === 'building', guessing = v.phase === 'guessing', reveal = v.phase === 'reveal', over = v.phase === 'gameover';
+  if (!over && v.phase !== 'lobby') renderGrid(v); // no saguão ainda não tem grade; no fim ela fica escondida
+  $('#building').hidden = !building; $('#gallery').hidden = !guessing; $('#reveal').hidden = !reveal;
+  $('#final').hidden = !over; $('#banner').hidden = building || guessing || reveal || over;
   $('#page').classList.toggle('building-phase', building);
   $('#page').classList.toggle('guessing-phase', guessing);
-  if (building) renderBuilding(v); else if (guessing) renderGallery(v); else renderBanner(v);
+  $('#page').classList.toggle('final-phase', over);
+  if (building) renderBuilding(v);
+  else if (guessing) renderGallery(v);
+  else if (reveal) { if (revealFor !== v.result) startReveal(v); }
+  else if (over) renderFinal(v);
+  else renderBanner(v);
   renderDevKits(v);
 }
 
