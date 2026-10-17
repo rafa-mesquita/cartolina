@@ -5,7 +5,8 @@ import { PicturesTable } from '../src/games/pictures/PicturesTable';
 import { randomWork } from '../src/games/pictures/random';
 import { KIT_NAMES } from '../src/games/pictures/status';
 import type { GameConn } from '../src/net/connection';
-import { COORDS, type PicturesRoomView } from '@cartolina/shared';
+import { COORDS, PLAYER_COLORS, joinRoom, type PicturesRoomView } from '@cartolina/shared';
+import { KITS_UI } from '../src/games/pictures/kits';
 import { confetti } from '../src/table/confetti';
 import { finished, guessing, lastReveal, picturesView, play, revealed, started, stateOf } from './pictures-fixtures';
 
@@ -252,7 +253,7 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(photo(container, 'B2').querySelectorAll('.pc-used > span')).toHaveLength(1);
 
     // seleciona a outra obra e cola a mesma foto
-    fireEvent.click(frame(container, 'p2'));
+    fireEvent.click(screen.getByRole('button', { name: 'obra de P2' }));
     expect(frame(container, 'p2').classList.contains('sel')).toBe(true);
     expect(photo(container, 'B2').classList.contains('picked')).toBe(false);
     fireEvent.click(photo(container, 'B2'));
@@ -333,7 +334,7 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(container.querySelector('.pc-empty-tag')).toBeNull();
     // a fitinha fica, mas não sai mais; foto, obra e teclado não mandam nada
     expect(frame(container, 'p1').querySelector('.pc-gtape')!.tagName).toBe('SPAN');
-    fireEvent.click(frame(container, 'p2'));
+    fireEvent.click(screen.getByRole('button', { name: 'obra de P2' }));
     fireEvent.click(photo(container, 'C2'));
     fireEvent.keyDown(document, { key: 'c' });
     fireEvent.keyDown(document, { key: '2' });
@@ -353,6 +354,116 @@ describe('mesa do Retratim: galeria de palpites', () => {
     render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
     expect(screen.getByRole('button', { name: 'pular ›' })).toBeTruthy();
     expect(screen.queryByText('de quem é qual foto?')).toBeNull();
+  });
+
+  it('confirmou e o eco não chegou: clique duplo e foto/obra/fitinha não mandam mais nada', () => {
+    const c = conn();
+    let room = guessing(3);
+    room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' });
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    const confirm = screen.getByRole('button', { name: 'confirmar palpites' });
+    const tape = frame(container, 'p1').querySelector<HTMLElement>('.pc-gtape')!;
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    fireEvent.click(photo(container, 'B3'));
+    fireEvent.click(tape);
+    fireEvent.click(screen.getByRole('button', { name: 'obra de P2' }));
+    fireEvent.keyDown(document, { key: 'c' });
+    fireEvent.keyDown(document, { key: '1' });
+    expect(c.sendAction.mock.calls).toEqual([[{ type: 'confirm' }]]);
+    // a galeria já fica travada sem esperar o servidor
+    expect(screen.queryByRole('button', { name: 'confirmar palpites' })).toBeNull();
+    expect(screen.getByText('esperando a galera…')).toBeTruthy();
+  });
+
+  it('pelo teclado dá pra escolher outra obra (cada moldura é um botão)', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    const pick = screen.getByRole('button', { name: 'obra de P2' });
+    expect(pick.tagName).toBe('BUTTON');
+    expect(pick.getAttribute('aria-pressed')).toBe('false');
+    expect(pick.tabIndex).toBe(0);
+    expect(screen.getByRole('button', { name: 'obra de P1' }).getAttribute('aria-pressed')).toBe('true');
+    // a lupa e a fitinha são irmãs do botão da moldura (botão não fica dentro de botão)
+    expect(pick.querySelector('button')).toBeNull();
+    expect(pick.parentElement).toBe(frame(container, 'p2'));
+    // Tab chega no botão; Enter num botão é um clique
+    pick.focus();
+    expect(document.activeElement).toBe(pick);
+    fireEvent.click(pick);
+    expect(pick.getAttribute('aria-pressed')).toBe('true');
+    expect(frame(container, 'p2').classList.contains('sel')).toBe(true);
+    fireEvent.keyDown(document, { key: 'a' });
+    fireEvent.keyDown(document, { key: '2' });
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p2', coord: 'A2' });
+  });
+
+  it('lupa da obra: modal, foco no ✕ e de volta na lupa; a lupinha das fotos não abre outro zoom por cima', () => {
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={conn()} serverOffset={0} />);
+    const lupa = screen.getByRole('button', { name: 'ver a obra de P1 grande' });
+    lupa.focus();
+    fireEvent.click(lupa);
+    const dialog = screen.getByRole('dialog', { name: 'obra de P1' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'fechar' }));
+    fireEvent.click(photo(container, 'A1').querySelector('.pc-zoom-btn')!);
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(lupa);
+  });
+
+  it('o teclado da galeria ignora quem está digitando num campo', () => {
+    const c = conn();
+    render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    const input = document.createElement('input');
+    const editable = document.createElement('div');
+    editable.setAttribute('contenteditable', 'true');
+    document.body.append(input, editable);
+    try {
+      for (const el of [input, editable]) {
+        fireEvent.keyDown(el, { key: 'c' });
+        fireEvent.keyDown(el, { key: '3' });
+      }
+      expect(c.sendAction).not.toHaveBeenCalled();
+    } finally {
+      input.remove();
+      editable.remove();
+    }
+  });
+
+  it('quem assiste a rodada vê as obras de todos, sem palpite; clicar na foto amplia', () => {
+    const c = conn();
+    let room = guessing(3);
+    const res = joinRoom(room, { token: 't3', name: 'P3', color: PLAYER_COLORS[3]! }, 'p3', 0);
+    if (!res.ok) throw new Error(res.error);
+    room = res.room;
+    expect(stateOf(room).inRound).not.toContain('p3');
+    const { container } = render(<PicturesTable view={picturesView(room, 'p3')} conn={c} serverOffset={0} />);
+    expect([...container.querySelectorAll<HTMLElement>('.pc-wf')].map((f) => f.dataset.artist)).toEqual(['p0', 'p1', 'p2']);
+    expect(screen.getByText('você está assistindo esta rodada')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'confirmar palpites' })).toBeNull();
+    expect(container.querySelector('.pc-empty-tag')).toBeNull();
+    expect(container.querySelector('.pc-photo.secret')).toBeNull();
+    fireEvent.click(photo(container, 'C2'));
+    expect(screen.getByRole('dialog', { name: 'foto C2' })).toBeTruthy();
+    expect(c.sendAction).not.toHaveBeenCalled();
+  });
+
+  it('um re-render com as mesmas obras não redesenha as molduras', () => {
+    const spies = Object.values(KITS_UI).map((k) => vi.spyOn(k, 'show'));
+    try {
+      let room = guessing(3);
+      const { rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+      const drawn = () => spies.reduce((n, s) => n + s.mock.calls.length, 0);
+      expect(drawn()).toBe(2);
+      rerender(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+      room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'D2' });
+      rerender(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+      expect(drawn()).toBe(2);
+    } finally {
+      for (const s of spies) s.mockRestore();
+    }
   });
 });
 

@@ -23,6 +23,14 @@ const TILTS = [-0.7, 0.5, -0.3, 0.8, -0.5, 0.3];
 const TAPE_ROTS = [-7, -4, -9, -5, -8, -3];
 const COLS = 'abcd', ROWS = '1234';
 
+/** A tecla foi num campo de texto (quem digita não está palpitando). */
+const typing = (t: EventTarget | null): boolean =>
+  t instanceof HTMLElement &&
+  (t instanceof HTMLInputElement ||
+    t instanceof HTMLTextAreaElement ||
+    t.isContentEditable ||
+    t.closest('[contenteditable]:not([contenteditable="false"])') !== null);
+
 type Seat = PhotoMark;
 
 function GuessTape({ coord, rot, pop, onRemove }: { coord: Coord; rot: number; pop?: boolean; onRemove?: () => void }) {
@@ -51,8 +59,19 @@ function GuessTape({ coord, rot, pop, onRemove }: { coord: Coord; rot: number; p
   );
 }
 
-/** A lupa da galeria: a obra grande, com o artista, o kit e a sua fitinha (se tiver). Esc / clique fora / ✕ fecham. */
+/**
+ * A lupa da galeria: a obra grande, com o artista, o kit e a sua fitinha (se tiver). Esc / clique fora / ✕ fecham.
+ * Ao abrir, o foco vai pro ✕; ao fechar, volta pra quem abriu (como no zoom das fotos).
+ */
 function WorkZoom({ seat, work, guess, rot, onClose }: { seat: Seat; work: Work; guess: Coord | null; rot: number; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement;
+    closeRef.current?.focus();
+    return () => {
+      if (opener instanceof HTMLElement && opener !== document.body && opener.isConnected) opener.focus();
+    };
+  }, []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -66,6 +85,7 @@ function WorkZoom({ seat, work, guess, rot, onClose }: { seat: Seat; work: Work;
     <div
       className="pc-zoom"
       role="dialog"
+      aria-modal="true"
       aria-label={`obra de ${seat.name}`}
       onClick={(e) => {
         if (!(e.target as Element).closest('.pc-zoom-frame, button')) onClose();
@@ -85,7 +105,7 @@ function WorkZoom({ seat, work, guess, rot, onClose }: { seat: Seat; work: Work;
         <span className="cap">Esc fecha</span>
         {guess && <GuessTape coord={guess} rot={rot} />}
       </div>
-      <button className="pc-zoom-x" type="button" title="fechar (Esc)" aria-label="fechar" onClick={onClose}>
+      <button ref={closeRef} className="pc-zoom-x" type="button" title="fechar (Esc)" aria-label="fechar" onClick={onClose}>
         ✕
       </button>
     </div>
@@ -99,7 +119,11 @@ function WorkZoom({ seat, work, guess, rot, onClose }: { seat: Seat; work: Work;
 export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
   const g = view.game, me = view.you;
   const playing = me !== null && g.inRound.includes(me);
-  const locked = !playing || g.confirmed.includes(me);
+  // Trava de envio: depois de mandar "confirmar", nada mais sai até o eco (clique duplo, foto logo depois…).
+  // A galeria remonta a cada rodada (`key`), então a trava zera sozinha.
+  const confirmSent = useRef(false);
+  const [, setSent] = useState(false);
+  const locked = !playing || g.confirmed.includes(me) || confirmSent.current;
   const guesses = g.myGuesses;
   const others = g.inRound.filter((p) => p !== me && Object.hasOwn(g.works, p));
   const [picked, setPicked] = useState<string | null>(null);
@@ -115,22 +139,35 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
   const tapeRot = (p: string) => TAPE_ROTS[nth(p) % TAPE_ROTS.length]!;
 
   function guessAt(coord: Coord) {
-    if (!playing) return;
-    if (locked) return onWarn('Você já confirmou.');
+    if (!playing || workZoom !== null) return;
+    if (locked || confirmSent.current) return onWarn('Você já confirmou.');
     if (!sel) return onWarn('Escolha uma obra primeiro.');
     if (guesses[sel] === coord) return;
     popped.current = `${sel}:${coord}`;
     conn.sendAction({ type: 'guess', artist: sel, coord });
   }
   function unguess(artist: string) {
-    if (locked) return;
+    if (locked || confirmSent.current) return;
     setPicked(artist);
     conn.sendAction({ type: 'guess', artist, coord: null });
   }
   function select(artist: string) {
-    if (locked || artist === sel) return;
+    if (locked || confirmSent.current || artist === sel) return;
     setPicked(artist);
     keyBuf.current = '';
+  }
+  function confirm() {
+    if (locked || confirmSent.current) return;
+    confirmSent.current = true;
+    setSent(true);
+    conn.sendAction({ type: 'confirm' });
+  }
+  // Um zoom de cada vez: com a obra grande aberta a lupinha das fotos não abre outra por cima (e vice-versa).
+  function zoomPhoto(coord: Coord) {
+    if (workZoom === null) onZoom(coord);
+  }
+  function openWork(artist: string) {
+    if (!zoomOpen) setWorkZoom(artist);
   }
 
   // Teclado: com uma obra selecionada, "b" e depois "3" cola a fitinha B3.
@@ -141,7 +178,7 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
     keyBuf.current = '';
     if (!keysOn) return undefined;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || typing(e.target)) return;
       const k = e.key.toLowerCase();
       if (k.length === 1 && COLS.includes(k)) {
         keyBuf.current = k.toUpperCase();
@@ -170,8 +207,8 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
       <PhotoGrid
         grid={g.grid}
         secret={playing ? g.mySecret : null}
-        onPhoto={guessAt}
-        onZoom={onZoom}
+        onPhoto={playing ? guessAt : zoomPhoto}
+        onZoom={zoomPhoto}
         pickable={!locked}
         picked={sel ? (guesses[sel] ?? null) : null}
         marks={marks}
@@ -210,9 +247,19 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
                 className={`pc-wf${p === sel ? ' sel' : ''}`}
                 data-artist={p}
                 style={{ '--tilt': `${tilt(p)}deg` } as CSSProperties}
-                onClick={() => select(p)}
               >
-                <KitShow work={work} className="pc-wsheet" />
+                <button className="pc-wf-pick" type="button" aria-pressed={p === sel} aria-label={`obra de ${seat.name}`} onClick={() => select(p)}>
+                  <KitShow work={work} className="pc-wsheet" />
+                  <span className="cap">
+                    <span className="cr">
+                      <Critter color={seat.color} />
+                    </span>
+                    <span>
+                      <span className="nm">{seat.name}</span>
+                      <span className="kt">{KIT_NAMES[work.kit]}</span>
+                    </span>
+                  </span>
+                </button>
                 <button
                   className="pc-wz"
                   type="button"
@@ -220,20 +267,11 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
                   aria-label={`ver a obra de ${seat.name} grande`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setWorkZoom(p);
+                    openWork(p);
                   }}
                 >
                   <i className="ti ti-zoom-in" />
                 </button>
-                <div className="cap">
-                  <span className="cr">
-                    <Critter color={seat.color} />
-                  </span>
-                  <span>
-                    <span className="nm">{seat.name}</span>
-                    <span className="kt">{KIT_NAMES[work.kit]}</span>
-                  </span>
-                </div>
                 {coord ? (
                   <GuessTape
                     key={`${p}:${coord}`}
@@ -264,7 +302,7 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
             )}
           </span>
           {!locked && (
-            <button className="pc-btn-big" type="button" onClick={() => conn.sendAction({ type: 'confirm' })}>
+            <button className="pc-btn-big" type="button" onClick={confirm}>
               confirmar palpites
             </button>
           )}

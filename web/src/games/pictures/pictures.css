@@ -238,6 +238,10 @@
   position: relative; container-type: size; background: var(--paper); box-shadow: inset 0 0 0 1px rgba(211, 191, 153, .7); overflow: hidden;
 }
 .pictures .pc-wsheet { width: 100%; aspect-ratio: 4 / 3; }
+/* a folha e a legenda são um botão só (escolher a obra, também pelo teclado); lupa e fitinha ficam ao lado dele */
+.pictures .pc-wf-pick { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; }
+.pictures .pc-wf-pick:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.pictures .pc-gallery.locked .pc-wf-pick { cursor: default; }
 .pictures .pc-wf .cap { display: flex; align-items: center; gap: 8px; padding: 7px 2px 8px; }
 .pictures .pc-wf .cap .cr { width: 30px; height: 30px; flex: none; }
 .pictures .pc-wf .cap .critter, .pictures .pc-wf .cap svg { width: 100%; height: 100%; display: block; }
