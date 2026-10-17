@@ -45,7 +45,8 @@ export function PhoneHand({
               <span className="p-hclue">{inRow ? 'tá na fila ↑' : clue || 'sem dica'}</span>
             </button>
             {!inRow && sorting && (
-              <button type="button" className="p-edit" onClick={() => onEdit(card.id)}>
+              // Nome com o número: na campanha há várias cartas e o leitor de tela precisa distinguir os botões.
+              <button type="button" className="p-edit" aria-label={`dica do ${card.value}`} onClick={() => onEdit(card.id)}>
                 ✎ dica
               </button>
             )}

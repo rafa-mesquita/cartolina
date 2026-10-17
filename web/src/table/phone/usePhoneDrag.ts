@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MutableRefObject, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import type { GameConn } from '../../net/connection';
-import { deskCursor, posFromY, slotTargets } from './phoneRowLogic';
+import { PARKED_CURSOR, deskCursor, posFromY, slotTargets } from './phoneRowLogic';
 
 const MOUSE_START_PX = 6;
 const TOUCH_HOLD_MS = 220;
@@ -26,7 +26,10 @@ export interface PhoneDragOptions {
   container: RefObject<HTMLElement | null>;
   /** Fila mostrada (do servidor + minha intenção pendente). */
   row: readonly string[];
-  /** Fila do servidor (`view.game.row`): dá o índice do `place` e o cursor do PC. */
+  /**
+   * Fila em ordem de servidor com as minhas intenções já aplicadas (`placeBase`, igual ao computador: o servidor
+   * aplica as minhas ações em ordem). Dá o índice do `place` e o cursor do PC.
+   */
   serverRow: readonly string[];
   canPick(cardId: string): boolean;
   conn: Pick<GameConn, 'sendCursor' | 'sendActivity'>;
@@ -165,10 +168,14 @@ function createController(live: MutableRefObject<PhoneDragOptions>, setDragging:
     clearTimeout(s.hold);
     cancelAnimationFrame(s.raf);
     if (!s.active) return;
-    const { conn, serverRow, onDrop } = live.current;
+    const { conn, onDrop } = live.current;
     // `place` antes do cursor sem arrasto (igual ao computador): quem olha não vê a carta voltar por uma ida e volta.
     if (drop && s.index !== null) onDrop(s.cardId, s.index);
-    conn.sendCursor({ ...deskCursor(serverRow, s.cardId, s.index ?? currentIndex(serverRow, s.cardId)), drag: null });
+    // Solta já estacionando (soltar, cancelar ou desmontar). No PC, `drag: null` solta a carta onde ela está sem
+    // olhar a zona (`remoteDrop`: pousa ou espera o `state`); só a seta vai pro assento. Um cursor de soltar na
+    // fila antes deste seria engolido pelo ritmo da conexão (o mais recente substitui o pendente) e, se saísse
+    // por último, o `keepalive` o repetiria pra sempre.
+    conn.sendCursor(PARKED_CURSOR);
     conn.sendActivity('thinking');
     setDragging(null);
     setPos(null);

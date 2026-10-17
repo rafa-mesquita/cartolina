@@ -21,7 +21,7 @@ test('rodada de DITU com um jogador no celular e outro no PC', async ({ browser 
   await pc.getByRole('button', { name: 'dar as cartas' }).click();
 
   // Celular: a dica pela folha de baixo, e a carta vai pra fila tocando nela e depois no "aqui".
-  await cel.getByRole('button', { name: '✎ dica' }).tap();
+  await cel.getByRole('button', { name: /^dica do \d+$/ }).tap();
   const sheet = cel.getByRole('dialog', { name: 'dica da carta' });
   await sheet.getByRole('textbox').fill('iglu');
   await sheet.getByRole('button', { name: 'ok' }).tap();

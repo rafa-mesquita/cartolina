@@ -13,8 +13,8 @@ export interface CatalogEntry {
   playable: boolean;
   /** Tem aba de histórico com partidas (segue `GAMES[id].recordsHistory`). */
   hasHistory: boolean;
-  /** Joga no celular (aparelho de toque). Sem isso, o celular vê "abre no computador". */
-  mobile: boolean;
+  /** Joga no celular (aparelho de toque). Sem isso, o celular vê "abre no computador". Ausente = só no computador. */
+  mobile?: boolean;
 }
 
 // Nomes de vitrine: o ITO aparece como DITU e o Dixit como Diquisti; os ids internos não mudam.

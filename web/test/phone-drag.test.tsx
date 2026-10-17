@@ -2,7 +2,7 @@ import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react
 import { useRef } from 'react';
 import { afterEach, beforeAll, describe, expect, it, vi, type Mock } from 'vitest';
 import type { GameConn } from '../src/net/connection';
-import { deskCursor } from '../src/table/phone/phoneRowLogic';
+import { PARKED_CURSOR, deskCursor } from '../src/table/phone/phoneRowLogic';
 import { usePhoneDrag } from '../src/table/phone/usePhoneDrag';
 
 // jsdom antigo não tem PointerEvent: sem ele o `fireEvent` perde clientY/pointerType.
@@ -92,9 +92,21 @@ describe('arrastar no celular', () => {
     expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ zone: 'table', drag: { cardId: 'h', index: 2 } }));
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
     expect(onDrop).toHaveBeenCalledWith('h', 2);
-    expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
     expect(conn.sendActivity).toHaveBeenLastCalledWith('thinking');
     expect(state()).toBe('-|-');
+  });
+
+  it('ao soltar, o último cursor é o estacionado (como o PC com o mouse fora da mesa): o reenvio não prende a seta na fila', () => {
+    const conn = mkConn();
+    render(<Harness conn={conn} onDrop={vi.fn()} />);
+    fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
+    expect(PARKED_CURSOR).toEqual({ zone: 'hand', x: 0, y: 0, drag: null });
+    // Uma única mensagem de soltar, e ela já é a estacionada (o PC solta a carta sem olhar a zona).
+    const released = conn.sendCursor.mock.calls.map(([c]) => c).filter((c) => !c.drag);
+    expect(released).toEqual([PARKED_CURSOR]);
   });
 
   it('ao soltar, o place vai antes do cursor sem arrasto (igual ao computador: a carta não volta por um instante)', () => {
@@ -195,7 +207,7 @@ describe('arrastar no celular', () => {
     expect(state()).toBe('b|-');
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 78 });
     expect(onDrop).not.toHaveBeenCalled();
-    expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
     expect(conn.sendActivity).toHaveBeenLastCalledWith('thinking');
   });
 
@@ -282,6 +294,7 @@ describe('arrastar no celular', () => {
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 200 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
     unmount();
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR); // o PC não fica com a carta no ar
     const calls = conn.sendCursor.mock.calls.length;
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 10 });
     expect(conn.sendCursor).toHaveBeenCalledTimes(calls);
@@ -298,7 +311,7 @@ describe('arrastar no celular', () => {
     expect(state()).toBe('h|-');
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 450 });
     expect(onDrop).not.toHaveBeenCalled();
-    expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
 
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 450 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
@@ -320,14 +333,18 @@ describe('arrastar no celular', () => {
     const conn = mkConn();
     render(<Harness conn={conn} onDrop={vi.fn()} />);
     fireEvent.pointerDown(screen.getByTestId('b'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 70 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 160 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 78 });
+    expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'b', 1), drag: { cardId: 'b', index: null } });
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 78 });
-    expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'b', 1), drag: null });
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
 
     fireEvent.pointerDown(screen.getByTestId('h'), { pointerType: 'mouse', button: 0, clientX: 0, clientY: 450 });
+    fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 95 });
     fireEvent.pointerMove(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
+    expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'h', 3), drag: { cardId: 'h', index: null } });
     fireEvent.pointerUp(window, { pointerType: 'mouse', clientX: 0, clientY: 440 });
-    expect(conn.sendCursor).toHaveBeenLastCalledWith({ ...deskCursor(['a', 'b', 'c'], 'h', 3), drag: null });
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
   });
 
   it('não rola com o dedo abaixo da fila (sobre a barra da mão)', () => {
@@ -377,7 +394,7 @@ describe('arrastar no celular', () => {
     fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 0, clientY: 95 });
     fireEvent(window, new PointerEvent('pointercancel', { pointerType: 'touch' }));
     expect(onDrop).not.toHaveBeenCalled();
-    expect(conn.sendCursor).toHaveBeenLastCalledWith(expect.objectContaining({ drag: null }));
+    expect(conn.sendCursor).toHaveBeenLastCalledWith(PARKED_CURSOR);
     expect(conn.sendActivity).toHaveBeenLastCalledWith('thinking');
     expect(state()).toBe('-|-');
   });

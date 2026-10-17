@@ -1,4 +1,4 @@
-import type { ItoRoomView } from '@cartolina/shared';
+import type { CursorFx, ItoRoomView } from '@cartolina/shared';
 import { isPlaying } from '../../game/derive';
 import { FH, FW, ROW_Y } from '../constants';
 import { rowEntries, toServerIndex } from '../rowLayout';
@@ -10,8 +10,9 @@ export interface SlotTarget {
 }
 
 /**
- * Espaços onde `movingId` pode cair. `row` é a fila mostrada (com minha intenção pendente); `serverRow` é a do
- * servidor, que dá o índice do `place` (igual ao computador, via `toServerIndex`). O índice ignora a própria carta.
+ * Espaços onde `movingId` pode cair. `row` é a fila mostrada (com minhas intenções pendentes); `serverRow` é a
+ * ordem do servidor (com minhas intenções já aplicadas, o `placeBase`), que dá o índice do `place` (igual ao
+ * computador, via `toServerIndex`). O índice ignora a própria carta.
  * Se ela já está na fila, os espaços colados nela (antes e depois) somem: soltar ali não muda nada.
  */
 export function slotTargets(row: readonly string[], movingId: string, serverRow: readonly string[] = row): SlotTarget[] {
@@ -43,6 +44,13 @@ export function deskCursor(row: readonly string[], cardId: string, index: number
   const gap = rowEntries(base, [{ owner: '_', index }]).find((e) => e.kind === 'gap');
   return { zone: 'table', x: (gap?.x ?? FW / 2) / FW, y: ROW_Y / FH };
 }
+
+/**
+ * Cursor "estacionado": o mesmo que o PC manda com o mouse fora da mesa (`cursorFromLocal`). Lá a seta vai pro
+ * assento de quem joga em vez de ficar na fila. O celular manda este ao soltar: como o `keepalive` da conexão
+ * reenvia o último cursor a cada 2 s, qualquer outro deixaria a seta presa sobre a fila nos PCs.
+ */
+export const PARKED_CURSOR: CursorFx = Object.freeze({ zone: 'hand', x: 0, y: 0, drag: null });
 
 /** Posição visual (0..n) pelo y do dedo: conta quantas faixas têm o meio acima dele. */
 export function posFromY(y: number, rects: ReadonlyArray<{ top: number; bottom: number }>): number {

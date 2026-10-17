@@ -24,7 +24,10 @@ describe('mão do celular', () => {
     const mine = view.game.cards['p0:0']!;
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${mine.value}`) }));
     expect(onPick).toHaveBeenCalledWith('p0:0');
-    fireEvent.click(screen.getByRole('button', { name: '✎ dica' }));
+    // Texto curto na tela; o nome acessível diz de qual carta é (na campanha há várias).
+    const edit = screen.getByRole('button', { name: `dica do ${mine.value}` });
+    expect(edit.textContent).toBe('✎ dica');
+    fireEvent.click(edit);
     expect(onEdit).toHaveBeenCalledWith('p0:0');
   });
 
@@ -43,7 +46,8 @@ describe('mão do celular', () => {
     const room = act(sortingRoom(2), 'p0', { type: 'place', cardId: 'p0:0', index: 0 });
     render(<PhoneHand view={viewOf(room, 'p0')} row={['p0:0']} selected={null} onPick={vi.fn()} onEdit={vi.fn()} />);
     expect(screen.getByText('tá na fila ↑')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: '✎ dica' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^dica do / })).toBeNull();
+    expect(screen.queryByText('✎ dica')).toBeNull();
     expect(screen.getByRole('button', { name: /na fila/ })).toBeTruthy();
   });
 });

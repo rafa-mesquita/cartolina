@@ -8,6 +8,11 @@ export interface PhoneRowProps {
   view: ItoRoomView;
   /** Fila mostrada (do servidor + minha intenção pendente). */
   row: readonly string[];
+  /**
+   * Fila em ordem de servidor com as minhas intenções aplicadas: dá o índice do `place` do "aqui".
+   * Sem ela, usa a do servidor (`view.game.row`).
+   */
+  placeBase?: readonly string[];
   /** Carta selecionada pra mover/colocar (da mão ou da fila), ou null. */
   selected: string | null;
   /** Vãos de arrastos (meu ou de outros), em posição visual. */
@@ -27,11 +32,11 @@ export interface PhoneRowProps {
 }
 
 /** Fila em pé: 1 no topo, 100 embaixo. Cada carta é uma faixa com o bichinho do dono e a dica. */
-export function PhoneRow({ view, row, selected, gaps, carried, shown, onPick, onTarget, onReturn, onPointerDown, listRef }: PhoneRowProps) {
+export function PhoneRow({ view, row, placeBase, selected, gaps, carried, shown, onPick, onTarget, onReturn, onPointerDown, listRef }: PhoneRowProps) {
   const colorOf = (owner: string) => view.seats.find((s) => s.id === owner)?.color ?? '#D9C2A0';
   const reveal = view.game.phase === 'reveal' ? (view.game.reveal ?? []) : [];
   const revealed = new Map(reveal.slice(0, shown).map((e) => [e.cardId, e]));
-  const targets = selected ? slotTargets(row, selected, view.game.row) : [];
+  const targets = selected ? slotTargets(row, selected, placeBase ?? view.game.row) : [];
   const targetAt = (pos: number) => targets.find((t) => t.pos === pos);
   const gapsAt = (pos: number) => gaps.filter((g) => g.pos === pos);
   const mineSelectedInRow = selected !== null && row.includes(selected) && view.game.cards[selected]?.owner === view.you;

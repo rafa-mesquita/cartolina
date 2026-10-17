@@ -24,6 +24,7 @@ import './phone.css';
 const ACTIVITY_TTL_MS = 4000;
 const REMOTE_STALE_MS = 6000;
 const ROLLBACK_ERRORS = new Set(['not_owner', 'unknown_card', 'bad_phase']);
+const NO_IDS: ReadonlySet<string> = new Set();
 
 /** Arrasto de outra pessoa: `index` é o índice do servidor (null = sem alvo, carta no ar). */
 interface RemoteDrag {
@@ -43,7 +44,8 @@ function without(m: Remotes, id: string): Remotes {
 export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }) {
   const { phase } = view.game;
   const serverRow = view.game.row;
-  const [pending, setPending] = useState<Intent | null>(null);
+  /** Minhas intenções ainda sem resposta, na ordem em que mandei (o servidor aplica nessa ordem). */
+  const [pending, setPending] = useState<Intent[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [activities, setActivities] = useState<Record<string, { a: Activity; until: number }>>({});
@@ -64,19 +66,30 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     setRemotes(next);
   };
 
-  // A cada `view`: a intenção sai quando o servidor confirma, quando a carta some ou fora da escolha.
+  // A cada `view`: cada intenção sai quando o servidor confirma, quando a carta some ou fora da escolha.
   useEffect(() => {
-    setPending((p) => {
-      if (!p) return p;
-      if (view.game.phase !== 'sorting' || !view.game.cards[p.cardId]) return null;
-      return intentSettled(view.game.row, p, Date.now()) ? null : p;
+    setPending((ps) => {
+      if (!ps.length) return ps;
+      if (view.game.phase !== 'sorting') return [];
+      const now = Date.now();
+      const kept = ps.filter((p) => view.game.cards[p.cardId] && !intentSettled(view.game.row, p, now));
+      return kept.length === ps.length ? ps : kept;
     });
   }, [view]);
 
-  // Sem resposta do servidor, a intenção expira mesmo sem `state` novo (igual ao computador).
+  // Sem resposta do servidor, cada intenção expira mesmo sem `state` novo (igual ao computador).
   useEffect(() => {
-    if (!pending) return;
-    const t = window.setTimeout(() => setPending((p) => (p === pending ? null : p)), INTENT_TTL_MS + 50);
+    if (!pending.length) return;
+    const oldest = Math.min(...pending.map((p) => p.at));
+    const t = window.setTimeout(
+      () =>
+        setPending((ps) => {
+          const now = Date.now();
+          const kept = ps.filter((p) => now - p.at <= INTENT_TTL_MS);
+          return kept.length === ps.length ? ps : kept;
+        }),
+      Math.max(0, oldest + INTENT_TTL_MS + 50 - Date.now()),
+    );
     return () => clearTimeout(t);
   }, [pending]);
 
@@ -114,7 +127,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
   useEffect(
     () =>
       conn.onError((code) => {
-        if (ROLLBACK_ERRORS.has(code)) setPending(null);
+        if (ROLLBACK_ERRORS.has(code)) setPending([]);
       }),
     [conn],
   );
@@ -139,7 +152,13 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     () => new Set(Object.values(remotes).map((r) => r.cardId).filter((id) => !!view.game.cards[id])),
     [remotes, view.game.cards],
   );
-  const row = useMemo(() => effectiveRow(serverRow, pending, carriedByOthers), [serverRow, pending, carriedByOthers]);
+  /**
+   * Fila em ordem de servidor contra a qual um `place` novo é interpretado: a do servidor com as minhas intenções
+   * aplicadas em ordem (igual ao `placeBase` do computador). Sem isso, a 2ª colocação antes da resposta da 1ª
+   * calcularia o índice sem a 1ª e poderia cair antes dela.
+   */
+  const placeBase = useMemo(() => pending.reduce<string[]>((r, p) => effectiveRow(r, p, NO_IDS), [...serverRow]), [serverRow, pending]);
+  const row = useMemo(() => placeBase.filter((id) => !carriedByOthers.has(id)), [placeBase, carriedByOthers]);
   const pickable = (id: string) => canPick(view, id) && !carriedByOthers.has(id);
   const sel = selected !== null && pickable(selected) ? selected : null;
 
@@ -149,15 +168,18 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     // A dica que ainda está no debounce vai antes: com a carta na fila o servidor recusaria.
     sheet.current?.flush();
     setEditing(null);
-    const base = serverRow.filter((id) => id !== cardId);
-    setPending({ kind: 'place', cardId, index, after: index > 0 ? (base[index - 1] ?? null) : null, at: Date.now() });
+    const base = placeBase.filter((id) => id !== cardId);
+    const intent: Intent = { kind: 'place', cardId, index, after: index > 0 ? (base[index - 1] ?? null) : null, at: Date.now() };
+    // Uma intenção nova da mesma carta substitui a anterior (o computador faz o mesmo ao pegar a carta).
+    setPending((ps) => [...ps.filter((p) => p.cardId !== cardId), intent]);
     conn.sendAction({ type: 'place', cardId, index });
     playSound('card');
     setSelected(null);
   };
   const ret = (cardId: string) => {
     if (live.current.game.phase !== 'sorting') return;
-    setPending({ kind: 'return', cardId, at: Date.now() });
+    const intent: Intent = { kind: 'return', cardId, at: Date.now() };
+    setPending((ps) => [...ps.filter((p) => p.cardId !== cardId), intent]);
     conn.sendAction({ type: 'return', cardId });
     setSelected(null);
   };
@@ -166,7 +188,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
     setSelected((s) => (s === cardId ? null : cardId));
   };
 
-  const drag = usePhoneDrag({ container: rowBox, row, serverRow, canPick: pickable, conn, onDrop: place });
+  const drag = usePhoneDrag({ container: rowBox, row, serverRow: placeBase, canPick: pickable, conn, onDrop: place });
   const reveal = usePhoneReveal(view, (name, index) => playSound(name, index), mountedInReveal.current);
 
   const gaps = Object.entries(remotes)
@@ -218,6 +240,7 @@ export function PhoneTable({ view, conn }: { view: ItoRoomView; conn: GameConn }
           <PhoneRow
             view={view}
             row={row}
+            placeBase={placeBase}
             selected={sel}
             gaps={gaps}
             carried={carried}

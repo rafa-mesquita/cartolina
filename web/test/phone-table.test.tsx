@@ -189,6 +189,56 @@ describe('mesa do celular', () => {
     expect(strip('p0:0')).toBeNull();
   });
 
+  it('duas colocações seguidas (a 2ª "depois da 1ª") antes do servidor responder: ordem e índice certos', () => {
+    const c = conn();
+    let room = sortingRoom(3);
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
+    room = act(room, 'p2', { type: 'place', cardId: 'p2:0', index: 1 });
+    const { rerender } = render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    const order = () => Array.from(document.querySelectorAll('.p-strip')).map((el) => el.getAttribute('data-card'));
+    // A: a minha no fim.
+    fireEvent.click(handCard('p0:0'));
+    fireEvent.click(heres().at(-1)!);
+    expect(order()).toEqual(['p1:0', 'p2:0', 'p0:0']);
+    // B: a do p1 logo depois da minha, que o servidor ainda nem conhece.
+    fireEvent.click(strip('p1:0')!);
+    fireEvent.click(heres().at(-1)!);
+    expect(c.sendAction.mock.calls.map(([a]) => a)).toEqual([
+      { type: 'place', cardId: 'p0:0', index: 2 },
+      { type: 'place', cardId: 'p1:0', index: 2 },
+    ]);
+    // A continua no lugar e B vem depois dela.
+    expect(order()).toEqual(['p2:0', 'p0:0', 'p1:0']);
+    // O servidor confirma só A: B segue pendente, depois de A.
+    room = act(room, 'p0', { type: 'place', cardId: 'p0:0', index: 2 });
+    rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    expect(order()).toEqual(['p2:0', 'p0:0', 'p1:0']);
+    // Aplicando as duas na ordem, o servidor chega na mesma fila.
+    room = act(room, 'p0', { type: 'place', cardId: 'p1:0', index: 2 });
+    rerender(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    expect(room.game.row).toEqual(['p2:0', 'p0:0', 'p1:0']);
+    expect(order()).toEqual(['p2:0', 'p0:0', 'p1:0']);
+  });
+
+  it('cada intenção expira sozinha, sem resposta do servidor', () => {
+    vi.useFakeTimers();
+    const c = conn();
+    let room = sortingRoom(3);
+    room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
+    render(<PhoneTable view={viewOf(room, 'p0')} conn={c} />);
+    fireEvent.click(handCard('p0:0'));
+    fireEvent.click(heres().at(-1)!);
+    rtlAct(() => void vi.advanceTimersByTime(1000));
+    fireEvent.click(strip('p1:0')!);
+    fireEvent.click(heres().at(-1)!);
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'place', cardId: 'p1:0', index: 1 });
+    expect(strip('p0:0')).toBeTruthy();
+    // A passou do prazo (1,5 s) e sai; B (mais nova) não segura A na tela.
+    rtlAct(() => void vi.advanceTimersByTime(600));
+    expect(strip('p0:0')).toBeNull();
+    expect(strip('p1:0')).toBeTruthy();
+  });
+
   it('tocar de novo ou fora da fila desseleciona; tocar outra carta troca', () => {
     let room = sortingRoom(2);
     room = act(room, 'p1', { type: 'place', cardId: 'p1:0', index: 0 });
@@ -218,7 +268,7 @@ describe('mesa do celular', () => {
   it('a dica pendente vai antes do place', () => {
     const c = conn();
     render(<PhoneTable view={viewOf(sortingRoom(2), 'p0')} conn={c} />);
-    fireEvent.click(screen.getByRole('button', { name: '✎ dica' }));
+    fireEvent.click(screen.getByRole('button', { name: /^dica do \d+$/ }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'gato' } });
     fireEvent.click(handCard('p0:0'));
     fireEvent.click(heres()[0]!);
