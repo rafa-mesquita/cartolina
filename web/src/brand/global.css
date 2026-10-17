@@ -109,3 +109,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .toggle.on { background: var(--pink); }
 .knob { position: absolute; left: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--paper); border: 2px solid var(--ink); transition: transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1); }
 .toggle.on .knob { transform: translateX(20px); }
+
+/* aviso de celular deitado */
+.rotate-notice { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--kraft); }
+.rotate-notice p { font: 700 24px/1.2 var(--font-ui); text-align: center; padding: 24px; }
