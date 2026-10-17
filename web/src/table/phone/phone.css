@@ -19,3 +19,23 @@
 .p-gap { height: 46px; border: 3px dashed var(--c); border-radius: var(--r); }
 .p-here { height: 44px; border: 2px dashed var(--ink); border-radius: var(--r); background: transparent; font: 600 15px/1 var(--font-ui); }
 .p-return { align-self: center; }
+
+/* Mão (barra de baixo) e painel da dica. A barra rola na horizontal, então nada de `touch-action: none` aqui:
+   o arrasto vem do segurar 220 ms + `touchmove` com preventDefault (usePhoneDrag). */
+.p-hand { display: flex; gap: 10px; overflow-x: auto; padding: 8px; scroll-snap-type: x mandatory; }
+.p-hcard { position: relative; flex: none; scroll-snap-align: center; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.p-hcard.away { opacity: 0.45; }
+.p-hcard.sel .p-hnum { transform: translateY(-6px); box-shadow: 4px 6px 0 var(--ink); }
+.p-hnum {
+  min-width: 110px; min-height: 76px; padding: 8px 10px 6px 36px; display: flex; flex-direction: column; align-items: flex-start;
+  border: 2px solid var(--ink); border-radius: var(--r); background: var(--c); box-shadow: 2px 3px 0 var(--ink);
+  font: 700 30px/1 var(--font-ui); color: var(--ink); touch-action: pan-x; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
+}
+.p-hnum:focus-visible, .p-edit:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.p-hclue { font: 16px/1.1 var(--font-hand); max-width: 160px; text-align: left; }
+.p-hbadge { position: absolute; left: 6px; top: 8px; width: 24px; height: 24px; pointer-events: none; }
+.p-edit { border: 2px dashed var(--ink); border-radius: 8px; background: var(--paper); font: 600 14px/1 var(--font-ui); padding: 6px; }
+.p-sheet-veil { position: fixed; inset: 0; z-index: 40; background: rgba(59, 47, 47, 0.35); display: flex; align-items: flex-end; }
+.p-sheet { width: 100%; background: var(--paper); border-top: 2px solid var(--ink); border-radius: 16px 16px 0 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+.p-sheet-num { margin: 0; font: 700 28px/1 var(--font-ui); }
+.p-sheet textarea { font: 22px/1.2 var(--font-hand); border: 2px solid var(--ink); border-radius: 10px; padding: 10px; background: var(--kraft); resize: none; }

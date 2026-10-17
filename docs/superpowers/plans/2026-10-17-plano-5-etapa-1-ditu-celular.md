@@ -1317,7 +1317,7 @@ Acrescente em `phone.css`:
 .p-hnum {
   min-width: 110px; min-height: 76px; padding: 8px 10px 6px 36px; display: flex; flex-direction: column; align-items: flex-start;
   border: 2px solid var(--ink); border-radius: var(--r); background: var(--c); box-shadow: 2px 3px 0 var(--ink);
-  font: 700 30px/1 var(--font-ui); color: var(--ink); touch-action: none; user-select: none; -webkit-user-select: none;
+  font: 700 30px/1 var(--font-ui); color: var(--ink); touch-action: pan-x; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none;
 }
 .p-hclue { font: 16px/1.1 var(--font-hand); max-width: 160px; text-align: left; }
 .p-hbadge { position: absolute; left: 6px; top: 8px; width: 24px; height: 24px; pointer-events: none; }
