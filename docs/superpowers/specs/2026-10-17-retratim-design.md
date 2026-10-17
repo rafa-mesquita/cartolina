@@ -160,8 +160,9 @@ Duas coisas que a sala genérica ainda não tem:
 
 `GAMES.pictures`: `minPlayers: 3`, `maxPlayers: 6`, `liveCursors: false` (um
 cursor na foto entregaria o palpite), `recordsHistory: true` a partir do
-Plano R4 (no R1 fica `false`). `fx.activity`
-mostra "mexendo…" (montar) e "palpitando…".
+Plano R4 (no R1 fica `false`). Os selinhos ("montando…", "pronto ✓",
+"palpitando…", "confirmou ✓") saem só da visão; o Retratim não usa
+`fx.activity` (decidido no Plano R2).
 
 ### 4.3 Segredos (`viewFor`)
 
@@ -175,8 +176,11 @@ mostra "mexendo…" (montar) e "palpitando…".
 
 - `POST /rooms { game: 'pictures' }` como os outros jogos.
 - Rascunho limitado em tamanho pelo próprio schema (cadarço ≤ 60 pontos etc.,
-  ~5 KB no pior caso). Limite de frequência fica pro Plano R2, sem nunca
-  descartar o último rascunho antes do "pronto" (ex.: `ready` levando a obra).
+  ~5 KB no pior caso). Sem limite de frequência no servidor (Plano R2): o
+  site manda rascunho no máximo a cada 2 s e o "pronto" leva a obra junto
+  (`ready { on: true, work }`), então o último rascunho nunca se perde.
+- A mensagem `state` leva `now` (hora do servidor) pra contagem de 30 s não
+  depender do relógio do PC.
 - Grava a rodada no D1 uma vez, no fim da revelação (idempotente, mesma lógica
   de `recordedRevealKey`), na tabela da §7.1.
 - `GET /history/pictures` público, no-cache, mesmo limite por IP dos outros.
