@@ -106,6 +106,27 @@ const RAW: ReadonlyArray<readonly [string, string, string]> = [
   ['Frases difíceis de dizer', 'fácil', 'travei'],
   ['Sons', 'irritante', 'relaxante'],
   ['Animais mais inteligentes', 'pouco esperto', 'gênio'],
+  // Novos sempre no fim: a sala guarda os temas já sorteados pelo índice.
+  ['Coisas que você faria numa segunda-feira', 'nem morto', 'faço feliz'],
+  ['Comidas que você comeria todo dia', 'enjoa na hora', 'comeria pra sempre'],
+  ['Coisas que te acordam de madrugada', 'durmo igual', 'pulo da cama'],
+  ['Músicas pra levantar uma festa', 'esvazia a pista', 'todo mundo dança'],
+  ['Coisas que você esquece em casa', 'nunca esqueço', 'esqueço sempre'],
+  ['Programas de domingo', 'tédio total', 'domingo perfeito'],
+  ['Coisas que você compraria por impulso', 'jamais', 'já comprei'],
+  ['Desculpas pra não ir à academia', 'fraquinha', 'imbatível'],
+  ['Coisas mais difíceis de dividir', 'divido fácil', 'é só meu'],
+  ['Lugares pra tirar um cochilo', 'impossível dormir', 'sono dos deuses'],
+  ['Coisas que tiram sua paciência', 'zen total', 'perco a linha'],
+  ['Comidas pra comer de mão', 'precisa de talher', 'feita pra mão'],
+  ['Coisas que você faria num avião', 'nunca', 'sempre faço'],
+  ['Mensagens que dão medo de abrir', 'abro tranquilo', 'pânico total'],
+  ['Coisas que dão inveja', 'nem ligo', 'morro de inveja'],
+  ['Brinquedos de parque de diversões', 'calminho', 'radical demais'],
+  ['Comidas de rua', 'passo longe', 'paro na hora'],
+  ['Coisas que você levaria num piquenique', 'nem lembro', 'não pode faltar'],
+  ['Segredos difíceis de guardar', 'guardo fácil', 'conto na hora'],
+  ['Coisas que fazem um dia ser bom', 'nem percebo', 'dia ganho'],
 ];
 
 export const THEMES: readonly Theme[] = RAW.map(([titulo, min, max]) => ({ titulo, min, max }));

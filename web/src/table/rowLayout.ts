@@ -85,8 +85,13 @@ export function toVisibleIndex(visible: readonly string[], server: readonly stri
   return pos;
 }
 
-export function cursorFromLocal(lx: number, ly: number): { zone: 'table' | 'hand'; x: number; y: number } {
-  const inside = lx > -60 && lx < FW + 60 && ly > -60 && ly < FH + 60;
+/**
+ * Cursor que os outros recebem. `overMine`: o mouse está sobre a minha área (mão, avatar, "tô pronto"), que fica
+ * por cima da beirada de baixo da mesa. Aí vai como "na mão" (os outros veem a seta no meu assento): mandado como
+ * posição da mesa, caía em cima da mão de quem olha, e os cursores de todo mundo se juntavam ali.
+ */
+export function cursorFromLocal(lx: number, ly: number, overMine = false): { zone: 'table' | 'hand'; x: number; y: number } {
+  const inside = !overMine && lx > -60 && lx < FW + 60 && ly > -60 && ly < FH + 60;
   if (!inside) return { zone: 'hand', x: 0, y: 0 };
   const clamp = (v: number) => Math.max(-1, Math.min(2, v));
   return { zone: 'table', x: clamp(lx / FW), y: clamp(ly / FH) };

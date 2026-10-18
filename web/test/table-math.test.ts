@@ -194,6 +194,13 @@ describe('zonas', () => {
     expect(cursorFromLocal(FW / 2, FH + 200)).toEqual({ zone: 'hand', x: 0, y: 0 });
   });
 
+  it('mouse em cima da minha área (mão, avatar, pronto) é "na mão", mesmo sobre a beirada da mesa', () => {
+    // A mão fica por cima da beirada de baixo: como posição da mesa, os outros viam o cursor em cima da mão deles.
+    expect(cursorFromLocal(FW / 2, FH + 20)).toMatchObject({ zone: 'table' });
+    expect(cursorFromLocal(FW / 2, FH + 20, true)).toEqual({ zone: 'hand', x: 0, y: 0 });
+    expect(cursorFromLocal(FW / 2, FH / 2, true)).toEqual({ zone: 'hand', x: 0, y: 0 });
+  });
+
   it('zona da fila', () => {
     expect(inRowZone(FW / 2, ROW_Y)).toBe(true);
     expect(inRowZone(FW / 2, 20)).toBe(false);

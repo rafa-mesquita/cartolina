@@ -380,7 +380,8 @@ export class TableEngine {
     if (this.drag) {
       // Os outros estão vendo meu arrasto: avisa que acabou antes de sumir.
       const [lx, ly] = this.toLocal(this.ptr.x, this.ptr.y);
-      this.handlers.cursor({ ...(this.Hi ? cursorFromLocal(lx, ly) : { zone: 'hand' as const, x: 0, y: 0 }), drag: null });
+      const mine = this.overMyArea(this.ptr.x, this.ptr.y);
+      this.handlers.cursor({ ...(this.Hi ? cursorFromLocal(lx, ly, mine) : { zone: 'hand' as const, x: 0, y: 0 }), drag: null });
       this.handlers.activity('thinking');
       this.drag = null;
     }
@@ -776,7 +777,13 @@ export class TableEngine {
     const drag = this.drag
       ? { cardId: this.drag.cardId, index: g?.active ? toServerIndex(this.visible, this.placeBase(), this.drag.cardId, g.index) : null }
       : null;
-    this.handlers.cursor({ ...cursorFromLocal(lx, ly), drag });
+    this.handlers.cursor({ ...cursorFromLocal(lx, ly, this.overMyArea(this.ptr.x, this.ptr.y)), drag });
+  }
+
+  /** O ponteiro está sobre a minha área (mão, avatar, "tô pronto"), que fica por cima da beirada da mesa? */
+  private overMyArea(x: number, y: number): boolean {
+    const r = document.querySelector('.me-area')?.getBoundingClientRect();
+    return !!r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   }
 
   /**
