@@ -31,6 +31,10 @@
   box-shadow: 2px 3px 0 var(--ink); flex: none; font: 700 14px/1 var(--font-ui);
 }
 .cover-dixit.mini { font: 400 15px/1 'DM Serif Display', Georgia, serif; }
+/* Cor de cada jogo na página dele (a mesma da capa): o "criar sala" segue. Jogo sem cor aqui fica no rosa. */
+.game-ito { --game: var(--pink); --game-ink: var(--ink); }
+.game-dixit { --game: #2f5d50; --game-ink: #f4ecd8; }
+.game-page .btn.play { background: var(--game, var(--pink)); color: var(--game-ink, var(--ink)); }
 .join-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
 .join-line > span { font: 21px/1 var(--font-hand); }
 .join-compact .text-in { width: 96px; padding: 7px 10px; font-size: 19px; text-transform: uppercase; text-align: center; }
@@ -40,12 +44,16 @@
 .game-head h2 { margin: 0; font: 700 30px/1 var(--font-ui); }
 .game-head .tagline { text-align: left; }
 .back-link { flex-basis: 100%; font: 500 16px/1 var(--font-ui); color: var(--ink); }
-.tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--ink); }
+/* Abas como botões lado a lado: a escolhida fica escura (como aba de pasta, a escolhida parecia a outra). */
+.tabs { display: flex; }
 .tab {
-  padding: 8px 16px; font: 600 17px/1 var(--font-ui); color: var(--ink); text-decoration: none;
-  border: 2px solid var(--ink); border-bottom: none; border-radius: 10px 10px 0 0; background: var(--kraft); margin-bottom: -2px;
+  padding: 10px 20px 9px; font: 600 17px/1 var(--font-ui); color: var(--ink); text-decoration: none;
+  border: 2px solid var(--ink); background: var(--paper);
 }
-.tab.on { background: var(--paper); }
+.tab:first-child { border-radius: 14px 0 0 9px; }
+.tab:last-child { border-radius: 0 10px 13px 0; }
+.tab + .tab { border-left: none; }
+.tab.on { background: var(--ink); color: var(--paper); }
 .rules { margin: 0; padding-left: 22px; font: 19px/1.35 var(--font-hand); }
 @media (prefers-reduced-motion: reduce) {
   .cover { transition: none; }
