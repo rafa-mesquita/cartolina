@@ -38,7 +38,7 @@ function PlayTab({ game }: { game: GameId }) {
           <p className="hint">{PHONE_TEXT}</p>
         ) : (
           <>
-            <button className="btn" type="button" onClick={() => void create()} disabled={busy}>
+            <button className="btn play" type="button" onClick={() => void create()} disabled={busy}>
               {busy ? 'criando…' : 'criar sala'}
             </button>
             <JoinByCode />
@@ -80,7 +80,7 @@ function HistoryTab({ game }: { game: GameId }) {
 export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: GameTab; legacy?: boolean }) {
   const entry = catalogEntry(game)!;
   return (
-    <main className="screen game-page">
+    <main className={`screen game-page game-${game}`}>
       <h1 className="logo">
         cartolina<span>~</span>
       </h1>
