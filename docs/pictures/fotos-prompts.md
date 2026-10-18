@@ -55,7 +55,7 @@ baixadas já com o nome do id (`p001.jpg`…), e `npm run pictures:fotos -- <pas
 | neve | p057 | 43 | boneco de neve | p058 | 49 | trenó |
 | no cabide | p059 | 44 | casaco e cachecol | p060 | 71 | terno |
 | janela | p061 | 51 | janela embaçada | p062 | 72 | janela com cortina |
-| trem | p063 | 52 | trem na estação | p064 | 59 | VLT |
+| trem | p063 | 52* | trem na estação | p064 | 59 | VLT |
 | trilhos | p065 | 53 | trilhos no horizonte | p066 | 58 | ponte ferroviária |
 | locomotiva | p067 | 54 | maria-fumaça | p068 | 55 | vagão de carga |
 | sinalização | p069 | 56 | passagem de nível | p070 | 73 | semáforo vermelho |
@@ -100,3 +100,8 @@ frances bread rolls · 94 a small basket of pao de queijo cheese breads · 95 a 
 granola · 96 a hand holding a strawberry ice cream cone up against a clear blue sky (+ no faces) · 97 a brown horse
 standing in profile in a fenced green field · 98 a black and white cow standing in a green pasture, side view · 99 a round
 wall clock with a black frame on a plain white wall · 100 a classic twin-bell alarm clock on a bedside table.
+
+\* **p063 refeita (2026-10-17):** a primeira mostrava pessoas de frente na plataforma. Prompt novo: `a passenger
+train arriving at an empty station platform, front three-quarter view, no people on the platform.` + fim padrão +
+`No people, no faces visible.` Baixada pelo link assinado `flow-content.google` com `curl` (sem diálogo de salvar) e
+convertida com os mesmos parâmetros do `scripts/pictures-fotos.mjs`.
