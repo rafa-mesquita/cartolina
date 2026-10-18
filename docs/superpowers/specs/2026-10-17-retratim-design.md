@@ -43,7 +43,7 @@ Decisões do usuário (2026-10-17):
 ### Preparação (ao clicar "começar")
 
 - 3 a 6 jogadores na ordem dos assentos.
-- O servidor sorteia **16 fotos** do baralho (§6.4) e monta a grade 4×4 com
+- O servidor sorteia **16 fotos** do baralho (**8 temas × 2 fotos**, §6.4) e monta a grade 4×4 com
   coordenadas **A–D** (colunas) × **1–4** (linhas). A grade não muda na partida.
 - **Saquinho** com 48 fichas (cada coordenada 3 vezes). Cada ficha tirada sai do
   saquinho pela partida inteira (6 × 6 = 36 ≤ 48, então nunca falta).
@@ -141,7 +141,8 @@ precisa refazer o empilhamento.
   grade; `scoring.ts`: `scorePicturesRound(...)` pura; `rules.ts`:
   `applyPicturesAction` + `settlePictures`; `view.ts`: visão e prazo;
   `schema.ts`: ações.
-- `photos.ts`: `PICTURES_DECK` (ids `p001…p100` + tema).
+- `photos.ts`: `PICTURES_DECK` (ids `p001…p100` + tema), `PICTURES_THEMES` (50 slugs) e
+  `PICTURES_THEME_NAMES` (nome em português).
 
 ### 4.2 Mudanças na base
 
@@ -253,9 +254,13 @@ mãos ou de costas (rosto gerado costuma sair estranho).
 
 ### 6.2 Temas
 
-100 fotos em 7 temas (~14 cada): bichos, objetos de casa, comida, lugares e
-construções, transporte, natureza, gente fazendo algo. Dentro de cada tema,
-fotos parecidas entre si, pra grade ficar traiçoeira.
+100 fotos em **50 temas de 2 fotos** (decisão do usuário, 2026-10-17; com mais
+fotos por tema elas ficavam parecidas demais). Cada tema é uma "dupla parecida",
+às vezes uma pegadinha (bandeirinha de escanteio × bandeirinha de festa junina):
+p001+p002 são o 1º tema, p003+p004 o 2º, e assim por diante. A tabela com os
+temas e as fotos está em `docs/pictures/fotos-prompts.md`; no código, os temas são
+slugs ASCII (`cachorro`, `chao-da-mata`, `onibus`…) com o nome bonito em
+`PICTURES_THEME_NAMES`.
 
 ### 6.3 Geração
 
@@ -263,12 +268,19 @@ fotos parecidas entre si, pra grade ficar traiçoeira.
 - Google Flow, **uma opção por prompt**.
 - **Lote de teste primeiro:** 8 fotos (uma por tema + uma). O usuário aprova a
   qualidade antes do resto.
-- `npm run pictures:fotos` (como `dixit:cartas`): otimiza e grava em
-  `web/public/pictures/fotos/`, junto da lista id → tema.
+- `npm run pictures:fotos -- <pasta>` (`scripts/pictures-fotos.mjs`, como
+  `dixit:cartas`): lê `p001…p100` (.jpg/.png/.webp), recorta no centro pra 4:3
+  exato e grava em `web/public/pictures/fotos/` a foto cheia `pNNN.webp`
+  (1200×900, WebP q75: zoom e revelação) e a miniatura `pNNN-thumb.webp`
+  (480×360, q75: grade e galeria). Também gera
+  `web/src/games/pictures/photos-ready.ts` (o `Set` dos ids importados; foto fora
+  dele usa a provisória, sem 404). Falha se faltar foto. As 100 dão **15,9 MB**
+  (12,7 MB cheias + 3,2 MB miniaturas).
 
 ### 6.4 Sorteio da grade
 
-4 temas sorteados × 4 fotos de cada, embaralhadas na grade.
+**8 temas sorteados × 2 fotos** (as duas do tema), embaralhadas na grade: 16
+fotos, 8 duplas parecidas. Baralho com menos de 8 temas de 2 fotos → erro.
 
 ## 7. Histórico e museu
 
@@ -337,7 +349,8 @@ Os números mínimos são ponto de partida.
    servidor aceitando `pictures`.
 4. **Plano R2 — mesa no site** (feito, `docs/superpowers/plans/2026-10-17-plano-r2-retratim-mesa.md`): kits
    (montar/mostrar), telas, sons, bots, catálogo jogável, E2E.
-5. **Plano R3 — fotos:** 100 prompts, geração, script.
+5. **Plano R3 — fotos** (feito): 100 prompts, geração, baralho de 50 temas × 2,
+   grade 8 × 2, script `pictures:fotos` e as fotos no site (miniatura + cheia).
 6. **Plano R4 — histórico e museu** (com o hook de histórico genérico).
 
 ## 11. Fora de escopo (esta versão)

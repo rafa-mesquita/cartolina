@@ -41,15 +41,22 @@ Saíram das revisões do Plano R1 (2026-10-17). Ler antes de escrever cada plano
 
 ## R3 — fotos
 
-- Depois que o script reescrever `photos.ts`, testar o baralho real: precisa
+- ~~Depois que o script reescrever `photos.ts`, testar o baralho real: precisa
   de pelo menos 4 temas com 4+ fotos, senão `drawGrid` lança erro no
-  "começar".
-- `PICTURES_PHOTOS_READY` (`web/src/games/pictures/photos.ts`) é um `Set` à
+  "começar".~~ **Resolvido no R3:** o baralho virou 50 temas × 2 (escrito à mão
+  em `photos.ts`, não pelo script) e a grade 8 × 2; o teste confere o baralho
+  real (50 temas de 2 fotos, ids únicos) e o erro com menos de 8 temas.
+- ~~`PICTURES_PHOTOS_READY` (`web/src/games/pictures/photos.ts`) é um `Set` à
   mão: gerar a partir de um manifesto do script (ou tirar o filtro quando as
   100 existirem). `Photo.tsx` sem `loading`/`decoding`: considerar miniatura
-  (grade) + grande (zoom) e pré-carregar a foto que voa na revelação.
+  (grade) + grande (zoom) e pré-carregar a foto que voa na revelação.~~
+  **Resolvido no R3:** o script gera `photos-ready.ts`; miniatura 480×360 na
+  grade/galeria (`loading="lazy"`, `decoding="async"`), cheia 1200×900 no zoom e
+  na revelação (por cima da miniatura), e a revelação pré-carrega as cheias das
+  secretas.
 - Fotos reais prontas → trocar o webfont inteiro do Tabler por SVG só dos
-  ícones usados (os 19 símbolos), pra pesar menos.
+  ícones usados (os 19 símbolos), pra pesar menos. **Ainda aberto** (fora do
+  Plano R3 executado; o placeholder ainda usa ícones do Tabler quando falta foto).
 
 ## Antes de mergear (revisão final do R2)
 

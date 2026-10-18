@@ -18,8 +18,8 @@ staged, not surreal, no text, no letters, no logos, no watermark.` (+ `No faces 
    bandeirinha de escanteio × bandeirinha de festa junina).
 4. Todas as 100 foram aproveitadas: as primeiras 61 geradas viraram duplas e 39 foram geradas pra completar.
 
-**Ordem no Flow (#):** posição da foto na ordem em que foi gerada (1 = a mais antiga). O script de importação usa
-essa coluna pra saber qual arquivo vira qual id. Os prompts das # 1–61 estão no histórico deste arquivo
+**Ordem no Flow (#):** posição da foto na ordem em que foi gerada (1 = a mais antiga). Só histórico: as fotos foram
+baixadas já com o nome do id (`p001.jpg`…), e `npm run pictures:fotos -- <pasta>` importa pelo nome. Os prompts das # 1–61 estão no histórico deste arquivo
 (commits `4f7dd1c` e `1505faa`); os das # 62–100 estão abaixo.
 
 | Tema | id | # | foto | id | # | foto |
