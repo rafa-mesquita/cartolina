@@ -64,13 +64,13 @@ baixadas já com o nome do id (`p001.jpg`…), e `npm run pictures:fotos -- <pas
 | abajur | p075 | 75 | abajur aceso | p076 | 76 | luminária de chão |
 | casa azul | p077 | 77 | fachada azul | p078 | 78 | porta azul |
 | esgrima | p079 | 79 | uniforme e máscara | p080 | 80 | dois esgrimistas duelando |
-| elefante | p081 | 81 | elefante no safari | p082 | 82 | elefante com filhote |
+| elefante | p081 | 81 | elefante no safari | p082 | 82* | elefante se molhando no rio |
 | safari | p083 | 83 | girafa | p084 | 84 | zebra |
 | feijoada | p085 | 85 | feijoada na panela de barro | p086 | 86 | prato de feijoada completa |
 | roupa dobrada | p087 | 87 | camiseta dobrada | p088 | 88 | calça jeans dobrada |
 | escolar | p089 | 89 | van escolar | p090 | 90 | ônibus escolar amarelo |
 | salgado | p091 | 91 | coxinha | p092 | 92 | pastel |
-| pão | p093 | 93 | pão francês | p094 | 94 | pão de queijo |
+| pão | p093 | 93 | pão francês | p094 | 94* | pão de queijo com cafezinho |
 | gelado | p095 | 95 | açaí | p096 | 96 | sorvete de casquinha |
 | fazenda | p097 | 97 | cavalo | p098 | 98 | vaca |
 | relógio | p099 | 99 | relógio de parede | p100 | 100 | despertador |
@@ -105,3 +105,9 @@ wall clock with a black frame on a plain white wall · 100 a classic twin-bell a
 train arriving at an empty station platform, front three-quarter view, no people on the platform.` + fim padrão +
 `No people, no faces visible.` Baixada pelo link assinado `flow-content.google` com `curl` (sem diálogo de salvar) e
 convertida com os mesmos parâmetros do `scripts/pictures-fotos.mjs`.
+
+\* **p082 e p094 refeitas (2026-10-17):** o usuário achou cada uma parecida demais com o par (elefante andando na
+savana; cestinha de pães). Prompts novos (+ fim padrão), baixadas e convertidas do mesmo jeito da p063:
+- p082: `an elephant standing in a shallow river, front view, spraying water with its trunk, lush green trees behind.`
+- p094: `a few pao de queijo cheese breads on a small white plate next to a little cup of black coffee on a white marble
+  counter, seen from directly above.`
