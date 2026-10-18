@@ -89,6 +89,15 @@ function stoneSVG(i: number): string {
 }
 const at = (q: Piece) => `translate(${q.x * W} ${q.y * H}) rotate(${q.rot})`;
 
+/** Pedras embaixo, palitos por cima: a ordem de quem não mexeu em nada (índices de [...palitos, ...pedras]). */
+const BASE_ORDER = [4, 5, 6, 7, 0, 1, 2, 3];
+/** Quem fica por cima, do fundo pra frente; ordem inválida (ou de obra antiga, sem ela) volta pra de sempre. */
+function readOrder(order: readonly number[] | undefined): number[] {
+  const n = BASE_ORDER.length;
+  const ok = Array.isArray(order) && order.length === n && new Set(order).size === n && order.every((i) => Number.isInteger(i) && i >= 0 && i < n);
+  return ok ? [...order] : [...BASE_ORDER];
+}
+
 /** Lê uma lista de peças da obra; peça inválida volta pro lugar inicial da gaveta. */
 function readPieces(list: readonly Piece[] | null | undefined, start: readonly Piece[]): Piece[] {
   return start.map((s, i) => {
@@ -107,6 +116,8 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
     ...readPieces(ok ? work.sticks : null, START.sticks),
     ...readPieces(ok ? work.stones : null, START.stones),
   ];
+  // a última peça escolhida fica por cima, na montagem e na obra (o print desenha nessa ordem)
+  const order = readOrder(ok ? work.order : undefined);
   let sel = -1;
   let drag: { i: number; pid: number; ox: number; oy: number; moved: boolean } | null = null;
   let turn: { pid: number; moved: boolean } | null = null;
@@ -133,8 +144,7 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
     g.innerHTML = i < STICKS ? stickSVG() : stoneSVG(i - STICKS);
     return g;
   });
-  // pedras embaixo, palitos por cima (a peça escolhida sobe pro topo)
-  for (const i of [4, 5, 6, 7, 0, 1, 2, 3]) layer.appendChild(gs[i]!);
+  for (const i of order) layer.appendChild(gs[i]!);
   const hd = document.createElementNS(NS, 'g');
   hd.setAttribute('class', 'pc-ks-hd');
   hd.style.display = 'none';
@@ -147,6 +157,7 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
     kit: 'sticks',
     sticks: pcs.slice(0, STICKS).map((q) => ({ x: r3(q.x), y: r3(q.y), rot: q.rot })),
     stones: pcs.slice(STICKS).map((q) => ({ x: r3(q.x), y: r3(q.y), rot: q.rot })),
+    order: [...order],
   });
   const emit = () => onChange(toWork());
 
@@ -159,7 +170,8 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
     st.textContent = n ? `na folha: ${n} de 8 ${n === 1 ? 'peça' : 'peças'}` : 'tudo na gaveta: arraste uma peça pra folha';
     st.classList.toggle('ok', n > 0);
   }
-  function choose(i: number): void {
+  /** Escolhe a peça `i` (−1 = nenhuma) e sobe ela pro topo; diz se a ordem de quem fica por cima mudou. */
+  function choose(i: number): boolean {
     if (sel >= 0) gs[sel]!.classList.remove('on');
     sel = i;
     hd.style.display = i >= 0 ? '' : 'none';
@@ -168,7 +180,13 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
       layer.appendChild(gs[i]!);
       layer.appendChild(hd);
       put(i);
+      if (order[order.length - 1] !== i) {
+        order.splice(order.indexOf(i), 1);
+        order.push(i);
+        return true;
+      }
     }
+    return false;
   }
   /** Ponteiro em unidades do viewBox. */
   function sp(e: PointerEvent): { x: number; y: number } {
@@ -192,7 +210,7 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
     }
     e.preventDefault();
     const i = Number(g.dataset.i), q = sp(e);
-    choose(i);
+    if (choose(i)) emit(); // só clicar já põe por cima (e vale na obra)
     drag = { i, pid: e.pointerId, ox: q.x - pcs[i]!.x * W, oy: q.y - pcs[i]!.y * H, moved: false };
     svg.setPointerCapture(e.pointerId);
     root.classList.add('drag');
@@ -259,15 +277,13 @@ function build(el: HTMLElement, work: Work | null, onChange: (work: Work) => voi
 function show(el: HTMLElement, work: Work): void {
   injectCSS();
   const ok = work?.kit === 'sticks';
-  const sticks = ok ? readPieces(work.sticks, START.sticks) : [];
-  const stones = ok ? readPieces(work.stones, START.stones) : [];
+  const pcs = ok ? [...readPieces(work.sticks, START.sticks), ...readPieces(work.stones, START.stones)] : [];
   let h = `<svg class="pc-ks-show" viewBox="0 0 ${W} ${H}" xmlns="${NS}">`;
-  stones.forEach((q, i) => {
-    if (onSheet(q)) h += `<g class="pc-ks-p" transform="${at(q)}">${stoneSVG(i)}</g>`;
-  });
-  sticks.forEach((q) => {
-    if (onSheet(q)) h += `<g class="pc-ks-p" transform="${at(q)}">${stickSVG()}</g>`;
-  });
+  // na mesma ordem da montagem: quem o artista escolheu por último fica por cima
+  for (const i of ok ? readOrder(work.order) : []) {
+    const q = pcs[i]!;
+    if (onSheet(q)) h += `<g class="pc-ks-p" transform="${at(q)}">${i < STICKS ? stickSVG() : stoneSVG(i - STICKS)}</g>`;
+  }
   el.innerHTML = h + '</svg>';
 }
 

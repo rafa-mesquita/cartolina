@@ -141,7 +141,16 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
   // A galeria remonta a cada rodada (`key`), então a trava zera sozinha.
   const confirmSent = useRef(false);
   const [, setSent] = useState(false);
-  const locked = !playing || g.confirmed.includes(me) || confirmSent.current;
+  const confirmedHere = me !== null && g.confirmed.includes(me);
+  const locked = !playing || confirmedHere || confirmSent.current;
+  // "Desconfirmar" mandado: o botão some até o eco (aí a galeria destrava).
+  const [undoSent, setUndoSent] = useState(false);
+  useEffect(() => {
+    // O eco do "confirmar" chegou: a visão manda daqui pra frente (e o "desconfirmar" pode destravar).
+    if (confirmedHere) confirmSent.current = false;
+    else setUndoSent(false);
+  }, [confirmedHere]);
+  useEffect(() => conn.onError(() => setUndoSent(false)), [conn]);
   const others = g.inRound.filter((p) => p !== me && Object.hasOwn(g.works, p));
   const [picked, setPicked] = useState<string | null>(null);
   const sel = locked ? null : picked !== null && others.includes(picked) ? picked : null;
@@ -217,6 +226,11 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
     setSent(true);
     setFly(null);
     conn.sendAction({ type: 'confirm' });
+  }
+  function unconfirm() {
+    if (!confirmedHere || undoSent) return;
+    setUndoSent(true);
+    conn.sendAction({ type: 'unconfirm' });
   }
   // Um zoom de cada vez: com a obra grande aberta a lupinha das fotos não abre outra por cima (e vice-versa).
   function zoomPhoto(coord: Coord) {
@@ -514,6 +528,11 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
           {!locked && (
             <button className="pc-btn-big" type="button" onClick={confirm}>
               confirmar palpites
+            </button>
+          )}
+          {confirmedHere && !undoSent && (
+            <button className="pc-btn-soft" type="button" title="volta a mexer nos palpites (a contagem não para)" onClick={unconfirm}>
+              desconfirmar
             </button>
           )}
         </div>

@@ -138,6 +138,19 @@ describe('show dos kits (jsdom)', () => {
     KITS_UI.sticks.show(el, { kit: 'sticks', sticks: [p(0.5), p(1.2), p(1.2), p(1.2)], stones: [p(-0.2), p(1.3), p(1.3), p(0.3)] });
     expect(el.querySelectorAll('g')).toHaveLength(2);
   });
+
+  it('sticks: desenha na ordem de quem fica por cima (sem ordem: pedras embaixo, palitos em cima)', () => {
+    const p = { x: 0.5, y: 0.5, rot: 0 };
+    const base = { kit: 'sticks' as const, sticks: [p, p, p, p], stones: [p, p, p, p] };
+    const kinds = () => [...el.querySelectorAll('g')].map((g) => g.firstElementChild!.tagName);
+    KITS_UI.sticks.show(el, base);
+    expect(kinds()).toEqual(['ellipse', 'ellipse', 'ellipse', 'ellipse', 'rect', 'rect', 'rect', 'rect']);
+    KITS_UI.sticks.show(el, { ...base, order: [0, 1, 2, 4, 5, 6, 3, 7] });
+    expect(kinds()).toEqual(['rect', 'rect', 'rect', 'ellipse', 'ellipse', 'ellipse', 'rect', 'ellipse']);
+    // ordem com repetição (obra torta): volta pra de sempre
+    KITS_UI.sticks.show(el, { ...base, order: [0, 0, 0, 0, 0, 0, 0, 0] });
+    expect(kinds().at(-1)).toBe('rect');
+  });
 });
 
 describe('build dos kits (jsdom)', () => {
@@ -215,6 +228,29 @@ describe('build dos kits (jsdom)', () => {
     expect(out.sticks.slice(1)).toEqual(work.sticks.slice(1));
     expect(out.stones).toEqual(work.stones);
     bench.destroy();
+  });
+
+  it('sticks: clicar numa pedra põe ela por cima, na montagem e na obra', () => {
+    const onChange = vi.fn();
+    const bench = KITS_UI.sticks.build(el, null, onChange);
+    const stone = el.querySelector('.pc-ks-p[data-i="5"] ellipse')!;
+    const svg = el.querySelector('svg')!;
+    svg.setPointerCapture = () => {};
+    svg.getScreenCTM = (() => ({ inverse: () => ({}) })) as unknown as typeof svg.getScreenCTM;
+    // jsdom não tem DOMPoint: o ponteiro vira o ponto (0, 0) do desenho
+    vi.stubGlobal('DOMPoint', class { matrixTransform() { return { x: 0, y: 0 }; } });
+    fireEvent.pointerDown(stone, { button: 0, pointerId: 1, clientX: 0, clientY: 0 });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect((onChange.mock.calls[0]![0] as WorkOf<'sticks'>).order).toEqual([4, 6, 7, 0, 1, 2, 3, 5]);
+    const layer = el.querySelector('.pc-ks-layer')!;
+    const pieces = [...layer.querySelectorAll<SVGGElement>('.pc-ks-p')].map((g) => g.dataset.i);
+    expect(pieces.at(-1)).toBe('5');
+    // clicar de novo na mesma peça não manda nada (já está por cima)
+    fireEvent.pointerUp(svg, { pointerId: 1 });
+    fireEvent.pointerDown(stone, { button: 0, pointerId: 2, clientX: 0, clientY: 0 });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    bench.destroy();
+    vi.unstubAllGlobals();
   });
 
   it('sticks: o limite do arraste fica dentro do −0,5/1,5 do schema', () => {

@@ -91,6 +91,10 @@
 .pictures .pc-seal .nm { font: 700 12.5px/1.1 var(--ui); }
 .pictures .pc-seal .stt { display: block; font: 500 10.5px/1.2 var(--ui); color: var(--ink-soft); }
 .pictures .pc-seal .stt.ok { color: var(--ok); font-weight: 700; }
+/* placar sempre à vista: número grande à direita do nome */
+.pictures .pc-seal .pt { display: flex; flex-direction: column; align-items: center; margin-left: 4px; padding-left: 8px; border-left: 1px dashed rgba(125, 106, 88, .35); }
+.pictures .pc-seal .pt b { font: 700 21px/1 var(--ui); color: var(--blue); }
+.pictures .pc-seal .pt small { font: 600 9.5px/1.1 var(--ui); color: var(--ink-soft); }
 .pictures .pc-clock {
   font: 700 17px/1 var(--ui); color: var(--blue); padding: 7px 14px; border: 1.5px solid var(--blue); border-radius: 999px;
   background: rgba(246, 238, 221, .7); white-space: nowrap;
@@ -484,6 +488,9 @@
 .pictures .pc-rs-g .gc { font: 700 13px/1 var(--ui); color: var(--blue); letter-spacing: .3px; }
 .pictures .pc-rs-g.ok { box-shadow: 0 0 0 1.5px var(--ok); }
 .pictures .pc-rs-g.no { filter: grayscale(1); opacity: .5; }
+/* chip com palpite: botão que abre a foto votada */
+.pictures button.pc-rs-g { border: 0; margin: 0; font: inherit; color: inherit; cursor: zoom-in; transition: opacity .12s, filter .12s, box-shadow .12s; }
+.pictures button.pc-rs-g:hover, .pictures button.pc-rs-g:focus-visible { opacity: 1; filter: none; box-shadow: 0 0 0 2px var(--blue); outline: none; }
 .pictures .pc-rs-g .tick {
   position: absolute; right: -6px; top: -7px; width: 17px; height: 17px; border-radius: 50%; background: var(--ok); color: var(--paper);
   display: grid; place-items: center; font: 700 10px/1 var(--ui); box-shadow: var(--shadow);

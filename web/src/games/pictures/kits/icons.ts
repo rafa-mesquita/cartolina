@@ -2,8 +2,8 @@ import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import { ICON_NAMES, ICONS_MAX, ICONS_MIN, type WorkOf } from '@cartolina/shared';
 import type { KitModule } from './types';
 
-/* Kit "símbolos": 19 cartas com ícone; a obra é a fila de 2 a 5 cartas lado a lado.
-   Obra = {kit:'icons', ids:number[]} (0–18, sem repetir, até 5; pronto pede 2). */
+/* Kit "símbolos": 20 cartas com ícone (as 19 do original + o vento), duas fileiras de 10; a obra é a fila de 2 a 5
+   cartas lado a lado. Obra = {kit:'icons', ids:number[]} (0–19, sem repetir, até 5; pronto pede 2). */
 
 const TILT = [-2.2, 1.4, -0.8, 2, -1.5];
 

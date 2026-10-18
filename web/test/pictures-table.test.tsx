@@ -153,6 +153,17 @@ describe('mesa do Retratim: montagem', () => {
     expect(seal('p1')).toBe('pronto ✓');
   });
 
+  it('selinhos: os pontos ficam à vista durante a rodada, junto com o status', () => {
+    const v = picturesView(started(3), 'p0');
+    const scored: PicturesRoomView = { ...v, game: { ...v.game, scores: { p0: 4, p1: 1, p2: 0 } } };
+    const { container } = render(<PicturesTable view={scored} conn={conn()} serverOffset={0} />);
+    const pt = (p: string) => [...container.querySelectorAll(`.pc-seal[data-p="${p}"] .pt > *`)].map((e) => e.textContent).join(' ');
+    expect(pt('p0')).toBe('4 pts');
+    expect(pt('p1')).toBe('1 pt');
+    expect(pt('p2')).toBe('0 pts');
+    expect(container.querySelector('.pc-seal[data-p="p0"] .stt')!.textContent).toBe('montando…');
+  });
+
   it('só o host vê "apressar" (manda hurry); com a contagem correndo, some e aparece o relógio', () => {
     const c = conn();
     const room = started(3);
@@ -608,6 +619,30 @@ describe('mesa do Retratim: galeria de palpites (adesivos)', () => {
   });
 });
 
+describe('mesa do Retratim: desconfirmar palpites', () => {
+  it('depois de confirmar aparece "desconfirmar"; o eco destrava a galeria pra mexer de novo', () => {
+    const c = conn();
+    let room = guessing(3);
+    const { rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(screen.queryByRole('button', { name: 'desconfirmar' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar palpites' }));
+    room = play(room, 'p0', { type: 'confirm' });
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(screen.queryByRole('button', { name: 'confirmar palpites' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'desconfirmar' }));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'unconfirm' });
+    // até o eco, o botão some (sem mandar duas vezes)
+    expect(screen.queryByRole('button', { name: 'desconfirmar' })).toBeNull();
+    room = play(room, 'p0', { type: 'unconfirm' });
+    rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    expect(screen.getByRole('button', { name: 'confirmar palpites' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'adesivo de P1' }));
+    expect(screen.getByRole('button', { name: 'adesivo de P1' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'confirmar palpites' }));
+    expect(c.sendAction.mock.calls.filter(([a]) => a.type === 'confirm')).toHaveLength(2);
+  });
+});
+
 describe('mesa do Retratim: palpite perdido e avisos da última rodada', () => {
   const photo = (container: HTMLElement, coord: string) => container.querySelector<HTMLElement>(`.pc-photo[data-coord="${coord}"]`)!;
 
@@ -912,7 +947,8 @@ describe('mesa do Retratim: foco e teclado', () => {
 
 describe('mesa do Retratim: revelação narrada', () => {
   const tick = (ms: number) => rtlAct(() => vi.advanceTimersByTime(ms));
-  const seal = (c: HTMLElement, p: string) => c.querySelector(`.pc-seal[data-p="${p}"] .stt`)!.textContent;
+  /** Os pontos do selinho, "3 pts" (o número grande e a palavrinha embaixo). */
+  const seal = (c: HTMLElement, p: string) => [...c.querySelectorAll(`.pc-seal[data-p="${p}"] .pt > *`)].map((e) => e.textContent).join(' ');
   const caption = (c: HTMLElement) => c.querySelector('.pc-rv-t')!.textContent;
 
   it('passo a passo: a obra cresce, as fitinhas, a foto sai da grade, ✓ e os pontos sobem nos selinhos', () => {
@@ -1071,6 +1107,20 @@ describe('mesa do Retratim: revelação narrada', () => {
     // rodinha pra cima numa obra também abre
     fireEvent.wheel(container.querySelector(`.pc-rs-page[data-artist="${a1}"] .pc-rs-work`)!, { deltaY: -100 });
     expect(screen.getByRole('dialog', { name: `obra de ${nm(a1)}` })).toBeTruthy();
+  });
+
+  it('no placar, clicar no chip de quem palpitou abre a foto em que a pessoa votou', () => {
+    const v = picturesView(revealed(3), 'p0');
+    const r = v.game.result!;
+    const { container } = render(<PicturesTable view={v} conn={conn()} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    const chips = [...container.querySelectorAll<HTMLButtonElement>('button.pc-rs-g')];
+    expect(chips.length).toBeGreaterThan(0);
+    const chip = chips.find((b) => b.classList.contains('no')) ?? chips[0]!;
+    const artist = chip.closest<HTMLElement>('.pc-rs-page')!.dataset.artist!;
+    const voted = r.guesses[chip.dataset.g!]![artist]!;
+    fireEvent.click(chip);
+    expect(screen.getByRole('dialog', { name: `foto ${voted}` })).toBeTruthy();
   });
 
   it('no placar, a foto verdadeira abre o zoom da mesa com a grade da rodada', () => {

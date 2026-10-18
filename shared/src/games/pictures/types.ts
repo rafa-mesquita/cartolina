@@ -80,6 +80,8 @@ export type PicturesAction =
   | { type: 'ready'; on: boolean; work?: Work }
   | { type: 'guess'; artist: string; coord: Coord | null }
   | { type: 'confirm' }
+  /** Volta atrás no "confirmar" (a fase de palpites ainda aberta); a contagem que já começou continua. */
+  | { type: 'unconfirm' }
   | { type: 'hurry' }
   | { type: 'next' }
   | { type: 'again' }

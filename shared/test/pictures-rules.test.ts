@@ -226,6 +226,28 @@ describe('Retratim: palpites', () => {
     s = act(s, 'p1', { type: 'confirm' }, ctx);
     expect(s.countdownEndsAt).toBe(T0 + PICTURES_COUNTDOWN_MS);
   });
+
+  it('desconfirmar volta a deixar palpitar; a contagem que começou continua; sem ter confirmado não muda nada', () => {
+    const { state, ctx } = started(4);
+    let s = toGuessingPhase(state, ctx);
+    expect(applyPicturesAction(s, 'p0', { type: 'unconfirm' }, ctx)).toEqual({ ok: true, state: s });
+    s = act(s, 'p0', { type: 'confirm' }, ctx);
+    s = act(s, 'p1', { type: 'confirm' }, ctx);
+    expect(s.countdownEndsAt).toBe(T0 + PICTURES_COUNTDOWN_MS);
+    s = act(s, 'p0', { type: 'unconfirm' }, ctx);
+    expect(s.confirmed).toEqual(['p1']);
+    expect(s.countdownEndsAt).toBe(T0 + PICTURES_COUNTDOWN_MS);
+    s = act(s, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' }, ctx);
+    expect(s.guesses.p0).toEqual({ p1: 'A1' });
+    s = act(s, 'p0', { type: 'confirm' }, ctx);
+    expect(s.confirmed).toEqual(['p1', 'p0']);
+  });
+
+  it('depois que os palpites fecham não dá pra desconfirmar', () => {
+    const { state, ctx } = started(3);
+    const s = toRevealPhase(toGuessingPhase(state, ctx), ctx, rightGuess);
+    expect(applyPicturesAction(s, 'p0', { type: 'unconfirm' }, ctx)).toEqual({ ok: false, error: 'bad_phase' });
+  });
 });
 
 describe('Retratim: revelação, rodadas e fim', () => {
