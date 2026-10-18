@@ -25,7 +25,9 @@ const sounds = () => vi.mocked(playDixitSound).mock.calls.map((c) => c[0]);
 const enter = (label: string) => fireEvent.keyDown(screen.getByRole('button', { name: label }), { key: 'Enter' });
 const NEED_CLUE = 'Antes de jogar a carta, escreva a dica ou marque “vou falar na call”.';
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  vi.useFakeTimers();
+});
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -33,6 +35,20 @@ afterEach(() => {
 });
 
 describe('mesa do Diquisti: narrar', () => {
+  it('o quadro de narrar fica no meio só pra quem narra, e só enquanto escreve a dica', () => {
+    const room = started(4);
+    const st = stateOf(room).storyteller!;
+    const panel = () => screen.getByRole('region', { name: 'sua vez' });
+    const { container, rerender } = render(<DixitTable view={dixitView(room, st)} conn={conn()} />);
+    expect(panel().classList.contains('center')).toBe(true);
+    expect(container.querySelector('.dx-felt-msg')?.classList.contains('low')).toBe(true);
+    rerender(<DixitTable view={dixitView(room, othersOf(room)[0]!)} conn={conn()} />);
+    expect(panel().classList.contains('center')).toBe(false);
+    expect(container.querySelector('.dx-felt-msg')?.classList.contains('low')).toBe(false);
+    rerender(<DixitTable view={dixitView(told(4), st)} conn={conn()} />);
+    expect(panel().classList.contains('center')).toBe(false);
+  });
+
   it('quem narra escreve a dica e solta a carta (Enter): manda tell com a dica', () => {
     const room = started(4);
     const st = stateOf(room).storyteller!;

@@ -34,7 +34,7 @@ interface Props {
 const SHAKE_MS = 450;
 const NEED_CLUE_MSG = 'Antes de jogar a carta, escreva a dica ou marque “vou falar na call”.';
 
-/** Canto inferior direito: o que fazer agora. */
+/** Canto inferior direito: o que fazer agora. Quem narra escreve a dica com o quadro no meio do feltro. */
 export function ActionPanel({ view, need, pending, revealDone, host, name, clue, onClue, spoken, onSpoken, needClueTick, actions }: Props) {
   const g = view.game, me = view.you;
   const errId = useId();
@@ -94,6 +94,8 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
   const over = isOver(g.scores, g.target);
   const clueWarn = warned && !clueReady;
   const voteWarn = tried && !g.myVote;
+  /** Narrador escrevendo a dica: o quadro vai pro meio do feltro, acima da mão. */
+  const center = !g.paused && playing && g.phase === 'storytelling' && iAmTeller;
   /** Contêiner fixo (só o texto muda) pro leitor de tela anunciar o aviso. */
   const alertBox = (text: string) => (
     <div className="dx-err" role="alert" id={errId}>
@@ -256,7 +258,7 @@ export function ActionPanel({ view, need, pending, revealDone, host, name, clue,
     );
   }
   return (
-    <section className="dx-panel" aria-label="sua vez">
+    <section className={center ? 'dx-panel center' : 'dx-panel'} aria-label="sua vez">
       {body}
     </section>
   );
