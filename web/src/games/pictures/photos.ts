@@ -1,21 +1,50 @@
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
-import { PICTURES_DECK, PICTURES_THEMES, type PicturesTheme } from '@cartolina/shared';
+import { PICTURES_DECK, PICTURES_THEME_NAMES, PICTURES_THEMES, type PicturesTheme } from '@cartolina/shared';
 
-/* Fotos provisórias: ícone do tema sobre cor, variando por foto. A foto real, quando existir, ganha. */
+/* Foto provisória (quando falta a real): ícone sobre cor, variando por foto. A foto real, quando existe, fica por cima. */
 
-/** Cor-base e família de ícones (Tabler Icons, sem o prefixo `ti-`) de cada tema. */
-export const PHOTO_THEMES: Record<PicturesTheme, { hue: number; icons: readonly string[] }> = {
-  bichos: { hue: 28, icons: ['dog', 'cat', 'fish', 'butterfly', 'feather', 'paw'] },
-  casa: { hue: 200, icons: ['armchair', 'lamp', 'cup', 'bed', 'key', 'clock'] },
-  comida: { hue: 8, icons: ['pizza', 'apple', 'bread', 'ice-cream', 'coffee', 'cheese'] },
-  lugares: {
-    hue: 260,
-    icons: ['building-lighthouse', 'building-church', 'building-bridge', 'tent', 'building-castle', 'home'],
-  },
-  transporte: { hue: 220, icons: ['car', 'bike', 'plane', 'bus', 'sailboat', 'train'] },
-  natureza: { hue: 110, icons: ['tree', 'mountain', 'flower', 'leaf', 'sun', 'cloud-rain'] },
-  gente: { hue: 330, icons: ['hand-stop', 'walk', 'run', 'swimming', 'yoga', 'hand-finger'] },
+/** Ícones (Tabler Icons, sem o prefixo `ti-`) de alguns temas. Tema fora daqui usa o genérico. */
+const THEME_ICONS: Partial<Record<PicturesTheme, readonly string[]>> = {
+  cachorro: ['dog', 'paw'],
+  caneca: ['mug', 'cup'],
+  gato: ['cat', 'paw'],
+  pizza: ['pizza'],
+  farol: ['building-lighthouse'],
+  bicicleta: ['bike'],
+  arvore: ['tree', 'trees'],
+  praia: ['beach', 'umbrella'],
+  floresta: ['trees', 'tree'],
+  'chao-da-mata': ['mushroom', 'leaf'],
+  bola: ['ball-football'],
+  campo: ['soccer-field'],
+  calcados: ['shoe'],
+  bandeirinha: ['flag'],
+  aniversario: ['cake', 'gift'],
+  festa: ['balloon', 'gift', 'confetti'],
+  fogo: ['flame', 'campfire'],
+  neve: ['snowflake'],
+  'no-cabide': ['hanger'],
+  janela: ['window'],
+  trem: ['train'],
+  onibus: ['bus'],
+  sinalizacao: ['traffic-lights'],
+  abajur: ['lamp', 'lamp-2'],
+  esgrima: ['swords'],
+  'roupa-dobrada': ['shirt'],
+  escolar: ['bus'],
+  pao: ['bread', 'baguette'],
+  gelado: ['ice-cream', 'ice-cream-2'],
+  fazenda: ['horse'],
+  relogio: ['clock', 'alarm'],
 };
+
+/** Ícone genérico (tema sem ícone próprio). */
+export const PHOTO_FALLBACK_ICONS: readonly string[] = ['photo'];
+
+/** Cor-base e família de ícones de cada tema (a cor gira pelo círculo, um tema longe do vizinho). */
+export const PHOTO_THEMES: Record<PicturesTheme, { hue: number; icons: readonly string[] }> = Object.fromEntries(
+  PICTURES_THEMES.map((theme, i) => [theme, { hue: Math.round(i * 137.5) % 360, icons: THEME_ICONS[theme] ?? PHOTO_FALLBACK_ICONS }]),
+) as Record<PicturesTheme, { hue: number; icons: readonly string[] }>;
 
 export interface PhotoPlaceholder {
   theme: PicturesTheme;
@@ -48,6 +77,11 @@ export function photoTheme(id: string): PicturesTheme {
   return byId.get(id)?.theme ?? PICTURES_THEMES[0];
 }
 
+/** Nome do tema da foto, pra mostrar (`alt`, legenda). */
+export function photoThemeName(id: string): string {
+  return PICTURES_THEME_NAMES[photoTheme(id)];
+}
+
 /** Como desenhar a foto provisória `id` (pura: o mesmo id dá sempre o mesmo desenho). */
 export function photoPlaceholder(id: string): PhotoPlaceholder {
   const theme = photoTheme(id), t = PHOTO_THEMES[theme], h = hash(id);
@@ -63,7 +97,7 @@ export function photoPlaceholder(id: string): PhotoPlaceholder {
     rot: ((h >> 17) % 31) - 15,
     dx: ((h >> 21) % 30) - 15,
     dy: ((h >> 25) % 20) - 10,
-    label: `${theme} · ${id.slice(1)}`,
+    label: `${PICTURES_THEME_NAMES[theme]} · ${id.slice(1)}`,
   };
 }
 

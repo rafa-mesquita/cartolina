@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { COPIES_PER_COORD, drawSecrets, fullBag } from '../src/games/pictures/bag';
-import { drawGrid } from '../src/games/pictures/grid';
-import { PICTURES_DECK, PICTURES_THEMES } from '../src/games/pictures/photos';
+import { GRID_PER_THEME, GRID_THEMES, drawGrid } from '../src/games/pictures/grid';
+import { PICTURES_DECK, PICTURES_THEME_NAMES, PICTURES_THEMES } from '../src/games/pictures/photos';
 import { kitFor, kitsForRound } from '../src/games/pictures/rotation';
 import { COORDS, PICTURES_COUNTDOWN_MS, PICTURES_MAX_PLAYERS, PICTURES_MIN_PLAYERS, PICTURES_ROUNDS } from '../src/games/pictures/types';
 import { KITS } from '../src/games/pictures/works';
@@ -20,31 +20,58 @@ describe('Retratim: constantes e coordenadas', () => {
 });
 
 describe('Retratim: baralho e grade', () => {
-  it('100 fotos com ids p001…p100, todas com tema conhecido, pelo menos 4 por tema', () => {
+  it('100 fotos com ids p001…p100, únicos e em ordem', () => {
     expect(PICTURES_DECK).toHaveLength(100);
-    expect(PICTURES_DECK[0]!.id).toBe('p001');
-    expect(PICTURES_DECK[99]!.id).toBe('p100');
+    expect(PICTURES_DECK.map((p) => p.id)).toEqual(Array.from({ length: 100 }, (_, i) => `p${String(i + 1).padStart(3, '0')}`));
     expect(new Set(PICTURES_DECK.map((p) => p.id)).size).toBe(100);
-    for (const t of PICTURES_THEMES) expect(PICTURES_DECK.filter((p) => p.theme === t).length).toBeGreaterThanOrEqual(4);
   });
 
-  it('a grade tem 16 fotos diferentes, de 4 temas com 4 fotos cada', () => {
+  it('50 temas, cada um com exatamente 2 fotos (a dupla p001+p002, p003+p004…)', () => {
+    expect(PICTURES_THEMES).toHaveLength(50);
+    expect(new Set(PICTURES_THEMES).size).toBe(50);
+    for (const [t, theme] of PICTURES_THEMES.entries()) {
+      expect(PICTURES_DECK.filter((p) => p.theme === theme).map((p) => p.id)).toEqual([
+        `p${String(2 * t + 1).padStart(3, '0')}`,
+        `p${String(2 * t + 2).padStart(3, '0')}`,
+      ]);
+    }
+    expect([PICTURES_THEMES[0], PICTURES_THEMES[49]]).toEqual(['cachorro', 'relogio']);
+  });
+
+  it('temas são slugs ASCII estáveis e cada um tem nome bonito em português', () => {
+    for (const t of PICTURES_THEMES) {
+      expect(t).toMatch(/^[a-z]+(-[a-z]+)*$/);
+      expect(PICTURES_THEME_NAMES[t]).toBeTruthy();
+    }
+    expect(Object.keys(PICTURES_THEME_NAMES)).toHaveLength(50);
+    expect(PICTURES_THEME_NAMES['chao-da-mata']).toBe('chão da mata');
+    expect(PICTURES_THEME_NAMES.onibus).toBe('ônibus');
+  });
+
+  it('a grade tem 16 fotos diferentes, de 8 temas com 2 fotos cada', () => {
+    expect([GRID_THEMES, GRID_PER_THEME]).toEqual([8, 2]);
     const themeOf = new Map(PICTURES_DECK.map((p) => [p.id, p.theme]));
-    for (let seed = 1; seed <= 20; seed++) {
+    for (let seed = 1; seed <= 30; seed++) {
       const grid = drawGrid(mulberry32(seed));
       expect(grid).toHaveLength(16);
       expect(new Set(grid).size).toBe(16);
       const count = new Map<string, number>();
       for (const id of grid) count.set(themeOf.get(id)!, (count.get(themeOf.get(id)!) ?? 0) + 1);
-      expect([...count.values()]).toEqual([4, 4, 4, 4]);
+      expect([...count.values()]).toEqual([2, 2, 2, 2, 2, 2, 2, 2]);
     }
   });
 
-  it('baralho com menos de 4 temas utilizáveis: a grade se recusa a sair incompleta', () => {
-    const deck = PICTURES_THEMES.slice(0, 3).flatMap((theme, t) =>
-      Array.from({ length: 5 }, (_, i) => ({ id: `t${t}-${i}`, theme })),
+  it('baralho com menos de 8 temas de 2 fotos: a grade se recusa a sair incompleta', () => {
+    // 7 temas com 2 fotos + 1 tema com uma só: não dá
+    const short = PICTURES_THEMES.slice(0, 8).flatMap((theme, t) =>
+      Array.from({ length: t === 7 ? 1 : 2 }, (_, i) => ({ id: `t${t}-${i}`, theme })),
     );
-    expect(() => drawGrid(mulberry32(1), deck)).toThrow();
+    expect(() => drawGrid(mulberry32(1), short)).toThrow();
+    // com 8 temas de 2 fotos, dá
+    const enough = PICTURES_THEMES.slice(0, 8).flatMap((theme, t) =>
+      Array.from({ length: 2 }, (_, i) => ({ id: `t${t}-${i}`, theme })),
+    );
+    expect(drawGrid(mulberry32(1), enough)).toHaveLength(16);
   });
 
   it('a grade muda com a semente', () => {

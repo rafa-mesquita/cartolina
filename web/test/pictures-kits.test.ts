@@ -1,4 +1,4 @@
-import { KITS, PICTURES_DECK, isBlankWork, mulberry32, readyError, workError, workSchema, type WorkOf } from '@cartolina/shared';
+import { KITS, PICTURES_DECK, PICTURES_THEME_NAMES, PICTURES_THEMES, isBlankWork, mulberry32, readyError, workError, workSchema, type WorkOf } from '@cartolina/shared';
 import { fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { KITS_UI } from '../src/games/pictures/kits';
@@ -6,7 +6,7 @@ import { blocks } from '../src/games/pictures/kits/blocks';
 import { cubes } from '../src/games/pictures/kits/cubes';
 import { LIM } from '../src/games/pictures/kits/sticks';
 import { ROPES, chainLength, dragPoint, makeChain, resample, SHEET_H, SHEET_W } from '../src/games/pictures/kits/laces';
-import { PHOTO_THEMES, PICTURES_PHOTOS_READY, photoPlaceholder, photoSrc, photoTheme } from '../src/games/pictures/photos';
+import { PHOTO_FALLBACK_ICONS, PHOTO_THEMES, PICTURES_PHOTOS_READY, photoPlaceholder, photoSrc, photoTheme } from '../src/games/pictures/photos';
 import { randomWork } from '../src/games/pictures/random';
 import { picturesView, revealed, stateOf } from './pictures-fixtures';
 
@@ -291,8 +291,17 @@ describe('fotos provisórias', () => {
       expect(photoTheme(id)).toBe(theme);
       expect(PHOTO_THEMES[theme].icons).toContain(ph.icon);
       expect(ph.hue).toBe(PHOTO_THEMES[theme].hue);
-      expect(ph.label).toBe(`${theme} · ${id.slice(1)}`);
+      expect(ph.label).toBe(`${PICTURES_THEME_NAMES[theme]} · ${id.slice(1)}`);
     }
+  });
+
+  it('todo tema tem cor e ícone; tema sem ícone próprio cai no genérico', () => {
+    for (const t of PICTURES_THEMES) {
+      expect(PHOTO_THEMES[t].icons.length).toBeGreaterThan(0);
+      expect(PHOTO_THEMES[t].hue).toBeGreaterThanOrEqual(0);
+    }
+    expect(PHOTO_THEMES.locomotiva.icons).toEqual(PHOTO_FALLBACK_ICONS);
+    expect(PHOTO_THEMES.gato.icons).toContain('cat');
   });
 
   it('fotos variam entre si (não é tudo igual)', () => {

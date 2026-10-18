@@ -3,5 +3,5 @@ export { applyPicturesAction, initialPicturesState, settlePictures } from '../..
 export { picturesViewFor } from '../../shared/src/games/pictures/view';
 export { picturesActionSchema } from '../../shared/src/games/pictures/schema';
 export { COORDS, PICTURES_COUNTDOWN_MS, PICTURES_ROUNDS } from '../../shared/src/games/pictures/types';
-export { PICTURES_DECK } from '../../shared/src/games/pictures/photos';
+export { PICTURES_DECK, PICTURES_THEME_NAMES } from '../../shared/src/games/pictures/photos';
 export { BLOCK_SHAPES, ICON_COUNT, KITS, isBlankWork, readyError } from '../../shared/src/games/pictures/works';

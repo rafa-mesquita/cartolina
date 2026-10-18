@@ -28,6 +28,7 @@ var Retratim = (() => {
     PICTURES_COUNTDOWN_MS: () => PICTURES_COUNTDOWN_MS,
     PICTURES_DECK: () => PICTURES_DECK,
     PICTURES_ROUNDS: () => PICTURES_ROUNDS,
+    PICTURES_THEME_NAMES: () => PICTURES_THEME_NAMES,
     applyPicturesAction: () => applyPicturesAction,
     initialPicturesState: () => initialPicturesState,
     isBlankWork: () => isBlankWork,
@@ -89,23 +90,121 @@ var Retratim = (() => {
   }
 
   // shared/src/games/pictures/photos.ts
-  var PICTURES_THEMES = ["bichos", "casa", "comida", "lugares", "transporte", "natureza", "gente"];
-  var PER_THEME = {
-    bichos: 15,
-    casa: 14,
-    comida: 14,
-    lugares: 15,
-    transporte: 14,
-    natureza: 14,
-    gente: 14
+  var PICTURES_THEMES = [
+    "cachorro",
+    "caneca",
+    "gato",
+    "pizza",
+    "farol",
+    "bicicleta",
+    "arvore",
+    "maos",
+    "praia",
+    "beira-mar",
+    "brinquedo-de-praia",
+    "areia",
+    "floresta",
+    "chao-da-mata",
+    "mata",
+    "cabana",
+    "visto-de-baixo",
+    "bola",
+    "campo",
+    "calcados",
+    "luvas",
+    "futebol",
+    "bandeirinha",
+    "aniversario",
+    "festa",
+    "doces",
+    "fogo",
+    "balada",
+    "neve",
+    "no-cabide",
+    "janela",
+    "trem",
+    "trilhos",
+    "locomotiva",
+    "sinalizacao",
+    "estacao",
+    "onibus",
+    "abajur",
+    "casa-azul",
+    "esgrima",
+    "elefante",
+    "safari",
+    "feijoada",
+    "roupa-dobrada",
+    "escolar",
+    "salgado",
+    "pao",
+    "gelado",
+    "fazenda",
+    "relogio"
+  ];
+  var PICTURES_THEME_NAMES = {
+    cachorro: "cachorro",
+    caneca: "caneca",
+    gato: "gato",
+    pizza: "pizza",
+    farol: "farol",
+    bicicleta: "bicicleta",
+    arvore: "\xE1rvore",
+    maos: "m\xE3os",
+    praia: "praia",
+    "beira-mar": "beira-mar",
+    "brinquedo-de-praia": "brinquedo de praia",
+    areia: "areia",
+    floresta: "floresta",
+    "chao-da-mata": "ch\xE3o da mata",
+    mata: "mata",
+    cabana: "cabana",
+    "visto-de-baixo": "visto de baixo",
+    bola: "bola",
+    campo: "campo",
+    calcados: "cal\xE7ados",
+    luvas: "luvas",
+    futebol: "futebol",
+    bandeirinha: "bandeirinha",
+    aniversario: "anivers\xE1rio",
+    festa: "festa",
+    doces: "doces",
+    fogo: "fogo",
+    balada: "balada",
+    neve: "neve",
+    "no-cabide": "no cabide",
+    janela: "janela",
+    trem: "trem",
+    trilhos: "trilhos",
+    locomotiva: "locomotiva",
+    sinalizacao: "sinaliza\xE7\xE3o",
+    estacao: "esta\xE7\xE3o",
+    onibus: "\xF4nibus",
+    abajur: "abajur",
+    "casa-azul": "casa azul",
+    esgrima: "esgrima",
+    elefante: "elefante",
+    safari: "safari",
+    feijoada: "feijoada",
+    "roupa-dobrada": "roupa dobrada",
+    escolar: "escolar",
+    salgado: "salgado",
+    pao: "p\xE3o",
+    gelado: "gelado",
+    fazenda: "fazenda",
+    relogio: "rel\xF3gio"
   };
+  var PICTURES_PER_THEME = 2;
   var PICTURES_DECK = PICTURES_THEMES.flatMap(
-    (theme) => Array.from({ length: PER_THEME[theme] }, () => theme)
-  ).map((theme, i) => ({ id: `p${String(i + 1).padStart(3, "0")}`, theme }));
+    (theme, t) => Array.from({ length: PICTURES_PER_THEME }, (_, k) => ({
+      id: `p${String(t * PICTURES_PER_THEME + k + 1).padStart(3, "0")}`,
+      theme
+    }))
+  );
 
   // shared/src/games/pictures/grid.ts
-  var GRID_THEMES = 4;
-  var GRID_PER_THEME = 4;
+  var GRID_THEMES = 8;
+  var GRID_PER_THEME = 2;
   function drawGrid(rng, deck = PICTURES_DECK) {
     const byTheme = /* @__PURE__ */ new Map();
     for (const p of deck) byTheme.set(p.theme, [...byTheme.get(p.theme) ?? [], p.id]);
@@ -113,7 +212,9 @@ var Retratim = (() => {
       rng,
       [...byTheme.keys()].filter((t) => byTheme.get(t).length >= GRID_PER_THEME)
     ).slice(0, GRID_THEMES);
-    if (themes.length < GRID_THEMES) throw new Error("drawGrid: o baralho precisa de 4 temas com pelo menos 4 fotos");
+    if (themes.length < GRID_THEMES) {
+      throw new Error(`drawGrid: o baralho precisa de ${GRID_THEMES} temas com pelo menos ${GRID_PER_THEME} fotos`);
+    }
     const picked = themes.flatMap((t) => shuffle(rng, byTheme.get(t)).slice(0, GRID_PER_THEME));
     return shuffle(rng, picked);
   }

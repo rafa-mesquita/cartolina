@@ -25,8 +25,15 @@ export { dixit, dixitViewFor } from './games/dixit/view';
 export { dixitActionSchema } from './games/dixit/schema';
 export * from './games/pictures/types';
 export * from './games/pictures/works';
-export { PICTURES_DECK, PICTURES_THEMES, type PicturesPhoto, type PicturesTheme } from './games/pictures/photos';
-export { drawGrid } from './games/pictures/grid';
+export {
+  PICTURES_DECK,
+  PICTURES_PER_THEME,
+  PICTURES_THEME_NAMES,
+  PICTURES_THEMES,
+  type PicturesPhoto,
+  type PicturesTheme,
+} from './games/pictures/photos';
+export { GRID_PER_THEME, GRID_THEMES, drawGrid } from './games/pictures/grid';
 export { kitFor, kitsForRound } from './games/pictures/rotation';
 export { scorePicturesRound } from './games/pictures/scoring';
 export { applyPicturesAction, initialPicturesState, settlePictures } from './games/pictures/rules';
