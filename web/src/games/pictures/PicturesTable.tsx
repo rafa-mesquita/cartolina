@@ -149,33 +149,33 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
           <Building view={view} conn={conn} onZoom={openZoom} onWarn={warn} serverOffset={serverOffset} />
         ) : g.phase === 'guessing' ? (
           <Gallery key={g.round} view={view} conn={conn} zoomOpen={zoomAt !== null} onZoom={openZoom} />
+        ) : g.phase === 'reveal' && result && frame && frame.done ? (
+          <RoundScore
+            result={result}
+            players={g.players}
+            inRound={g.inRound}
+            scores={g.scores}
+            round={g.round}
+            rounds={g.rounds}
+            me={me}
+            name={name}
+            color={color}
+            host={host}
+            busy={busy}
+            onNext={() => hostSend('next')}
+            onZoomPhoto={openZoom}
+          />
         ) : g.phase === 'reveal' && result && frame ? (
           <SplitLayout
             onResizeEnd={() => setResized((n) => n + 1)}
             left={
               <>
-                <PhotoGrid grid={g.grid} secret={null} onPhoto={openZoom} onZoom={openZoom} marks={revealMarks} lifted={lifted} />
+                <PhotoGrid grid={result.grid} secret={null} onPhoto={openZoom} onZoom={openZoom} marks={revealMarks} lifted={lifted} />
                 <p className="pc-grid-note">As fotos secretas desta rodada trocam na próxima.</p>
               </>
             }
             right={
-              frame.done ? (
-                <RoundScore
-                  result={result}
-                  players={g.players}
-                  scores={g.scores}
-                  round={g.round}
-                  rounds={g.rounds}
-                  me={me}
-                  name={name}
-                  color={color}
-                  host={host}
-                  busy={busy}
-                  onNext={() => hostSend('next')}
-                />
-              ) : (
-                <RevealStage result={result} frame={frame} inRound={g.inRound} players={g.players} grid={g.grid} me={me} name={name} color={color} resized={resized} onSkip={skip} />
-              )
+              <RevealStage result={result} frame={frame} inRound={g.inRound} players={g.players} grid={result.grid} me={me} name={name} color={color} resized={resized} onSkip={skip} />
             }
           />
         ) : g.phase === 'gameover' ? (
@@ -194,7 +194,7 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
         ) : null}
         {zoomAt !== null && (
           <PhotoZoom
-            grid={g.grid}
+            grid={result ? result.grid : g.grid}
             index={zoomAt}
             secret={g.phase === 'building' || g.phase === 'guessing' ? g.mySecret : null}
             onIndex={setZoomAt}

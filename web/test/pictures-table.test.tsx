@@ -925,8 +925,23 @@ describe('mesa do Retratim: revelação narrada', () => {
       expect(row.querySelector('.g')!.textContent).toBe(`+${g.result!.gained[p]}`);
       expect(seal(container, p)).toBe(`${g.scores[p]} pts`);
     }
-    // todas as fotos reveladas marcadas na grade
-    expect(container.querySelectorAll('.pc-grid .pc-used > span').length).toBe(3);
+    // ao lado do placar, todas as obras com a foto verdadeira (da grade da rodada) e os palpites
+    const r = g.result!;
+    const pages = container.querySelectorAll<HTMLElement>('.pc-rs-page');
+    expect([...pages].map((pg) => pg.dataset.artist)).toEqual(r.order);
+    for (const pg of pages) {
+      const a = pg.dataset.artist!;
+      const coord = r.secrets[a]!;
+      const ph = pg.querySelector<HTMLElement>('.pc-rs-photo')!;
+      expect(ph.dataset.zoomPhoto).toBe(coord);
+      expect(ph.dataset.photo).toBe(r.grid[COORDS.indexOf(coord)]);
+      expect(pg.querySelector('.gain')!.textContent).toBe(`+${r.correct[a]!.length}${r.correct[a]!.length === 1 ? 'pt' : 'pts'}`);
+      for (const p of g.inRound.filter((q) => q !== a)) {
+        const chip = pg.querySelector(`.pc-rs-g[data-g="${p}"]`)!;
+        expect(chip.querySelector('.gc')!.textContent).toBe(r.guesses[p]?.[a] ?? '—');
+        expect(chip.classList.contains('ok')).toBe(r.correct[a]!.includes(p));
+      }
+    }
     expect(screen.queryByText('esperando o host…')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'próxima rodada' }));
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'next' });
@@ -959,6 +974,37 @@ describe('mesa do Retratim: revelação narrada', () => {
     expect(screen.getByText(/Ninguém montou nada nesta rodada, então não tem obra pra revelar/)).toBeTruthy();
     tick(2500);
     expect(container.querySelector('.pc-rv-board .sum')!.textContent).toBe('ninguém montou nada nesta rodada');
+  });
+
+  it('no placar, a obra amplia ao lado da foto verdadeira: ← → passam pelas obras, Esc fecha', () => {
+    const v = picturesView(revealed(3), 'p0');
+    const r = v.game.result!;
+    const { container } = render(<PicturesTable view={v} conn={conn()} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    const [a0, a1] = r.order as [string, string];
+    const nm = (p: string) => container.querySelector(`.pc-rs-page[data-artist="${p}"] .cap .nm`)!.textContent;
+    fireEvent.click(container.querySelector(`.pc-rs-page[data-artist="${a0}"] .pc-rs-work`)!);
+    let dialog = screen.getByRole('dialog', { name: `obra de ${nm(a0)}` });
+    expect(dialog.querySelector('.pc-zoom-frame.photo .co')!.textContent).toBe(`era a${r.secrets[a0]}`);
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    dialog = screen.getByRole('dialog', { name: `obra de ${nm(a1)}` });
+    expect(dialog.querySelector('.pc-zoom-frame.photo .co')!.textContent).toBe(`era a${r.secrets[a1]}`);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    // rodinha pra cima numa obra também abre
+    fireEvent.wheel(container.querySelector(`.pc-rs-page[data-artist="${a1}"] .pc-rs-work`)!, { deltaY: -100 });
+    expect(screen.getByRole('dialog', { name: `obra de ${nm(a1)}` })).toBeTruthy();
+  });
+
+  it('no placar, a foto verdadeira abre o zoom da mesa com a grade da rodada', () => {
+    const v = picturesView(revealed(3), 'p0');
+    const r = v.game.result!;
+    const { container } = render(<PicturesTable view={v} conn={conn()} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    const a = r.order[0]!;
+    fireEvent.click(container.querySelector(`.pc-rs-page[data-artist="${a}"] .pc-rs-photo .pc-zoom-btn`)!);
+    expect(screen.getByRole('dialog', { name: `foto ${r.secrets[a]}` })).toBeTruthy();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
   it('na última rodada o host vê "ver o fim do jogo"', () => {
