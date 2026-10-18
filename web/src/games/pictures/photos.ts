@@ -1,5 +1,8 @@
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import { PICTURES_DECK, PICTURES_THEME_NAMES, PICTURES_THEMES, type PicturesTheme } from '@cartolina/shared';
+import { PICTURES_PHOTOS_READY } from './photos-ready';
+
+export { PICTURES_PHOTOS_READY };
 
 /* Foto provisória (quando falta a real): ícone sobre cor, variando por foto. A foto real, quando existe, fica por cima. */
 
@@ -101,10 +104,24 @@ export function photoPlaceholder(id: string): PhotoPlaceholder {
   };
 }
 
-/** Ids que têm foto real em `web/public/pictures/fotos/<id>.webp` (o script do Plano R3 preenche). */
-export const PICTURES_PHOTOS_READY: ReadonlySet<string> = new Set<string>();
+/** Tamanho da foto real: miniatura 480×360 (grade, galeria) ou cheia 1200×900 (zoom, revelação). */
+export type PhotoSize = 'thumb' | 'full';
 
-/** Endereço da foto real, ou `null` se ela ainda não existe (aí vale a provisória, sem pedir nada ao servidor). */
-export function photoSrc(id: string): string | null {
-  return PICTURES_PHOTOS_READY.has(id) ? `${import.meta.env.BASE_URL}pictures/fotos/${id}.webp` : null;
+/** Endereço da foto real, ou `null` se ela não existe (aí vale a provisória, sem pedir nada ao servidor). */
+export function photoSrc(id: string, size: PhotoSize): string | null {
+  if (!PICTURES_PHOTOS_READY.has(id)) return null;
+  return `${import.meta.env.BASE_URL}pictures/fotos/${id}${size === 'thumb' ? '-thumb' : ''}.webp`;
+}
+
+/** Já pedidas pelo `preloadPhoto` (cada uma uma vez só; guardar a `Image` segura o pedido até o fim). */
+const preloaded = new Map<string, HTMLImageElement>();
+
+/** Pede a foto cheia de antemão (a que vai voar na revelação), pra ela chegar pronta. */
+export function preloadPhoto(id: string): void {
+  const src = photoSrc(id, 'full');
+  if (!src || preloaded.has(src) || typeof Image === 'undefined') return;
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = src;
+  preloaded.set(src, img);
 }

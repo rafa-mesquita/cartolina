@@ -53,7 +53,7 @@ export function PhotoZoom({ grid, index, secret, onIndex, onClose }: Props) {
         <i className="ti ti-chevron-left" />
       </button>
       <div className="pc-zoom-frame">
-        <div className="pic">{id && <Photo id={id} />}</div>
+        <div className="pic">{id && <Photo id={id} size="full" />}</div>
         <span className="co">{coord}</span>
         <span className="cap">← → pra ver as outras · Esc fecha</span>
         {coord === secret && <span className="mine">sua foto</span>}

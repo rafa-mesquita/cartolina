@@ -1,8 +1,9 @@
 import { COORDS, type Coord, type PicturesRoundResult } from '@cartolina/shared';
-import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Critter } from '../../screens/Critter';
 import { KitShow } from './KitShow';
 import { Photo } from './Photo';
+import { preloadPhoto } from './photos';
 import { workPoints, type RevealFrame } from './reveal';
 import { KIT_NAMES, listNames, tapeRotOf, tiltOf } from './status';
 
@@ -113,7 +114,7 @@ function FlyingPhoto({ id, from, to, onLanded }: { id: string; from: Box; to: Bo
   return (
     <div className="pc-fly" ref={ref} style={style}>
       <div className="pc-rv-pic">
-        <Photo id={id} />
+        <Photo id={id} size="full" />
       </div>
     </div>
   );
@@ -130,6 +131,15 @@ export function RevealStage({ result: r, frame: f, inRound, players, grid, me, n
   const rootRef = useRef<HTMLDivElement>(null);
   const slotRef = useRef<HTMLDivElement>(null);
   const polRef = useRef<HTMLDivElement>(null);
+  // As fotos que vão voar nesta revelação (as secretas de quem montou): pede as cheias já, pra chegarem prontas.
+  useEffect(() => {
+    for (const a of r.order) {
+      const c = r.secrets[a];
+      const id = c !== undefined ? grid[COORDS.indexOf(c)] : undefined;
+      if (id) preloadPhoto(id);
+    }
+  }, [r, grid]);
+
   /** Obra cuja foto já pousou no lugar. */
   const [landed, setLanded] = useState(-1);
   const [fly, setFly] = useState<{ k: number; from: Box; to: Box } | null>(null);
@@ -202,7 +212,7 @@ export function RevealStage({ result: r, frame: f, inRound, players, grid, me, n
                 </div>
                 <div className={`pc-rv-slot${on ? ' on' : ''}`} ref={slotRef}>
                   <div className="pc-rv-polaroid" ref={polRef}>
-                    <div className="pc-rv-pic">{photoId && f.photoShown && <Photo id={photoId} />}</div>
+                    <div className="pc-rv-pic">{photoId && f.photoShown && <Photo id={photoId} size="full" />}</div>
                     <span className="pc-rv-co">
                       <small>era a</small>
                       {coord}

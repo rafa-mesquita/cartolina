@@ -1,5 +1,6 @@
 import { KITS, PICTURES_DECK, PICTURES_THEME_NAMES, PICTURES_THEMES, isBlankWork, mulberry32, readyError, workError, workSchema, type WorkOf } from '@cartolina/shared';
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
+import { createElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { KITS_UI } from '../src/games/pictures/kits';
 import { blocks } from '../src/games/pictures/kits/blocks';
@@ -7,6 +8,7 @@ import { cubes } from '../src/games/pictures/kits/cubes';
 import { LIM } from '../src/games/pictures/kits/sticks';
 import { ROPES, chainLength, dragPoint, makeChain, resample, SHEET_H, SHEET_W } from '../src/games/pictures/kits/laces';
 import { PHOTO_FALLBACK_ICONS, PHOTO_THEMES, PICTURES_PHOTOS_READY, photoPlaceholder, photoSrc, photoTheme } from '../src/games/pictures/photos';
+import { Photo } from '../src/games/pictures/Photo';
 import { randomWork } from '../src/games/pictures/random';
 import { picturesView, revealed, stateOf } from './pictures-fixtures';
 
@@ -311,9 +313,30 @@ describe('fotos provisórias', () => {
     expect(lights.size).toBeGreaterThan(5);
   });
 
-  it('sem foto real pronta, photoSrc é null (nada de 404)', () => {
-    expect(PICTURES_PHOTOS_READY.size).toBe(0);
-    expect(photoSrc('p001')).toBeNull();
+  it('as 100 fotos do baralho têm foto real', () => {
+    expect(PICTURES_PHOTOS_READY.size).toBe(100);
+    for (const { id } of PICTURES_DECK) expect(PICTURES_PHOTOS_READY.has(id)).toBe(true);
+  });
+
+  it('photoSrc: miniatura na grade, cheia no zoom; id sem foto real é null (nada de 404)', () => {
+    const base = import.meta.env.BASE_URL;
+    expect(photoSrc('p001', 'thumb')).toBe(`${base}pictures/fotos/p001-thumb.webp`);
+    expect(photoSrc('p100', 'full')).toBe(`${base}pictures/fotos/p100.webp`);
+    expect(photoSrc('p101', 'thumb')).toBeNull();
+    expect(photoSrc('x', 'full')).toBeNull();
+  });
+
+  it('a foto mostra a miniatura (ou miniatura + cheia) com o nome do tema no alt', () => {
+    const { container, unmount } = render(createElement(Photo, { id: 'p073' }));
+    const imgs = container.querySelectorAll('img');
+    expect(imgs).toHaveLength(1);
+    expect(imgs[0]!.getAttribute('src')).toMatch(/p073-thumb.webp$/);
+    expect(imgs[0]!.getAttribute('alt')).toBe('ônibus');
+    expect(imgs[0]!.getAttribute('loading')).toBe('lazy');
+    unmount();
+    const full = render(createElement(Photo, { id: 'p073', size: 'full' })).container.querySelectorAll('img');
+    expect([...full].map((i) => i.getAttribute('src')!.split('/').pop())).toEqual(['p073-thumb.webp', 'p073.webp']);
+    expect(full[1]!.getAttribute('alt')).toBe('ônibus');
   });
 });
 
