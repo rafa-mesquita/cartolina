@@ -391,7 +391,8 @@ Os números mínimos são ponto de partida.
 
 - Celular.
 - Baixar a página do álbum como PNG pro Discord.
-- Grade nova por rodada / impedir foto repetida (revemos depois de jogar).
+- Grade toda nova por rodada (só as fotos que foram secretas trocam, §4) e impedir foto secreta repetida na mesma
+  rodada (revemos depois de jogar).
 - Pacote de fotos da galera (upload).
 - Kits extras (tangram, pixel 2 cores, traço único).
 - Ícones próprios com cara de álbum (começa com Tabler).

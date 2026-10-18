@@ -106,10 +106,19 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
     conn.sendAction({ type });
   };
 
-  // No fim de jogo a grade some: a foto ampliada fecha junto.
+  // No fim de jogo a grade some, e na rodada nova as casas trocadas mostram outra foto: a ampliada fecha junto.
+  const [zoomRound, setZoomRound] = useState(g.round);
+  if (zoomRound !== g.round) {
+    setZoomRound(g.round);
+    if (zoomAt !== null) setZoomAt(null);
+  }
   if (g.phase === 'gameover' && zoomAt !== null) setZoomAt(null);
 
-  const openZoom = useCallback((coord: Coord) => setZoomAt(COORDS.indexOf(coord)), []);
+  // Um zoom de cada vez: com outro aberto (a obra grande da galeria ou do placar), nem clique nem tecla abre a foto.
+  const openZoom = useCallback((coord: Coord) => {
+    if (rootRef.current?.querySelector('.pc-zoom')) return;
+    setZoomAt(COORDS.indexOf(coord));
+  }, []);
   const closeZoom = useCallback(() => setZoomAt(null), []);
   // Rodinha pra cima numa foto (grade, cartão da secreta, placar) amplia; pra baixo, o próprio zoom fecha.
   useWheelOpen(rootRef, (t) => {
@@ -171,7 +180,7 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
             left={
               <>
                 <PhotoGrid grid={result.grid} secret={null} onPhoto={openZoom} onZoom={openZoom} marks={revealMarks} lifted={lifted} />
-                <p className="pc-grid-note">As fotos secretas desta rodada trocam na próxima.</p>
+                {g.round + 1 < g.rounds && <p className="pc-grid-note">As fotos secretas desta rodada trocam na próxima.</p>}
               </>
             }
             right={

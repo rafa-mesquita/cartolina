@@ -170,6 +170,8 @@ export function RoundScore({ result: r, players, inRound, scores, round, rounds,
   const [zoom, setZoom] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const open = (artist: string) => {
+    // um zoom de cada vez: com a foto ampliada aberta, a lupinha de uma obra (pelo Tab) não abre outro por cima
+    if (listRef.current?.closest('.pictures')?.querySelector('.pc-zoom')) return;
     const i = reviews.findIndex((rv) => rv.artist === artist);
     if (i >= 0) setZoom(i);
   };

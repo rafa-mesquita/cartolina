@@ -27,6 +27,8 @@ const STICKER_ROTS = [-8, 6, -4, 9, -6, 4];
 const COLS = 'abcd', ROWS = '1234';
 /** O adesivo voando segue o ponteiro um pouco maior que o da moldura. */
 const FLY_GROW = 1.12;
+/** Palpite mandado sem eco depois disso (ms): o envio se perdeu, vale o que a visão diz. */
+const PENDING_MS = 3000;
 
 /** A tecla foi num campo de texto (quem digita não está palpitando). */
 const typing = (t: EventTarget | null): boolean =>
@@ -161,6 +163,24 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
     });
   }, [guesses]);
   useEffect(() => conn.onError(() => setPending({})), [conn]);
+  // Envio perdido (conexão caiu no meio): sem eco, o otimista vence e o adesivo volta pro que a visão diz.
+  const pendingTimers = useRef(new Set<number>());
+  useEffect(() => {
+    const timers = pendingTimers.current;
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, []);
+  function expire(artist: string, coord: Coord | null) {
+    const t = window.setTimeout(() => {
+      pendingTimers.current.delete(t);
+      setPending((prev) => {
+        if (!Object.hasOwn(prev, artist) || prev[artist] !== coord) return prev;
+        const rest = { ...prev };
+        delete rest[artist];
+        return rest;
+      });
+    }, PENDING_MS);
+    pendingTimers.current.add(t);
+  }
   const guessOf = (p: string): Coord | null => (playing ? (Object.hasOwn(pending, p) ? pending[p]! : (guesses[p] ?? null)) : null);
 
   const seatOf = (p: string): Seat => view.seats.find((s) => s.id === p) ?? { id: p, name: '?', color: '#A7A9AE' };
@@ -176,6 +196,7 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
     if (!move) return;
     if (coord) popped.current = `${artist}:${coord}`;
     setPending((prev) => ({ ...prev, [artist]: coord }));
+    expire(artist, coord);
     conn.sendAction({ type: 'guess', artist, coord: move.coord });
     playPicturesSound(coord ? 'tape' : 'peel');
   }
@@ -230,18 +251,22 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
     const onDown = () => {
       eatClick.current = false;
     };
+    // Arraste por toque não solta clique nenhum: o próximo gesto (ponteiro ou tecla) zera, senão o Enter seria engolido.
     window.addEventListener('click', onClick, true);
     window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('keydown', onDown, true);
     return () => {
       window.removeEventListener('click', onClick, true);
       window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('keydown', onDown, true);
     };
   }, []);
   const stopDrag = useRef<(() => void) | null>(null);
   useEffect(() => () => stopDrag.current?.(), []);
+  // Travou ou abriu um zoom por cima no meio do arraste: o adesivo volta sem mexer no palpite.
   useEffect(() => {
-    if (locked) stopDrag.current?.();
-  }, [locked]);
+    if (locked || zoomOpen || workZoom !== null) stopDrag.current?.();
+  }, [locked, zoomOpen, workZoom]);
 
   function startDrag(e: ReactPointerEvent<HTMLElement>, artist: string) {
     if (locked || confirmSent.current || e.button !== 0 || session.current) return;
@@ -361,7 +386,7 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
           style={style}
           type="button"
           data-sound="none"
-          aria-label={`tirar o palpite ${c}`}
+          aria-label={`tirar o palpite de ${seat.name} (${c})`}
           title="devolver o adesivo (tira o palpite)"
           onClick={(e) => {
             e.stopPropagation();
@@ -402,7 +427,7 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
         stickers={stickers}
         dropOn={flying?.over ?? null}
       />
-      <p className="pc-grid-note">As fotos secretas desta rodada trocam na próxima.</p>
+      {g.round + 1 < g.rounds && <p className="pc-grid-note">As fotos secretas desta rodada trocam na próxima.</p>}
     </>
   );
 

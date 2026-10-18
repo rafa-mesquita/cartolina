@@ -318,7 +318,7 @@ describe('mesa do Retratim: galeria de palpites (adesivos)', () => {
     room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' });
     room = play(room, 'p0', { type: 'guess', artist: 'p2', coord: 'B1' });
     const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
-    fireEvent.click(screen.getByRole('button', { name: 'tirar o palpite A1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'tirar o palpite de P1 (A1)' }));
     expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: null });
     expect(onPhoto(container, 'A1')).toEqual([]);
     expect(sticker('P1').closest('.pc-wf')).toBe(frame(container, 'p1'));
@@ -608,6 +608,63 @@ describe('mesa do Retratim: galeria de palpites (adesivos)', () => {
   });
 });
 
+describe('mesa do Retratim: palpite perdido e avisos da última rodada', () => {
+  const photo = (container: HTMLElement, coord: string) => container.querySelector<HTMLElement>(`.pc-photo[data-coord="${coord}"]`)!;
+
+  it('palpite mandado sem eco (conexão caiu): depois de 3 s o adesivo volta pro que a visão diz', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'adesivo de P1' }));
+    fireEvent.click(photo(container, 'B2'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: 'B2' });
+    expect(photo(container, 'B2').querySelector('.pc-stks .pc-stk')).toBeTruthy();
+    rtlAct(() => vi.advanceTimersByTime(2900));
+    expect(photo(container, 'B2').querySelector('.pc-stks .pc-stk')).toBeTruthy();
+    rtlAct(() => vi.advanceTimersByTime(200));
+    expect(photo(container, 'B2').querySelector('.pc-stks .pc-stk')).toBeNull();
+    // e dá pra colar de novo (o adesivo continua na mão; manda outra vez)
+    fireEvent.click(photo(container, 'B2'));
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('com o eco a tempo, o palpite fica', () => {
+    const c = conn();
+    const room = guessing(3);
+    const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'adesivo de P1' }));
+    fireEvent.click(photo(container, 'B2'));
+    rerender(<PicturesTable view={picturesView(play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'B2' }), 'p0')} conn={c} serverOffset={0} />);
+    rtlAct(() => vi.advanceTimersByTime(5000));
+    expect(photo(container, 'B2').querySelector('.pc-stks .pc-stk')).toBeTruthy();
+  });
+
+  it('na última rodada não tem aviso de que as fotos trocam (nada troca no fim)', () => {
+    const { container } = render(<PicturesTable view={picturesView(lastReveal(3), 'p0')} conn={conn()} serverOffset={0} />);
+    expect(container.textContent).not.toMatch(/trocam na próxima/);
+    render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    expect(document.body.textContent).toMatch(/trocam na próxima/);
+  });
+
+  it('a foto ampliada no placar fecha quando começa a rodada seguinte', () => {
+    const c = conn();
+    const room = revealed(3);
+    const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    fireEvent.click(container.querySelector('.pc-rs-photo .pc-zoom-btn')!);
+    expect(screen.getByRole('dialog', { name: /^foto / })).toBeTruthy();
+    rerender(<PicturesTable view={picturesView(play(room, 'p0', { type: 'next' }), 'p0')} conn={c} serverOffset={0} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('com a foto ampliada no placar, a lupinha de uma obra não abre outro zoom por cima', () => {
+    const { container } = render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    fireEvent.click(container.querySelector('.pc-rs-photo .pc-zoom-btn')!);
+    fireEvent.click(container.querySelector('.pc-rs-work .pc-wz')!);
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+});
+
 describe('mesa do Retratim: onde o adesivo cai (funções puras)', () => {
   it('dropTarget: dentro de uma foto da grade dá a coordenada; fora dela, null', () => {
     const grid = document.createElement('div');
@@ -783,6 +840,26 @@ describe('mesa do Retratim: rodinha do mouse (como no Diquisti)', () => {
     wheel(container.querySelector('.pc-photo[data-coord="C3"]')!, -50);
     expect(screen.getByRole('dialog', { name: 'foto C3' })).toBeTruthy();
     expect(c.sendAction).not.toHaveBeenCalled();
+  });
+
+  it('numa lista que rola (placar), a rodinha rola primeiro: só abre com a lista no topo e num giro novo', () => {
+    const { container } = render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'pular ›' }));
+    const list = container.querySelector<HTMLElement>('.pc-rs-list')!;
+    list.style.overflowY = 'auto';
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 2000 });
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 500 });
+    list.scrollTop = 300;
+    const work = container.querySelector('.pc-rs-work')!;
+    const photo = container.querySelector('.pc-rs-photo')!;
+    expect(wheel(work, -40)).toBe(false); // rolando pra cima: a lista rola, nada abre
+    expect(wheel(photo, -40)).toBe(false);
+    list.scrollTop = 0;
+    expect(wheel(work, -40)).toBe(false); // chegou no topo no embalo do mesmo giro: ainda não abre
+    expect(screen.queryByRole('dialog')).toBeNull();
+    tick(400);
+    expect(wheel(photo, -40)).toBe(true); // giro novo com a lista no topo: abre
+    expect(screen.getByRole('dialog', { name: /^foto / })).toBeTruthy();
   });
 
   it('revelação: pra cima numa foto da grade abre o zoom', () => {
@@ -1109,7 +1186,7 @@ describe('mesa do Retratim: sons', () => {
     fireEvent.click(screen.getByRole('button', { name: 'adesivo de P1' }));
     fireEvent.click(photo(container, 'B2'));
     expect(sons()).toEqual(['tape']);
-    fireEvent.click(screen.getByRole('button', { name: 'tirar o palpite B2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'tirar o palpite de P1 (B2)' }));
     expect(sons()).toEqual(['tape', 'peel']);
   });
 
