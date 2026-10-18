@@ -18,7 +18,9 @@ describe('Retratim: obras dos kits', () => {
     }
   });
 
-  it('os 19 símbolos têm nome, sem repetir', () => {
+  it('os 20 símbolos (os 19 do original + o vento) têm nome, sem repetir', () => {
+    expect(ICON_COUNT).toBe(20);
+    expect(ICON_NAMES).toContain('wind');
     expect(ICON_NAMES).toHaveLength(ICON_COUNT);
     expect(new Set(ICON_NAMES).size).toBe(ICON_COUNT);
   });
@@ -61,14 +63,24 @@ describe('Retratim: obras dos kits', () => {
     expect(parse({ kit: 'sticks', sticks: Array(4).fill({ x: 2, y: 0, rot: 0 }), stones: Array(4).fill({ x: 0, y: 0, rot: 0 }) })).toBe(false);
   });
 
+  it('palitos e pedras: a ordem de quem fica por cima é opcional e sem repetir', () => {
+    const base = { kit: 'sticks' as const, sticks: Array(4).fill({ x: 0.5, y: 0.5, rot: 0 }), stones: Array(4).fill({ x: 0.5, y: 0.5, rot: 0 }) };
+    expect(parse({ ...base, order: [4, 5, 6, 7, 0, 1, 2, 3] })).toBe(true);
+    expect(parse({ ...base, order: [0, 1, 2] })).toBe(false);
+    expect(parse({ ...base, order: [0, 1, 2, 3, 4, 5, 6, 8] })).toBe(false);
+    expect(workError({ ...base, order: [0, 0, 1, 2, 3, 4, 5, 6] })).toBe('bad_work');
+    expect(workError({ ...base, order: [7, 6, 5, 4, 3, 2, 1, 0] })).toBeNull();
+  });
+
   it('blocos: uma posição por forma (6) e a câmera do artista', () => {
     expect(parse({ kit: 'blocks', pieces: [], camera: { theta: 0, phi: 1 } })).toBe(false);
     const base = sampleWork('blocks');
     expect(parse({ ...base, camera: { theta: 0, phi: 2 } })).toBe(false);
   });
 
-  it('símbolos: ids de 0 a 18, até 5, sem repetir; pronto só com 2 ou mais', () => {
-    expect(parse({ kit: 'icons', ids: [19] })).toBe(false);
+  it('símbolos: ids de 0 a 19, até 5, sem repetir; pronto só com 2 ou mais', () => {
+    expect(parse({ kit: 'icons', ids: [19] })).toBe(true);
+    expect(parse({ kit: 'icons', ids: [20] })).toBe(false);
     expect(parse({ kit: 'icons', ids: [0, 1, 2, 3, 4, 5] })).toBe(false);
     const repeated: Work = { kit: 'icons', ids: [3, 3] };
     expect(workError(repeated)).toBe('bad_work');

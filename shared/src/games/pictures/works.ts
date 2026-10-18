@@ -12,11 +12,11 @@ export const STICKS = 4;
 export const STONES = 4;
 /** Ordem fixa das peças do kit de blocos: a obra guarda uma posição por forma, nessa ordem. */
 export const BLOCK_SHAPES = ['cube', 'brick', 'plank', 'pillar', 'roof', 'arch'] as const;
-export const ICON_COUNT = 19;
-/** Os 19 símbolos do kit (id = índice): nomes de ícone do Tabler Icons, sem o prefixo `ti-`. */
+export const ICON_COUNT = 20;
+/** Os 20 símbolos do kit (os 19 do original + o vento; id = índice): nomes de ícone do Tabler Icons, sem `ti-`. */
 export const ICON_NAMES = [
   'circle', 'square', 'triangle', 'arrow-up', 'arrow-right', 'wave-sine', 'sun', 'moon', 'cloud', 'flame',
-  'droplet', 'leaf', 'home', 'eye', 'heart', 'star', 'bolt', 'user', 'paw',
+  'droplet', 'leaf', 'home', 'eye', 'heart', 'star', 'bolt', 'user', 'paw', 'wind',
 ] as const;
 export const ICONS_MIN = 2;
 export const ICONS_MAX = 5;
@@ -48,6 +48,8 @@ const sticksWork = z.object({
   kit: z.literal('sticks'),
   sticks: z.array(placed).length(STICKS),
   stones: z.array(placed).length(STONES),
+  /** Quem fica por cima: índices de [...sticks, ...stones], do fundo pra frente (sem ela: pedras embaixo, palitos em cima). */
+  order: z.array(z.number().int().min(0).max(STICKS + STONES - 1)).length(STICKS + STONES).optional(),
 });
 
 const blocksWork = z.object({
@@ -99,6 +101,8 @@ export function workError(work: Work): 'bad_work' | null {
     }
     case 'icons':
       return new Set(work.ids).size === work.ids.length ? null : 'bad_work';
+    case 'sticks':
+      return !work.order || new Set(work.order).size === work.order.length ? null : 'bad_work';
     case 'dots': {
       const seen = new Set<string>();
       for (const [a, b] of work.lines) {

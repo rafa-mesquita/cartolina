@@ -313,24 +313,40 @@ export function RoundScore({ result: r, players, inRound, scores, round, rounds,
                   <div className="hits">
                     <span className="txt">{hitsText(rv.right, name)}</span>
                     <span className="chips">
-                      {rv.guesses.map(({ guesser, coord, ok }) => (
-                        <span
-                          key={guesser}
-                          className={`pc-rs-g${ok ? ' ok' : ' no'}`}
-                          data-g={guesser}
-                          title={`${name(guesser)}: ${coord ?? 'sem palpite'}${ok ? ' ✓' : ''}`}
-                        >
-                          <span className="cr">
-                            <Critter color={color(guesser)} />
-                          </span>
-                          <span className="gc">{coord ?? '—'}</span>
-                          {ok && (
-                            <span className="tick" aria-label="acertou">
-                              ✓
+                      {rv.guesses.map(({ guesser, coord, ok }) => {
+                        const inner = (
+                          <>
+                            <span className="cr">
+                              <Critter color={color(guesser)} />
                             </span>
-                          )}
-                        </span>
-                      ))}
+                            <span className="gc">{coord ?? '—'}</span>
+                            {ok && (
+                              <span className="tick" aria-label="acertou">
+                                ✓
+                              </span>
+                            )}
+                          </>
+                        );
+                        const cls = `pc-rs-g${ok ? ' ok' : ' no'}`;
+                        // com palpite, o chip abre a foto votada (quem errou: pra ver no que a pessoa pensou)
+                        return coord ? (
+                          <button
+                            key={guesser}
+                            type="button"
+                            className={cls}
+                            data-g={guesser}
+                            title={`ver a foto que ${name(guesser)} votou (${coord})${ok ? ' ✓' : ''}`}
+                            aria-label={`${name(guesser)} votou na ${coord}${ok ? ', acertou' : ''}: ver a foto`}
+                            onClick={() => onZoomPhoto(coord)}
+                          >
+                            {inner}
+                          </button>
+                        ) : (
+                          <span key={guesser} className={cls} data-g={guesser} title={`${name(guesser)}: sem palpite`}>
+                            {inner}
+                          </span>
+                        );
+                      })}
                     </span>
                   </div>
                 </article>

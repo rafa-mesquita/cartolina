@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { loadSoundPref, saveSoundPref } from '../../net/identity';
 import { Critter } from '../../screens/Critter';
 import { playPicturesSound } from './sounds';
-import { KIT_NAMES, pts, seatLabel } from './status';
+import { KIT_NAMES, ptsWord, seatLabel } from './status';
 import { useCountdown } from './useCountdown';
 
 /** Liga/desliga o som (a mesma preferência do resto do site), no estilo álbum. */
@@ -79,7 +79,9 @@ export function TopBar({ view, serverOffset, host, onHurry, scores, plus = [] }:
         {g.players.map((p) => {
           const seat = view.seats.find((s) => s.id === p);
           if (!seat) return null;
-          const label = seatLabel(g, seat) || pts((scores ?? g.scores)[p] ?? 0);
+          // os pontos ficam sempre à vista; embaixo do nome, o que a pessoa está fazendo (montando…, pronto ✓…)
+          const label = seatLabel(g, seat);
+          const score = (scores ?? g.scores)[p] ?? 0;
           const mine = plus.filter((x) => x.player === p);
           return (
             <div key={p} className={`pc-seal${p === me ? ' me' : ''}${mine.length ? ' bump' : ''}`} data-p={p}>
@@ -88,7 +90,11 @@ export function TopBar({ view, serverOffset, host, onHurry, scores, plus = [] }:
               </span>
               <span>
                 <span className="nm">{seat.name}</span>
-                <span className={`stt${label.endsWith('✓') ? ' ok' : ''}`}>{label}</span>
+                {label && <span className={`stt${label.endsWith('✓') ? ' ok' : ''}`}>{label}</span>}
+              </span>
+              <span className="pt" title={`${score} ${ptsWord(score)}`}>
+                <b>{score}</b>
+                <small>{ptsWord(score)}</small>
               </span>
               {mine.map((x) => (
                 <span key={x.id} className="pc-plus" aria-hidden="true">

@@ -246,6 +246,12 @@ export function applyPicturesAction(
       if (state.confirmed.includes(playerId)) return fail('already_confirmed');
       return ok(settlePictures({ ...state, confirmed: [...state.confirmed, playerId] }, ctx));
     }
+    case 'unconfirm': {
+      const e = playerError(state, playerId, 'guessing');
+      if (e) return fail(e);
+      if (!state.confirmed.includes(playerId)) return ok(state);
+      return ok({ ...state, confirmed: state.confirmed.filter((p) => p !== playerId) });
+    }
     case 'hurry':
       if (!isHost) return fail('not_host');
       if (state.phase !== 'building' && state.phase !== 'guessing') return fail('bad_phase');

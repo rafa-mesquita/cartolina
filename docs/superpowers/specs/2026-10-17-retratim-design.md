@@ -67,7 +67,8 @@ Decisões do usuário (2026-10-17):
    recebido.
 2. **Palpitar** (`guessing`): galeria com as obras dos outros (a sua não
    aparece pra você). Pra cada obra você escolhe uma coordenada; pode trocar até
-   **"confirmar"**. Obra sem palpite vale zero. A mesma coordenada pode ir em
+   **"confirmar"** (e **"desconfirmar"** volta atrás enquanto a fase não fecha; a
+   contagem que já começou continua). Obra sem palpite vale zero. A mesma coordenada pode ir em
    mais de uma obra. Mesma regra de tempo: `ceil(n/2)` confirmados → 30 s pra
    quem falta. Quando o tempo acaba, valem os palpites já colados, confirmados
    ou não.
@@ -75,7 +76,9 @@ Decisões do usuário (2026-10-17):
 Contagem já disparada não para se alguém desmarca "pronto". O host tem
 **"apressar"**: dispara os 30 s na hora (pra quando alguém some sem cair).
 3. **Revelar** (`reveal`): uma obra por vez, na ordem dos assentos (§5.3).
-   Depois, placar da rodada; o host clica **"próxima rodada"**.
+   Depois, placar da rodada com todas as obras ao lado das fotos verdadeiras
+   (clicar no palpite de alguém abre a foto em que a pessoa votou); o host
+   clica **"próxima rodada"**.
 4. **Troca das fotos usadas** (decisão do usuário, 2026-10-17; substitui a
    grade fixa): ao começar a rodada seguinte, cada coordenada que foi a foto
    secreta de alguém na rodada que passou recebe uma foto aleatória do baralho
@@ -127,9 +130,9 @@ obra e uma validação (quantidade e limites); no `web/`, um componente
 |---|---|---|---|
 | `cubes` | 24 cubos, **3 de cada uma das 8 cores**, grade **4×4** | Escolhe a cor e clica na casa. A paleta mostra quantos restam de cada cor. **Não precisa preencher tudo** (decisão do usuário, 2026-10-17, diferente do original): com pelo menos 1 cubo já dá pra ficar pronto; grade vazia é obra em branco. | `cells: (cor \| null)[16]` |
 | `laces` | 1 cadarço **longo** + 1 **curto** | Física da v3: o ponto pego arrasta um **trecho** em volta (janela com queda suave, tamanho fixo, padrão 9 pontos de 160); o resto só se move quando a corda estica; comprimento constante. Pontos de pegar invisíveis; o trecho aparece destacado ao passar o mouse. | 2 polilinhas, ~40 pontos cada |
-| `sticks` | **4 palitos + 4 pedras** | Arrasta pra mover; clicar mostra a **alça azul** de girar; rodinha gira 15°. | `{tipo, x, y, giro}[]` |
+| `sticks` | **4 palitos + 4 pedras** | Arrasta pra mover; clicar mostra a **alça azul** de girar; rodinha gira 15°. A última peça clicada fica **por cima**, e a obra guarda essa ordem (o print desenha igual). | `{x, y, giro}[]` + `order` |
 | `blocks` | **6 blocos** de madeira: cubo, tijolo, prancha, pilar, telhado, arco | three.js. Arrastar move sobre a mesa; a peça **sobe em cima** do que está embaixo. Ao soltar, **menu flutuante** junto da peça: girar ↺/↻ (15°) e deitar/levantar. **Sem botões fora da cena**: legendas no canto explicam (arraste a peça pra mover, rodinha gira a mesa, arraste o fundo pra inclinar). **O ângulo da câmera faz parte da obra.** | `{forma, x, y, z, giro, deitado}[]` + câmera `{θ, φ}` |
-| `icons` | **19 cartas de ícone** (fixas) | Escolhe de **2 a 5** e arrasta pra ordenar lado a lado. Começa com ícones Tabler (MIT); depois podem virar ícones com cara de álbum. "Pronto" com menos de 2 avisa. | `ids[]` em ordem |
+| `icons` | **20 cartas de ícone** (as 19 do original + **vento**, pedido do usuário em 2026-10-18) | Escolhe de **2 a 5** e arrasta pra ordenar lado a lado. Começa com ícones Tabler (MIT); depois podem virar ícones com cara de álbum. "Pronto" com menos de 2 avisa. | `ids[]` em ordem |
 | `dots` | **5 pontos** e linhas | Clique na folha põe ponto (até 5); clique num ponto e depois em outro liga/desliga a linha (livre, no máx. 10); arrastar move; clique duplo apaga. Folha vazia (não por cima da foto). | `pontos[]`, `linhas: [i, j][]` |
 
 Os blocos guardam `y` (a altura calculada na montagem), então quem mostra não
@@ -149,7 +152,7 @@ precisa refazer o empilhamento.
   daquela rodada), `winners`,
   `paused`.
 - Ações: `start`, `draft { work }`, `ready { on }`, `guess { artist, coord |
-  null }`, `confirm`, `hurry` (host), `next`, `again`, `lobby`.
+  null }`, `confirm`, `unconfirm`, `hurry` (host), `next`, `again`, `lobby`.
 - `works.ts`: schema zod da obra de cada kit (`workSchema`), `workError`
   (regras que o schema não pega → `bad_work`), `readyError` (o que impede
   "pronto") e `isBlankWork` (obra que não mostra nada conta como em branco).
@@ -224,7 +227,8 @@ Página do álbum: grade 4×4 de fotos com coordenadas na borda (a **sua** foto
 com um contorno pontilhado em tinta azul, só pra você). Ao lado: cartão
 "sua foto secreta **B3**" com fitinha, a **bancada** (folha 4:3 com o kit) e
 o botão "estou pronto". No topo: "Retratim · rodada 2 de 6 · kit: palitos e
-pedras" e os selinhos de cada um ("Ana pronta", "Caio mexendo…"). Quando a
+pedras" e os selinhos de cada um ("Ana pronta", "Caio mexendo…"), sempre com
+os **pontos à vista** (número grande ao lado do nome; pedido de 2026-10-18). Quando a
 contagem dispara, todos veem o relógio ("faltam 0:24").
 
 ### 5.2 Palpitar (galeria)
@@ -242,7 +246,7 @@ não perder de vista de quem é cada obra, com "você acha que é a **B3**" ou
 "sem palpite"; clicar na sombra também tira. Sem arrastar: clique no adesivo
 (contorno azul) e depois na foto, ou letra + número no teclado (Delete tira).
 Sem adesivo na mão, clicar na foto amplia. Depois de confirmar nada se
-arrasta. Obras 3D aparecem **fixas no ângulo do artista**; uma lupa abre
+arrasta, até "desconfirmar". Obras 3D aparecem **fixas no ângulo do artista**; uma lupa abre
 qualquer obra grande. "Confirmar" vale com obra sem palpite. Selinho de quem
 confirmou.
 
