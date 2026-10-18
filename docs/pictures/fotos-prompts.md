@@ -1,160 +1,102 @@
-# Fotos do Retratim: prompts (Google Flow)
+# Fotos do Retratim: prompts e baralho (Google Flow)
 
-Spec: `docs/superpowers/specs/2026-10-17-retratim-design.md` §6. 100 fotos **realistas** (nada surreal),
-cara de foto de celular. Flow: projeto https://flow.google.com/project/9034c6f8-554a-413f-946c-1f4d4030a6b6,
-**imagem**, **4:3 paisagem**, **Nano Banana 2.1**, **x1** (uma opção por prompt). Saída 1200×896.
+Spec: `docs/superpowers/specs/2026-10-17-retratim-design.md` §6. 100 fotos **realistas** (nada surreal), cara de
+foto de celular. Flow: projeto https://flow.google.com/project/9034c6f8-554a-413f-946c-1f4d4030a6b6,
+**imagem · 4:3 · Nano Banana 2.1 · x1**. Saída 1200×896. Geradas em 2026-10-17 pelo painel de navegador do app.
 
-Prompt = **começo** + cena + **fim**:
+Prompt = `Casual smartphone photo:` + cena + `Natural light, realistic everyday colors, slight phone-camera grain,
+casual framing with the main subject clearly visible and well separated from a simple background. Photorealistic, not
+staged, not surreal, no text, no letters, no logos, no watermark.` (+ `No faces visible.` quando aparece gente).
 
-- **Começo:** `Casual smartphone photo:`
-- **Fim:** `Natural light, realistic everyday colors, slight phone-camera grain, casual framing with the main subject clearly visible and well separated from a simple background. Photorealistic, not staged, not surreal, no text, no letters, no logos, no watermark.`
-- Foto com gente (de costas ou só mãos): o fim ganha `No faces visible.` (marcado 👤).
+## Como o baralho ficou (decisões do usuário, 2026-10-17)
 
-O jogo é remontar a foto com cubos, cordas, palitos, blocos, símbolos ou pontos: assunto com silhueta e cor
-claras. Dentro de cada tema as fotos são parecidas entre si, pra grade ficar traiçoeira.
+1. Lote de teste de 8 aprovado ("gostei").
+2. O usuário mandou 15 temas (ferrovia, ônibus brasileiro, roupa, inverno, futebol, abajur, festa, praia, floresta,
+   casa azul, esgrima, gato, elefante safari, terno, feijoada) e escolheu misturar com os amplos.
+3. Gerando, achou as fotos de cada tema parecidas demais e decidiu: **2 fotos por tema, 50 temas**. A grade passa a
+   sortear **8 temas × 2 fotos** (antes 4 × 4). Cada tema é uma "dupla parecida" (às vezes uma pegadinha, ex.:
+   bandeirinha de escanteio × bandeirinha de festa junina).
+4. Todas as 100 foram aproveitadas: as primeiras 61 geradas viraram duplas e 39 foram geradas pra completar.
 
-## Temas (decisão do usuário, 2026-10-17)
+**Ordem no Flow (#):** posição da foto na ordem em que foi gerada (1 = a mais antiga). O script de importação usa
+essa coluna pra saber qual arquivo vira qual id. Os prompts das # 1–61 estão no histórico deste arquivo
+(commits `4f7dd1c` e `1505faa`); os das # 62–100 estão abaixo.
 
-Lote de teste aprovado ("gostei"). Depois o usuário mandou 15 temas: ferrovia, ônibus (brasileiro), roupa,
-inverno, futebol, abajur, festa, praia, floresta, casa azul, esgrima, gato, elefante safari, terno,
-feijoada. Escolheu a **mistura**: os amplos viram tema; os específicos entram dentro de um tema (abajur e
-casa azul em casa; terno e esgrima em roupa; feijoada em comida; gato e elefante em bichos). Saíram os
-temas antigos que se sobrepunham (lugares, transporte, natureza, gente).
+| Tema | id | # | foto | id | # | foto |
+|---|---|---|---|---|---|---|
+| cachorro | p001 | 1 | golden no gramado | p002 | 62 | vira-lata deitado na calçada |
+| caneca | p003 | 2 | caneca vermelha de café | p004 | 45 | chocolate quente |
+| gato | p005 | 3 | gato preto dormindo | p006 | 63 | gato laranja se espreguiçando |
+| pizza | p007 | 4 | fatia de pizza | p008 | 64 | pizza inteira na caixa |
+| farol | p009 | 5 | farol listrado na costa | p010 | 65 | farol branco ao entardecer |
+| bicicleta | p011 | 6 | bicicleta vermelha | p012 | 66 | bicicleta com cestinha |
+| árvore | p013 | 7 | árvore sozinha no campo | p014 | 47 | pinheiro com neve |
+| mãos | p015 | 8 | mãos com xícara de chá | p016 | 40 | brinde |
+| praia | p017 | 9 | guarda-sol amarelo | p018 | 10 | cadeira de praia |
+| beira-mar | p019 | 14 | coqueiro | p020 | 15 | quiosque |
+| brinquedo de praia | p021 | 13 | boia de flamingo | p022 | 11 | prancha na areia |
+| areia | p023 | 12 | castelo de areia | p024 | 67 | pegadas na areia |
+| floresta | p025 | 17 | trilha | p026 | 22 | ponte sobre riacho |
+| chão da mata | p027 | 18 | cogumelo | p028 | 24 | folhas de outono |
+| mata | p029 | 19 | tronco com musgo | p030 | 20 | cachoeira |
+| cabana | p031 | 21 | cabana na mata | p032 | 50 | cabana com neve |
+| visto de baixo | p033 | 23 | pinheiros vistos de baixo | p034 | 68 | prédio visto de baixo |
+| bola | p035 | 25 | bola na grama | p036 | 29 | bola no pênalti |
+| campo | p037 | 26 | gol com rede | p038 | 32 | campo de várzea |
+| calçados | p039 | 27 | chuteira | p040 | 16 | chinelos na areia |
+| luvas | p041 | 31 | luvas de goleiro | p042 | 48 | luvas de lã |
+| futebol | p043 | 28 | arquibancada vazia | p044 | 30 | jogador camisa 10 |
+| bandeirinha | p045 | 33 | bandeirinha de escanteio | p046 | 38 | bandeirinhas de festa junina |
+| aniversário | p047 | 34 | bolo com velas | p048 | 37 | chapéu de festa |
+| festa | p049 | 35 | balões | p050 | 41 | presentes |
+| doces | p051 | 36 | brigadeiros | p052 | 69 | bolo de pote |
+| fogo | p053 | 39 | fogueira de São João | p054 | 46 | lareira |
+| balada | p055 | 42 | globo de luz | p056 | 70 | palco com luzes |
+| neve | p057 | 43 | boneco de neve | p058 | 49 | trenó |
+| no cabide | p059 | 44 | casaco e cachecol | p060 | 71 | terno |
+| janela | p061 | 51 | janela embaçada | p062 | 72 | janela com cortina |
+| trem | p063 | 52 | trem na estação | p064 | 59 | VLT |
+| trilhos | p065 | 53 | trilhos no horizonte | p066 | 58 | ponte ferroviária |
+| locomotiva | p067 | 54 | maria-fumaça | p068 | 55 | vagão de carga |
+| sinalização | p069 | 56 | passagem de nível | p070 | 73 | semáforo vermelho |
+| estação | p071 | 57 | estaçãozinha do interior | p072 | 60 | plataforma vazia |
+| ônibus | p073 | 61 | ônibus urbano no ponto | p074 | 74 | ônibus de viagem na rodoviária |
+| abajur | p075 | 75 | abajur aceso | p076 | 76 | luminária de chão |
+| casa azul | p077 | 77 | fachada azul | p078 | 78 | porta azul |
+| esgrima | p079 | 79 | uniforme e máscara | p080 | 80 | dois esgrimistas duelando |
+| elefante | p081 | 81 | elefante no safari | p082 | 82 | elefante com filhote |
+| safari | p083 | 83 | girafa | p084 | 84 | zebra |
+| feijoada | p085 | 85 | feijoada na panela de barro | p086 | 86 | prato de feijoada completa |
+| roupa dobrada | p087 | 87 | camiseta dobrada | p088 | 88 | calça jeans dobrada |
+| escolar | p089 | 89 | van escolar | p090 | 90 | ônibus escolar amarelo |
+| salgado | p091 | 91 | coxinha | p092 | 92 | pastel |
+| pão | p093 | 93 | pão francês | p094 | 94 | pão de queijo |
+| gelado | p095 | 95 | açaí | p096 | 96 | sorvete de casquinha |
+| fazenda | p097 | 97 | cavalo | p098 | 98 | vaca |
+| relógio | p099 | 99 | relógio de parede | p100 | 100 | despertador |
 
-11 temas, ids nesta ordem (o `shared/src/games/pictures/photos.ts` segue): praia 9, floresta 9, futebol 9,
-festa 9, inverno 9, ferrovia 9, ônibus 9, roupa 9, casa 10, comida 9, bichos 9.
+## Prompts das # 62–100 (cena)
 
-✓ = já gerada no lote de teste (reaproveitada). A bicicleta vermelha do teste ficou de fora.
-
-## Praia (p001–p009)
-
-- **p001 · guarda-sol amarelo:** a single yellow beach umbrella standing on an empty sandy beach, calm sea behind.
-- **p002 · cadeira de praia:** a striped blue and white folding beach chair on the sand facing the sea.
-- **p003 · prancha na areia:** a white surfboard stuck upright in the sand on a beach.
-- **p004 · castelo de areia:** a sandcastle with towers on the wet sand near the water.
-- **p005 · boia de flamingo:** a pink inflatable flamingo pool float lying at the edge of the sea on the sand.
-- ✓ **p006 · farol:** a red and white striped lighthouse on a rocky coast under a blue sky.
-- **p007 · coqueiro:** a single coconut palm tree leaning over a white sand beach.
-- **p008 · quiosque:** a small wooden beach kiosk with a straw roof on the sand.
-- **p009 · chinelos:** a pair of colorful flip-flops lying on the sand, seen from above.
-
-## Floresta (p010–p018)
-
-- **p010 · trilha:** a narrow dirt trail winding between tall trees in a green forest.
-- **p011 · cogumelo:** a red mushroom with white spots on the forest floor among moss.
-- **p012 · tronco com musgo:** a fallen tree trunk covered in green moss in a forest.
-- **p013 · cachoeira:** a small waterfall falling over rocks in a lush green forest.
-- **p014 · cabana:** a small wooden cabin among pine trees.
-- **p015 · ponte sobre riacho:** a little wooden footbridge over a forest stream.
-- **p016 · pinheiros de baixo:** tall pine trees seen from the ground looking straight up at the sky.
-- **p017 · folhas de outono:** orange and red autumn leaves scattered on a forest path.
-- ✓ **p018 · árvore sozinha:** a single big round tree standing alone in an open green field.
-
-## Futebol (p019–p027)
-
-- **p019 · bola na grama:** a white and black soccer ball resting on green grass.
-- **p020 · gol vazio:** an empty soccer goal with a white net on a grass field.
-- **p021 · chuteira:** a pair of soccer cleats lying on the grass next to the white field line.
-- **p022 · arquibancada vazia:** empty colorful stadium seats in a soccer stadium.
-- **p023 · marca do pênalti:** a soccer ball placed on the penalty spot in front of the goal.
-- 👤 **p024 · camisa 10:** a soccer player seen from behind wearing a yellow shirt with the number 10, standing on the field.
-- **p025 · luvas de goleiro:** a pair of goalkeeper gloves lying on the grass.
-- **p026 · campo de várzea:** a simple dirt soccer field with wooden goalposts in a Brazilian neighborhood.
-- **p027 · bandeirinha de escanteio:** a corner flag on a soccer field, close up.
-
-## Festa (p028–p036)
-
-- **p028 · bolo com velas:** a birthday cake with lit candles on a table.
-- **p029 · balões:** a bunch of colorful helium balloons tied to the back of a chair.
-- **p030 · brigadeiros:** a party table with many brigadeiros in small paper cups, Brazilian birthday party.
-- **p031 · chapéu de festa:** a cone-shaped paper party hat on a table with confetti.
-- **p032 · bandeirinhas:** colorful festa junina paper flags strung across a street under a blue sky.
-- **p033 · fogueira:** a festa junina bonfire burning at night.
-- 👤 **p034 · brinde:** hands clinking two glasses of sparkling drink in a toast, close up.
-- **p035 · presentes:** a pile of wrapped gift boxes with ribbons.
-- **p036 · globo de luz:** a mirror disco ball hanging over a dance floor with colored lights.
-
-## Inverno (p037–p045)
-
-- **p037 · boneco de neve:** a snowman with a carrot nose and a scarf in a snowy yard.
-- **p038 · casaco e cachecol:** a winter coat and a knitted scarf hanging on a wall hook.
-- **p039 · chocolate quente:** a mug of hot chocolate with whipped cream on a wooden table.
-- **p040 · lareira:** a fireplace with a burning fire in a cozy living room.
-- **p041 · pinheiro com neve:** a single pine tree covered in snow.
-- **p042 · luvas de lã:** a pair of knitted wool mittens on a snowy surface.
-- **p043 · trenó:** a wooden sled on a snowy hill.
-- **p044 · cabana com neve:** a small cabin with a snow-covered roof in a winter landscape.
-- **p045 · janela embaçada:** a fogged-up window with frost at the edges, snow falling outside.
-
-## Ferrovia (p046–p054)
-
-- **p046 · trem na estação:** a passenger train arriving at a station platform, front three-quarter view.
-- **p047 · trilhos:** railway tracks stretching straight to the horizon through a flat field.
-- **p048 · maria-fumaça:** an old black steam locomotive puffing white smoke.
-- **p049 · vagão de carga:** a rusty red freight wagon on the tracks.
-- **p050 · passagem de nível:** a railroad crossing with a red and white barrier and warning lights.
-- **p051 · estaçãozinha:** a small old countryside train station in Brazil with a tiled roof.
-- **p052 · ponte ferroviária:** a metal railway bridge over a river.
-- **p053 · VLT:** a modern light rail tram on a city street.
-- **p054 · plataforma vazia:** an empty train platform with a single bench.
-
-## Ônibus — brasileiro (p055–p063)
-
-- **p055 · ônibus urbano:** a Brazilian city bus stopped at a bus stop on a sunny street, side view.
-- **p056 · ônibus de viagem:** an intercity coach bus parked at a Brazilian bus station.
-- **p057 · van escolar:** a yellow Brazilian school van parked on a street.
-- **p058 · BRT:** a long articulated BRT bus on a dedicated lane in a Brazilian city.
-- **p059 · ponto de ônibus:** an empty bus stop shelter on a Brazilian city sidewalk.
-- **p060 · bancos vazios:** the inside of an empty city bus, rows of seats and handrails.
-- **p061 · catraca:** a bus turnstile inside a Brazilian city bus, close up.
-- **p062 · dois andares:** a red double-decker tourist bus on a city street.
-- **p063 · jardineira:** an old colorful vintage Brazilian "jardineira" bus parked on a country road.
-
-## Roupa (p064–p072)
-
-- **p064 · terno:** a dark navy suit hanging on a wooden hanger against a plain wall.
-- **p065 · uniforme de esgrima:** a white fencing uniform and fencing mask laid out on a bench, with a foil sword beside it.
-- 👤 **p066 · esgrimistas:** two fencers in white uniforms and masks dueling on a fencing strip, seen from the side at a distance.
-- **p067 · camiseta dobrada:** a neatly folded white t-shirt on a wooden surface.
-- **p068 · vestido:** a red summer dress hanging on a hanger.
-- **p069 · jaqueta jeans:** a denim jacket hanging on a hook.
-- **p070 · gravata:** a striped necktie lying on a white shirt, close up.
-- **p071 · boné:** a baseball cap on a table.
-- **p072 · meias no varal:** colorful socks hanging on a clothesline.
-
-## Casa (p073–p082)
-
-- **p073 · abajur:** a table lamp with a beige fabric shade, switched on, on a bedside table in a dim room.
-- **p074 · casa azul:** the front of a small blue house with a white door and windows, Brazilian street.
-- ✓ **p075 · caneca vermelha:** a red ceramic mug of coffee on a wooden table, steam rising, side view.
-- ✓👤 **p076 · mãos com xícara:** two hands holding a cup of tea, close up.
-- **p077 · poltrona verde:** a green velvet armchair in the corner of a living room with a plain white wall.
-- **p078 · relógio de parede:** a round wall clock with a black frame on a plain white wall.
-- **p079 · chaves no capacho:** a bunch of house keys on a ring lying on a brown doormat.
-- **p080 · cama desfeita:** an unmade bed with rumpled white sheets in soft morning light.
-- **p081 · janela com cortina:** a window with light curtains blowing in the breeze.
-- **p082 · vaso de planta:** a leafy green plant in a ceramic pot on the floor next to a wall.
-
-## Comida (p083–p091)
-
-- **p083 · feijoada na panela:** a clay pot full of Brazilian feijoada (black beans with meats) on a table.
-- **p084 · prato de feijoada:** a plate of feijoada completa with rice, collard greens, farofa and an orange slice, seen from above.
-- ✓ **p085 · fatia de pizza:** a slice of pepperoni pizza on a white plate, seen from above.
-- **p086 · pão francês:** a wicker basket of Brazilian pão francês bread rolls.
-- **p087 · coxinha:** a golden fried coxinha on a small plate.
-- **p088 · pastel:** a large crispy pastel de feira on a paper napkin.
-- **p089 · açaí:** a bowl of açaí topped with banana slices and granola.
-- **p090 · pão de queijo:** a small basket of pão de queijo cheese breads.
-- **p091 · café coado:** coffee being brewed through a cloth filter (coador de pano) into a pot.
-
-## Bichos (p092–p100)
-
-- ✓ **p092 · gato preto dormindo:** a black cat curled up asleep in a tight ball on a light gray sofa cushion.
-- **p093 · gato laranja:** an orange tabby cat stretching with its front legs extended on a light wooden floor, side view.
-- **p094 · gato na janela:** a cat sitting on a windowsill seen from behind, looking out at a bright garden.
-- **p095 · elefante no safari:** an African elephant walking across a dry savanna, side view.
-- **p096 · elefante com filhote:** a mother elephant and her baby walking together on the savanna.
-- **p097 · girafa:** a giraffe standing next to an acacia tree on the savanna.
-- ✓ **p098 · golden no gramado:** a golden retriever sitting upright on a green lawn, facing the camera, tongue out.
-- **p099 · cavalo:** a brown horse standing in profile in a fenced green field.
-- **p100 · pombo:** a gray pigeon standing on a pale stone ledge, side view, city blurred behind.
+62 a mixed-breed brown dog lying down on a sidewalk, side view · 63 an orange tabby cat stretching with its front legs
+extended on a light wooden floor, side view · 64 a whole pepperoni pizza in an open cardboard pizza box on a table, seen
+from above · 65 a white lighthouse on a cliff at sunset, warm sky · 66 a pastel blue bicycle with a wicker basket parked
+on a cobblestone street, side view · 67 footprints in smooth wet sand on a beach leading toward the sea · 68 a tall glass
+office building seen from the street looking straight up at the sky · 69 a Brazilian bolo de pote, a layered chocolate
+cake in a clear plastic cup, on a table · 70 an empty concert stage with colorful spotlights and haze · 71 a dark navy
+suit hanging on a wooden hanger against a plain wall · 72 a window with light curtains blowing in the breeze · 73 a
+traffic light showing red on a city street corner · 74 an intercity coach bus parked at a Brazilian bus station · 75 a
+table lamp with a beige fabric shade, switched on, on a bedside table in a dim room · 76 a tall floor lamp with a white
+shade, switched on, next to a sofa in a living room · 77 the front of a small blue house with a white door and windows on
+a Brazilian street · 78 a bright blue wooden front door on a white wall, close up · 79 a white fencing uniform and fencing
+mask laid out on a bench, with a foil sword beside it · 80 two fencers in white uniforms and masks dueling on a fencing
+strip, seen from the side at a distance (+ no faces) · 81 an African elephant walking across a dry savanna, side view ·
+82 a mother elephant and her baby walking together on the savanna · 83 a giraffe standing next to an acacia tree on the
+savanna · 84 a zebra standing on the savanna grass, side view · 85 a clay pot full of Brazilian feijoada, black beans with
+meats, on a table · 86 a plate of feijoada completa with rice, collard greens, farofa and an orange slice, seen from above
+· 87 a neatly folded white t-shirt on a wooden surface · 88 a neatly folded pair of blue jeans on a wooden surface · 89 a
+yellow Brazilian school van parked on a street · 90 a yellow school bus parked on a street, side view · 91 a golden fried
+coxinha on a small plate · 92 a large crispy pastel de feira on a paper napkin · 93 a wicker basket of Brazilian pao
+frances bread rolls · 94 a small basket of pao de queijo cheese breads · 95 a bowl of acai topped with banana slices and
+granola · 96 a hand holding a strawberry ice cream cone up against a clear blue sky (+ no faces) · 97 a brown horse
+standing in profile in a fenced green field · 98 a black and white cow standing in a green pasture, side view · 99 a round
+wall clock with a black frame on a plain white wall · 100 a classic twin-bell alarm clock on a bedside table.
