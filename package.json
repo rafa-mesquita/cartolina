@@ -13,6 +13,7 @@
     "dev:web": "npm run dev -w web",
     "build": "npm run build -w web",
     "dixit:cartas": "node scripts/dixit-cartas.mjs",
+    "pictures:fotos": "node scripts/pictures-fotos.mjs",
     "smoke": "node scripts/smoke.mjs",
     "e2e": "playwright test -c e2e/playwright.config.ts"
   },
