@@ -228,25 +228,22 @@
   padding: 18px 16px 18px 14px; margin: 0 -16px 0 -14px; scrollbar-width: thin; scrollbar-color: var(--edge) transparent;
 }
 .pictures .pc-wf {
-  position: relative; padding: 8px 8px 0; background: var(--photo-border); box-shadow: 0 1px 3px rgba(59, 47, 47, .28); cursor: pointer;
+  position: relative; padding: 8px 8px 0; background: var(--photo-border); box-shadow: 0 1px 3px rgba(59, 47, 47, .28);
   transform: rotate(var(--tilt, 0deg)); transition: box-shadow .15s, transform .15s;
 }
-.pictures .pc-wf:hover { transform: rotate(var(--tilt, 0deg)) translateY(-2px); }
 .pictures .pc-wf.sel { box-shadow: 0 0 0 3px var(--blue), 0 4px 12px rgba(47, 90, 168, .25); }
 /* a folha é o contêiner do `show` do kit (as unidades cq* medem a folha, não a janela) */
 .pictures .pc-wsheet, .pictures .pc-zoom-frame.work .pic {
   position: relative; container-type: size; background: var(--paper); box-shadow: inset 0 0 0 1px rgba(211, 191, 153, .7); overflow: hidden;
 }
 .pictures .pc-wsheet { width: 100%; aspect-ratio: 4 / 3; }
-/* a folha e a legenda são um botão só (escolher a obra, também pelo teclado); lupa e fitinha ficam ao lado dele */
-.pictures .pc-wf-pick { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; }
-.pictures .pc-wf-pick:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
-.pictures .pc-gallery.locked .pc-wf-pick { cursor: default; }
-.pictures .pc-wf .cap { display: flex; align-items: center; gap: 8px; padding: 7px 2px 8px; }
-.pictures .pc-wf .cap .cr { width: 30px; height: 30px; flex: none; }
-.pictures .pc-wf .cap .critter, .pictures .pc-wf .cap svg { width: 100%; height: 100%; display: block; }
-.pictures .pc-wf .cap .nm { font: 700 15px/1.1 var(--ui); }
-.pictures .pc-wf .cap .kt { display: block; font: 500 12px/1.2 var(--ui); color: var(--ink-soft); }
+/* legenda: o lugar marcado do adesivo (sobe um pouco por cima da folha), artista e kit, e o seu palpite */
+.pictures .pc-wf .cap { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 4px 8px 2px; }
+.pictures .pc-wf .cap .who { flex: 1 1 auto; min-width: 0; }
+.pictures .pc-wf .cap .nm { display: block; font: 700 15px/1.1 var(--ui); }
+.pictures .pc-wf .cap .kt { display: block; font: 500 12px/1.2 var(--ui); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pictures .pc-wf-guess { margin-left: auto; font: 500 12.5px/1.25 var(--ui); color: var(--ink-soft); white-space: nowrap; }
+.pictures .pc-wf-guess b { font: 700 17px/1 var(--ui); color: var(--blue); letter-spacing: .5px; }
 .pictures .pc-wz {
   position: absolute; right: 14px; top: 14px; width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid var(--edge);
   background: var(--paper); color: var(--ink-soft); display: grid; place-items: center; font-size: 16px; box-shadow: var(--shadow);
@@ -254,26 +251,48 @@
 }
 .pictures .pc-wf:hover .pc-wz, .pictures .pc-wz:focus-visible { opacity: 1; }
 .pictures .pc-wz:hover { color: var(--blue); border-color: var(--blue); }
+/* fitinha com a coordenada (lupa da obra) */
 .pictures .pc-gtape {
   position: absolute; left: -12px; top: -11px; z-index: 4; min-width: 64px; height: 30px; padding: 0 12px; display: grid; place-items: center;
   border: 0; border-radius: 0; background: var(--tape); box-shadow: 0 1px 2px rgba(59, 47, 47, .18); font: 700 19px/1 var(--ui); color: var(--blue);
   letter-spacing: .5px; transform: rotate(var(--rot, -7deg));
 }
-.pictures button.pc-gtape { cursor: pointer; color: var(--blue); }
-.pictures button.pc-gtape:hover { filter: brightness(.96); }
-.pictures button.pc-gtape:hover::after {
-  content: '✕'; position: absolute; right: -7px; top: -7px; width: 16px; height: 16px; border-radius: 50%; background: var(--paper);
-  color: var(--ink-soft); font-size: 9px; display: grid; place-items: center; box-shadow: var(--shadow);
+
+/* adesivos: o bichinho do artista num círculo branco de adesivo, com sombrinha */
+.pictures .pc-stk-slot {
+  position: relative; z-index: 2; flex: none; width: 54px; height: 54px; margin-top: -20px; border-radius: 50%;
+  border: 1.5px dashed rgba(125, 106, 88, .45); background: rgba(246, 238, 221, .55); display: grid; place-items: center;
 }
-.pictures .pc-gtape.pop { animation: pc-tapein .22s ease-out; }
-@keyframes pc-tapein { from { transform: rotate(var(--rot, -7deg)) scale(1.35); opacity: .2; } }
-.pictures .pc-empty-tag {
-  position: absolute; left: 12px; top: 12px; z-index: 2; padding: 3px 9px; border-radius: 999px; background: rgba(246, 238, 221, .92);
-  font: 600 11.5px/1.2 var(--ui); color: var(--ink-soft); box-shadow: var(--shadow);
+.pictures .pc-stk {
+  width: 46px; height: 46px; padding: 4px; border: 0; border-radius: 50%; background: #fff; display: grid; place-items: center;
+  box-shadow: 0 0 0 1px rgba(211, 191, 153, .55), 0 1px 3px rgba(59, 47, 47, .35); transform: rotate(var(--rot, -6deg));
+  transition: transform .12s, box-shadow .12s, opacity .15s; touch-action: none; -webkit-user-drag: none;
 }
-.pictures .pc-wf.sel .pc-empty-tag { color: var(--blue); }
-.pictures .pc-gallery.locked .pc-wf { cursor: default; }
-.pictures .pc-gallery.locked .pc-wf:hover { transform: rotate(var(--tilt, 0deg)); }
+.pictures .pc-stk .critter, .pictures .pc-stk svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+.pictures button.pc-stk { cursor: grab; }
+.pictures button.pc-stk:hover { transform: rotate(var(--rot, -6deg)) scale(1.07); }
+.pictures button.pc-stk:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.pictures .pc-stk.sel, .pictures button.pc-stk.sel:hover { box-shadow: 0 0 0 3px var(--blue), 0 2px 6px rgba(47, 90, 168, .35); }
+.pictures .pc-stk.ghost { opacity: .3; box-shadow: 0 0 0 1px rgba(211, 191, 153, .55); }
+.pictures button.pc-stk.ghost { cursor: pointer; }
+.pictures button.pc-stk.ghost:hover { opacity: .5; transform: rotate(var(--rot, -6deg)); }
+.pictures .pc-stk.lifting { opacity: 0; }
+.pictures .pc-stk.fly {
+  position: fixed; z-index: 80; margin: 0; pointer-events: none; transition: none;
+  transform: translate(-50%, -50%) rotate(var(--rot, -6deg)); box-shadow: 0 0 0 1px rgba(211, 191, 153, .55), 0 10px 22px rgba(43, 34, 30, .35);
+}
+/* na foto: pequenos, empilhados no canto de baixo (a lupinha fica no de cima) */
+.pictures .pc-stks { position: absolute; left: 8px; bottom: 8px; z-index: 3; display: flex; align-items: flex-end; }
+.pictures .pc-stks .pc-stk { width: 30px; height: 30px; padding: 2px; }
+.pictures .pc-stks .pc-stk + .pc-stk { margin-left: -7px; }
+.pictures .pc-stks .pc-stk.sel { box-shadow: 0 0 0 2.5px var(--blue), 0 1px 3px rgba(59, 47, 47, .35); position: relative; z-index: 1; }
+.pictures .pc-stk.pop { animation: pc-stkin .24s ease-out; }
+@keyframes pc-stkin { from { transform: rotate(var(--rot, -6deg)) scale(1.6); opacity: .3; } }
+/* foto embaixo do adesivo arrastado */
+.pictures .pc-photo.drop::after {
+  content: ''; position: absolute; inset: -5px; z-index: 4; border: 3px dashed var(--blue); border-radius: 3px;
+  background: rgba(47, 90, 168, .10); pointer-events: none;
+}
 .pictures .pc-no-works { grid-column: 1 / -1; margin: 0; padding: 40px 20px; text-align: center; font: 500 16px/1.4 var(--ui); color: var(--ink-soft); }
 .pictures .pc-gal-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px;

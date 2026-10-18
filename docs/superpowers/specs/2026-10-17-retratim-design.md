@@ -229,11 +229,22 @@ contagem dispara, todos veem o relógio ("faltam 0:24").
 
 ### 5.2 Palpitar (galeria)
 
-Grade de fotos de um lado, obras dos outros em molduras (nome + bichinho do
-artista) do outro. Clica numa obra, depois numa foto: cola na obra uma
-**fitinha "B3"** em tinta azul (clicar outra foto troca). Obras 3D aparecem
-**fixas no ângulo do artista**; uma lupa abre qualquer obra grande.
-"Confirmar" vale com obra sem palpite. Selinho de quem confirmou.
+Grade de fotos de um lado, obras dos outros em molduras do outro. Palpite com
+**adesivos** (decisão do usuário, 2026-10-17, aprovada num mockup; substitui a
+"fitinha B3" colada na obra): cada obra vem com um **adesivo redondo com o
+bichinho do artista** (círculo branco, sombrinha) num lugar marcado da moldura.
+**Arrastar o adesivo** até uma foto cola o adesivo na foto (pequeno, no canto;
+vários empilham) e manda o palpite; enquanto arrasta, o adesivo segue o
+ponteiro um pouco maior e a foto embaixo ganha contorno azul tracejado. De uma
+foto pra outra troca; de volta pra moldura (ou solto fora da grade) tira o
+palpite. Na moldura fica a **sombra apagada do adesivo** (opacidade 0,3), pra
+não perder de vista de quem é cada obra, com "você acha que é a **B3**" ou
+"sem palpite"; clicar na sombra também tira. Sem arrastar: clique no adesivo
+(contorno azul) e depois na foto, ou letra + número no teclado (Delete tira).
+Sem adesivo na mão, clicar na foto amplia. Depois de confirmar nada se
+arrasta. Obras 3D aparecem **fixas no ângulo do artista**; uma lupa abre
+qualquer obra grande. "Confirmar" vale com obra sem palpite. Selinho de quem
+confirmou.
 
 ### 5.3 Revelação narrada (avança sozinha, ritmo do Diquisti)
 

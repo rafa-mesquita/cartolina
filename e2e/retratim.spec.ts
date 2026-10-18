@@ -54,16 +54,22 @@ async function buildSticks(page: Page): Promise<void> {
   await expect(bench.locator('.pc-ks-st')).toHaveText(/na folha: 1 de 8/);
 }
 
-/** Na galeria: cola uma foto diferente em cada obra alheia e confirma (o último a confirmar já vai pra revelação). */
+/**
+ * Na galeria: clica no adesivo de cada obra alheia e depois numa foto (diferente pra cada obra), e confirma
+ * (o último a confirmar já vai pra revelação).
+ */
 async function guessAll(page: Page, others: string[], last = false): Promise<void> {
   await expect(page.getByRole('heading', { name: 'de quem é qual foto?' })).toBeVisible({ timeout: 30_000 });
   const coords = ['A1', 'B2'];
   for (const [i, name] of others.entries()) {
     const coord = coords[i]!;
-    const pick = page.getByRole('button', { name: `obra de ${name}`, exact: true });
-    await pick.click();
-    await expect(pick).toHaveAttribute('aria-pressed', 'true');
-    await page.locator(`.pc-grid .pc-photo[data-coord="${coord}"]`).click();
+    const sticker = page.getByRole('button', { name: `adesivo de ${name}`, exact: true });
+    await sticker.click();
+    await expect(sticker).toHaveAttribute('aria-pressed', 'true');
+    const photo = page.locator(`.pc-grid .pc-photo[data-coord="${coord}"]`);
+    await photo.click();
+    // o adesivo vai pra foto; na moldura fica a sombra (que tira o palpite)
+    await expect(photo.getByRole('button', { name: `adesivo de ${name}`, exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: `tirar o palpite ${coord}` })).toBeVisible();
   }
   await page.getByRole('button', { name: 'confirmar palpites' }).click();

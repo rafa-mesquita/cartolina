@@ -8,6 +8,7 @@ import type { GameConn } from '../src/net/connection';
 import { COORDS, PLAYER_COLORS, joinRoom, type PicturesRoomView } from '@cartolina/shared';
 import { KITS_UI } from '../src/games/pictures/kits';
 import { confetti } from '../src/table/confetti';
+import { dropTarget, stickerMove } from '../src/games/pictures/stickers';
 import { finished, guessing, lastReveal, picturesView, play, revealed, started, stateOf } from './pictures-fixtures';
 
 vi.mock('../src/games/pictures/sounds', async (original) => ({ ...(await original<typeof import('../src/games/pictures/sounds')>()), playPicturesSound: vi.fn() }));
@@ -211,11 +212,31 @@ describe('mesa do Retratim: montagem', () => {
   });
 });
 
-describe('mesa do Retratim: galeria de palpites', () => {
+describe('mesa do Retratim: galeria de palpites (adesivos)', () => {
   const photo = (container: HTMLElement, coord: string) => container.querySelector<HTMLElement>(`.pc-photo[data-coord="${coord}"]`)!;
   const frame = (container: HTMLElement, p: string) => container.querySelector<HTMLElement>(`.pc-wf[data-artist="${p}"]`)!;
+  const sticker = (name: string) => screen.getByRole('button', { name: `adesivo de ${name}` });
+  /** Os adesivos colados numa foto (na ordem em que aparecem). */
+  const onPhoto = (container: HTMLElement, coord: string) =>
+    [...photo(container, coord).querySelectorAll<HTMLElement>('.pc-stks .pc-stk')].map((s) => s.getAttribute('aria-label') ?? s.title);
 
-  it('mostra as obras dos outros (não a sua) com artista e kit, a grade e os selinhos', () => {
+  /** Arrasta `el` até o ponto onde `document.elementFromPoint` devolve `over` (o kit acha o alvo pelo ponteiro). */
+  function dragTo(el: HTMLElement, over: Element | null, { drop = true }: { drop?: boolean } = {}) {
+    const real = document.elementFromPoint;
+    document.elementFromPoint = () => over;
+    try {
+      fireEvent.pointerDown(el, { button: 0, clientX: 10, clientY: 10, pointerId: 7 });
+      fireEvent.pointerMove(window, { clientX: 60, clientY: 40, pointerId: 7 });
+      if (drop) {
+        fireEvent.pointerUp(window, { clientX: 60, clientY: 40, pointerId: 7 });
+        fireEvent.click(el);
+      }
+    } finally {
+      document.elementFromPoint = real;
+    }
+  }
+
+  it('mostra as obras dos outros (não a sua) com o adesivo do artista, o kit, a grade e os selinhos', () => {
     const room = guessing(3);
     const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
     expect(screen.getByText('de quem é qual foto?')).toBeTruthy();
@@ -225,89 +246,201 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(frame(container, 'p1').querySelector('.cap .nm')!.textContent).toBe('P1');
     expect(frame(container, 'p1').querySelector('.cap .kt')!.textContent).toBe(KIT_NAMES[kits.p1!]);
     expect(frame(container, 'p2').querySelector('.cap .kt')!.textContent).toBe(KIT_NAMES[kits.p2!]);
-    // cada moldura desenha a obra na própria folha
     expect(frame(container, 'p1').querySelector('.pc-wsheet')!.childElementCount).toBeGreaterThan(0);
     expect(container.querySelectorAll('.pc-grid .pc-photo')).toHaveLength(16);
     expect(container.querySelector('.pc-bench')).toBeNull();
-    expect(frame(container, 'p1').classList.contains('sel')).toBe(true);
-    expect(frame(container, 'p1').querySelector('.pc-empty-tag')!.textContent).toBe('sem palpite');
+    // o adesivo (bichinho num círculo branco) mora no lugar marcado da moldura
+    const s = sticker('P1');
+    expect(s.closest('.pc-stk-slot')!.closest('.pc-wf')).toBe(frame(container, 'p1'));
+    expect(s.querySelector('.critter')).toBeTruthy();
+    expect(s.getAttribute('aria-pressed')).toBe('false');
+    expect(frame(container, 'p1').querySelector('.pc-wf-guess')!.textContent).toBe('sem palpite');
     expect(container.querySelector('.pc-seal[data-p="p1"] .stt')!.textContent).toBe('palpitando…');
   });
 
-  it('clicar na foto cola a fitinha na obra selecionada; a mesma foto vale em duas obras; a fitinha tira', () => {
+  it('clicar no adesivo e depois na foto manda o guess; o adesivo vai pra foto na hora e a sombra fica na moldura', () => {
     const c = conn();
     let room = guessing(3);
     const { container, rerender } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
     const show = () => rerender(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
 
+    fireEvent.click(sticker('P1'));
+    expect(sticker('P1').getAttribute('aria-pressed')).toBe('true');
+    expect(sticker('P1').classList.contains('sel')).toBe(true);
     fireEvent.click(photo(container, 'B2'));
     expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: 'B2' });
-    // sem o eco ainda nada aparece: o que vale são os palpites da visão
-    expect(frame(container, 'p1').querySelector('.pc-gtape')).toBeNull();
+    // sem esperar o eco: o adesivo já está na foto, pequeno no canto; na moldura fica a sombra apagada
+    expect(onPhoto(container, 'B2')).toEqual(['adesivo de P1']);
+    const ghost = frame(container, 'p1').querySelector<HTMLElement>('.pc-stk-slot .pc-stk.ghost')!;
+    expect(ghost.querySelector('.critter')).toBeTruthy();
+    expect(frame(container, 'p1').querySelector('.pc-wf-guess')!.textContent).toBe('você acha que é a B2');
+    expect(frame(container, 'p1').querySelector('.pc-wf-guess b')!.textContent).toBe('B2');
     room = play(room, 'p0', c.sendAction.mock.lastCall![0]);
     show();
-    const tape = frame(container, 'p1').querySelector('.pc-gtape')!;
-    expect(tape.textContent).toBe('B2');
-    expect(tape.classList.contains('pop')).toBe(true);
+    expect(onPhoto(container, 'B2')).toEqual(['adesivo de P1']);
     expect(photo(container, 'B2').classList.contains('picked')).toBe(true);
-    expect(photo(container, 'B2').querySelectorAll('.pc-used > span')).toHaveLength(1);
 
-    // seleciona a outra obra e cola a mesma foto
-    fireEvent.click(screen.getByRole('button', { name: 'obra de P2' }));
-    expect(frame(container, 'p2').classList.contains('sel')).toBe(true);
-    expect(photo(container, 'B2').classList.contains('picked')).toBe(false);
+    // outro adesivo na mesma foto: empilham
+    fireEvent.click(sticker('P2'));
+    expect(sticker('P1').getAttribute('aria-pressed')).toBe('false');
     fireEvent.click(photo(container, 'B2'));
     expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p2', coord: 'B2' });
     room = play(room, 'p0', c.sendAction.mock.lastCall![0]);
     show();
-    expect(photo(container, 'B2').querySelectorAll('.pc-used > span')).toHaveLength(2);
+    expect(onPhoto(container, 'B2')).toEqual(['adesivo de P1', 'adesivo de P2']);
 
-    // clicar de novo na mesma foto não manda nada; trocar manda a nova
+    // a mesma foto de novo não manda nada; outra foto troca
     const sent = c.sendAction.mock.calls.length;
     fireEvent.click(photo(container, 'B2'));
     expect(c.sendAction).toHaveBeenCalledTimes(sent);
     fireEvent.click(photo(container, 'D4'));
     expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p2', coord: 'D4' });
-
-    // a fitinha da p1 sai (e a obra fica selecionada)
-    expect(screen.getAllByRole('button', { name: 'tirar o palpite B2' })).toHaveLength(2);
-    fireEvent.click(frame(container, 'p1').querySelector('.pc-gtape')!);
-    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: null });
-    expect(frame(container, 'p1').classList.contains('sel')).toBe(true);
+    expect(onPhoto(container, 'D4')).toEqual(['adesivo de P2']);
+    expect(onPhoto(container, 'B2')).toEqual(['adesivo de P1']);
   });
 
-  it('teclado: letra e número colam a fitinha (com a foto ampliada aberta, não)', () => {
+  it('a sombra apagada do adesivo continua na moldura (palpite que veio da visão)', () => {
+    let room = guessing(3);
+    room = play(room, 'p0', { type: 'guess', artist: 'p2', coord: 'C3' });
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+    const slot = frame(container, 'p2').querySelector('.pc-stk-slot')!;
+    expect(slot.querySelector('.pc-stk.ghost .critter')).toBeTruthy();
+    expect(slot.querySelector('.pc-stk:not(.ghost)')).toBeNull();
+    expect(onPhoto(container, 'C3')).toEqual(['adesivo de P2']);
+    // a outra obra continua com o adesivo inteiro na moldura
+    expect(frame(container, 'p1').querySelector('.pc-stk-slot .pc-stk.ghost')).toBeNull();
+    expect(sticker('P1').closest('.pc-wf')).toBe(frame(container, 'p1'));
+  });
+
+  it('tirar o palpite manda coord null: clicando na sombra, pelo teclado ou arrastando de volta pra moldura', () => {
+    const c = conn();
+    let room = guessing(3);
+    room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' });
+    room = play(room, 'p0', { type: 'guess', artist: 'p2', coord: 'B1' });
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'tirar o palpite A1' }));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: null });
+    expect(onPhoto(container, 'A1')).toEqual([]);
+    expect(sticker('P1').closest('.pc-wf')).toBe(frame(container, 'p1'));
+
+    dragTo(sticker('P2'), frame(container, 'p2').querySelector('.pc-wsheet'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p2', coord: null });
+    expect(onPhoto(container, 'B1')).toEqual([]);
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('arrastar o adesivo: segue o ponteiro e destaca a foto embaixo; soltar cola; de uma foto pra outra troca; fora tira', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    // no meio do arraste: o adesivo voa (maior) e a foto embaixo fica destacada
+    dragTo(sticker('P1'), photo(container, 'C2').querySelector('img') ?? photo(container, 'C2'), { drop: false });
+    expect(container.querySelector('.pc-stk.fly')).toBeTruthy();
+    expect(photo(container, 'C2').classList.contains('drop')).toBe(true);
+    expect(frame(container, 'p1').querySelector('.pc-stk-slot .pc-stk.ghost')).toBeTruthy();
+    fireEvent.pointerUp(window, { clientX: 60, clientY: 40, pointerId: 7 });
+    // sem `elementFromPoint` no ponto (jsdom), soltou fora: nada colado, nada mandado
+    expect(c.sendAction).not.toHaveBeenCalled();
+    expect(container.querySelector('.pc-stk.fly')).toBeNull();
+    expect(container.querySelector('.pc-photo.drop')).toBeNull();
+
+    dragTo(sticker('P1'), photo(container, 'C2'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: 'C2' });
+    expect(playPicturesSound).toHaveBeenLastCalledWith('tape');
+    // o clique que vem no fim do arraste não seleciona o adesivo
+    expect(sticker('P1').getAttribute('aria-pressed')).toBe('false');
+    expect(onPhoto(container, 'C2')).toEqual(['adesivo de P1']);
+
+    dragTo(sticker('P1'), photo(container, 'A4'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: 'A4' });
+    expect(onPhoto(container, 'A4')).toEqual(['adesivo de P1']);
+    expect(onPhoto(container, 'C2')).toEqual([]);
+
+    // soltar na mesma foto: nada muda
+    dragTo(sticker('P1'), photo(container, 'A4'));
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+
+    dragTo(sticker('P1'), container.querySelector('.pc-gal-head'));
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: null });
+    expect(playPicturesSound).toHaveBeenLastCalledWith('peel');
+    expect(onPhoto(container, 'A4')).toEqual([]);
+  });
+
+  it('um toque sem arrastar é clique (seleciona), não arraste', () => {
+    const c = conn();
+    render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    const s = sticker('P2');
+    fireEvent.pointerDown(s, { button: 0, clientX: 10, clientY: 10, pointerId: 2 });
+    fireEvent.pointerMove(window, { clientX: 12, clientY: 11, pointerId: 2 });
+    fireEvent.pointerUp(window, { clientX: 12, clientY: 11, pointerId: 2 });
+    fireEvent.click(s);
+    expect(s.getAttribute('aria-pressed')).toBe('true');
+    expect(c.sendAction).not.toHaveBeenCalled();
+    // clicar de novo larga
+    fireEvent.click(s);
+    expect(s.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('o adesivo volta pra moldura se o servidor recusar o palpite', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(sticker('P1'));
+    fireEvent.click(photo(container, 'B4'));
+    expect(onPhoto(container, 'B4')).toEqual(['adesivo de P1']);
+    fail(c, 'bad_phase', 'fase errada');
+    expect(onPhoto(container, 'B4')).toEqual([]);
+    expect(sticker('P1').closest('.pc-wf')).toBe(frame(container, 'p1'));
+  });
+
+  it('teclado: com um adesivo selecionado, letra e número colam (sem adesivo, ou com a foto ampliada aberta, não)', () => {
     const c = conn();
     const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
     fireEvent.keyDown(document, { key: 'c' });
     fireEvent.keyDown(document, { key: '3' });
+    expect(c.sendAction).not.toHaveBeenCalled();
+
+    fireEvent.click(sticker('P1'));
+    fireEvent.keyDown(document, { key: 'c' });
+    fireEvent.keyDown(document, { key: '3' });
     expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: 'C3' });
+    expect(onPhoto(container, 'C3')).toEqual(['adesivo de P1']);
     // um número sem letra antes não faz nada
     fireEvent.keyDown(document, { key: '2' });
     expect(c.sendAction).toHaveBeenCalledTimes(1);
+    // Delete tira o palpite do adesivo selecionado
+    fireEvent.keyDown(document, { key: 'Delete' });
+    expect(c.sendAction).toHaveBeenLastCalledWith({ type: 'guess', artist: 'p1', coord: null });
 
-    // a lupinha abre a foto grande (sem palpite); lá as setas passam as fotos
+    // a lupinha abre a foto grande (sem palpite); com ela aberta o teclado não cola
     fireEvent.click(photo(container, 'A1').querySelector('.pc-zoom-btn')!);
     expect(screen.getByRole('dialog', { name: 'foto A1' })).toBeTruthy();
     fireEvent.keyDown(document, { key: 'b' });
     fireEvent.keyDown(document, { key: '1' });
-    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('a lupa da obra abre a obra grande com o artista e a sua fitinha; Esc fecha', () => {
+  it('sem adesivo selecionado, clicar na foto amplia', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(photo(container, 'D1'));
+    expect(screen.getByRole('dialog', { name: 'foto D1' })).toBeTruthy();
+    expect(c.sendAction).not.toHaveBeenCalled();
+  });
+
+  it('a lupa da obra abre a obra grande com o artista e o seu palpite; Esc fecha', () => {
     const c = conn();
     let room = guessing(3);
     room = play(room, 'p0', { type: 'guess', artist: 'p2', coord: 'A4' });
-    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(sticker('P1'));
     fireEvent.click(screen.getByRole('button', { name: 'ver a obra de P2 grande' }));
     const dialog = screen.getByRole('dialog', { name: 'obra de P2' });
     expect(dialog.querySelector('.who .nm')!.textContent).toBe('P2');
     expect(dialog.querySelector('.pc-gtape')!.textContent).toBe('A4');
     expect(dialog.querySelector('.pic')!.childElementCount).toBeGreaterThan(0);
-    // a lupa não seleciona a obra, e o teclado não cola fitinha com ela aberta
-    expect(frame(container, 'p1').classList.contains('sel')).toBe(true);
+    // a lupa não troca o adesivo selecionado, e o teclado não cola com ela aberta
+    expect(sticker('P1').getAttribute('aria-pressed')).toBe('true');
     fireEvent.keyDown(document, { key: 'b' });
     fireEvent.keyDown(document, { key: '1' });
     expect(c.sendAction).not.toHaveBeenCalled();
@@ -315,7 +448,7 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('"confirmar palpites" avisa quantas faltam e manda confirm; depois só "esperando a galera…"', () => {
+  it('"confirmar palpites" avisa quantas faltam e manda confirm; depois só "esperando a galera…" e nada se arrasta', () => {
     const c = conn();
     let room = guessing(3);
     room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' });
@@ -330,16 +463,24 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(screen.getByText('palpites confirmados ✓')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'confirmar palpites' })).toBeNull();
     expect(container.querySelector('.pc-seal[data-p="p0"] .stt')!.textContent).toBe('confirmou ✓');
-    expect(container.querySelector('.pc-wf.sel')).toBeNull();
-    expect(container.querySelector('.pc-empty-tag')).toBeNull();
-    // a fitinha fica, mas não sai mais; foto, obra e teclado não mandam nada
-    expect(frame(container, 'p1').querySelector('.pc-gtape')!.tagName).toBe('SPAN');
-    fireEvent.click(screen.getByRole('button', { name: 'obra de P2' }));
+    // os adesivos ficam onde estão, mas não são mais botões; a sombra e o texto continuam
+    expect(screen.queryByRole('button', { name: /^adesivo de/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^tirar o palpite/ })).toBeNull();
+    expect(onPhoto(container, 'A1')).toEqual(['adesivo de P1']);
+    expect(frame(container, 'p1').querySelector('.pc-stk-slot .pc-stk.ghost')).toBeTruthy();
+    expect(frame(container, 'p1').querySelector('.pc-wf-guess')!.textContent).toBe('você acha que é a A1');
+    const onA1 = photo(container, 'A1').querySelector<HTMLElement>('.pc-stks .pc-stk')!;
+    const p2 = frame(container, 'p2').querySelector<HTMLElement>('.pc-stk-slot .pc-stk')!;
+    dragTo(onA1, photo(container, 'C2'));
+    dragTo(p2, photo(container, 'C2'), { drop: false });
+    expect(container.querySelector('.pc-stk.fly')).toBeNull();
+    expect(container.querySelector('.pc-photo.drop')).toBeNull();
+    fireEvent.pointerUp(window, { pointerId: 7 });
+    fireEvent.click(p2);
     fireEvent.click(photo(container, 'C2'));
     fireEvent.keyDown(document, { key: 'c' });
     fireEvent.keyDown(document, { key: '2' });
     expect(c.sendAction).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Você já confirmou.')).toBeTruthy();
   });
 
   it('todas com palpite: o pé diz isso', () => {
@@ -356,42 +497,39 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect(screen.queryByText('de quem é qual foto?')).toBeNull();
   });
 
-  it('confirmou e o eco não chegou: clique duplo e foto/obra/fitinha não mandam mais nada', () => {
+  it('confirmou e o eco não chegou: clique duplo, adesivo, foto, sombra, arraste e teclado não mandam mais nada', () => {
     const c = conn();
     let room = guessing(3);
     room = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'A1' });
     const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(sticker('P2'));
     const confirm = screen.getByRole('button', { name: 'confirmar palpites' });
-    const tape = frame(container, 'p1').querySelector<HTMLElement>('.pc-gtape')!;
     fireEvent.click(confirm);
     fireEvent.click(confirm);
     fireEvent.click(photo(container, 'B3'));
-    fireEvent.click(tape);
-    fireEvent.click(screen.getByRole('button', { name: 'obra de P2' }));
     fireEvent.keyDown(document, { key: 'c' });
     fireEvent.keyDown(document, { key: '1' });
+    fireEvent.keyDown(document, { key: 'Delete' });
+    expect(screen.queryByRole('button', { name: /^adesivo de/ })).toBeNull();
+    dragTo(frame(container, 'p2').querySelector<HTMLElement>('.pc-stk-slot .pc-stk')!, photo(container, 'D1'));
     expect(c.sendAction.mock.calls).toEqual([[{ type: 'confirm' }]]);
-    // a galeria já fica travada sem esperar o servidor
     expect(screen.queryByRole('button', { name: 'confirmar palpites' })).toBeNull();
     expect(screen.getByText('esperando a galera…')).toBeTruthy();
   });
 
-  it('pelo teclado dá pra escolher outra obra (cada moldura é um botão)', () => {
+  it('pelo teclado: cada adesivo é um botão (Tab chega, Enter seleciona) e letra + número colam', () => {
     const c = conn();
     const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
-    const pick = screen.getByRole('button', { name: 'obra de P2' });
-    expect(pick.tagName).toBe('BUTTON');
-    expect(pick.getAttribute('aria-pressed')).toBe('false');
-    expect(pick.tabIndex).toBe(0);
-    expect(screen.getByRole('button', { name: 'obra de P1' }).getAttribute('aria-pressed')).toBe('true');
-    // a lupa e a fitinha são irmãs do botão da moldura (botão não fica dentro de botão)
-    expect(pick.querySelector('button')).toBeNull();
-    expect(pick.parentElement).toBe(frame(container, 'p2'));
-    // Tab chega no botão; Enter num botão é um clique
-    pick.focus();
-    expect(document.activeElement).toBe(pick);
-    fireEvent.click(pick);
-    expect(pick.getAttribute('aria-pressed')).toBe('true');
+    const s = sticker('P2');
+    expect(s.tagName).toBe('BUTTON');
+    expect(s.tabIndex).toBe(0);
+    // a lupa e o adesivo são irmãos (botão não fica dentro de botão)
+    expect(s.querySelector('button')).toBeNull();
+    expect(s.closest('.pc-wf')).toBe(frame(container, 'p2'));
+    s.focus();
+    expect(document.activeElement).toBe(s);
+    fireEvent.click(s);
+    expect(s.getAttribute('aria-pressed')).toBe('true');
     expect(frame(container, 'p2').classList.contains('sel')).toBe(true);
     fireEvent.keyDown(document, { key: 'a' });
     fireEvent.keyDown(document, { key: '2' });
@@ -416,6 +554,7 @@ describe('mesa do Retratim: galeria de palpites', () => {
   it('o teclado da galeria ignora quem está digitando num campo', () => {
     const c = conn();
     render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(sticker('P1'));
     const input = document.createElement('input');
     const editable = document.createElement('div');
     editable.setAttribute('contenteditable', 'true');
@@ -432,7 +571,7 @@ describe('mesa do Retratim: galeria de palpites', () => {
     }
   });
 
-  it('quem assiste a rodada vê as obras de todos, sem palpite; clicar na foto amplia', () => {
+  it('quem assiste a rodada vê as obras de todos com o adesivo de cada artista, sem palpite; clicar na foto amplia', () => {
     const c = conn();
     let room = guessing(3);
     const res = joinRoom(room, { token: 't3', name: 'P3', color: PLAYER_COLORS[3]! }, 'p3', 0);
@@ -443,7 +582,9 @@ describe('mesa do Retratim: galeria de palpites', () => {
     expect([...container.querySelectorAll<HTMLElement>('.pc-wf')].map((f) => f.dataset.artist)).toEqual(['p0', 'p1', 'p2']);
     expect(screen.getByText('você está assistindo esta rodada')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'confirmar palpites' })).toBeNull();
-    expect(container.querySelector('.pc-empty-tag')).toBeNull();
+    expect(screen.queryByRole('button', { name: /^adesivo de/ })).toBeNull();
+    expect(container.querySelectorAll('.pc-stk-slot .pc-stk:not(.ghost)')).toHaveLength(3);
+    expect(container.querySelector('.pc-wf-guess')).toBeNull();
     expect(container.querySelector('.pc-photo.secret')).toBeNull();
     fireEvent.click(photo(container, 'C2'));
     expect(screen.getByRole('dialog', { name: 'foto C2' })).toBeTruthy();
@@ -464,6 +605,54 @@ describe('mesa do Retratim: galeria de palpites', () => {
     } finally {
       for (const s of spies) s.mockRestore();
     }
+  });
+});
+
+describe('mesa do Retratim: onde o adesivo cai (funções puras)', () => {
+  it('dropTarget: dentro de uma foto da grade dá a coordenada; fora dela, null', () => {
+    const grid = document.createElement('div');
+    grid.className = 'pc-grid';
+    grid.innerHTML = '<div class="pc-photo" data-coord="B3"><div class="pc-ph"><img></div></div><span class="pc-lbl">A</span>';
+    const wf = document.createElement('div');
+    wf.className = 'pc-wf';
+    wf.innerHTML = '<div class="pc-wsheet"></div>';
+    document.body.append(grid, wf);
+    try {
+      expect(dropTarget(grid.querySelector('img'))).toBe('B3');
+      expect(dropTarget(grid.querySelector('.pc-photo'))).toBe('B3');
+      expect(dropTarget(grid.querySelector('.pc-lbl'))).toBeNull();
+      expect(dropTarget(wf.querySelector('.pc-wsheet'))).toBeNull();
+      expect(dropTarget(document.body)).toBeNull();
+      expect(dropTarget(null)).toBeNull();
+    } finally {
+      grid.remove();
+      wf.remove();
+    }
+  });
+
+  it('dropTarget ignora foto fora da grade (o zoom, a revelação) e coordenada inválida', () => {
+    const lone = document.createElement('div');
+    lone.className = 'pc-photo';
+    lone.dataset.coord = 'A1';
+    const bad = document.createElement('div');
+    bad.className = 'pc-grid';
+    bad.innerHTML = '<div class="pc-photo" data-coord="Z9"></div>';
+    document.body.append(lone, bad);
+    try {
+      expect(dropTarget(lone)).toBeNull();
+      expect(dropTarget(bad.firstElementChild)).toBeNull();
+    } finally {
+      lone.remove();
+      bad.remove();
+    }
+  });
+
+  it('stickerMove: soltar onde já estava não manda nada; noutra foto troca; fora tira', () => {
+    expect(stickerMove(null, null)).toBeUndefined();
+    expect(stickerMove('A1', 'A1')).toBeUndefined();
+    expect(stickerMove(null, 'B2')).toEqual({ coord: 'B2' });
+    expect(stickerMove('B2', 'C3')).toEqual({ coord: 'C3' });
+    expect(stickerMove('C3', null)).toEqual({ coord: null });
   });
 });
 
@@ -801,16 +990,13 @@ describe('mesa do Retratim: sons', () => {
     expect(sons()).toContain('round');
   });
 
-  it('fitinha colando e saindo na galeria: "tape" e "peel"', () => {
+  it('adesivo colando e saindo na galeria: "tape" e "peel"', () => {
     const c = conn();
-    const room = guessing(3);
-    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={c} serverOffset={0} />);
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    fireEvent.click(screen.getByRole('button', { name: 'adesivo de P1' }));
     fireEvent.click(photo(container, 'B2'));
     expect(sons()).toEqual(['tape']);
-    // sem eco a fitinha não aparece; com ela na visão, tirar toca "peel"
-    const withTape = play(room, 'p0', { type: 'guess', artist: 'p1', coord: 'B2' });
-    const { container: c2 } = render(<PicturesTable view={picturesView(withTape, 'p0')} conn={conn()} serverOffset={0} />);
-    fireEvent.click(c2.querySelector('.pc-gtape')!);
+    fireEvent.click(screen.getByRole('button', { name: 'tirar o palpite B2' }));
     expect(sons()).toEqual(['tape', 'peel']);
   });
 
