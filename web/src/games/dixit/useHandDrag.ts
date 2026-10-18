@@ -44,7 +44,8 @@ interface Track {
 /** Quanto o ponteiro anda (px do palco) antes de o clique virar arrasto. */
 const DRAG_START = 6;
 
-const overFelt = (x: number, y: number): boolean => !!document.elementFromPoint?.(x, y)?.closest('.dx-felt');
+/** O quadro de narrar fica em cima do feltro: soltar a carta nele também vale. */
+const overFelt = (x: number, y: number): boolean => !!document.elementFromPoint?.(x, y)?.closest('.dx-felt, .dx-panel.center');
 
 /**
  * Arrastar e soltar da mão (pointer events): arrastar dentro da mão troca a ordem; soltar no feltro joga a

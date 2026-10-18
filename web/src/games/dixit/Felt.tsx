@@ -60,6 +60,8 @@ export function Felt({ view, name, color, frame, scores, dropState, pending, dro
           : 'primeiro a dica: escreva ou marque “vou falar na call”'
         : `${name(g.storyteller)} está escolhendo a carta…`
       : null;
+  /** Quem narra tem o quadro da dica no meio do feltro: o recado desce pra perto da mão. */
+  const low = !g.paused && g.phase === 'storytelling' && you !== null && g.storyteller === you;
 
   let cards: ReactNode = null;
   if (g.phase === 'submitting') {
@@ -123,7 +125,7 @@ export function Felt({ view, name, color, frame, scores, dropState, pending, dro
             </div>
           );
         })}
-        {message && <div className="dx-felt-msg">{message}</div>}
+        {message && <div className={low ? 'dx-felt-msg low' : 'dx-felt-msg'}>{message}</div>}
         {cards}
       </div>
     </div>
