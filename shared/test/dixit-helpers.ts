@@ -7,7 +7,7 @@ export const ids = (n: number): string[] => Array.from({ length: n }, (_, i) => 
 
 /** Contexto com `p0` como host por padrão. */
 export function ctxOf(active: string[], seed = 1, hostId: string | null = 'p0'): GameContext {
-  return { hostId, active, rng: mulberry32(seed) };
+  return { hostId, active, rng: mulberry32(seed), now: 0 };
 }
 
 export function must(res: ActionResult<DixitState>): DixitState {

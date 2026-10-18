@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retratim · protótipo da mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --kraft:#eadbc0; --paper:#f6eedd; --edge:#d3bf99; --ink:#3b2f2f; --ink-soft:#7d6a58;
+  --blue:#2f5aa8; --tape:rgba(242,165,65,.75); --photo-border:#fbf7ef; --ok:#3b6d11; --no:#a3958a;
+  --hand:'Caveat',cursive; /* só no logo */ --ui:'Quicksand',system-ui,sans-serif;
+  --shadow:0 1px 2px rgba(59,47,47,.25);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;height:100%;overflow:hidden;background:#d6c39f}
+body{font-family:var(--ui);font-weight:500;color:var(--ink);-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* ---------- palco 1440×900 (página de álbum em kraft) ---------- */
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 18% 22%,rgba(255,255,255,.22),transparent 45%),
+    radial-gradient(ellipse at 85% 80%,rgba(125,106,88,.10),transparent 50%),
+    repeating-linear-gradient(112deg,rgba(125,106,88,.035) 0 1px,transparent 1px 6px),
+    repeating-linear-gradient(22deg,rgba(255,255,255,.05) 0 1px,transparent 1px 9px),
+    var(--kraft)}
+
+/* ---------- topo ---------- */
+#top{position:absolute;left:0;right:0;top:0;height:84px;display:flex;align-items:center;gap:16px;padding:0 26px;z-index:8;
+  border-bottom:1px dashed rgba(125,106,88,.35)}
+.logo{font:700 44px/1 var(--hand);letter-spacing:.5px;color:var(--ink);white-space:nowrap}
+.logo small{display:block;font:500 11px/1.2 var(--ui);color:var(--ink-soft);letter-spacing:1px;margin-top:1px}
+#info{flex:1;text-align:center;font:500 13.5px/1.2 var(--ui);color:var(--ink-soft);white-space:nowrap}
+#info b{font-weight:700;color:var(--ink)}
+#info .kit{display:block;margin-top:3px;font:700 20px/1 var(--ui);color:var(--blue)}
+#seals{display:flex;gap:8px}
+.seal{display:flex;align-items:center;gap:5px;padding:3px 10px 3px 4px;border-radius:999px;background:var(--paper);box-shadow:var(--shadow);white-space:nowrap}
+.seal.me{box-shadow:0 0 0 1.5px var(--blue),var(--shadow)}
+.seal .cr{width:28px;height:28px;flex:none}
+.seal .cr svg{width:100%;height:100%;display:block}
+.seal .nm{font:700 12.5px/1.1 var(--ui)}
+.seal .stt{display:block;font:500 10.5px/1.2 var(--ui);color:var(--ink-soft)}
+.seal .stt.ok{color:var(--ok);font-weight:700}
+.clock{display:none;font:700 17px/1 var(--ui);color:var(--blue);padding:7px 14px;border:1.5px solid var(--blue);border-radius:999px;background:rgba(246,238,221,.7);white-space:nowrap}
+.clock.on{display:block}
+.clock.hurry{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.07)}}
+.icon-btn{width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--edge);background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;font-size:19px;color:var(--ink-soft)}
+.icon-btn:hover{color:var(--blue);border-color:var(--blue)}
+
+/* ---------- painel de dev ---------- */
+#dev{position:absolute;right:24px;top:82px;width:330px;padding:14px 16px 16px;border:1px solid var(--edge);border-radius:6px;background:var(--paper);box-shadow:0 8px 24px rgba(59,47,47,.22);z-index:30;display:none;font-size:13px}
+#dev.on{display:block}
+#dev h4{margin:0 0 8px;font:700 20px/1 var(--ui)}
+#dev .row{display:flex;align-items:center;justify-content:space-between;margin:9px 0;gap:8px}
+#dev .col{margin:12px 0 6px}
+#dev .col .opts{justify-content:flex-start;margin-top:6px}
+#dev .opts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#dev .opts button{padding:4px 9px;border:1px solid var(--edge);border-radius:999px;background:none;font-size:12px}
+#dev .opts button.on{border-color:var(--blue);color:var(--blue);font-weight:700}
+#dev .wide{width:100%;margin-top:8px;padding:8px;border:1px solid var(--blue);border-radius:999px;background:none;color:var(--blue);font-weight:700}
+#dev p{color:var(--ink-soft);font-size:11.5px;line-height:1.45;margin:10px 0 0}
+
+/* ---------- página (1440 centralizado) ---------- */
+#page{position:absolute;top:84px;bottom:0;left:50%;width:1440px;margin-left:-720px}
+
+/* grade 4×4 */
+/* duas colunas (grade | divisor | lado direito); larguras vêm do layout() em px do palco */
+#page{--pw:164px;--ph:126px;--grid-w:732px;--side-x:800px;--side-w:600px;--div-x:772px;--bw:600px}
+#gridWrap{position:absolute;left:40px;top:22px}
+#grid{display:grid;grid-template-columns:28px repeat(4,var(--pw));grid-template-rows:30px repeat(4,var(--ph));gap:12px}
+#grid .lbl{display:grid;place-items:center;font:700 18px/1 var(--ui);color:var(--ink-soft)}
+.photo{position:relative;width:var(--pw);height:var(--ph);padding:6px;background:var(--photo-border);box-shadow:var(--shadow);border-radius:1px}
+.building-phase #grid .photo{cursor:zoom-in}
+.zoom-btn{position:absolute;right:10px;top:10px;width:28px;height:28px;padding:0;border-radius:50%;border:1px solid var(--edge);background:var(--paper);
+  color:var(--ink-soft);display:grid;place-items:center;font-size:16px;box-shadow:var(--shadow);opacity:0;transition:opacity .15s;z-index:2}
+.photo:hover .zoom-btn{opacity:1}
+.zoom-btn:hover{color:var(--blue);border-color:var(--blue)}
+.photo.secret{outline:3px dashed var(--blue);outline-offset:4px}
+#gridNote{margin:16px 0 0 40px;max-width:calc(var(--grid-w) - 40px);font:500 14.5px/1.45 var(--ui);color:var(--ink-soft)}
+
+/* foto provisória (photos.js) */
+.ph{position:relative;width:100%;height:100%;overflow:hidden;display:grid;place-items:center;color:rgba(59,47,47,.55);container-type:size}
+.ph i{font-size:calc(var(--s) * 1cqh);line-height:1}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph-cap{position:absolute;left:6px;bottom:4px;font:600 10px var(--ui);color:rgba(59,47,47,.6)}
+
+/* lado direito */
+#side{position:absolute;left:var(--side-x);top:22px;width:var(--side-w)}
+
+/* divisor arrastável (alça de papel com 3 risquinhos) */
+#divider{position:absolute;left:var(--div-x);top:0;bottom:0;width:24px;cursor:col-resize;z-index:5;touch-action:none}
+#divider::before{content:'';position:absolute;left:12px;top:22px;bottom:22px;border-left:1px dashed rgba(125,106,88,.4)}
+#divider .grip{position:absolute;left:3px;top:50%;width:18px;height:64px;margin-top:-32px;border-radius:9px;background:var(--paper);
+  box-shadow:0 0 0 1px var(--edge),var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:box-shadow .15s}
+#divider .grip i{display:block;width:8px;height:1.5px;border-radius:1px;background:var(--ink-soft)}
+#divider:hover .grip,#divider.on .grip{box-shadow:0 0 0 1.5px var(--blue),var(--shadow)}
+#divider:hover .grip i,#divider.on .grip i{background:var(--blue)}
+#divider:hover::before,#divider.on::before{border-left-color:var(--blue)}
+body.resizing,body.resizing *{cursor:col-resize !important}
+.secret-card{position:relative;cursor:zoom-in;display:flex;align-items:center;gap:16px;width:max-content;padding:12px 22px 12px 12px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(-1deg);margin-left:6px}
+.tape{position:absolute;width:86px;height:24px;background:var(--tape);left:-8px;top:-9px;transform:rotate(-8deg);box-shadow:0 1px 1px rgba(59,47,47,.1)}
+.secret-card .mini{width:96px;height:74px;padding:4px;background:var(--photo-border);box-shadow:var(--shadow)}
+.secret-card .lab{font:700 17px/1 var(--ui);color:var(--ink-soft)}
+.secret-card .co{font:700 40px/.9 var(--ui);color:var(--blue);margin-left:6px}
+.secret-card .shh{display:block;font:500 11px/1.3 var(--ui);color:var(--ink-soft);margin-top:6px}
+#bench{position:relative;width:var(--bw);height:calc(var(--bw) * .75);margin-top:18px;background:var(--paper);box-shadow:0 0 0 1px var(--edge),0 2px 6px rgba(59,47,47,.18);border-radius:3px;transition:opacity .25s}
+#bench.ready{opacity:.6;pointer-events:none}
+#bench .sheet{position:absolute;inset:0}
+.bench-foot{width:var(--bw);display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:16px}
+.bench-foot .hint{font:500 15px/1.2 var(--ui);color:var(--ink-soft)}
+.bench-foot .hint b{color:var(--blue);font-weight:700}
+.btn-big{font:700 19px/1 var(--ui);padding:13px 28px;border-radius:999px;border:1.5px solid var(--blue);background:var(--blue);color:var(--paper);box-shadow:var(--shadow);white-space:nowrap}
+.btn-big:hover{filter:brightness(1.08)}
+.btn-big.off{background:none;color:var(--blue)}
+.btn-soft{font:700 14px/1 var(--ui);padding:9px 18px;border-radius:999px;border:1px solid var(--blue);background:none;color:var(--blue)}
+.btn-soft:hover{background:rgba(47,90,168,.08)}
+
+/* kit que ainda não existe */
+.nokit{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:30px}
+.nokit i{font-size:56px;color:var(--edge)}
+.nokit h3{margin:0;font:700 23px/1.1 var(--ui);color:var(--ink)}
+.nokit p{margin:0;max-width:380px;font-size:13px;line-height:1.45;color:var(--ink-soft)}
+.nokit .st{min-height:18px;color:var(--ok);font-weight:700}
+
+/* faixa das fases sem tela (só o saguão, que o protótipo pula) */
+#banner{position:relative;margin-top:30px;padding:26px 30px 28px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(.6deg)}
+#banner h2{margin:0;font:700 32px/1.05 var(--ui)}
+#banner .sub{margin:8px 0 0;font:500 16px/1.3 var(--ui);color:var(--ink-soft)}
+
+/* zoom das fotos */
+#zoom{position:absolute;inset:0;z-index:35;background:rgba(43,34,30,.62);display:flex;align-items:center;justify-content:center}
+#zoom .frame{position:relative;padding:14px 14px 54px;background:var(--photo-border);box-shadow:0 10px 34px rgba(0,0,0,.35);transform:rotate(-.6deg)}
+#zoom .pic{width:720px;height:540px}
+#zoom .co{position:absolute;left:18px;bottom:11px;font:700 32px/1 var(--ui);color:var(--blue)}
+#zoom .cap{position:absolute;right:20px;bottom:19px;font:500 14px/1 var(--ui);color:var(--ink-soft)}
+#zoom .mine{position:absolute;right:-22px;top:-20px;padding:10px 18px;border-radius:999px;background:var(--blue);color:var(--paper);
+  font:700 18px/1 var(--ui);transform:rotate(8deg);box-shadow:var(--shadow)}
+#zoom .zx{position:absolute;right:28px;top:22px;width:44px;height:44px;border-radius:50%;border:1px solid var(--edge);background:var(--paper);
+  font-size:20px;color:var(--ink-soft);display:grid;place-items:center;box-shadow:var(--shadow)}
+#zoom .nav{position:absolute;top:50%;width:52px;height:52px;margin-top:-26px;border-radius:50%;border:1px solid var(--edge);background:rgba(246,238,221,.9);
+  font-size:24px;color:var(--ink-soft);display:grid;place-items:center;box-shadow:var(--shadow)}
+#zoom .nav.l{left:60px}#zoom .nav.r{right:60px}
+#zoom .zx:hover,#zoom .nav:hover{color:var(--blue);border-color:var(--blue)}
+
+/* ---------- galeria de palpites ---------- */
+.guessing-phase #grid .photo{cursor:pointer;transition:transform .12s,box-shadow .12s}
+.guessing-phase #grid .photo:hover{transform:translateY(-2px);box-shadow:0 0 0 2px rgba(47,90,168,.55),0 4px 10px rgba(59,47,47,.22)}
+.guessing-phase.locked #grid .photo{cursor:default}
+.guessing-phase.locked #grid .photo:hover{transform:none;box-shadow:var(--shadow)}
+.guessing-phase #grid .photo.picked,.guessing-phase #grid .photo.picked:hover{box-shadow:0 0 0 3px var(--blue),var(--shadow)}
+#grid .photo .used{position:absolute;left:10px;top:10px;display:flex;gap:2px;z-index:1;pointer-events:none}
+#grid .photo .used span{width:22px;height:22px;border-radius:50%;background:var(--paper);box-shadow:var(--shadow);padding:1px}
+#grid .photo .used svg{width:100%;height:100%;display:block}
+#gallery{display:flex;flex-direction:column;height:calc(900px - 84px - 22px - 20px);width:var(--side-w)}
+.gal-head{padding:0 4px 2px}
+.gal-head h2{margin:0;font:700 24px/1.1 var(--ui);white-space:nowrap}
+.gal-head .hint{display:block;min-height:18px;margin-top:4px;font:500 14px/1.3 var(--ui);color:var(--ink-soft)}
+.gal-head .hint b{color:var(--blue);font-weight:700}
+#works{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:26px 22px;padding:18px 16px 18px 14px;margin:0 -16px 0 -14px;
+  scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
+.wf{position:relative;padding:8px 8px 0;background:var(--photo-border);box-shadow:0 1px 3px rgba(59,47,47,.28);cursor:pointer;transform:rotate(var(--tilt,0deg));transition:box-shadow .15s,transform .15s}
+.wf:hover{transform:rotate(var(--tilt,0deg)) translateY(-2px)}
+.wf.sel{box-shadow:0 0 0 3px var(--blue),0 4px 12px rgba(47,90,168,.25)}
+/* a folha é contêiner de tamanho: unidades cq* dos kits (ex.: o vão das cartas de símbolos) medem a folha, não a janela */
+.wf .sheet,.rv-work .sheet{position:relative;width:100%;aspect-ratio:4/3;container-type:size;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(211,191,153,.7);overflow:hidden}
+.wf .cap{display:flex;align-items:center;gap:8px;padding:7px 2px 8px}
+.wf .cap .cr{width:30px;height:30px;flex:none}
+.wf .cap .cr svg{width:100%;height:100%;display:block}
+.wf .cap .nm{font:700 15px/1.1 var(--ui)}
+.wf .cap .kt{display:block;font:500 12px/1.2 var(--ui);color:var(--ink-soft)}
+.wf .wz{position:absolute;right:14px;top:14px;width:30px;height:30px;padding:0;border-radius:50%;border:1px solid var(--edge);background:var(--paper);color:var(--ink-soft);
+  display:grid;place-items:center;font-size:16px;box-shadow:var(--shadow);opacity:0;transition:opacity .15s;z-index:3}
+.wf:hover .wz{opacity:1}
+.wf .wz:hover{color:var(--blue);border-color:var(--blue)}
+.gtape{position:absolute;left:-12px;top:-11px;z-index:4;min-width:64px;height:30px;padding:0 12px;display:grid;place-items:center;background:var(--tape);
+  box-shadow:0 1px 2px rgba(59,47,47,.18);font:700 19px/1 var(--ui);color:var(--blue);letter-spacing:.5px;transform:rotate(var(--rot,-7deg));cursor:pointer}
+.gtape:hover{filter:brightness(.96)}
+.gtape:hover::after{content:'✕';position:absolute;right:-7px;top:-7px;width:16px;height:16px;border-radius:50%;background:var(--paper);color:var(--ink-soft);font-size:9px;display:grid;place-items:center;box-shadow:var(--shadow)}
+.gtape.pop{animation:tapein .22s ease-out}
+@keyframes tapein{from{transform:rotate(var(--rot,-7deg)) scale(1.35);opacity:.2}}
+.wf .empty-tag{position:absolute;left:12px;top:12px;z-index:2;padding:3px 9px;border-radius:999px;background:rgba(246,238,221,.92);font:600 11.5px/1.2 var(--ui);color:var(--ink-soft);box-shadow:var(--shadow)}
+.wf.sel .empty-tag{color:var(--blue)}
+#gallery.locked .wf{cursor:default}
+#gallery.locked .wf:hover{transform:rotate(var(--tilt,0deg))}
+#gallery.locked .gtape{cursor:default}
+#gallery.locked .gtape:hover{filter:none}
+#gallery.locked .gtape:hover::after{display:none}
+#gallery.locked .empty-tag{display:none}
+.no-works{grid-column:1/-1;padding:40px 20px;text-align:center;font:500 16px/1.4 var(--ui);color:var(--ink-soft)}
+.gal-foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:14px;border-top:1px dashed rgba(125,106,88,.35)}
+.gal-foot .hint{font:500 14px/1.35 var(--ui);color:var(--ink-soft)}
+.gal-foot .hint b{color:var(--blue);font-weight:700}
+.gal-foot .hint.ok{color:var(--ok);font-weight:700}
+
+/* obra grande (lupa da galeria; usa o mesmo #zoom das fotos) */
+#zoom .frame.work .pic{position:relative;container-type:size;background:var(--paper);box-shadow:inset 0 0 0 1px rgba(211,191,153,.7);overflow:hidden}
+#zoom .frame.work .who{position:absolute;left:16px;bottom:9px;display:flex;align-items:center;gap:10px}
+#zoom .frame.work .who .cr{width:36px;height:36px}
+#zoom .frame.work .who .cr svg{width:100%;height:100%;display:block}
+#zoom .frame.work .who .nm{font:700 20px/1 var(--ui)}
+#zoom .frame.work .who .kt{display:block;font:500 13px/1.2 var(--ui);color:var(--ink-soft)}
+#zoom .frame.work .gtape{left:-18px;top:-16px;height:40px;min-width:84px;font-size:26px;cursor:default}
+#zoom .frame.work .gtape:hover{filter:none}
+#zoom .frame.work .gtape:hover::after{display:none}
+
+/* ---------- revelação narrada ---------- */
+#reveal{display:flex;flex-direction:column;height:calc(900px - 84px - 22px - 20px);width:var(--side-w)}
+.rv-head{display:flex;align-items:center;gap:14px;min-height:46px;padding:0 4px 10px;border-bottom:1px dashed rgba(125,106,88,.35)}
+.rv-n{font:700 12.5px/1 var(--ui);color:var(--ink-soft);letter-spacing:.8px;white-space:nowrap}
+.rv-t{flex:1;font:700 22px/1.2 var(--ui);transition:opacity .16s ease}
+.rv-t b{color:var(--blue);font-weight:700}
+.rv-t.swap{opacity:0}
+.rv-skip{flex:none;border:none;background:none;padding:4px 2px;font:600 13px/1 var(--ui);color:var(--ink-soft);text-decoration:underline dotted;text-underline-offset:3px}
+.rv-skip:hover{color:var(--blue)}
+.rv-stage{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:40px;transition:opacity .3s,transform .3s}
+.rv-stage.out{opacity:0;transform:translateY(-10px)}
+.rv-pair{display:flex;align-items:center;justify-content:center;gap:calc(var(--side-w) * .045)}
+.rv-work{position:relative;width:min(calc(var(--side-w) * .56),560px);padding:9px 9px 0;background:var(--photo-border);box-shadow:0 2px 10px rgba(59,47,47,.26);transform:rotate(-1.2deg)}
+.rv-work.in{animation:rvgrow .6s cubic-bezier(.3,1.35,.5,1) both}
+@keyframes rvgrow{from{transform:rotate(-6deg) scale(.25);opacity:0}}
+.rv-work .cap{display:flex;align-items:center;gap:10px;padding:9px 2px 10px}
+.rv-work .cap .cr{width:36px;height:36px;flex:none}
+.rv-work .cap .cr svg{width:100%;height:100%;display:block}
+.rv-work .cap .nm{font:700 18px/1.1 var(--ui)}
+.rv-work .cap .kt{display:block;font:500 13px/1.2 var(--ui);color:var(--ink-soft)}
+/* lugar da foto verdadeira: tracejado até a foto pousar */
+.rv-slot{position:relative;width:min(calc(var(--side-w) * .35),340px);flex:none}
+.rv-slot::before{content:'?';position:absolute;inset:0;display:grid;place-items:center;border:2px dashed var(--edge);border-radius:3px;font:700 46px/1 var(--ui);color:var(--edge);transition:opacity .2s}
+.rv-slot.on::before{opacity:0}
+.rv-polaroid{position:relative;padding:7px 7px 38px;background:var(--photo-border);box-shadow:0 2px 8px rgba(59,47,47,.25);transform:rotate(3deg);visibility:hidden}
+.rv-slot.on .rv-polaroid{visibility:visible}
+.rv-pic{width:100%;aspect-ratio:4/3}
+.rv-co{position:absolute;left:12px;bottom:8px;font:700 22px/1 var(--ui);color:var(--blue);opacity:0;transition:opacity .3s .1s}
+.rv-co small{font:600 12px/1 var(--ui);color:var(--ink-soft);margin-right:5px}
+.rv-slot.on .rv-co{opacity:1}
+.fly{position:absolute;z-index:20;background:var(--photo-border);pointer-events:none}
+.fly .rv-pic{width:100%;height:100%;aspect-ratio:auto}
+#grid .photo.lifted .ph{opacity:.14}
+#grid .photo.lifted{box-shadow:inset 0 0 0 2px var(--edge);background:transparent}
+/* fitinhas dos palpites ao redor da obra */
+.rv-guesses{display:flex;flex-wrap:wrap;justify-content:center;gap:26px 22px;min-height:64px;max-width:var(--side-w)}
+.rv-g{position:relative;display:flex;align-items:center;gap:8px;padding:17px 14px 9px 9px;background:var(--paper);box-shadow:var(--shadow);transform:rotate(var(--tilt,0deg));transition:filter .35s,opacity .35s,box-shadow .35s}
+.rv-g.in{animation:rvpop .3s ease-out both}
+@keyframes rvpop{from{transform:rotate(var(--tilt,0deg)) scale(1.4);opacity:0}}
+.rv-g .cr{width:32px;height:32px;flex:none}
+.rv-g .cr svg{width:100%;height:100%;display:block}
+.rv-g .nm{font:700 14px/1.1 var(--ui);white-space:nowrap}
+.rv-tape{position:absolute;left:-10px;top:-14px;min-width:56px;height:27px;padding:0 10px;display:grid;place-items:center;background:var(--tape);box-shadow:0 1px 2px rgba(59,47,47,.18);
+  font:700 17px/1 var(--ui);color:var(--blue);letter-spacing:.5px;transform:rotate(var(--rot,-7deg))}
+.rv-tape.none{background:rgba(211,191,153,.75);color:var(--ink-soft);font-size:12px;font-weight:600;letter-spacing:0}
+.rv-g.ok{box-shadow:0 0 0 2px var(--ok),var(--shadow)}
+.rv-g .tick{position:absolute;right:-10px;top:-10px;width:25px;height:25px;border-radius:50%;background:var(--ok);color:var(--paper);display:grid;place-items:center;font:700 15px/1 var(--ui);box-shadow:var(--shadow);animation:tickin .3s ease-out both}
+@keyframes tickin{from{transform:scale(1.8);opacity:0}}
+.rv-g.no{filter:grayscale(1);opacity:.45}
+.rv-empty{margin:auto;max-width:420px;text-align:center;font:600 20px/1.4 var(--ui);color:var(--ink-soft)}
+.rv-empty i{display:block;font-size:54px;color:var(--edge);margin-bottom:10px}
+/* os pontos sobem por cima dos selinhos */
+.plus{position:absolute;z-index:25;pointer-events:none;padding:4px 9px;border-radius:999px;background:var(--blue);color:var(--paper);
+  font:700 15px/1 var(--ui);box-shadow:0 2px 6px rgba(47,90,168,.35);transform:translate(-50%,-50%);animation:plusup 1.5s ease-out forwards}
+@keyframes plusup{0%{opacity:0;transform:translate(-50%,-10%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}30%{transform:translate(-50%,-60%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
+.seal.bump{animation:bump .45s ease-out}
+@keyframes bump{40%{transform:scale(1.12)}}
+
+/* placar da rodada (cartão de álbum) */
+.rv-board{position:relative;width:min(var(--side-w),560px);margin:auto;padding:30px 30px 24px;background:var(--paper);box-shadow:0 2px 10px rgba(59,47,47,.22);transform:rotate(-.6deg);animation:rvin .45s cubic-bezier(.3,1.3,.5,1) both}
+@keyframes rvin{from{transform:rotate(-3deg) translateY(16px) scale(.94);opacity:0}}
+.rv-board h2{margin:0;font:700 28px/1.1 var(--ui)}
+.rv-board .sum{margin:6px 0 16px;font:500 14.5px/1.4 var(--ui);color:var(--ink-soft)}
+.rv-board .sum b{color:var(--blue);font-weight:700}
+.board-row{display:grid;grid-template-columns:40px 1fr auto 76px;align-items:center;gap:12px;padding:8px 4px;border-top:1px dashed rgba(125,106,88,.3)}
+.board-row .cr{width:38px;height:38px}
+.board-row .cr svg{width:100%;height:100%;display:block}
+.board-row .nm{font:700 17px/1.1 var(--ui)}
+.board-row.me .nm{color:var(--blue)}
+.board-row .g{font:700 19px/1 var(--ui);color:var(--blue);text-align:right}
+.board-row .g.zero{color:var(--no)}
+.board-row .tot{font:700 17px/1 var(--ui);text-align:right}
+.board-row .tot small{font:500 12px/1 var(--ui);color:var(--ink-soft);margin-left:3px}
+.rv-board .acts{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin-top:18px}
+
+/* ---------- fim de jogo: página final do álbum ---------- */
+.final-phase #gridWrap,.final-phase #divider,.final-phase #side{display:none}
+#final{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.fin{position:relative;width:660px;padding:40px 48px 34px;background:var(--paper);box-shadow:0 4px 18px rgba(59,47,47,.25);transform:rotate(-.7deg);animation:rvin .6s cubic-bezier(.3,1.3,.5,1) both}
+.fin .tape{left:-14px;top:-12px}
+.fin .tape.r{left:auto;right:-14px;transform:rotate(9deg)}
+.fin h2{margin:0;font:700 40px/1.05 var(--ui)}
+.fin .sub{margin:8px 0 22px;font:500 17px/1.35 var(--ui);color:var(--ink-soft)}
+.fin .sub b{color:var(--blue);font-weight:700}
+.fin-row{display:grid;grid-template-columns:34px 48px 1fr auto;align-items:center;gap:14px;padding:10px 12px;border-top:1px dashed rgba(125,106,88,.3)}
+.fin-row.win{background:rgba(242,165,65,.16);border-radius:4px}
+.fin-row .pos{font:700 18px/1 var(--ui);color:var(--ink-soft);text-align:center}
+.fin-row .cr{width:46px;height:46px}
+.fin-row .cr svg{width:100%;height:100%;display:block}
+.fin-row .nm{font:700 20px/1.1 var(--ui);display:flex;align-items:center;gap:8px}
+.fin-row.me .nm{color:var(--blue)}
+.fin-row .star{color:#e39a2d;font-size:22px}
+.fin-row .pts{font:700 22px/1 var(--ui)}
+.fin-row .pts small{font:500 13px/1 var(--ui);color:var(--ink-soft);margin-left:4px}
+.fin .acts{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:26px}
+#confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:45}
+
+#toast{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--ink);color:var(--paper);font:700 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="logo">Retratim<small>protótipo da mesa · cartolina~</small></div>
+    <div id="info"></div>
+    <div id="seals"></div>
+    <div class="clock" id="clock"></div>
+    <button class="icon-btn" id="soundBtn" title="som"><i class="ti ti-volume"></i></button>
+    <button class="icon-btn" id="devBtn" title="protótipo">⚙</button>
+  </header>
+  <div id="dev">
+    <h4>protótipo</h4>
+    <div class="row">jogadores<div class="opts" id="optN"></div></div>
+    <div class="row">bots<div class="opts" id="optS"></div></div>
+    <div class="row">bots acertam<div class="opts" id="optH"></div></div>
+    <div class="col">trocar meu kit<div class="opts" id="optK"></div></div>
+    <button class="wide" id="hurryBtn">apressar (contagem de 30 s)</button>
+    <button class="wide" id="newBtn">nova partida</button>
+    <p>Protótipo descartável: as regras são as reais (as mesmas do servidor), os bots montam obras ao acaso. Fotos provisórias; a foto real entra sozinha quando existir. Trocar o kit mexe direto no estado (só aqui).</p>
+  </div>
+  <main id="page">
+    <section id="gridWrap"><div id="grid"></div><p id="gridNote"></p></section>
+    <div id="divider" title="arraste pra mudar o espaço de trabalho · clique duplo volta ao padrão"><span class="grip"><i></i><i></i><i></i></span></div>
+    <section id="side">
+      <div id="building">
+        <div class="secret-card"><span class="tape"></span><div class="mini" id="secretMini"></div>
+          <div><span class="lab">sua foto secreta</span><span class="co" id="secretCo"></span><span class="shh">só você vê o contorno azul na grade</span></div></div>
+        <div id="bench"></div>
+        <div class="bench-foot"><span class="hint" id="benchHint"></span><button class="btn-big" id="readyBtn">estou pronto</button></div>
+      </div>
+      <div id="gallery" hidden>
+        <div class="gal-head"><h2>de quem é qual foto?</h2><span class="hint" id="galHint"></span></div>
+        <div id="works"></div>
+        <div class="gal-foot"><span class="hint" id="galFoot"></span><button class="btn-big" id="confirmBtn">confirmar palpites</button></div>
+      </div>
+      <div id="reveal" hidden></div>
+      <div id="banner" hidden></div>
+    </section>
+    <section id="final" hidden></section>
+  </main>
+  <div id="zoom" hidden></div>
+  <canvas id="confetti"></canvas>
+  <div id="toast"></div>
+</div>
+<script src="../dixit/critters.js"></script>
+<script src="rules.js"></script>
+<script src="photos.js"></script>
+<script src="random.js"></script>
+<script src="sounds.js"></script>
+<script>window.Kits = window.Kits || {};</script>
+<script src="kits/cubes.js"></script>
+<script src="kits/icons.js"></script>
+<script src="kits/dots.js"></script>
+<script src="kits/sticks.js"></script>
+<script src="kits/laces.js"></script>
+<script src="kits/blocks.js"></script><!-- three.js r128 vem do CDN só quando o kit aparece -->
+<script>
+'use strict';
+/* =========================================================
+   Protótipo da mesa do Retratim (descartável). Regras: shared/src/games/pictures
+   empacotadas em rules.js. Tudo aqui é só interface + bots falsos.
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+const ME = 'p0';
+let N = 4, SPEED = 1, BOT_HIT = .5, ids = [], state = null, prevPhase = null;
+const NAMES = ['você', 'Bia', 'Léo', 'Nina', 'Caio', 'Duda'];
+const COLORS = Object.keys(window.CRITTERS);
+const KIT_NAMES = { cubes: 'cubos coloridos', laces: 'cadarços', sticks: 'palitos e pedras', blocks: 'blocos', icons: 'símbolos', dots: 'pontos e linhas' };
+/** Mensagens de shared/src/protocol.ts pros códigos do Retratim. */
+const ERR = {
+  wrong_kit: 'Esse não é o seu kit nesta rodada.', bad_work: 'Essa obra não vale com esse kit.',
+  empty_work: 'Monte alguma coisa antes de ficar pronto.',
+  icons_too_few: 'Escolha pelo menos 2 cartas.', already_ready: 'Você já está pronto. Desmarque pra mexer.',
+  own_work: 'Não dá pra palpitar na própria obra.', no_work: 'Essa pessoa não tem obra nesta rodada.',
+  already_confirmed: 'Você já confirmou.', not_player: 'Você está assistindo esta rodada.',
+  bad_phase: 'Agora não dá pra fazer isso.', paused: 'Esperando gente: precisa de 3 pessoas na mesa.',
+  need_3_players: 'Precisa de pelo menos 3 jogadores.', not_host: 'Só o host pode fazer isso.',
+};
+const ctx = () => ({ hostId: ME, active: ids, rng: Math.random, now: Date.now() });
+const view = () => Retratim.picturesViewFor(state, ME);
+
+/* ---------- utilidades ---------- */
+const timers = new Set();
+const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+const between = (a, b) => a + Math.random() * (b - a);
+const ptsWord = (n) => (n === 1 ? 'pt' : 'pts');
+const nameOf = (p) => NAMES[Number(p.slice(1))];
+const critter = (p) => window.CRITTERS[COLORS[Number(p.slice(1)) % COLORS.length]];
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2400); }
+
+/* ---------- escala do palco 1440×900 ---------- */
+let APPW = 1440;
+function fit() {
+  let sc = innerHeight / 900, w = innerWidth / sc;
+  if (w < 1440) { sc = innerWidth / 1440; w = 1440; }
+  APPW = Math.round(w); app.style.width = APPW + 'px';
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+}
+addEventListener('resize', fit);
+
+/* ---------- laço do jogo ---------- */
+/** Igual ao servidor: o schema das ações valida antes das regras. */
+function act(pid, action, quiet) {
+  const parsed = Retratim.picturesActionSchema.safeParse(action);
+  if (!parsed.success) { console.error('ação inválida (bug do protótipo)', action, parsed.error); toast('Ação inválida (bug do protótipo — veja o console)'); return false; }
+  const res = Retratim.applyPicturesAction(state, pid, parsed.data, ctx());
+  if (!res.ok) { if (!quiet) { toast(ERR[res.error] || res.error); play('error'); } return false; }
+  state = res.state; changed(); return true;
+}
+/** O "alarme" do servidor: reavalia contagem/fechamento/pausa. */
+setInterval(() => { if (!state) return; const next = Retratim.settlePictures(state, ctx()); if (next !== state) { state = next; changed(); } else renderClock(); }, 200);
+
+let slowBot = null;
+/** Zera o que é só da tela/dos bots (timers, planos dos bots, revelação, confete) antes de uma partida nova. */
+function resetLocal() {
+  for (const t of timers) clearTimeout(t); timers.clear(); plannedFor.clear(); closePhotoZoom();
+  slowGuesser = { round: -1, p: null };
+  leaveReveal(); revealFor = null; finalFor = null; stopConfetti();
+}
+function newGame() {
+  resetLocal();
+  destroyBench(); resetDraft(); clearGallery(); gridKey = ''; secretKey = '';
+  ids = Array.from({ length: N }, (_, i) => `p${i}`);
+  slowBot = ids[1 + Math.floor(Math.random() * (N - 1))];
+  state = Retratim.initialPicturesState(); prevPhase = null;
+  act(ME, { type: 'start' });
+}
+
+function changed() {
+  const v = view();
+  if (v.phase !== prevPhase) {
+    if (prevPhase === 'building') { resetDraft(); destroyBench(); }
+    if (prevPhase === 'guessing' || v.phase === 'guessing') { if (workZoom) closePhotoZoom(); clearGallery(); }
+    if (prevPhase === 'reveal') leaveReveal();
+    if (v.phase === 'building') play('round');
+    if (v.phase === 'gameover') { closePhotoZoom(); launchConfetti(); }
+  }
+  prevPhase = v.phase;
+  render(v); scheduleBots();
+}
+
+/* ---------- rascunho (no máximo a cada 2 s; o último sempre vai) ---------- */
+let myWork = null, dirty = false, lastDraftAt = 0, draftTimer = 0;
+function resetDraft() { clearTimeout(draftTimer); draftTimer = 0; myWork = null; dirty = false; lastDraftAt = 0; }
+function onBenchChange(work) { myWork = work; dirty = true; queueDraft(); }
+function queueDraft() {
+  if (draftTimer) return;
+  const wait = Math.max(0, lastDraftAt + 2000 - Date.now());
+  draftTimer = setTimeout(() => { draftTimer = 0; sendDraft(); }, wait);
+}
+/** Manda o rascunho pendente. Devolve false se a regra recusou. */
+function sendDraft() {
+  if (!dirty || !state || state.phase !== 'building' || state.ready.includes(ME)) return true;
+  dirty = false; lastDraftAt = Date.now();
+  return act(ME, { type: 'draft', work: myWork });
+}
+function onReady() {
+  if (!state || state.phase !== 'building') return;
+  if (state.ready.includes(ME)) { act(ME, { type: 'ready', on: false }); return; }
+  clearTimeout(draftTimer); draftTimer = 0;
+  if (!sendDraft()) return;
+  const work = state.works[ME], e = Retratim.readyError(work);
+  if (e) { toast(ERR[e]); play('error'); return; }
+  if (act(ME, { type: 'ready', on: true })) play('ready');
+}
+$('#readyBtn').onclick = onReady;
+
+/* ---------- bancada (recriada só quando a rodada ou o kit muda; nunca pelo eco do rascunho) ---------- */
+let bench = null, benchKey = '';
+function ensureBench(v) {
+  const kit = v.kits[ME]; if (!kit) return;
+  const key = `${v.round}:${kit}`;
+  if (key === benchKey) return;
+  destroyBench(); resetDraft(); benchKey = key;
+  const sheet = document.createElement('div'); sheet.className = 'sheet'; $('#bench').appendChild(sheet);
+  const prev = v.works[ME];
+  const work = prev && prev.kit === kit ? prev : null;
+  myWork = work;
+  const k = window.Kits[kit] || fallbackKit(kit);
+  let handle = null;
+  try { handle = k.build(sheet, work, onBenchChange); } catch (err) { console.error('kit quebrou no build', kit, err); }
+  bench = { handle, sheet };
+}
+function destroyBench() {
+  if (bench) { try { bench.handle && bench.handle.destroy(); } catch (err) { console.error('kit quebrou no destroy', err); } bench.sheet.remove(); bench = null; }
+  benchKey = '';
+}
+/** Bancada provisória pros kits que ainda não existem: sorteia uma obra válida. */
+function fallbackKit(kit) {
+  return {
+    build(el, work, onChange) {
+      el.innerHTML = `<div class="nokit"><i class="ti ti-tools"></i><h3>kit ainda não feito no protótipo</h3>`
+        + `<p>A bancada de <b>${KIT_NAMES[kit]}</b> chega numa próxima etapa. Por enquanto, sorteie uma obra válida pra seguir a partida.</p>`
+        + `<button class="btn-soft">usar obra aleatória</button><p class="st"></p></div>`;
+      const btn = el.querySelector('button'), st = el.querySelector('.st');
+      let cur = work;
+      const mark = () => { st.textContent = cur ? 'obra aleatória escolhida ✓ — já dá pra ficar pronto' : ''; btn.textContent = cur ? 'sortear outra obra' : 'usar obra aleatória'; };
+      const onClick = () => { cur = RandomWork[kit](); mark(); onChange(cur); };
+      mark(); btn.addEventListener('click', onClick);
+      return { destroy() { btn.removeEventListener('click', onClick); } };
+    },
+    show() {},
+  };
+}
+
+/* ---------- bots ---------- */
+const plannedFor = new Set();
+const botKey = (p) => `${state.round}:${state.phase}:${p}`;
+function scheduleBots() {
+  const st = state;
+  if (st.paused) return;
+  if (st.phase === 'guessing') { scheduleGuessBots(); return; }
+  if (st.phase !== 'building') return; // na revelação e no fim os bots não fazem nada (só o host avança)
+  for (const p of st.inRound) {
+    if (p === ME) continue;
+    const key = botKey(p);
+    if (plannedFor.has(key) || st.ready.includes(p)) continue;
+    plannedFor.add(key);
+    const draftAt = between(3000, 9000) * SPEED;
+    later(draftAt, () => botDraft(p, key));
+    // um bot por partida demora: só fica pronto depois de 40 s (a contagem dos 30 s aparece e fecha a fase)
+    later(p === slowBot ? Math.max(40000, draftAt + 500) : draftAt + between(300, 900) * SPEED, () => botReady(p, key));
+  }
+}
+function botDraft(p, key) {
+  if (botKey(p) !== key || state.ready.includes(p)) return;
+  if (!act(p, { type: 'draft', work: RandomWork[state.kits[p]]() }, true)) console.warn('bot não conseguiu mandar o rascunho', p, state.kits[p]);
+}
+function botReady(p, key) {
+  if (botKey(p) !== key || state.ready.includes(p)) return;
+  if (!state.works[p]) botDraft(p, key);
+  if (act(p, { type: 'ready', on: true }, true)) play('ready'); else console.warn('bot não conseguiu ficar pronto', p, state.kits[p]);
+}
+/** Palpite dos bots: um por rodada (sorteado) só confirma depois de 40 s, pra a contagem dos 30 s aparecer. */
+let slowGuesser = { round: -1, p: null };
+function scheduleGuessBots() {
+  const st = state;
+  const bots = st.inRound.filter((p) => p !== ME);
+  if (slowGuesser.round !== st.round) slowGuesser = { round: st.round, p: bots.length ? bots[Math.floor(Math.random() * bots.length)] : null };
+  for (const p of bots) {
+    const key = botKey(p);
+    if (plannedFor.has(key) || st.confirmed.includes(p)) continue;
+    plannedFor.add(key);
+    const guessAt = between(4000, 12000) * SPEED;
+    later(guessAt, () => botGuess(p, key));
+    later(p === slowGuesser.p ? Math.max(40000, guessAt + 500) : guessAt + between(300, 900) * SPEED, () => botConfirm(p, key));
+  }
+}
+/** O bot cola uma fitinha em cada obra alheia: com chance BOT_HIT acerta (o protótipo lê o estado inteiro), senão chuta. */
+function botGuess(p, key) {
+  if (botKey(p) !== key || state.confirmed.includes(p)) return;
+  for (const artist of Object.keys(state.works)) {
+    if (artist === p) continue;
+    const coord = Math.random() < BOT_HIT ? state.secrets[artist] : Retratim.COORDS[Math.floor(Math.random() * 16)];
+    if (!act(p, { type: 'guess', artist, coord }, true)) console.warn('bot não conseguiu palpitar', p, artist);
+  }
+}
+function botConfirm(p, key) {
+  if (botKey(p) !== key || state.confirmed.includes(p)) return;
+  if (!state.guesses[p]) botGuess(p, key);
+  if (act(p, { type: 'confirm' }, true)) play('ready'); else console.warn('bot não conseguiu confirmar', p);
+}
+
+/* ---------- topo ---------- */
+function statusOf(v, p) {
+  if (!v.inRound.includes(p)) return ['assistindo', ''];
+  if (v.phase === 'building') return v.ready.includes(p) ? ['pronto ✓', 'ok'] : ['mexendo…', ''];
+  if (v.phase === 'guessing') return v.confirmed.includes(p) ? ['confirmou ✓', 'ok'] : ['palpitando…', ''];
+  // na revelação o placar dos selinhos anda junto com a narração (shown); fora dela vale o placar real
+  const pts = v.phase === 'reveal' && shown ? shown[p] : v.scores[p];
+  return [`${pts ?? 0} ${ptsWord(pts ?? 0)}`, ''];
+}
+function renderTop(v) {
+  $('#info').innerHTML = v.phase === 'gameover'
+    ? '<b>fim de jogo</b>'
+    : `rodada <b>${v.round + 1}</b> de ${v.rounds} · seu kit<span class="kit">${KIT_NAMES[v.kits[ME]] || '—'}</span>`;
+  $('#seals').innerHTML = v.players.map((p) => {
+    const [txt, cls] = statusOf(v, p);
+    return `<div class="seal${p === ME ? ' me' : ''}" data-p="${p}"><span class="cr">${critter(p)}</span><span><span class="nm">${nameOf(p)}</span><span class="stt ${cls}">${txt}</span></span></div>`;
+  }).join('');
+  renderClock();
+}
+let lastTick = '';
+function renderClock() {
+  const el = $('#clock'), end = state && state.countdownEndsAt;
+  if (state && state.paused) { el.textContent = 'esperando gente'; el.classList.add('on'); el.classList.remove('hurry'); return; }
+  if (!end) { el.classList.remove('on', 'hurry'); lastTick = ''; return; }
+  const s = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+  if (s >= 1 && s <= 5 && lastTick !== `${end}:${s}`) { lastTick = `${end}:${s}`; play('tick'); } // uma vez por segundo, nos 5 s finais
+  el.textContent = `faltam ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  el.classList.add('on'); el.classList.toggle('hurry', s <= 10);
+}
+
+/* ---------- grade 4×4 (montada uma vez por partida; o contorno da secreta só troca a classe) ---------- */
+let gridKey = '', secretKey = '';
+function renderGrid(v) {
+  const key = v.grid.join();
+  if (key !== gridKey) {
+    gridKey = key;
+    let h = '<span></span>' + ['A', 'B', 'C', 'D'].map((c) => `<span class="lbl">${c}</span>`).join('');
+    for (let row = 0; row < 4; row++) {
+      h += `<span class="lbl">${row + 1}</span>`;
+      for (let col = 0; col < 4; col++) { const i = row * 4 + col; h += `<div class="photo" data-i="${i}">${photoHTML(v.grid[i])}<button class="zoom-btn" title="ver grande"><i class="ti ti-zoom-in"></i></button></div>`; }
+    }
+    $('#grid').innerHTML = h;
+  }
+  const mine = v.phase === 'building' || v.phase === 'guessing' ? Retratim.COORDS.indexOf(v.mySecret) : -1;
+  document.querySelectorAll('#grid .photo').forEach((el) => el.classList.toggle('secret', Number(el.dataset.i) === mine));
+  $('#gridNote').textContent = v.phase === 'building'
+    ? 'As fotos secretas de cada rodada trocam na próxima. Remonte a sua foto secreta com o kit da rodada; os outros vão tentar adivinhar qual é.'
+    : 'As fotos secretas desta rodada trocam na próxima.';
+}
+
+/* ---------- montagem ---------- */
+function renderBuilding(v) {
+  const secret = v.mySecret, i = Retratim.COORDS.indexOf(secret);
+  const sk = `${gridKey}|${secret}`;
+  if (sk !== secretKey) { secretKey = sk; $('#secretCo').textContent = secret || '—'; $('#secretMini').innerHTML = i >= 0 ? photoHTML(v.grid[i]) : ''; }
+  ensureBench(v);
+  const ready = v.ready.includes(ME);
+  $('#bench').classList.toggle('ready', ready);
+  const btn = $('#readyBtn'); btn.textContent = ready ? 'desmarcar pronto' : 'estou pronto'; btn.classList.toggle('off', ready);
+  $('#benchHint').innerHTML = ready
+    ? 'pronto ✓ — esperando os outros'
+    : `kit da rodada: <b>${KIT_NAMES[v.kits[ME]]}</b>`;
+}
+
+/* ---------- galeria de palpites ---------- */
+let galKey = '', selArtist = null, keyBuf = '', poppedFor = '';
+const othersOf = (v) => v.inRound.filter((p) => p !== ME && Object.hasOwn(v.works, p));
+const iConfirmed = (v) => v.confirmed.includes(ME);
+/** Um leve giro por artista, sempre o mesmo (álbum colado à mão). */
+const tiltOf = (p) => [-.7, .5, -.3, .8, -.5, .3][Number(p.slice(1)) % 6];
+const tapeRot = (p) => [-7, -4, -9, -5, -8, -3][Number(p.slice(1)) % 6];
+function tapeHTML(p, coord, pop) {
+  return `<span class="gtape${pop ? ' pop' : ''}" data-tape="${p}" style="--rot:${tapeRot(p)}deg" title="tirar o palpite">${coord}</span>`;
+}
+function showWork(el, work) {
+  const k = window.Kits[work.kit];
+  if (!k) { el.innerHTML = `<div class="nokit"><p>obra de ${KIT_NAMES[work.kit]}</p></div>`; return; }
+  try { k.show(el, work); } catch (err) { console.error('kit quebrou no show', work.kit, err); }
+}
+/** Molduras montadas uma vez por rodada (as obras não mudam no palpite); depois só troca fitinha e seleção. */
+function renderGallery(v) {
+  const others = othersOf(v);
+  const key = `${v.round}|${others.join()}`;
+  const box = $('#works');
+  if (key !== galKey) {
+    galKey = key; keyBuf = '';
+    if (!others.includes(selArtist)) selArtist = others[0] || null;
+    box.innerHTML = others.length
+      ? others.map((p) => `<div class="wf" data-artist="${p}" style="--tilt:${tiltOf(p)}deg"><div class="sheet"></div>`
+        + `<button class="wz" data-wz="${p}" title="ver a obra grande"><i class="ti ti-zoom-in"></i></button>`
+        + `<div class="cap"><span class="cr">${critter(p)}</span><span><span class="nm">${nameOf(p)}</span><span class="kt">${KIT_NAMES[v.kits[p]]}</span></span></div></div>`).join('')
+      : '<p class="no-works">Ninguém mais montou nada nesta rodada. Confirme pra seguir.</p>';
+    box.querySelectorAll('.wf').forEach((f) => showWork(f.querySelector('.sheet'), v.works[f.dataset.artist]));
+  }
+  const locked = iConfirmed(v);
+  $('#gallery').classList.toggle('locked', locked);
+  $('#page').classList.toggle('locked', locked);
+  box.querySelectorAll('.wf').forEach((f) => {
+    const p = f.dataset.artist, coord = v.myGuesses[p];
+    f.classList.toggle('sel', !locked && p === selArtist);
+    const old = f.querySelector('.gtape, .empty-tag');
+    const want = coord ? `t:${coord}` : 'e';
+    if (old && old.dataset.k === want) return;
+    if (old) old.remove();
+    const tmp = document.createElement('div');
+    tmp.innerHTML = coord ? tapeHTML(p, coord, poppedFor === `${p}:${coord}`) : '<span class="empty-tag">sem palpite</span>';
+    const n = tmp.firstChild; n.dataset.k = want; f.appendChild(n);
+  });
+  poppedFor = '';
+  // na grade: a foto escolhida pra obra selecionada fica em azul, e cada foto mostra os bichinhos das obras em que você a colou
+  const picked = selArtist && !locked ? Retratim.COORDS.indexOf(v.myGuesses[selArtist]) : -1;
+  document.querySelectorAll('#grid .photo').forEach((el) => {
+    const i = Number(el.dataset.i), coord = Retratim.COORDS[i];
+    el.classList.toggle('picked', i === picked);
+    const who = others.filter((p) => v.myGuesses[p] === coord);
+    let used = el.querySelector('.used');
+    const uk = who.join();
+    if (!who.length) { if (used) used.remove(); return; }
+    if (used && used.dataset.k === uk) return;
+    if (!used) { used = document.createElement('div'); used.className = 'used'; el.appendChild(used); }
+    used.dataset.k = uk; used.innerHTML = who.map((p) => `<span title="${nameOf(p)}">${critter(p)}</span>`).join('');
+  });
+  const missing = others.filter((p) => !v.myGuesses[p]).length;
+  $('#galHint').innerHTML = locked
+    ? 'palpites confirmados ✓'
+    : selArtist ? `obra de <b>${nameOf(selArtist)}</b> selecionada: clique na foto que você acha que é (ou digite <b>b3</b>)` : 'clique numa obra pra escolher';
+  const foot = $('#galFoot');
+  foot.classList.toggle('ok', locked);
+  foot.innerHTML = locked
+    ? 'esperando a galera…'
+    : missing ? `faltam <b>${missing}</b> ${missing === 1 ? 'obra' : 'obras'} sem palpite · dá pra confirmar assim mesmo` : 'todas as obras com palpite';
+  $('#confirmBtn').hidden = locked;
+}
+function clearGallery() {
+  galKey = ''; selArtist = null; keyBuf = '';
+  $('#works').innerHTML = '';
+  $('#page').classList.remove('locked');
+  document.querySelectorAll('#grid .photo').forEach((el) => { el.classList.remove('picked'); const u = el.querySelector('.used'); if (u) u.remove(); });
+}
+/** Cola (ou troca) a fitinha na obra selecionada. */
+function guessAt(coord) {
+  if (!state || state.phase !== 'guessing') return;
+  const v = view();
+  if (iConfirmed(v)) { toast('Você já confirmou.'); return; }
+  if (!selArtist) { toast('Escolha uma obra primeiro.'); return; }
+  if (v.myGuesses[selArtist] === coord) return;
+  poppedFor = `${selArtist}:${coord}`;
+  if (act(ME, { type: 'guess', artist: selArtist, coord })) play('tape');
+}
+function unguess(artist) {
+  if (!state || state.phase !== 'guessing' || iConfirmed(view())) return;
+  selArtist = artist;
+  if (act(ME, { type: 'guess', artist, coord: null })) play('untape');
+}
+function selectWork(artist) {
+  if (!state || state.phase !== 'guessing' || iConfirmed(view()) || selArtist === artist) return;
+  selArtist = artist; keyBuf = ''; render();
+}
+$('#works').addEventListener('click', (e) => {
+  const z = e.target.closest('[data-wz]');
+  if (z) { openWorkZoom(z.dataset.wz); return; }
+  const t = e.target.closest('[data-tape]');
+  if (t) { unguess(t.dataset.tape); return; }
+  const f = e.target.closest('.wf');
+  if (f) selectWork(f.dataset.artist);
+});
+$('#confirmBtn').onclick = () => {
+  if (!state || state.phase !== 'guessing') return;
+  if (act(ME, { type: 'confirm' })) play('ready');
+};
+
+/* ---------- saguão (o protótipo pula direto pra partida; só aparece se algo travar lá) ---------- */
+function renderBanner() {
+  $('#banner').innerHTML = '<span class="tape"></span><h2>saguão</h2><p class="sub">o protótipo começa a partida direto</p>';
+}
+
+/* ---------- revelação narrada (uma obra por vez, avança sozinha; disparada uma vez por rodada) ---------- */
+let revealFor = null, revealRun = 0, revealDone = false, shown = null;
+const pause = (ms) => new Promise((r) => later(ms * SPEED, r));
+/** A execução `run` ainda é a da vez? (pular, sair da fase ou partida nova cancelam) */
+const alive = (run) => run === revealRun && state && state.phase === 'reveal';
+const list = (ps) => (ps.length <= 1 ? ps.map(nameOf).join('') : ps.slice(0, -1).map(nameOf).join(', ') + ' e ' + nameOf(ps[ps.length - 1]));
+const workOf = (a) => (a === ME ? 'a <b>sua</b> obra' : `a obra de <b>${nameOf(a)}</b>`);
+/** Posição de um elemento em px do palco (o #app é escalado). */
+function stageBox(el) {
+  const ar = app.getBoundingClientRect(), sc = ar.width / APPW, r = el.getBoundingClientRect();
+  return { x: (r.left - ar.left) / sc, y: (r.top - ar.top) / sc, w: r.width / sc, h: r.height / sc };
+}
+const gridPhoto = (coord) => document.querySelector(`#grid .photo[data-i="${Retratim.COORDS.indexOf(coord)}"]`);
+/** Troca a frase da narração com um fade (a caixa fica parada). */
+function say(n, html) {
+  const t = $('#reveal .rv-t'), nn = $('#reveal .rv-n'); if (!t) return;
+  clearTimeout(say.t); t.classList.add('swap');
+  say.t = setTimeout(() => { t.innerHTML = html; nn.textContent = n; t.classList.remove('swap'); }, 160);
+}
+function startReveal(v) {
+  const R = v.result;
+  revealFor = R; revealDone = false;
+  const run = ++revealRun;
+  // os selinhos começam no placar de antes da rodada e sobem junto com a narração
+  shown = Object.fromEntries(v.players.map((p) => [p, (v.scores[p] ?? 0) - (R.gained[p] ?? 0)]));
+  renderTop(v);
+  $('#reveal').innerHTML = '<div class="rv-head"><span class="rv-n"></span><span class="rv-t"></span><button class="rv-skip" title="vai direto pro placar da rodada">pular ›</button></div><div class="rv-stage"></div>';
+  runReveal(run, R);
+}
+async function runReveal(run, R) {
+  const stage = $('#reveal .rv-stage');
+  if (!R.order.length) {
+    say('', 'revelação');
+    stage.innerHTML = '<p class="rv-empty"><i class="ti ti-photo-off"></i>Ninguém montou nada nesta rodada, então não tem obra pra revelar.</p>';
+    await pause(2400); if (!alive(run)) return;
+    finishReveal(); return;
+  }
+  await pause(300); if (!alive(run)) return;
+  const total = R.order.length;
+  for (let k = 0; k < total; k++) {
+    const a = R.order[k], coord = R.secrets[a], right = R.correct[a] || [];
+    const n = `obra ${k + 1} de ${total}`;
+    if (k) { stage.classList.add('out'); await pause(380); if (!alive(run)) return; stage.classList.remove('out'); settleGridPhoto(R.order[k - 1], R); }
+    // 1 · a obra cresce no centro, numa moldura grande, com o artista e o kit
+    stage.innerHTML = `<div class="rv-pair"><div class="rv-work in"><div class="sheet"></div>`
+      + `<div class="cap"><span class="cr">${critter(a)}</span><span><span class="nm">${nameOf(a)}</span><span class="kt">${KIT_NAMES[R.kits[a]]}</span></span></div></div>`
+      + `<div class="rv-slot"><div class="rv-polaroid"><div class="rv-pic"></div><span class="rv-co"><small>era a</small>${coord}</span></div></div></div>`
+      + '<div class="rv-guesses"></div>';
+    showWork(stage.querySelector('.rv-work .sheet'), R.works[a]);
+    say(n, `${workOf(a)} · ${KIT_NAMES[R.kits[a]]}`);
+    await pause(900); if (!alive(run)) return;
+    // 2 · as fitinhas de quem palpitou, uma a uma
+    const guessers = state.inRound.filter((p) => p !== a);
+    say(n, 'os palpites…');
+    const box = stage.querySelector('.rv-guesses'), step = 1200 / (guessers.length + 1);
+    for (const g of guessers) {
+      const c = R.guesses[g] && R.guesses[g][a];
+      box.insertAdjacentHTML('beforeend', `<div class="rv-g in" data-g="${g}" style="--tilt:${tiltOf(g) * 2}deg">`
+        + `<span class="rv-tape${c ? '' : ' none'}" style="--rot:${tapeRot(g)}deg">${c || 'sem palpite'}</span>`
+        + `<span class="cr">${critter(g)}</span><span class="nm">${nameOf(g)}</span></div>`);
+      play('tape');
+      await pause(step); if (!alive(run)) return;
+    }
+    if (!guessers.some((g) => R.guesses[g] && R.guesses[g][a])) say(n, 'ninguém palpitou nesta obra');
+    await pause(step); if (!alive(run)) return;
+    // 3 · a foto verdadeira descola da grade e voa até o lado da obra
+    say(n, `a foto era a <b>${coord}</b>!`);
+    play('shutter');
+    flyPhoto(run, coord, stage.querySelector('.rv-slot'));
+    await pause(1200); if (!alive(run)) return;
+    // 4 · fitinhas certas ganham ✓; erradas ficam cinza
+    box.querySelectorAll('.rv-g').forEach((el) => {
+      const ok = right.includes(el.dataset.g);
+      el.classList.remove('in'); el.classList.add(ok ? 'ok' : 'no');
+      if (ok) el.insertAdjacentHTML('beforeend', '<span class="tick">✓</span>');
+    });
+    say(n, right.length ? `<b>${list(right)}</b> ${right.length === 1 ? 'acertou' : 'acertaram'}` : 'ninguém acertou');
+    await pause(800); if (!alive(run)) return;
+    // 5 · os pontos sobem por cima dos selinhos (+1 por acerto; o artista ganha +1 por quem acertou)
+    const pts = right.length ? [[a, right.length], ...right.map((g) => [g, 1])] : [];
+    say(n, pts.length ? pts.map(([p, x]) => `<b>+${x}</b> pra ${nameOf(p)}`).join(' · ') : 'ninguém pontua com esta obra');
+    for (const [p, x] of pts) {
+      shown[p] = (shown[p] ?? 0) + x;
+      renderTop(view()); floatPlus(p, x); play('plim');
+      await pause(Math.min(220, 700 / pts.length)); if (!alive(run)) return;
+    }
+    await pause(pts.length ? 650 : 1000); if (!alive(run)) return;
+  }
+  await pause(500); if (!alive(run)) return;
+  finishReveal();
+}
+/** A miniatura voa da posição real na grade até o lado da obra, cresce e gira um pouco (papel). */
+function flyPhoto(run, coord, slot) {
+  const id = view().grid[Retratim.COORDS.indexOf(coord)];
+  slot.querySelector('.rv-pic').innerHTML = photoHTML(id);
+  const src = gridPhoto(coord), pol = slot.querySelector('.rv-polaroid');
+  if (!src) { slot.classList.add('on'); return; }
+  const a = stageBox(src);
+  // o destino é o polaroide sem o giro (o slot não gira): mede a caixa dele "de pé"
+  const s = stageBox(slot), b = { x: s.x, y: s.y + (s.h - pol.offsetHeight) / 2, w: pol.offsetWidth, h: pol.offsetHeight };
+  src.classList.add('lifted');
+  const fly = document.createElement('div');
+  fly.className = 'fly'; fly.innerHTML = `<div class="rv-pic">${photoHTML(id)}</div>`;
+  app.appendChild(fly);
+  const anim = fly.animate([
+    { left: a.x + 'px', top: a.y + 'px', width: a.w + 'px', height: a.h + 'px', padding: '6px', transform: 'rotate(0deg) scale(1)', boxShadow: '0 1px 2px rgba(59,47,47,.25)' },
+    { offset: .35, transform: 'rotate(-5deg) scale(1.14)', boxShadow: '0 22px 34px rgba(43,34,30,.32)' },
+    { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px', padding: '7px 7px 38px', transform: 'rotate(3deg) scale(1)', boxShadow: '0 2px 8px rgba(59,47,47,.25)' },
+  ], { duration: 820 * SPEED, easing: 'cubic-bezier(.45,.05,.25,1)', fill: 'forwards' });
+  anim.finished.then(() => { fly.remove(); if (run === revealRun) slot.classList.add('on'); }, () => fly.remove());
+}
+/** A foto volta pro lugar na grade com o bichinho do artista (fica marcada até o fim da revelação). */
+function settleGridPhoto(a, R) {
+  const el = gridPhoto(R.secrets[a]); if (!el) return;
+  el.classList.remove('lifted');
+  let used = el.querySelector('.used.rv');
+  if (!used) { used = document.createElement('div'); used.className = 'used rv'; el.appendChild(used); }
+  if (!used.querySelector(`[data-p="${a}"]`)) used.insertAdjacentHTML('beforeend', `<span data-p="${a}" title="${nameOf(a)}">${critter(a)}</span>`);
+}
+function floatPlus(p, x) {
+  const seal = document.querySelector(`#seals .seal[data-p="${p}"]`); if (!seal) return;
+  seal.classList.add('bump');
+  const r = stageBox(seal), el = document.createElement('div');
+  el.className = 'plus'; el.textContent = '+' + x;
+  el.style.left = (r.x + r.w - 12) + 'px'; el.style.top = (r.y + 4) + 'px'; // adesivo no canto de cima do selinho, subindo
+  app.appendChild(el); el.addEventListener('animationend', () => el.remove());
+}
+/** Fim da revelação (ou "pular"): placar real nos selinhos, todas as fotos marcadas na grade, placar da rodada. */
+function finishReveal() {
+  if (!state || state.phase !== 'reveal') return;
+  revealRun++; revealDone = true; shown = null;
+  document.querySelectorAll('#app > .fly, #app > .plus').forEach((e) => e.remove());
+  const R = view().result;
+  for (const a of R.order) settleGridPhoto(a, R);
+  renderTop(view()); renderBoard(view());
+}
+/** Sai da revelação: cancela o que estiver rodando e limpa a grade. */
+function leaveReveal() {
+  revealRun++; revealDone = false; shown = null; clearTimeout(say.t);
+  document.querySelectorAll('#app > .fly, #app > .plus').forEach((e) => e.remove());
+  document.querySelectorAll('#grid .photo').forEach((el) => { el.classList.remove('lifted'); const u = el.querySelector('.used.rv'); if (u) u.remove(); });
+  $('#reveal').innerHTML = '';
+}
+/** Placar da rodada: cartão de álbum ordenado pelo total. Só o host (você) avança; os bots não clicam. */
+function renderBoard(v) {
+  const R = v.result;
+  const rows = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0) || (R.gained[b] ?? 0) - (R.gained[a] ?? 0));
+  const hits = R.order.reduce((s, a) => s + (R.correct[a] || []).length, 0);
+  const sum = R.order.length
+    ? `${R.order.length} ${R.order.length === 1 ? 'obra' : 'obras'} · <b>${hits}</b> ${hits === 1 ? 'acerto' : 'acertos'}`
+    : 'ninguém montou nada nesta rodada';
+  const last = v.round + 1 >= v.rounds;
+  $('#reveal').innerHTML = `<div class="rv-board"><span class="tape"></span><h2>placar da rodada ${v.round + 1}</h2><p class="sum">${sum}</p>`
+    + rows.map((p) => {
+      const g = R.gained[p] ?? 0;
+      return `<div class="board-row${p === ME ? ' me' : ''}"><span class="cr">${critter(p)}</span><span class="nm">${nameOf(p)}</span>`
+        + `<span class="g${g ? '' : ' zero'}">+${g}</span><span class="tot">${v.scores[p] ?? 0}<small>${ptsWord(v.scores[p] ?? 0)}</small></span></div>`;
+    }).join('')
+    + `<div class="acts"><button class="btn-big" data-a="next">${last ? 'ver o fim do jogo' : 'próxima rodada'}</button></div></div>`;
+}
+$('#reveal').addEventListener('click', (e) => {
+  if (e.target.closest('.rv-skip')) { finishReveal(); return; }
+  if (e.target.closest('[data-a="next"]')) act(ME, { type: 'next' });
+});
+
+/* ---------- fim de jogo: página final do álbum ---------- */
+let finalFor = null;
+function renderFinal(v) {
+  if (finalFor === v.winners) return; // monta uma vez por fim de jogo (a animação de entrada não repete)
+  finalFor = v.winners;
+  const rows = [...v.players].sort((a, b) => (v.scores[b] ?? 0) - (v.scores[a] ?? 0));
+  const win = v.winners;
+  if (win.includes(ME)) play('win');
+  const sub = win.length > 1
+    ? `empate! <b>${list(win)}</b> dividem o álbum`
+    : win[0] === ME ? '<b>você</b> venceu!' : `<b>${nameOf(win[0])}</b> venceu!`;
+  let pos = 0;
+  $('#final').innerHTML = `<div class="fin"><span class="tape"></span><span class="tape r"></span><h2>fim de jogo</h2><p class="sub">${sub}</p>`
+    + rows.map((p, i) => {
+      if (i === 0 || (v.scores[p] ?? 0) !== (v.scores[rows[i - 1]] ?? 0)) pos = i + 1; // empate divide a posição
+      const w = win.includes(p);
+      return `<div class="fin-row${w ? ' win' : ''}${p === ME ? ' me' : ''}"><span class="pos">${pos}º</span><span class="cr">${critter(p)}</span>`
+        + `<span class="nm">${nameOf(p)}${w ? '<i class="ti ti-star-filled star" title="venceu"></i>' : ''}</span><span class="pts">${v.scores[p] ?? 0}<small>${ptsWord(v.scores[p] ?? 0)}</small></span></div>`;
+    }).join('')
+    + '<div class="acts"><button class="btn-big" data-a="again">jogar de novo</button><button class="btn-soft" data-a="lobby">voltar pro lobby</button></div></div>';
+}
+$('#final').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-a]'); if (!b || !state || state.phase !== 'gameover') return;
+  resetLocal();
+  if (b.dataset.a === 'again') act(ME, { type: 'again' });
+  // no protótipo o lobby não tem tela: volta pro saguão e já recomeça
+  if (b.dataset.a === 'lobby' && act(ME, { type: 'lobby' })) act(ME, { type: 'start' });
+});
+
+/* ---------- confete de papel picado (porte do Diquisti, mais leve e com cara de papel) ---------- */
+const cv = $('#confetti'), cx = cv.getContext('2d');
+const PAPER = ['#2f5aa8', '#f2a541', '#fbf7ef', '#d3bf99', '#3b6d11', '#c8644f'];
+let bits = [], raf = 0;
+function launchConfetti() {
+  cv.width = APPW; cv.height = 900;
+  bits = Array.from({ length: 110 }, () => ({
+    x: APPW / 2 + (Math.random() - .5) * 360, y: 250, vx: (Math.random() - .5) * 12, vy: -Math.random() * 11 - 3,
+    w: 6 + Math.random() * 5, h: 3 + Math.random() * 3, c: PAPER[Math.floor(Math.random() * PAPER.length)],
+    a: Math.random() * 6, s: Math.random() * 6, f: .05 + Math.random() * .08,
+  }));
+  cancelAnimationFrame(raf);
+  const tick = () => {
+    cx.clearRect(0, 0, cv.width, cv.height); let live = 0;
+    for (const b of bits) {
+      // cai devagar e balança, como papel (velocidade-limite baixa)
+      b.vy = Math.min(b.vy + .22, 3.1); b.vx *= .985; b.s += b.f; b.a += .05;
+      b.x += b.vx + Math.sin(b.s) * .9; b.y += b.vy;
+      if (b.y < 920) live++;
+      cx.save(); cx.translate(b.x, b.y); cx.rotate(b.a); cx.scale(1, Math.cos(b.s * 1.7));
+      cx.fillStyle = b.c; cx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); cx.restore();
+    }
+    raf = live ? requestAnimationFrame(tick) : 0;
+  };
+  tick();
+}
+function stopConfetti() { cancelAnimationFrame(raf); raf = 0; bits = []; cx.clearRect(0, 0, cv.width, cv.height); }
+
+function render(v = view()) {
+  renderTop(v);
+  const building = v.phase === 'building', guessing = v.phase === 'guessing', reveal = v.phase === 'reveal', over = v.phase === 'gameover';
+  if (!over && v.phase !== 'lobby') renderGrid(v); // no saguão ainda não tem grade; no fim ela fica escondida
+  $('#building').hidden = !building; $('#gallery').hidden = !guessing; $('#reveal').hidden = !reveal;
+  $('#final').hidden = !over; $('#banner').hidden = building || guessing || reveal || over;
+  $('#page').classList.toggle('building-phase', building);
+  $('#page').classList.toggle('guessing-phase', guessing);
+  $('#page').classList.toggle('final-phase', over);
+  if (building) renderBuilding(v);
+  else if (guessing) renderGallery(v);
+  else if (reveal) { if (revealFor !== v.result) startReveal(v); }
+  else if (over) renderFinal(v);
+  else renderBanner(v);
+  renderDevKits(v);
+}
+
+/* ---------- controles do protótipo ---------- */
+function opts(el, values, cur, label, set) {
+  el.innerHTML = values.map((x) => `<button class="${x === cur ? 'on' : ''}" data-v="${x}">${label(x)}</button>`).join('');
+  el.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; set(b.dataset.v); };
+}
+function renderDev() {
+  opts($('#optN'), [3, 4, 5, 6], N, String, (x) => { N = Number(x); renderDev(); newGame(); });
+  opts($('#optS'), [.4, 1, 2], SPEED, (x) => ({ 0.4: 'rápido', 1: 'normal', 2: 'lento' })[x], (x) => { SPEED = Number(x); renderDev(); });
+  opts($('#optH'), [.2, .5, .8], BOT_HIT, (x) => `${Math.round(x * 100)}%`, (x) => { BOT_HIT = Number(x); renderDev(); });
+}
+function renderDevKits(v) {
+  opts($('#optK'), [...Retratim.KITS], v.kits[ME], (k) => KIT_NAMES[k], swapKit);
+}
+/** Só no protótipo: troca o meu kit com quem tem o kit escolhido (mexida direta no estado). */
+function swapKit(target) {
+  if (!state || state.phase !== 'building') { toast('Só dá pra trocar o kit na montagem.'); return; }
+  const mine = state.kits[ME]; if (mine === target) return;
+  const other = Object.keys(state.kits).find((p) => state.kits[p] === target);
+  const kits = { ...state.kits, [ME]: target }; if (other) kits[other] = mine;
+  const touched = other ? [ME, other] : [ME];
+  const works = Object.fromEntries(Object.entries(state.works).filter(([p]) => !touched.includes(p)));
+  state = { ...state, kits, works, ready: state.ready.filter((p) => !touched.includes(p)) };
+  if (other) plannedFor.delete(botKey(other)); // o bot refaz a obra com o kit novo
+  changed();
+}
+const SOUND_KEY = 'retratim.sound';
+let soundOn = true;
+try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (err) { /* sem localStorage: som ligado */ }
+function paintSound() { setSound(soundOn); $('#soundBtn').innerHTML = `<i class="ti ${soundOn ? 'ti-volume' : 'ti-volume-off'}"></i>`; $('#soundBtn').title = soundOn ? 'som ligado' : 'som desligado'; }
+paintSound();
+$('#soundBtn').onclick = () => { soundOn = !soundOn; paintSound(); try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (err) { /* ignora */ } };
+$('#devBtn').onclick = () => $('#dev').classList.toggle('on');
+$('#hurryBtn').onclick = () => act(ME, { type: 'hurry' });
+$('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
+
+/* ---------- duas colunas: grade | divisor | lado direito (bancada na montagem, obras na galeria) ---------- */
+const PAGE_H = 900 - 84, PAD = 40, GAP = 48;
+const SIDE_DEFAULT = 600, SIDE_MIN = Math.round(1440 * .35), SIDE_MAX = Math.round(1440 * .75);
+const SIDE_KEY = 'retratim-prototipo:lado-direito';
+let sideW = SIDE_DEFAULT;
+try { const w = Number(localStorage.getItem(SIDE_KEY)); if (w >= SIDE_MIN && w <= SIDE_MAX) sideW = w; } catch (err) { /* sem localStorage: fica o padrão */ }
+function saveSide() { try { localStorage.setItem(SIDE_KEY, String(sideW)); } catch (err) { /* ignora */ } }
+/** Recalcula as larguras (px do palco): fotos 4:3 na sobra da esquerda, bancada 4:3 na coluna da direita. */
+function layout() {
+  // respiro de GAP px de cada lado da linha do divisor, em qualquer posição (a alça fica centrada na linha)
+  const sideX = 1440 - PAD - sideW, line = sideX - GAP, divX = line - 12, gridW = line - GAP - PAD;
+  // grade = rótulo 28 + 4 fotos + 4 vãos de 12; na altura: topo 22 + rótulos 30 + 4 vãos + nota ~80
+  const byW = (gridW - 28 - 48) / 4, byH = ((PAGE_H - 22 - 30 - 48 - 80) / 4 - 12) * 4 / 3 + 12;
+  const pw = Math.max(16, Math.min(byW, byH)), ph = (pw - 12) * .75 + 12; // borda de 6 px em volta da foto 4:3
+  // bancada: largura da coluna, limitada pela altura (cartão da secreta ~104 + 18 + pé ~70 + folga)
+  const bw = Math.min(sideW, (PAGE_H - 22 - 104 - 18 - 70 - 16) * 4 / 3);
+  const st = $('#page').style;
+  for (const [k, v] of Object.entries({ '--pw': pw, '--ph': ph, '--grid-w': gridW, '--side-x': sideX, '--side-w': sideW, '--div-x': divX, '--bw': bw })) st.setProperty(k, v.toFixed(2) + 'px');
+}
+/** Recria a bancada com o rascunho atual (depois de mudar o tamanho). Não manda rascunho nem conta como mexida. */
+function rebuildBench() {
+  if (!bench || !state || state.phase !== 'building') return;
+  const kit = state.kits[ME];
+  try { bench.handle && bench.handle.destroy(); } catch (err) { console.error('kit quebrou no destroy', err); }
+  bench.sheet.innerHTML = '';
+  const k = window.Kits[kit] || fallbackKit(kit);
+  try { bench.handle = k.build(bench.sheet, myWork && myWork.kit === kit ? myWork : null, onBenchChange); } catch (err) { bench.handle = null; console.error('kit quebrou no build', kit, err); }
+}
+const divider = $('#divider');
+let resizing = null;
+divider.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  e.preventDefault(); divider.setPointerCapture(e.pointerId);
+  resizing = { pid: e.pointerId, x0: e.clientX, w0: sideW, sc: app.getBoundingClientRect().width / APPW, moved: false };
+  divider.classList.add('on'); document.body.classList.add('resizing');
+});
+divider.addEventListener('pointermove', (e) => {
+  if (!resizing || e.pointerId !== resizing.pid) return;
+  // durante o arraste só muda o tamanho (os kits escalam pela folha); ao soltar a bancada é recriada
+  const w = Math.round(Math.min(SIDE_MAX, Math.max(SIDE_MIN, resizing.w0 - (e.clientX - resizing.x0) / resizing.sc)));
+  if (w !== sideW) { sideW = w; resizing.moved = true; layout(); }
+});
+function endResize(e) {
+  if (!resizing || e.pointerId !== resizing.pid) return;
+  const moved = resizing.moved; resizing = null;
+  divider.classList.remove('on'); document.body.classList.remove('resizing');
+  if (moved) { saveSide(); rebuildBench(); }
+}
+divider.addEventListener('pointerup', endResize);
+divider.addEventListener('pointercancel', endResize);
+divider.addEventListener('dblclick', () => { if (sideW === SIDE_DEFAULT) return; sideW = SIDE_DEFAULT; layout(); saveSide(); rebuildBench(); });
+
+/* ---------- zoom das fotos (a galeria da Task 6 usa a lupinha; o clique na foto vira palpite lá) ---------- */
+let zoomAt = -1;
+/** Abre a foto da coordenada ("B3") grande. */
+function openPhotoZoom(coord) {
+  const i = Retratim.COORDS.indexOf(coord);
+  if (!state || i < 0 || !view().grid[i]) return;
+  zoomAt = i; renderZoom();
+}
+function renderZoom() {
+  const v = view(), coord = Retratim.COORDS[zoomAt];
+  const mine = (v.phase === 'building' || v.phase === 'guessing') && v.mySecret === coord;
+  const z = $('#zoom');
+  z.innerHTML = `<button class="nav l" data-z="-1" title="anterior (←)"><i class="ti ti-chevron-left"></i></button>`
+    + `<div class="frame"><div class="pic">${photoHTML(v.grid[zoomAt])}</div><span class="co">${coord}</span><span class="cap">← → pra ver as outras · Esc fecha</span>${mine ? '<span class="mine">sua foto</span>' : ''}</div>`
+    + `<button class="nav r" data-z="1" title="próxima (→)"><i class="ti ti-chevron-right"></i></button>`
+    + `<button class="zx" data-z="x" title="fechar (Esc)">✕</button>`;
+  z.hidden = false;
+}
+function stepZoom(d) { zoomAt = (zoomAt + d + 16) % 16; renderZoom(); }
+/** Fecha o zoom (foto ou obra: os dois usam o mesmo #zoom). */
+function closePhotoZoom() { zoomAt = -1; workZoom = null; const z = $('#zoom'); z.hidden = true; z.innerHTML = ''; }
+window.openPhotoZoom = openPhotoZoom;
+
+/* lupa da galeria: a obra grande, com o artista, o kit e a sua fitinha (se tiver) */
+let workZoom = null;
+function openWorkZoom(artist) {
+  const v = state && view();
+  if (!v || !Object.hasOwn(v.works, artist)) return;
+  zoomAt = -1; workZoom = artist;
+  const coord = v.myGuesses[artist];
+  const z = $('#zoom');
+  z.innerHTML = `<div class="frame work"><div class="pic"></div>`
+    + `<span class="who"><span class="cr">${critter(artist)}</span><span><span class="nm">${nameOf(artist)}</span><span class="kt">${KIT_NAMES[v.works[artist].kit]}</span></span></span>`
+    + `<span class="cap">Esc fecha</span>${coord ? `<span class="gtape" style="--rot:${tapeRot(artist)}deg">${coord}</span>` : ''}</div>`
+    + `<button class="zx" data-z="x" title="fechar (Esc)">✕</button>`;
+  z.hidden = false;
+  showWork(z.querySelector('.pic'), v.works[artist]);
+}
+$('#zoom').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-z]');
+  if (b) { if (b.dataset.z === 'x') closePhotoZoom(); else stepZoom(Number(b.dataset.z)); return; }
+  if (!e.target.closest('.frame')) closePhotoZoom();
+});
+document.addEventListener('keydown', (e) => {
+  if (workZoom) { if (e.key === 'Escape') { closePhotoZoom(); e.preventDefault(); } return; }
+  if (zoomAt < 0) { guessKey(e); return; }
+  if (e.key === 'Escape') closePhotoZoom();
+  else if (e.key === 'ArrowLeft') stepZoom(-1);
+  else if (e.key === 'ArrowRight') stepZoom(1);
+  else return;
+  e.preventDefault();
+});
+/** Teclado na galeria: com uma obra selecionada, "b" e depois "3" cola a fitinha B3. */
+function guessKey(e) {
+  if (!state || state.phase !== 'guessing' || !selArtist || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if ('abcd'.includes(k) && k.length === 1) { keyBuf = k.toUpperCase(); e.preventDefault(); return; }
+  if ('1234'.includes(k) && k.length === 1 && keyBuf) { const c = keyBuf + k; keyBuf = ''; e.preventDefault(); guessAt(c); return; }
+  keyBuf = '';
+}
+$('#grid').addEventListener('click', (e) => {
+  const ph = e.target.closest('.photo'); if (!ph) return;
+  const coord = Retratim.COORDS[Number(ph.dataset.i)];
+  // na montagem a foto inteira abre o zoom; nas outras fases só a lupinha (o clique na foto fica pro palpite)
+  if (e.target.closest('.zoom-btn') || (state && state.phase === 'building')) { openPhotoZoom(coord); return; }
+  if (state && state.phase === 'guessing') guessAt(coord);
+});
+$('.secret-card').addEventListener('click', () => { const v = state && view(); if (v && v.mySecret) openPhotoZoom(v.mySecret); });
+
+fit(); layout(); renderDev(); newGame();
+</script>
+</body>
+</html>

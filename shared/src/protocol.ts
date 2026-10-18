@@ -32,7 +32,7 @@ export type CursorFx = Omit<Extract<ClientMessage, { t: 'fx.cursor' }>, 't'>;
 
 export type ServerMessage =
   | { t: 'welcome'; playerId: string; code: string }
-  | { t: 'state'; room: RoomView }
+  | { t: 'state'; room: RoomView; /** Hora do servidor (ms) quando a visão saiu: o cliente mede a diferença pro próprio relógio. */ now?: number }
   | ({ t: 'fx.cursor'; from: string } & CursorFx)
   | { t: 'fx.activity'; from: string; activity: Activity }
   | { t: 'fx.ping'; from: string; x: number; y: number }
@@ -77,6 +77,13 @@ export const ERROR_CODES = [
   'already_confirmed',
   'paused',
   'deck_too_small',
+  'wrong_kit',
+  'bad_work',
+  'empty_work',
+  'icons_too_few',
+  'already_ready',
+  'own_work',
+  'no_work',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -92,7 +99,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   theme_random_only: 'No modo campanha o tema é sempre sorteado.',
   not_player: 'Você está assistindo esta rodada.',
   bad_action: 'Ação inválida.',
-  room_full: 'A sala está cheia (máx. 10).',
+  room_full: 'A sala está cheia.',
   bad_name: 'Escolha um nome de 1 a 16 letras.',
   bad_color: 'Personagem inválido.',
   color_taken: 'Esse personagem já foi escolhido.',
@@ -110,6 +117,13 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   already_confirmed: 'Você já confirmou.',
   paused: 'Esperando gente: precisa de 3 pessoas na mesa.',
   deck_too_small: 'O baralho tem poucas cartas pra tanta gente.',
+  wrong_kit: 'Esse não é o seu kit nesta rodada.',
+  bad_work: 'Essa obra não vale com esse kit.',
+  empty_work: 'Monte alguma coisa antes de ficar pronto.',
+  icons_too_few: 'Escolha pelo menos 2 cartas.',
+  already_ready: 'Você já está pronto. Desmarque pra mexer.',
+  own_work: 'Não dá pra palpitar na própria obra.',
+  no_work: 'Essa pessoa não tem obra nesta rodada.',
 };
 
 export function errorMessage(code: string): string {

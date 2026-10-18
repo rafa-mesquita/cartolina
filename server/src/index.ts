@@ -80,6 +80,9 @@ async function historyPageOf(env: Env, game: GameId, before: number | null): Pro
       return getHistoryPage(env, before);
     case 'dixit':
       return dixitHistoryPage(env.DB, before);
+    case 'pictures':
+      // sem `recordsHistory` a rota já respondeu 404; o histórico do Retratim vem no R4
+      throw new Error('o Retratim ainda não tem histórico');
     default: {
       const _never: never = game;
       throw new Error(`jogo sem página de histórico: ${String(_never)}`);

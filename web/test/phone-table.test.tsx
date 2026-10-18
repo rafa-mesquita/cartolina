@@ -585,7 +585,7 @@ describe('esconder a barra de baixo (sua mão)', () => {
 });
 
 describe('Game escolhe a mesa pelo layout', () => {
-  const snap = (view: RoomView): ConnSnapshot => ({ status: 'joined', playerId: view.you, view, joinError: null });
+  const snap = (view: RoomView): ConnSnapshot => ({ status: 'joined', playerId: view.you, view, joinError: null, serverOffset: 0 });
   const media = (matching: string[]) =>
     vi.stubGlobal(
       'matchMedia',

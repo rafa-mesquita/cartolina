@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ref · corda v3 (aprovada)</title>
+<link rel="stylesheet" href="base.css">
+<style>.row{display:flex;gap:10px;align-items:center;margin-top:8px;font-size:12px;color:var(--text-secondary)}.row input{width:110px}</style>
+</head>
+<body>
+<h1>Referência aprovada: corda (v3)</h1>
+<p class="nota">Aprovada em 2026-10-17 depois da v2 ("muito difícil"). Física: o ponto pego arrasta um <b>trecho</b> em volta (janela com queda suave, K pontos de cada lado); o resto só vem quando a corda estica (corrente só puxa, não empurra); um relaxamento de comprimento mínimo evita embolar. Comprimento total fixo. Pontos de pegar invisíveis; o trecho aparece destacado. Depois deste protótipo: são <b>duas</b> cordas (uma longa e uma curta), K fixo em 9, e a obra guarda no máximo 60 pontos por corda (reamostrar antes de enviar).</p>
+<canvas id="cad" style="width:100%;height:340px;background:var(--surface-1);border-radius:12px;touch-action:none;display:block;cursor:grab"></canvas>
+<div class="row"><button id="cadx">embolar de novo</button><span style="margin-left:auto">tamanho do trecho que você segura</span><input type="range" id="kk" min="2" max="20" step="1" value="9"><span id="kv">9</span></div>
+<script>
+const cv=document.getElementById('cad'),cx=cv.getContext('2d');let W,H,L,P=[],N=160,K=9,drag=-1,hov=-1;
+function init(){const r=cv.getBoundingClientRect();W=r.width;H=r.height;cv.width=W*2;cv.height=H*2;cx.setTransform(2,0,0,2,0,0);L=W*1.75/N;P=[];let x=W*.1,y=H*.3,a=0;for(let i=0;i<N;i++){P.push({x,y});a=1.25*Math.sin(i/N*Math.PI*4.2);x+=L*Math.cos(a)*.62;y+=L*Math.sin(a)*.9+L*.12}let mx=0,my=0;P.forEach(p=>{mx+=p.x;my+=p.y});mx=W/2-mx/N;my=H/2-my/N;P.forEach(p=>{p.x+=mx;p.y+=my});relax(-1,6);clamp();draw()}
+function clamp(){P.forEach(p=>{p.x=Math.min(W-7,Math.max(7,p.x));p.y=Math.min(H-7,Math.max(7,p.y))})}
+function relax(pin,it){const m=L*.85;for(let k=0;k<it;k++)for(let j=0;j<N-1;j++){const a=P[j],b=P[j+1],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||.001;let c=0;if(d<m)c=m-d;else if(d>L)c=L-d;else continue;const ux=dx/d*c,uy=dy/d*c;let wa=.5,wb=.5;if(j===pin){wa=0;wb=1}if(j+1===pin){wa=1;wb=0}a.x-=ux*wa;a.y-=uy*wa;b.x+=ux*wb;b.y+=uy*wb}}
+function pull(i){for(let j=i+1;j<N;j++){const a=P[j-1],b=P[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>L){b.x=a.x+dx/d*L;b.y=a.y+dy/d*L}}for(let j=i-1;j>=0;j--){const a=P[j+1],b=P[j],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);if(d>L){b.x=a.x+dx/d*L;b.y=a.y+dy/d*L}}}
+function path(){cx.beginPath();cx.moveTo(P[0].x,P[0].y);for(let i=1;i<N-1;i++)cx.quadraticCurveTo(P[i].x,P[i].y,(P[i].x+P[i+1].x)/2,(P[i].y+P[i+1].y)/2);cx.lineTo(P[N-1].x,P[N-1].y)}
+function tip(a,b){const dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy)||1;cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(a.x+dx/d*12,a.y+dy/d*12);cx.lineWidth=6;cx.strokeStyle='#5F5E5A';cx.lineCap='butt';cx.stroke()}
+function draw(){cx.clearRect(0,0,W,H);cx.lineCap='round';cx.lineJoin='round';path();cx.lineWidth=9;cx.strokeStyle='#712B13';cx.stroke();path();cx.lineWidth=6;cx.strokeStyle='#D85A30';cx.stroke();path();cx.setLineDash([2,5]);cx.lineWidth=2;cx.strokeStyle='#F0997B';cx.stroke();cx.setLineDash([]);tip(P[0],P[1]);tip(P[N-1],P[N-2]);const h=drag>=0?drag:hov;if(h>=0){const a=Math.max(0,h-K),b=Math.min(N-1,h+K);cx.beginPath();cx.moveTo(P[a].x,P[a].y);for(let j=a+1;j<=b;j++)cx.lineTo(P[j].x,P[j].y);cx.lineWidth=14;cx.strokeStyle=drag>=0?'rgba(55,138,221,.28)':'rgba(55,138,221,.16)';cx.stroke()}}
+function near(x,y){let b=-1,bd=26;P.forEach((p,i)=>{const d=Math.hypot(p.x-x,p.y-y);if(d<bd){bd=d;b=i}});return b}
+const pos=e=>{const r=cv.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+cv.onpointerdown=e=>{const[x,y]=pos(e);drag=near(x,y);if(drag>=0){cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';draw()}};
+cv.onpointermove=e=>{const[x,y]=pos(e);if(drag<0){const h=near(x,y);if(h!==hov){hov=h;draw()}return}const tx=Math.min(W-7,Math.max(7,x)),ty=Math.min(H-7,Math.max(7,y)),dx=tx-P[drag].x,dy=ty-P[drag].y;for(let j=Math.max(0,drag-K);j<=Math.min(N-1,drag+K);j++){const w=.5*(1+Math.cos(Math.PI*Math.abs(j-drag)/(K+1)));P[j].x+=dx*w;P[j].y+=dy*w}P[drag].x=tx;P[drag].y=ty;pull(drag);relax(drag,3);P[drag].x=tx;P[drag].y=ty;clamp();draw()};
+cv.onpointerup=()=>{drag=-1;cv.style.cursor='grab';draw()};
+cv.onpointerleave=()=>{if(drag<0){hov=-1;draw()}};
+const kk=document.getElementById('kk'),kv=document.getElementById('kv');kk.oninput=()=>{K=+kk.value;kv.textContent=K};
+document.getElementById('cadx').onclick=init;init();
+</script>
+</body>
+</html>

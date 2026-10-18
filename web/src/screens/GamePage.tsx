@@ -70,6 +70,13 @@ function HistoryTab({ game }: { game: GameId }) {
       return <HistoryPanel game={game} />;
     case 'dixit':
       return <DixitHistory />;
+    case 'pictures':
+      // histórico e museu do Retratim vêm no R4
+      return (
+        <section className="panel">
+          <p>O histórico do Retratim vem em breve.</p>
+        </section>
+      );
     default: {
       const _never: never = game;
       throw new Error(`jogo sem histórico: ${String(_never)}`);

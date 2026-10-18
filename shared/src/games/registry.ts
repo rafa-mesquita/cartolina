@@ -7,12 +7,15 @@ import { dixit } from './dixit/view';
 import { ito } from './ito/rules';
 import { itoActionSchema } from './ito/schema';
 import type { ItoAction, ItoState, ItoView } from './ito/types';
+import { picturesActionSchema } from './pictures/schema';
+import { PICTURES_MAX_PLAYERS, PICTURES_MIN_PLAYERS, type PicturesAction, type PicturesState, type PicturesView } from './pictures/types';
+import { pictures } from './pictures/view';
 
-export const GAME_IDS = ['ito', 'dixit'] as const;
+export const GAME_IDS = ['ito', 'dixit', 'pictures'] as const;
 export type GameId = (typeof GAME_IDS)[number];
-export type GameState = ItoState | DixitState;
-export type GameView = ItoView | DixitView;
-export type GameAction = ItoAction | DixitAction;
+export type GameState = ItoState | DixitState | PicturesState;
+export type GameView = ItoView | DixitView | PicturesView;
+export type GameAction = ItoAction | DixitAction | PicturesAction;
 
 export interface GameEntry {
   id: GameId;
@@ -58,6 +61,17 @@ export const GAMES: Record<GameId, GameEntry> = {
     maxPlayers: MAX_PLAYERS,
     liveCursors: false,
     recordsHistory: true,
+  }),
+  pictures: defineGame({
+    id: 'pictures',
+    module: pictures,
+    actionSchema: picturesActionSchema,
+    minPlayers: PICTURES_MIN_PLAYERS,
+    maxPlayers: PICTURES_MAX_PLAYERS,
+    // Cursor em cima de uma foto entregaria o palpite.
+    liveCursors: false,
+    // O histórico do Retratim (com o museu) vem no Plano R4.
+    recordsHistory: false,
   }),
 };
 

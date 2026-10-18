@@ -15,6 +15,23 @@
 .cover-ito { background: var(--pink); }
 .cover-dixit { background: #2f5d50; color: #f4ecd8; }
 .cover-dixit b { font: 400 30px/1.05 'DM Serif Display', Georgia, serif; }
+/* Retratim: página de álbum em kraft, com uma foto de borda branca e fitinha */
+.cover-pictures { background: #eadbc0; color: #3b2f2f; }
+.cover-pictures b { font: 700 42px/0.95 'Caveat', cursive; }
+.cover-pictures span { font: 600 13px/1.25 'Quicksand', system-ui, sans-serif; color: #7d6a58; }
+.cover-pictures::before {
+  content: ''; position: absolute; left: 20px; right: 20px; top: 20px; height: 104px; transform: rotate(-2deg);
+  border: solid #fbf7ef; border-width: 6px 6px 16px; box-shadow: 0 2px 5px rgba(59, 47, 47, 0.35);
+  background:
+    radial-gradient(circle at 72% 30%, #ffe08a 0 10px, transparent 11px),
+    radial-gradient(ellipse 70% 46% at 22% 108%, #6f9a4e 0 98%, transparent 100%),
+    radial-gradient(ellipse 80% 52% at 88% 112%, #4e7d46 0 98%, transparent 100%),
+    linear-gradient(#a3c9e8, #dcecf3);
+}
+.cover-pictures::after {
+  content: ''; position: absolute; left: 50%; top: 12px; width: 62px; height: 18px; transform: translateX(-50%) rotate(3deg);
+  background: rgba(242, 165, 65, 0.75); box-shadow: 0 1px 2px rgba(59, 47, 47, 0.25);
+}
 /* número decorativo no canto, como o da carta da mão */
 .shelf .cover-ito::after {
   content: '87'; content: '87' / ''; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
@@ -31,9 +48,13 @@
   box-shadow: 2px 3px 0 var(--ink); flex: none; font: 700 14px/1 var(--font-ui);
 }
 .cover-dixit.mini { font: 400 15px/1 'DM Serif Display', Georgia, serif; }
+.cover-pictures.mini { font: 700 19px/1 'Caveat', cursive; }
+.cover-pictures.mini::before, .cover-pictures.mini::after { display: none; }
 /* Cor de cada jogo na página dele (a mesma da capa): o "criar sala" segue. Jogo sem cor aqui fica no rosa. */
 .game-ito { --game: var(--pink); --game-ink: var(--ink); }
 .game-dixit { --game: #2f5d50; --game-ink: #f4ecd8; }
+/* Retratim: o kraft da capa some no fundo da página; o botão vai na tinta azul do álbum */
+.game-pictures { --game: #2f5aa8; --game-ink: #f6eedd; }
 .game-page .btn.play { background: var(--game, var(--pink)); color: var(--game-ink, var(--ink)); }
 .join-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
 .join-line > span { font: 21px/1 var(--font-hand); }

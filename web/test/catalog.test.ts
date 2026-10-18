@@ -23,8 +23,17 @@ describe('catálogo de jogos do site', () => {
     expect(catalogEntry('xyz')).toBeNull();
   });
 
-  it('DITU funciona no celular; Diquisti ainda não (etapa 2)', () => {
+  it('Retratim (o Pictures) aparece na estante e já dá pra jogar', () => {
+    const entry = catalogEntry('pictures');
+    expect(entry?.name).toBe('Retratim');
+    expect(entry?.players).toBe('3 a 6 pessoas');
+    expect(entry?.playable).toBe(true);
+    expect(entry?.hasHistory).toBe(false);
+  });
+
+  it('DITU funciona no celular; Diquisti e Retratim ainda não', () => {
     expect(catalogEntry('ito')?.mobile).toBe(true);
     expect(catalogEntry('dixit')?.mobile).toBe(false);
+    expect(catalogEntry('pictures')?.mobile).toBe(false);
   });
 });

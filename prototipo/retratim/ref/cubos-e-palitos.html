@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ref · cubos e palitos (aprovados)</title>
+<link rel="stylesheet" href="base.css">
+<style>
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.k{background:var(--surface-2);border:.5px solid var(--border);border-radius:12px;padding:12px 14px}
+.k h3{margin:0 0 2px;font-size:15px}.k p{margin:0 0 8px;font-size:12px;color:var(--text-secondary)}
+.mesa{width:100%;background:var(--surface-1);border-radius:8px;touch-action:none;display:block}
+.row{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px}
+.row button.on{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
+.cub{display:grid;gap:5px;justify-content:center;padding:12px;background:var(--surface-1);border-radius:8px}
+.cub div{border-radius:5px;border:.5px solid var(--border-strong);cursor:pointer}
+.pal{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.pal span{width:22px;height:22px;border-radius:5px;cursor:pointer;border:2px solid transparent}
+.pal span.on{border-color:var(--text-primary)}
+</style>
+</head>
+<body>
+<h1>Referência aprovada: cubos e palitos e pedras</h1>
+<p class="nota">Aprovado pelo usuário em 2026-10-17. Decisões depois deste protótipo: cubos ficam só em <b>4×4</b>, com <b>8 cores × 3 cubos</b> (a paleta mostra quantos sobram) e todas as casas preenchidas pra ficar pronto; palitos e pedras são <b>4 + 4</b>.</p>
+<div class="g">
+<div class="k"><h3>Cubos coloridos</h3><p>Escolhe a cor e pinta.</p>
+<div class="cub" id="cub"></div><div class="pal" id="pal"></div>
+<div class="row" style="justify-content:center"><button id="g3">3×3</button><button id="g4" class="on">4×4</button></div></div>
+<div class="k"><h3>Palitos e pedras</h3><p>Clica numa peça: aparece a alça azul pra girar. A rodinha do mouse também gira.</p>
+<svg class="mesa" id="pp" viewBox="0 0 300 230" style="height:230px"></svg></div>
+</div>
+<script>
+const C=['#E24B4A','#EF9F27','#639922','#378ADD','#F1EFE8','#2C2C2A'];let cur=0,n=4;
+const pal=document.getElementById('pal'),cub=document.getElementById('cub');
+C.forEach((c,i)=>{const s=document.createElement('span');s.style.background=c;if(!i)s.className='on';s.onclick=()=>{cur=i;[...pal.children].forEach(x=>x.className='');s.className='on'};pal.appendChild(s)});
+function grid(){cub.innerHTML='';const z=n==3?54:42;cub.style.gridTemplateColumns=`repeat(${n},${z}px)`;for(let i=0;i<n*n;i++){const d=document.createElement('div');d.style.width=d.style.height=z+'px';d.onclick=()=>{const same=d.dataset.c===String(cur);d.style.background=same?'transparent':C[cur];d.dataset.c=same?'':cur};cub.appendChild(d)}}
+grid();
+const g3=document.getElementById('g3'),g4=document.getElementById('g4');
+g3.onclick=()=>{n=3;g3.className='on';g4.className='';grid()};g4.onclick=()=>{n=4;g4.className='on';g3.className='';grid()};
+const NS='http://www.w3.org/2000/svg',svg=document.getElementById('pp');
+function sp(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
+let sel=null;const hd=document.createElementNS(NS,'g');hd.style.display='none';
+hd.innerHTML='<line x1="0" y1="0" x2="0" y2="-48" stroke="#378ADD" stroke-width="1.5" stroke-dasharray="3 3"/><circle cy="-48" r="8" fill="#378ADD" style="cursor:alias"/><circle r="3" fill="#378ADD"/>';
+function put(g){g.setAttribute('transform',`translate(${g.dataset.x} ${g.dataset.y}) rotate(${g.dataset.r})`);if(sel===g)hd.setAttribute('transform',`translate(${g.dataset.x} ${g.dataset.y}) rotate(${g.dataset.r})`)}
+function choose(g){sel=g;hd.style.display=g?'':'none';if(g){svg.appendChild(g);svg.appendChild(hd);put(g)}}
+svg.onpointerdown=e=>{if(e.target===svg)choose(null)};
+const stick='<rect x="-45" y="-3" width="90" height="6" rx="3" fill="#BA7517" stroke="#633806" stroke-width=".6"/>',stone=(a,b)=>`<ellipse rx="${a}" ry="${b}" fill="#888780" stroke="#444441" stroke-width=".6"/>`;
+[{x:70,y:30,s:stick},{x:70,y:52,s:stick},{x:70,y:74,s:stick},{x:70,y:96,s:stick},{x:240,y:40,s:stone(12,9)},{x:268,y:75,s:stone(9,8)},{x:236,y:110,s:stone(13,10)},{x:266,y:150,s:stone(8,7)}].forEach(p=>{const g=document.createElementNS(NS,'g');Object.assign(g.dataset,{x:p.x,y:p.y,r:0});g.style.cursor='grab';g.innerHTML=p.s;svg.appendChild(g);put(g);
+g.onpointerdown=e=>{e.preventDefault();e.stopPropagation();choose(g);const q=sp(e),ox=q.x-g.dataset.x,oy=q.y-g.dataset.y;g.setPointerCapture(e.pointerId);g.onpointermove=ev=>{const t=sp(ev);g.dataset.x=Math.max(0,Math.min(300,t.x-ox));g.dataset.y=Math.max(0,Math.min(230,t.y-oy));put(g)};g.onpointerup=()=>{g.onpointermove=null}};
+g.onwheel=e=>{e.preventDefault();choose(g);g.dataset.r=(+g.dataset.r+(e.deltaY>0?15:-15))%360;put(g)}});
+svg.appendChild(hd);
+const knob=hd.children[1];knob.onpointerdown=e=>{e.preventDefault();e.stopPropagation();knob.setPointerCapture(e.pointerId);knob.onpointermove=ev=>{if(!sel)return;const t=sp(ev);sel.dataset.r=Math.round(Math.atan2(t.y-sel.dataset.y,t.x-sel.dataset.x)*180/Math.PI+90);put(sel)};knob.onpointerup=()=>{knob.onpointermove=null}};
+</script>
+</body>
+</html>

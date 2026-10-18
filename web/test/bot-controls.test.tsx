@@ -46,9 +46,27 @@ vi.mock('../src/dev/dixitBots', () => ({
   }),
 }));
 
+vi.mock('../src/dev/picturesBots', () => ({
+  subscribePicturesBots: (fn: () => void) => {
+    fake.listeners.add(fn);
+    return () => fake.listeners.delete(fn);
+  },
+  picturesBotsVersion: () => fake.state.version,
+  picturesBotsIn: (code: string) => fake.state.bots.filter((b) => b.code === code).length,
+  addPicturesBot: vi.fn((code: string) => {
+    fake.state.bots.push({ code });
+    fake.emit();
+  }),
+  removeAllPicturesBots: vi.fn(() => {
+    fake.state.bots = [];
+    fake.emit();
+  }),
+}));
+
 import BotControls from '../src/dev/BotControls';
 import { addBot, removeAllBots } from '../src/dev/bots';
 import { addDixitBot, removeAllDixitBots } from '../src/dev/dixitBots';
+import { addPicturesBot, removeAllPicturesBots } from '../src/dev/picturesBots';
 import { Lobby } from '../src/screens/Lobby';
 import { makeRoom, viewOf } from './fixtures';
 
@@ -85,6 +103,22 @@ describe('BotControls (dev)', () => {
     });
     expect(removeAllDixitBots).toHaveBeenCalled();
     expect(removeAllBots).not.toHaveBeenCalled();
+  });
+
+  it('no Retratim usa os bots do Retratim, não os do DITU nem os do Diquisti', () => {
+    render(<BotControls code="ABCD" seats={2} game="pictures" />);
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /adicionar bot/ }));
+    });
+    expect(addPicturesBot).toHaveBeenCalledWith('ABCD');
+    expect(addBot).not.toHaveBeenCalled();
+    expect(addDixitBot).not.toHaveBeenCalled();
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /tirar bots \(1\)/ }));
+    });
+    expect(removeAllPicturesBots).toHaveBeenCalled();
+    expect(removeAllBots).not.toHaveBeenCalled();
+    expect(removeAllDixitBots).not.toHaveBeenCalled();
   });
 
   it('sala cheia desabilita "adicionar bot"', () => {

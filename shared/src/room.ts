@@ -1,6 +1,7 @@
 import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
 import { withDixitCounters } from './games/dixit/rules';
 import type { DixitState, DixitView } from './games/dixit/types';
+import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
 import type { Rng } from './rng';
@@ -57,6 +58,12 @@ export function isItoRoomView(view: RoomView): view is ItoRoomView {
 
 export function isDixitRoomView(view: RoomView): view is DixitRoomView {
   return view.gameId === 'dixit';
+}
+
+export type PicturesRoomView = RoomView<PicturesView> & { gameId: 'pictures' };
+
+export function isPicturesRoomView(view: RoomView): view is PicturesRoomView {
+  return view.gameId === 'pictures';
 }
 
 export interface RoomSummary {
@@ -185,7 +192,7 @@ export function tick(room: Room, now: number, rng: Rng): Room {
     hostId =
       rotated.find((id) => connected.has(id)) ?? rotated.find((id) => active.includes(id)) ?? hostId;
   }
-  const game = GAMES[room.gameId].module.onPresenceChange(room.game, { hostId, active, rng });
+  const game = GAMES[room.gameId].module.onPresenceChange(room.game, { hostId, active, rng, now });
   return { ...room, hostId, game };
 }
 
@@ -199,6 +206,7 @@ export function roomAction(room: Room, playerId: string, action: unknown, rng: R
     hostId: room.hostId,
     active: activePlayers(room, now),
     rng,
+    now,
   });
   if (!res.ok) return res;
   const startedRun = room.game.phase === 'lobby' && res.state.phase !== 'lobby';
@@ -223,12 +231,15 @@ export function isExpired(room: Room, now: number): boolean {
   return now - room.lastActivity >= ROOM_TTL_MS;
 }
 
-/** Próximo momento em que o servidor precisa acordar: fim de uma tolerância de desconexão ou expiração. */
+/** Próximo momento em que o servidor precisa acordar: fim de uma tolerância de desconexão, prazo do jogo ou expiração. */
 export function nextAlarmAt(room: Room, now: number): number {
   const pending = room.seats
     .filter((s) => !s.connected && s.disconnectedAt !== null)
     .map((s) => s.disconnectedAt! + DISCONNECT_GRACE_MS + 1000)
     .filter((at) => at > now);
+  const deadline = GAMES[room.gameId].module.nextDeadline?.(room.game) ?? null;
+  // Prazo vencido acorda na hora. Não entra em loop: o tick fecha a fase e zera o prazo.
+  if (deadline !== null) pending.push(Math.max(deadline, now));
   return Math.min(room.lastActivity + ROOM_TTL_MS, ...pending);
 }
 

@@ -293,9 +293,10 @@ export class RoomDO extends DurableObject<Env> {
       await this.ctx.storage.put('room', this.room);
     }
     await this.scheduleAlarm();
+    const now = Date.now();
     for (const ws of this.ctx.getWebSockets()) {
       const playerId = this.attachment(ws).playerId;
-      if (playerId) this.send(ws, { t: 'state', room: roomView(this.room, playerId) });
+      if (playerId) this.send(ws, { t: 'state', room: roomView(this.room, playerId), now });
     }
     // Só depois de todos verem a revelação: grava no D1. Se falhar, fica na fila e o alarme tenta de novo.
     if (queued) await this.flushRound(...queued);

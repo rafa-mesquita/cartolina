@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ref · pontos e linhas (aprovado)</title>
+<link rel="stylesheet" href="base.css">
+<style>.row{display:flex;gap:10px;align-items:center;margin-top:8px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap}</style>
+</head>
+<body>
+<h1>Referência aprovada: pontos e linhas</h1>
+<p class="nota">Kit inventado pelo usuário em 2026-10-17. Decidido: até 5 pontos na folha vazia (não por cima da foto), linhas livres (no máximo 10).</p>
+<svg id="pl" viewBox="0 0 600 340" style="width:100%;height:340px;background:var(--surface-1);border-radius:12px;touch-action:none;display:block"></svg>
+<div class="row"><span id="st"></span><span style="margin-left:auto">clique num ponto e depois em outro pra ligar ou desligar · arraste pra mover · clique duplo apaga</span><button id="clr">limpar</button></div>
+<script>
+const NS='http://www.w3.org/2000/svg',svg=document.getElementById('pl'),st=document.getElementById('st');
+let pts=[],lines=[],sel=null,drag=null,moved=false,id=0;
+const sp=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())};
+const key=(a,b)=>a<b?a+'-'+b:b+'-'+a;
+function render(){svg.innerHTML='';lines.forEach(k=>{const[a,b]=k.split('-').map(Number),A=pts.find(p=>p.id===a),B=pts.find(p=>p.id===b);const l=document.createElementNS(NS,'line');Object.entries({x1:A.x,y1:A.y,x2:B.x,y2:B.y,stroke:'#3C3489','stroke-width':5,'stroke-linecap':'round'}).forEach(([k,v])=>l.setAttribute(k,v));svg.appendChild(l)});
+pts.forEach(p=>{const c=document.createElementNS(NS,'circle');c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',sel===p.id?14:11);c.setAttribute('fill',sel===p.id?'#7F77DD':'#534AB7');c.setAttribute('stroke',sel===p.id?'#26215C':'none');c.setAttribute('stroke-width',2);c.style.cursor='grab';
+c.onpointerdown=e=>{e.stopPropagation();drag=p;moved=false;svg.setPointerCapture(e.pointerId)};
+c.ondblclick=e=>{e.stopPropagation();pts=pts.filter(q=>q!==p);lines=lines.filter(k=>!k.split('-').map(Number).includes(p.id));sel=null;render()};svg.appendChild(c)});
+const left=5-pts.length;st.textContent=sel!==null?'agora clique em outro ponto pra ligar':left?`clique na mesa pra pôr um ponto (${left} restante${left>1?'s':''})`:`5 pontos usados · ${lines.length} linha${lines.length===1?'':'s'}`}
+svg.onpointerdown=e=>{if(drag)return;if(sel!==null){sel=null;render();return}if(pts.length>=5)return;const q=sp(e);pts.push({id:id++,x:q.x,y:q.y});render()};
+svg.onpointermove=e=>{if(!drag)return;const q=sp(e);if(Math.hypot(q.x-drag.x,q.y-drag.y)>3)moved=true;if(!moved)return;drag.x=Math.max(12,Math.min(588,q.x));drag.y=Math.max(12,Math.min(328,q.y));render()};
+svg.onpointerup=()=>{if(drag&&!moved){if(sel===null)sel=drag.id;else if(sel===drag.id)sel=null;else{const k=key(sel,drag.id);lines=lines.includes(k)?lines.filter(x=>x!==k):[...lines,k];sel=null}render()}drag=null};
+document.getElementById('clr').onclick=()=>{pts=[];lines=[];sel=null;render()};render();
+</script>
+</body>
+</html>

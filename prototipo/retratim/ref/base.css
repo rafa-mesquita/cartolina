@@ -1,0 +1,11 @@
+/* Variáveis mínimas pra os protótipos de referência (feitos como widgets na conversa de 2026-10-17). */
+:root {
+  --surface-1: #f1efe8; --surface-2: #ffffff; --border: rgba(0,0,0,.12); --border-strong: rgba(0,0,0,.25);
+  --border-accent: #378add; --bg-accent: #e6f1fb; --text-accent: #0c447c;
+  --text-primary: #2c2c2a; --text-secondary: #5f5e5a; --text-muted: #888780;
+  font-family: system-ui, sans-serif; color: var(--text-primary); background: #faf9f6;
+}
+body { margin: 0; padding: 16px; max-width: 900px; }
+button { font: inherit; padding: 4px 10px; border: .5px solid var(--border-strong); border-radius: 8px; background: transparent; cursor: pointer; }
+h1 { font-size: 18px; font-weight: 500; }
+.nota { font-size: 13px; color: var(--text-secondary); }

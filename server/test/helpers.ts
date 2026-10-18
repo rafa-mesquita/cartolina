@@ -1,5 +1,5 @@
 import { SELF } from 'cloudflare:test';
-import { HEARTBEAT_PONG, type ClientMessage, type DixitRoomView, type ItoRoomView, type RoomView, type ServerMessage } from '@cartolina/shared';
+import { HEARTBEAT_PONG, type ClientMessage, type DixitRoomView, type GameId, type ItoRoomView, type RoomView, type ServerMessage } from '@cartolina/shared';
 
 export async function newRoomCode(): Promise<string> {
   const res = await SELF.fetch('https://x/rooms', { method: 'POST' });
@@ -104,7 +104,7 @@ export async function joined(code: string, n: number): Promise<{ client: TestCli
 }
 
 /** Cria sala do jogo pedido (padrão ITO). */
-export async function newGameRoom(game: 'ito' | 'dixit' = 'ito'): Promise<string> {
+export async function newGameRoom(game: GameId = 'ito'): Promise<string> {
   const res = await SELF.fetch('https://x/rooms', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

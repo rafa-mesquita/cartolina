@@ -80,6 +80,8 @@ export interface DixitHistoryResponse {
 export interface HistoryResponses {
   ito: HistoryResponse;
   dixit: DixitHistoryResponse;
+  /** O Retratim ainda não grava histórico (vem no R4, com o museu): a rota responde 404 antes de chegar aqui. */
+  pictures: never;
 }
 export type HistoryResponseOf<G extends GameId> = HistoryResponses[G];
 
@@ -188,6 +190,8 @@ export function pendingHistoryRecord(room: Room, now: number, id: string): Pendi
       const pending = pendingRecord(room, now, id);
       return pending ? { game: 'ito', ...pending } : null;
     }
+    case 'pictures':
+      return null; // histórico e museu do Retratim vêm no R4
     default: {
       const _never: never = room.gameId;
       return _never;
