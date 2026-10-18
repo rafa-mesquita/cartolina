@@ -27,4 +27,11 @@ describe('api de salas e histórico', () => {
     await getHistory('ito', null, f, 'http://s');
     expect(f).toHaveBeenCalledWith('http://s/history/ito');
   });
+
+  it('getHistory do Diquisti devolve a resposta do Diquisti (partidas)', async () => {
+    const body = { game: 'dixit', matches: [], stats: null, nextBefore: null };
+    const res = await getHistory('dixit', null, fakeFetch(200, body), 'http://s');
+    expect(res?.matches).toEqual([]);
+    expect(res?.game).toBe('dixit');
+  });
 });

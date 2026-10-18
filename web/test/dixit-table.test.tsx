@@ -1,4 +1,4 @@
-import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react';
+import { act as rtlAct, fireEvent, render, screen, within } from '@testing-library/react';
 import type { RoomView } from '@cartolina/shared';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { installButtonSounds } from '../src/brand/buttonSounds';
@@ -306,6 +306,14 @@ describe('mesa do Diquisti: carta ampliada e sons', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('na mesa a carta ampliada não ganha o botão de fechar do histórico', () => {
+    render(<DixitTable view={dixitView(started(4), 'p1')} conn={conn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'sua carta 1' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: 'fechar' })).toBeNull();
+    expect(within(dialog).getAllByRole('button')).toHaveLength(2);
+  });
+
   it('a carta ampliada fecha quando a fase muda', () => {
     const room = told(4);
     const p = othersOf(room)[0]!;
@@ -376,5 +384,30 @@ describe('Game com sala de Diquisti', () => {
     render(<Game conn={conn()} snap={snap(view)} view={view} />);
     expect(screen.queryByRole('region', { name: 'sua vez' })).toBeNull();
     expect(screen.queryByText(/sendo montada/)).toBeNull();
+  });
+});
+
+describe('mesa do Diquisti: topo', () => {
+  it('embaixo do logo tem o link pro histórico do Diquisti, numa aba nova', () => {
+    render(<DixitTable view={dixitView(started(4), 'p0')} conn={conn()} />);
+    const link = screen.getByRole('link', { name: /histórico/ });
+    expect(link.getAttribute('href')).toBe('#/dixit/historico');
+    expect(link.getAttribute('target')).toBe('_blank');
+    expect(link.getAttribute('rel')).toBe('noopener');
+  });
+
+  it('o link fica fora das pílulas e o emoji não entra no nome', () => {
+    render(<DixitTable view={dixitView(started(4), 'p0')} conn={conn()} />);
+    const link = screen.getByRole('link', { name: 'histórico' });
+    expect(link.closest('.dx-pills')).toBeNull();
+    expect(link.querySelector('[aria-hidden="true"]')!.textContent).toBe('📜');
+  });
+
+  it('no fim de jogo o link continua lá', () => {
+    let room = revealed(4);
+    room = { ...room, game: { ...room.game, phase: 'gameover' } as typeof room.game };
+    render(<DixitTable view={dixitView(room, 'p0')} conn={conn()} />);
+    expect(screen.getByText('fim de jogo')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'histórico' }).getAttribute('href')).toBe('#/dixit/historico');
   });
 });

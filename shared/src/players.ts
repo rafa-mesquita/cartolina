@@ -30,6 +30,11 @@ export function isPlayerColor(value: unknown): value is PlayerColor {
   return typeof value === 'string' && (PLAYER_COLORS as readonly string[]).includes(value);
 }
 
+/** Bots do modo teste se chamam `Bot <nome>` (`web/src/dev/bots.ts`); rodada com bot não entra no histórico. */
+export function isBotName(name: string): boolean {
+  return name.startsWith('Bot ');
+}
+
 export function cleanName(raw: string): string | null {
   const name = raw.trim().replace(/\s+/g, ' ');
   const length = Array.from(name).length;

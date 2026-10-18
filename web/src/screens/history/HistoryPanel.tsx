@@ -1,4 +1,4 @@
-import type { GameId, HistoryResponse } from '@cartolina/shared';
+import type { HistoryResponse } from '@cartolina/shared';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gameHash } from '../../lib/router';
 import { getHistory } from '../../net/api';
@@ -6,7 +6,8 @@ import { TOO_MANY_MESSAGE, isTooMany } from '../../net/errors';
 import { CritterIcon, RoundItem, Stat } from './RoundItem';
 import './history.css';
 
-export function HistoryPanel({ game }: { game: GameId }) {
+/** Histórico do DITU (id `ito`). O do Diquisti fica em `games/dixit/history/`. */
+export function HistoryPanel({ game }: { game: 'ito' }) {
   const [data, setData] = useState<HistoryResponse | null | undefined>(undefined);
   /** Falha da primeira carga: 	oo_many (429, pedidos demais) ou 
 et (servidor fora/rede). */

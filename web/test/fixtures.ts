@@ -35,3 +35,23 @@ export function sortingRoom(n: number): ItoRoom {
 }
 
 export const viewOf = (room: Room, id: string | null): ItoRoomView => roomView(room, id) as ItoRoomView;
+
+/**
+ * Revelação de 2 cartas (com dicas "dica0"/"dica1"). `wrong` = procura um sorteio/ordem em que alguma carta
+ * fique fora de ordem (true) ou toda certa (false); `undefined` aceita o primeiro.
+ */
+export function revealedItoView(wrong?: boolean): ItoRoomView {
+  for (let seed = 1; seed < 60; seed++) {
+    for (const order of [[0, 1], [1, 0]] as const) {
+      let room = act(act(makeRoom(2), 'p0', { type: 'start' }, seed), 'p0', { type: 'beginRound' }, seed);
+      for (const [slot, who] of order.entries()) {
+        room = act(room, `p${who}`, { type: 'clue', cardId: `p${who}:0`, text: `dica${who}` }, seed);
+        room = act(room, `p${who}`, { type: 'place', cardId: `p${who}:0`, index: slot }, seed);
+      }
+      room = act(room, 'p0', { type: 'forceReveal' }, seed);
+      const view = viewOf(room, 'p0');
+      if (wrong === undefined || (view.game.reveal ?? []).some((e) => e.error) === wrong) return view;
+    }
+  }
+  throw new Error('sem sorteio com esse resultado');
+}

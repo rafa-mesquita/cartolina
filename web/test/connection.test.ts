@@ -245,6 +245,24 @@ describe('RoomConnection', () => {
       expect(sentXs()).toEqual([0.5, 0.6]);
     });
 
+    it('soltar estacionando (celular): o estacionado passa na frente do arrasto pendente e é ele que o reenvio repete', () => {
+      const parked = { zone: 'hand' as const, x: 0, y: 0, drag: null };
+      const conn = make();
+      last().open();
+      conn.sendCursor(dragging(0.1));
+      conn.sendCursor(dragging(0.2)); // ainda no intervalo de 50 ms: fica pendente
+      conn.sendCursor(parked); // soltou: troca o pendente
+      vi.advanceTimersByTime(100);
+      const cursors = () => last().messages().filter((m) => m.t === 'fx.cursor');
+      expect(cursors().map((m) => [m.zone, (m.drag as { cardId: string } | null)?.cardId ?? null])).toEqual([
+        ['table', 'p0:0'],
+        ['hand', null],
+      ]);
+      vi.advanceTimersByTime(2000);
+      expect(cursors()).toHaveLength(3);
+      expect(cursors().at(-1)).toMatchObject(parked);
+    });
+
     it('o reenvio volta quando o foco volta', () => {
       const conn = make();
       last().open();

@@ -59,14 +59,6 @@ describe('GET /history/:game', () => {
     expect(await roundsOf(code)).toHaveLength(1);
   });
 
-  it('sala de Dixit não enfileira rodada para o histórico', async () => {
-    const code = await newGameRoom('dixit');
-    const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
-    await runInDurableObject(stub, async (_instance, state) => {
-      expect((await state.storage.list({ prefix: 'pendingRound:' })).size).toBe(0);
-    });
-  });
-
   it('páginas seguintes vêm sem estatísticas; before inválido dá 400', async () => {
     const page = (await (await history('ito', Date.now() + 1)).json()) as HistoryResponse;
     expect(page.stats).toBeNull();
@@ -78,10 +70,7 @@ describe('GET /history/:game', () => {
     expect((await history('ito', 0)).status).toBe(200);
   });
 
-  it('jogo sem histórico dá 404 no_history; jogo inexistente dá 404 not_found', async () => {
-    const dixit = await history('dixit');
-    expect(dixit.status).toBe(404);
-    expect(await dixit.json()).toEqual({ error: 'no_history' });
+  it('jogo inexistente dá 404 not_found', async () => {
     const xyz = await history('xyz');
     expect(xyz.status).toBe(404);
     expect(await xyz.json()).toEqual({ error: 'not_found' });

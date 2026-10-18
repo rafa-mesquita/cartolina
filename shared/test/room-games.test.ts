@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { DixitState } from '../src/games/dixit/types';
 import { GAMES, isGameId } from '../src/games/registry';
 import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
 import { PLAYER_COLORS } from '../src/players';
@@ -122,6 +123,14 @@ describe('restoreRoom', () => {
   it('mantém o que já existe', () => {
     const room = createRoom('ABCD', 0, 'dixit');
     expect(restoreRoom(room)).toEqual(room);
+  });
+
+  it('sala de Diquisti gravada antes do histórico ganha partida e rodada', () => {
+    const res = roomAction(dixitRoom(3), 'p0', { type: 'start' }, rng, 10);
+    if (!res.ok) throw new Error(res.error);
+    const { match: _m, round: _r, ...oldGame } = res.room.game as DixitState;
+    const restored = restoreRoom({ ...res.room, game: oldGame as DixitState });
+    expect(restored.game).toMatchObject({ match: 1, round: 0, phase: 'storytelling' });
   });
 });
 

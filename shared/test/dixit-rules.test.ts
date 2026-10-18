@@ -6,7 +6,9 @@ import {
   dixitDeckTooSmall,
   dixitOnPresenceChange,
   initialDixitState,
+  withDixitCounters,
 } from '../src/games/dixit/rules';
+import type { DixitState } from '../src/games/dixit/types';
 import { act, ctxOf, deepFreeze, ids, others, revealed, started, told, voting } from './dixit-helpers';
 
 describe('Dixit: lobby e início', () => {
@@ -498,5 +500,75 @@ describe('Dixit: erros e conferência', () => {
     const free = state.table.filter((c) => !state.picks[p]!.includes(c));
     const s = act(act(state, p, { type: 'vote', cardId: free[0]! }, ctx), p, { type: 'vote', cardId: free[1]! }, ctx);
     expect(s.votes[p]).toBe(free[1]);
+  });
+});
+
+describe('Dixit: contagem de partidas e rodadas (histórico)', () => {
+  it('lobby começa na partida 0, rodada 0', () => {
+    expect(initialDixitState()).toMatchObject({ match: 0, round: 0 });
+  });
+
+  it('começar abre a partida 1 na rodada 1', () => {
+    expect(started(4).state).toMatchObject({ match: 1, round: 1 });
+  });
+
+  it('a próxima narração soma 1 na rodada; a partida continua', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    expect(act(state, 'p0', { type: 'next' }, ctx)).toMatchObject({ match: 1, round: 2 });
+  });
+
+  it('narração pulada pelo host também conta como narração nova', () => {
+    const { state, ctx } = started(4);
+    expect(act(state, 'p0', { type: 'forceNext' }, ctx).round).toBe(2);
+  });
+
+  it('jogar de novo: partida 2, rodada 1', () => {
+    const { state, ctx } = revealed(4, (s) => s.storyCard!);
+    const over = act({ ...state, scores: { ...state.scores, p2: 30 } }, 'p0', { type: 'next' }, ctx);
+    expect(over.phase).toBe('gameover');
+    expect(over).toMatchObject({ match: 1, round: 1 });
+    expect(act(over, 'p0', { type: 'again' }, ctx)).toMatchObject({ match: 2, round: 1 });
+  });
+
+  it('rodada refeita pelo host (submitting sem confirmados) soma 1 na rodada', () => {
+    const { state, ctx } = told(4);
+    expect(state.phase).toBe('submitting');
+    expect(act(state, 'p0', { type: 'forceNext' }, ctx)).toMatchObject({ phase: 'storytelling', match: 1, round: 2 });
+  });
+
+  it('presença que refaz a narração (storytelling) soma 1 na rodada', () => {
+    const { state } = started(4);
+    const s = dixitOnPresenceChange(state, ctxOf([...ids(4), 'p9']));
+    expect(s).not.toBe(state);
+    expect(s).toMatchObject({ phase: 'storytelling', match: 1, round: 2 });
+  });
+
+  it('voltar pro lobby zera os dois', () => {
+    const { state, ctx } = started(4);
+    expect(act(state, 'p0', { type: 'lobby' }, ctx)).toMatchObject({ match: 0, round: 0 });
+  });
+});
+
+describe('withDixitCounters', () => {
+  it('estado gravado antes do histórico: partida em andamento vira a 1 (rodada 0); lobby fica na 0', () => {
+    const { match: _m, round: _r, ...old } = started(4).state;
+    expect(withDixitCounters(old as DixitState)).toMatchObject({ match: 1, round: 0, phase: 'storytelling' });
+    const { match: _m2, round: _r2, ...lobby } = initialDixitState();
+    expect(withDixitCounters(lobby as DixitState)).toMatchObject({ match: 0, round: 0 });
+  });
+
+  it('estado só com match (sem round): mantém a partida e a rodada vira 0', () => {
+    const { round: _r, ...partial } = started(4).state;
+    expect(withDixitCounters({ ...partial, match: 3 } as DixitState)).toMatchObject({ match: 3, round: 0 });
+  });
+
+  it('estado antigo na revelação: partida 1, rodada 0', () => {
+    const { match: _m, round: _r, ...old } = revealed(4, (s) => s.storyCard!).state;
+    expect(withDixitCounters(old as DixitState)).toMatchObject({ match: 1, round: 0, phase: 'reveal' });
+  });
+
+  it('estado que já tem os campos volta o mesmo objeto', () => {
+    const s = started(4).state;
+    expect(withDixitCounters(s)).toBe(s);
   });
 });

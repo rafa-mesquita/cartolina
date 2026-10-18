@@ -19,6 +19,9 @@ const ROUND_COLS = 'id, game, room_code, played_at, mode, level, outcome, errors
 /** Limite de rodadas lidas para estatísticas (a galera fica bem abaixo disso). */
 export const STATS_ROUNDS_CAP = 5000;
 
+/** Itens por página do histórico: rodadas no DITU, partidas no Diquisti. */
+export const HISTORY_PAGE_SIZE = 20;
+
 /** Idempotente por (jogo, sala, chave da revelação): gravar a mesma revelação de novo não duplica. */
 export async function insertRound(db: D1Database, game: GameId, r: RoundRecord, revealKey: string): Promise<void> {
   await db

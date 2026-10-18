@@ -1,6 +1,8 @@
+import { pendingDixitRecord, type DixitRoundRecord } from './games/dixit/record';
+import type { DixitHistoryStats, DixitMatch } from './games/dixit/summary';
 import { GAMES, type GameId } from './games/registry';
 import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
-import type { PlayerColor } from './players';
+import { isBotName, type PlayerColor } from './players';
 import { itoStateOf, type Room } from './room';
 
 export const SHARPEST_MIN_CARDS = 3;
@@ -55,14 +57,33 @@ export interface HistoryStats {
   topThemes: { titulo: string; count: number }[];
 }
 
-/** Resposta de `GET /history/:game`. */
+/** Resposta de `GET /history/ito` (o DITU). */
 export interface HistoryResponse {
-  game: GameId;
+  game: 'ito';
   rounds: RoundRecord[];
   /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
   stats: HistoryStats | null;
   nextBefore: number | null;
 }
+
+/** Resposta de `GET /history/dixit`: 20 partidas por página; estatísticas e cartas famosas só na primeira. */
+export interface DixitHistoryResponse {
+  game: 'dixit';
+  matches: DixitMatch[];
+  /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
+  stats: DixitHistoryStats | null;
+  /** Início da última partida da página (exclusivo na próxima), ou null se acabou. */
+  nextBefore: number | null;
+}
+
+/** Resposta de `GET /history/:game`, por jogo (todo jogo do registro precisa estar aqui). */
+export interface HistoryResponses {
+  ito: HistoryResponse;
+  dixit: DixitHistoryResponse;
+  /** O Retratim ainda não grava histórico (vem no R4, com o museu): a rota responde 404 antes de chegar aqui. */
+  pictures: never;
+}
+export type HistoryResponseOf<G extends GameId> = HistoryResponses[G];
 
 /** Identifica uma revelação (ids das cartas se repetem entre rodadas: entram nível, vidas, tema e valores). */
 export function revealKey(game: ItoState): string | null {
@@ -73,7 +94,7 @@ export function revealKey(game: ItoState): string | null {
 
 /** Registro a gravar se o jogo da sala grava histórico e ela está numa revelação ainda não gravada. */
 export function pendingRecord(room: Room, now: number, id: string): { key: string; record: RoundRecord } | null {
-  // Só jogos que gravam histórico (hoje, o ITO).
+  // Só jogos que gravam histórico; aqui só o DITU monta registro (o Diquisti é `pendingDixitRecord`).
   if (!GAMES[room.gameId].recordsHistory) return null;
   const game = itoStateOf(room);
   if (!game) return null;
@@ -84,6 +105,8 @@ export function pendingRecord(room: Room, now: number, id: string): { key: strin
     const seat = seatOf(playerId);
     return seat ? [{ name: seat.name, color: seat.color }] : [];
   });
+  // Rodada de teste com bot não suja o histórico (aberto a todos) nem as estatísticas da galera.
+  if (players.some((p) => isBotName(p.name))) return null;
   const cards = game.reveal.flatMap((entry) => {
     const seat = seatOf(entry.owner);
     if (!seat) return [];
@@ -148,4 +171,30 @@ export function summarizeHistory(rounds: readonly RoundRecord[]): HistoryStats {
     .sort((a, b) => b.count - a.count || a.titulo.localeCompare(b.titulo, 'pt-BR'))
     .slice(0, 5);
   return { rounds: ordered.length, livreRounds, livreWins, campaigns, campaignsWon, bestStreak, sharpest, topThemes };
+}
+
+/** Rodada a gravar, já com o jogo: o servidor escolhe a tabela por ele. */
+export type PendingHistoryRecord =
+  | { game: 'ito'; key: string; record: RoundRecord }
+  | { game: 'dixit'; key: string; record: DixitRoundRecord };
+
+/** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação nova. */
+export function pendingHistoryRecord(room: Room, now: number, id: string): PendingHistoryRecord | null {
+  if (!GAMES[room.gameId].recordsHistory) return null;
+  switch (room.gameId) {
+    case 'dixit': {
+      const pending = pendingDixitRecord(room, now, id);
+      return pending ? { game: 'dixit', ...pending } : null;
+    }
+    case 'ito': {
+      const pending = pendingRecord(room, now, id);
+      return pending ? { game: 'ito', ...pending } : null;
+    }
+    case 'pictures':
+      return null; // histórico e museu do Retratim vêm no R4
+    default: {
+      const _never: never = room.gameId;
+      return _never;
+    }
+  }
 }

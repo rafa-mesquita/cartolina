@@ -25,7 +25,7 @@ function revealedRoom(): Room {
 describe('histórico por jogo', () => {
   it('o registro diz quem grava histórico', () => {
     expect(GAMES.ito.recordsHistory).toBe(true);
-    expect(GAMES.dixit.recordsHistory).toBe(false);
+    expect(GAMES.dixit.recordsHistory).toBe(true);
   });
 
   it('sala de ITO sem grupo grava a revelação', () => {
@@ -34,7 +34,7 @@ describe('histórico por jogo', () => {
     expect(pending?.record.cards).toHaveLength(2);
   });
 
-  it('sala de Dixit não grava', () => {
+  it('pendingRecord (o do DITU) não monta registro de sala de Diquisti', () => {
     const room = createRoom('ABCD', 0, 'dixit');
     expect(pendingRecord(room, 1000, 'r1')).toBeNull();
   });

@@ -3,6 +3,7 @@ import type { ItoState } from '../src/games/ito/types';
 import {
   PLAYER_COLORS,
   createRoom,
+  isBotName,
   joinRoom,
   mulberry32,
   pendingRecord,
@@ -21,9 +22,9 @@ function play(room: Room, id: string, action: ItoAction, now = 100): Room {
   return res.room;
 }
 
-function revealedRoom(mode: 'livre' | 'campanha' = 'livre'): Room {
+function revealedRoom(mode: 'livre' | 'campanha' = 'livre', names = ['Ana', 'Bia']): Room {
   let room = createRoom('ABCD', 0);
-  for (const [i, name] of ['Ana', 'Bia'].entries()) {
+  for (const [i, name] of names.entries()) {
     const res = joinRoom(room, { token: `t${i}`, name, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
     if (!res.ok) throw new Error(res.error);
     room = res.room;
@@ -70,11 +71,17 @@ describe('pendingRecord', () => {
     expect(pendingRecord({ ...room, recordedRevealKey: key }, 2, 'r2')).toBeNull();
   });
 
+  it('rodada com bot (modo teste) não vai pro histórico', () => {
+    expect(pendingRecord(revealedRoom('livre', ['Ana', 'Bot Bia']), 1, 'r')).toBeNull();
+    expect(isBotName('Bot Caio')).toBe(true);
+    expect(isBotName('Botafogo')).toBe(false);
+  });
+
   it('sala fora da revelação não grava', () => {
     expect(pendingRecord(createRoom('ABCD', 0), 1, 'r')).toBeNull();
   });
 
-  it('sala de Dixit, mesmo na revelação, não grava histórico', () => {
+  it('pendingRecord (o do DITU) ignora sala de Diquisti, mesmo na revelação', () => {
     const { state } = revealed(3, (s) => s.storyCard!);
     expect(state.phase).toBe('reveal');
     const room: Room = { ...createRoom('ABCD', 0, 'dixit'), game: state };

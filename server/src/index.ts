@@ -1,12 +1,11 @@
-import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse } from '@cartolina/shared';
+import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse, type HistoryResponseOf } from '@cartolina/shared';
 import { CODE_RE, randomCode } from './codes';
+import { dixitHistoryPage } from './dixit-history-page';
 import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
-import { allRounds, listRounds } from './history-db';
+import { HISTORY_PAGE_SIZE, allRounds, listRounds } from './history-db';
 import { RoomDO } from './room-do';
 
 export { RoomDO };
-
-const PAGE_SIZE = 20;
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
@@ -60,17 +59,35 @@ function parseBefore(raw: string | null): number | null | undefined {
   return Number.isSafeInteger(n) ? n : undefined;
 }
 
-async function getHistoryPage(env: Env, game: GameId, before: number | null): Promise<HistoryResponse> {
+/** Página do histórico do DITU (id `ito`): 20 rodadas; estatísticas só na primeira. */
+async function getHistoryPage(env: Env, before: number | null): Promise<HistoryResponse> {
   // Uma a mais que a página só para saber se existe próxima.
-  const fetched = await listRounds(env.DB, game, before, PAGE_SIZE + 1);
-  const rounds = fetched.slice(0, PAGE_SIZE);
+  const fetched = await listRounds(env.DB, 'ito', before, HISTORY_PAGE_SIZE + 1);
+  const rounds = fetched.slice(0, HISTORY_PAGE_SIZE);
   return {
-    game,
+    game: 'ito',
     rounds,
     // Estatísticas só na primeira página: leem até STATS_ROUNDS_CAP rodadas, caro demais para repetir a cada "ver mais".
-    stats: before === null ? summarizeHistory(await allRounds(env.DB, game)) : null,
-    nextBefore: fetched.length > PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
+    stats: before === null ? summarizeHistory(await allRounds(env.DB, 'ito')) : null,
+    nextBefore: fetched.length > HISTORY_PAGE_SIZE ? rounds[rounds.length - 1]!.playedAt : null,
   };
+}
+
+/** Página do histórico no formato de cada jogo (jogo novo no registro sem caso aqui não compila). */
+async function historyPageOf(env: Env, game: GameId, before: number | null): Promise<HistoryResponseOf<GameId>> {
+  switch (game) {
+    case 'ito':
+      return getHistoryPage(env, before);
+    case 'dixit':
+      return dixitHistoryPage(env.DB, before);
+    case 'pictures':
+      // sem `recordsHistory` a rota já respondeu 404; o histórico do Retratim vem no R4
+      throw new Error('o Retratim ainda não tem histórico');
+    default: {
+      const _never: never = game;
+      throw new Error(`jogo sem página de histórico: ${String(_never)}`);
+    }
+  }
 }
 
 /** O binding pode não existir (removido do wrangler.jsonc se o plano não tiver): lê sem depender do tipo gerado. */
@@ -107,7 +124,8 @@ async function handle(request: Request, env: Env, rawOrigin: string | null, orig
     if (before === undefined) return json({ error: 'bad_before' }, 400);
     // Público e caro na primeira página (lê até 5000 rodadas): limite por IP. Sem cache: a rodada recém-jogada tem que aparecer.
     if (!(await underLimit(limiterOf(env, 'HISTORY_LIMITER'), ip))) return tooMany();
-    return json(await getHistoryPage(env, game, before), 200, { 'Cache-Control': 'no-cache' });
+    const page = await historyPageOf(env, game, before);
+    return json(page, 200, { 'Cache-Control': 'no-cache' });
   }
 
   const roomMatch = url.pathname.match(/^\/rooms\/([^/]+)(\/ws)?$/);

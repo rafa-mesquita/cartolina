@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SocketLike } from '../src/net/connection';
 import { RoomScreen } from '../src/screens/RoomScreen';
 import { createRoom, getRoomInfo, type RoomInfo } from '../src/net/api';
+import { LANDSCAPE_PHONE_QUERY, PHONE_QUERY } from '../src/lib/device';
 import { markJoined, saveProfile } from '../src/net/identity';
+import { PHONE_TEXT } from '../src/screens/PhoneNotice';
 import { makeRoom, viewOf } from './fixtures';
 
 vi.mock('../src/net/api', () => ({ getRoomInfo: vi.fn(), createRoom: vi.fn() }));
@@ -54,7 +56,15 @@ function welcomeAndState(playerId = 'p0') {
   });
 }
 
+function media(matching: string[]) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({ matches: matching.includes(query), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+  );
+}
+const touch = () => media([PHONE_QUERY]);
 describe('RoomScreen', () => {
+  afterEach(() => vi.unstubAllGlobals());
   beforeEach(() => {
     FakeSocket.all = [];
     mocked.mockReset();
@@ -67,6 +77,41 @@ describe('RoomScreen', () => {
     renderRoom();
     expect(screen.getByText('carregando…')).toBeTruthy();
     expect(await screen.findByText('sala não encontrada')).toBeTruthy();
+  });
+
+  it('celular: sala de jogo sem versão de celular mostra o aviso', async () => {
+    touch();
+    mocked.mockResolvedValue({ exists: true, game: 'dixit', phase: 'lobby', seats: [] });
+    renderRoom();
+    expect(await screen.findByText(PHONE_TEXT)).toBeTruthy();
+  });
+
+  it('celular: sala sem versão de celular não abre conexão nem com perfil guardado nesta aba', async () => {
+    touch();
+    markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
+    mocked.mockResolvedValue({ exists: true, game: 'dixit', phase: 'lobby', seats: [] });
+    renderRoom();
+    expect(await screen.findByText(PHONE_TEXT)).toBeTruthy();
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(FakeSocket.all.length).toBe(0);
+  });
+
+  it('celular: sala de DITU entra normalmente', async () => {
+    touch();
+    mocked.mockResolvedValue({ exists: true, game: 'ito', phase: 'lobby', seats: [] });
+    renderRoom();
+    expect(await screen.findByLabelText('seu nome')).toBeTruthy();
+    expect(screen.queryByText(PHONE_TEXT)).toBeNull();
+  });
+
+  it('celular deitado: o aviso de virar fica por cima do formulário', async () => {
+    media([LANDSCAPE_PHONE_QUERY]);
+    mocked.mockResolvedValue({ exists: true, game: 'ito', phase: 'lobby', seats: [] });
+    renderRoom();
+    expect(await screen.findByLabelText('seu nome')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toContain('vira o celular em pé');
   });
 
   it('falha de rede é diferente de sala inexistente e dá pra tentar de novo', async () => {
@@ -201,7 +246,7 @@ describe('RoomScreen', () => {
     await waitFor(() => expect(window.location.hash).toBe('#/sala/QRST'));
   });
 
-  it('sala de Diquisti que acabou: cria outra do Diquisti e não oferece histórico (não tem)', async () => {
+  it('sala de Diquisti que acabou: cria outra do Diquisti e mostra o histórico do Diquisti', async () => {
     mocked.mockResolvedValue({ ...info(), game: 'dixit' });
     vi.mocked(createRoom).mockResolvedValue('QRST');
     markJoined('ABCD', { name: 'Ana', color: '#8EC5FF' });
@@ -209,7 +254,7 @@ describe('RoomScreen', () => {
     await waitFor(() => expect(FakeSocket.all).toHaveLength(1));
     act(() => last().drop(4004));
     expect(await screen.findByText('essa sala acabou')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'ver o histórico' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'ver o histórico' }).getAttribute('href')).toBe('#/dixit/historico');
     fireEvent.click(screen.getByRole('button', { name: 'criar sala nova' }));
     await waitFor(() => expect(createRoom).toHaveBeenCalledWith('dixit'));
   });

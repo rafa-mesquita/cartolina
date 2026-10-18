@@ -1,5 +1,6 @@
 import type { DixitRoomView } from '@cartolina/shared';
 import { useState } from 'react';
+import { gameHash } from '../../lib/router';
 import { loadSoundPref, saveSoundPref } from '../../net/identity';
 import { Critter } from '../../screens/Critter';
 import { phaseLabel } from './status';
@@ -41,6 +42,10 @@ export function DixitTopBar({ view, name, color, tilt, onTilt, host, onForce }: 
       <h1 className="dx-logo">
         diquisti<small>sala {view.code} · cartolina~</small>
       </h1>
+      {/* Embaixo do logo, e não nas pílulas: ali ele apertaria a dica do narrador. */}
+      <a className="dx-histlink" href={gameHash('dixit', 'historico')} target="_blank" rel="noopener" title="histórico do Diquisti">
+        <span aria-hidden="true">📜</span> histórico
+      </a>
       <div className="dx-clue">
         {st && g.phase !== 'gameover' && (
           <span className="who">

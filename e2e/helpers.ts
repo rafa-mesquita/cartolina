@@ -1,4 +1,4 @@
-import { expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { devices, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 const contexts: BrowserContext[] = [];
 
@@ -9,7 +9,14 @@ export async function newPlayer(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
-/** Fecha os contextos criados por `newPlayer` (chamar no `afterEach`). */
+/** Página num contexto de celular em pé, com toque (Pixel 7): a mesa usa o layout do celular. */
+export async function newPhonePlayer(browser: Browser): Promise<Page> {
+  const context = await browser.newContext({ ...devices['Pixel 7'] });
+  contexts.push(context);
+  return context.newPage();
+}
+
+/** Fecha os contextos criados por `newPlayer` e `newPhonePlayer` (chamar no `afterEach`). */
 export async function closePlayers(): Promise<void> {
   await Promise.all(contexts.splice(0).map((c) => c.close()));
 }

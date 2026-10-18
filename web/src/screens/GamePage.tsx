@@ -1,6 +1,7 @@
 import type { GameId } from '@cartolina/shared';
 import { useState } from 'react';
 import { catalogEntry } from '../games/catalog';
+import { DixitHistory } from '../games/dixit/history/DixitHistory';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goToRoom, type GameTab } from '../lib/router';
 import { createRoom } from '../net/api';
@@ -33,11 +34,11 @@ function PlayTab({ game }: { game: GameId }) {
       <section className="panel">
         {!entry.playable ? (
           <p className="hint">O {entry.name} tá chegando! Por enquanto dá pra ver as regras aqui embaixo.</p>
-        ) : phone ? (
+        ) : phone && !entry.mobile ? (
           <p className="hint">{PHONE_TEXT}</p>
         ) : (
           <>
-            <button className="btn" type="button" onClick={() => void create()} disabled={busy}>
+            <button className="btn play" type="button" onClick={() => void create()} disabled={busy}>
               {busy ? 'criando…' : 'criar sala'}
             </button>
             <JoinByCode />
@@ -62,10 +63,31 @@ function PlayTab({ game }: { game: GameId }) {
   );
 }
 
+/** Histórico no formato de cada jogo (jogo novo no registro sem caso aqui não compila). */
+function HistoryTab({ game }: { game: GameId }) {
+  switch (game) {
+    case 'ito':
+      return <HistoryPanel game={game} />;
+    case 'dixit':
+      return <DixitHistory />;
+    case 'pictures':
+      // histórico e museu do Retratim vêm no R4
+      return (
+        <section className="panel">
+          <p>O histórico do Retratim vem em breve.</p>
+        </section>
+      );
+    default: {
+      const _never: never = game;
+      throw new Error(`jogo sem histórico: ${String(_never)}`);
+    }
+  }
+}
+
 export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: GameTab; legacy?: boolean }) {
   const entry = catalogEntry(game)!;
   return (
-    <main className="screen game-page">
+    <main className={`screen game-page game-${game}`}>
       <h1 className="logo">
         cartolina<span>~</span>
       </h1>
@@ -91,12 +113,8 @@ export function GamePage({ game, tab, legacy = false }: { game: GameId; tab: Gam
       {legacy && <p className="hint">Os grupos acabaram: agora todo o histórico fica aqui, dentro de cada jogo.</p>}
       {tab === 'jogar' ? (
         <PlayTab game={game} />
-      ) : entry.hasHistory ? (
-        <HistoryPanel game={game} />
       ) : (
-        <section className="panel">
-          <p>O histórico do {entry.name} vem em breve.</p>
-        </section>
+        <HistoryTab game={game} />
       )}
     </main>
   );

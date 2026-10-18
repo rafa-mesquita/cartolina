@@ -70,7 +70,7 @@ async function guessAll(page: Page, others: string[], last = false): Promise<voi
     await photo.click();
     // o adesivo vai pra foto; na moldura fica a sombra (que tira o palpite)
     await expect(photo.getByRole('button', { name: `adesivo de ${name}`, exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: `tirar o palpite ${coord}` })).toBeVisible();
+    await expect(page.getByRole('button', { name: `tirar o palpite de ${name} (${coord})` })).toBeVisible();
   }
   await page.getByRole('button', { name: 'confirmar palpites' }).click();
   if (!last) await expect(page.getByText('palpites confirmados ✓')).toBeVisible();

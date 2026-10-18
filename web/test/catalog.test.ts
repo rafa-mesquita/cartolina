@@ -30,4 +30,10 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.playable).toBe(true);
     expect(entry?.hasHistory).toBe(false);
   });
+
+  it('DITU funciona no celular; Diquisti e Retratim ainda não', () => {
+    expect(catalogEntry('ito')?.mobile).toBe(true);
+    expect(catalogEntry('dixit')?.mobile).toBe(false);
+    expect(catalogEntry('pictures')?.mobile).toBe(false);
+  });
 });
