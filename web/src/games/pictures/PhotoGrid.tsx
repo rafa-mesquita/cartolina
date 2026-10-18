@@ -65,7 +65,7 @@ export function PhotoGrid({
             const coord = COORDS[row * 4 + col]!, id = grid[row * 4 + col], who = marks?.[coord];
             const cls = `pc-photo${coord === secret ? ' secret' : ''}${coord === picked ? ' picked' : ''}${coord === lifted ? ' lifted' : ''}${coord === dropOn ? ' drop' : ''}`;
             return (
-              <div key={coord} className={cls} data-coord={coord} onClick={() => onPhoto(coord)}>
+              <div key={coord} className={cls} data-coord={coord} data-zoom-photo={coord} onClick={() => onPhoto(coord)}>
                 {id && <Photo id={id} />}
                 {who && who.length > 0 && (
                   <div className="pc-used">

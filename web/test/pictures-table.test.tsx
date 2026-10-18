@@ -725,6 +725,73 @@ describe('mesa do Retratim: montagem sem perder rascunho', () => {
   });
 });
 
+describe('mesa do Retratim: rodinha do mouse (como no Diquisti)', () => {
+  const tick = (ms: number) => rtlAct(() => vi.advanceTimersByTime(ms));
+  /** Gira a rodinha em `el`; devolve se a página foi impedida de rolar (o giro abriu ou fechou algo). */
+  const wheel = (el: Element, deltaY: number) => !fireEvent.wheel(el, { deltaY });
+
+  it('pra cima numa foto da grade abre o zoom dela; pra baixo fecha, menos logo depois de abrir', () => {
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={conn()} serverOffset={0} />);
+    const b2 = container.querySelector('.pc-photo[data-coord="B2"]')!;
+    expect(wheel(b2, 40)).toBe(false); // pra baixo sem zoom: nada (e a página rola normal)
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(wheel(b2.querySelector('.pc-ph')!, -40)).toBe(true);
+    const dialog = screen.getByRole('dialog', { name: 'foto B2' });
+    // o resto do mesmo giro não abre outra nem fecha
+    expect(wheel(dialog, -40)).toBe(false);
+    tick(200);
+    expect(wheel(dialog, 40)).toBe(false);
+    expect(screen.getByRole('dialog', { name: 'foto B2' })).toBeTruthy();
+    tick(200);
+    expect(wheel(dialog.querySelector('.pc-zoom-frame')!, 40)).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('o cartão da foto secreta também amplia com a rodinha', () => {
+    const room = started(3);
+    const { container } = render(<PicturesTable view={picturesView(room, 'p0')} conn={conn()} serverOffset={0} />);
+    wheel(container.querySelector('.pc-secret-card')!, -30);
+    expect(screen.getByRole('dialog', { name: `foto ${stateOf(room).secrets.p0}` })).toBeTruthy();
+  });
+
+  it('dentro da bancada a rodinha fica com o kit: não abre nada nem barra a rolagem', () => {
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={conn()} serverOffset={0} />);
+    const bench = container.querySelector('.pc-bench')!;
+    expect(wheel(bench.querySelector('.pc-kc-cell') ?? bench, -60)).toBe(false);
+    expect(wheel(bench, -60)).toBe(false);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('fora de foto e de obra não faz nada', () => {
+    const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={conn()} serverOffset={0} />);
+    expect(wheel(container.querySelector('.pc-grid-note')!, -60)).toBe(false);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('galeria: pra cima numa moldura abre a obra grande; numa foto, a foto (com um adesivo na mão, sem colar)', () => {
+    const c = conn();
+    const { container } = render(<PicturesTable view={picturesView(guessing(3), 'p0')} conn={c} serverOffset={0} />);
+    wheel(container.querySelector('.pc-wf[data-artist="p2"] .pc-wsheet')!, -50);
+    const work = screen.getByRole('dialog', { name: 'obra de P2' });
+    // com a obra aberta, a rodinha numa foto não abre outro zoom por cima
+    expect(wheel(container.querySelector('.pc-photo[data-coord="A1"]')!, -50)).toBe(false);
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    tick(400);
+    wheel(work, 50);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'adesivo de P1' }));
+    wheel(container.querySelector('.pc-photo[data-coord="C3"]')!, -50);
+    expect(screen.getByRole('dialog', { name: 'foto C3' })).toBeTruthy();
+    expect(c.sendAction).not.toHaveBeenCalled();
+  });
+
+  it('revelação: pra cima numa foto da grade abre o zoom', () => {
+    const { container } = render(<PicturesTable view={picturesView(revealed(3), 'p0')} conn={conn()} serverOffset={0} />);
+    wheel(container.querySelector('.pc-photo[data-coord="D4"]')!, -50);
+    expect(screen.getByRole('dialog', { name: 'foto D4' })).toBeTruthy();
+  });
+});
+
 describe('mesa do Retratim: foco e teclado', () => {
   it('o zoom foca o ✕, é modal e, ao fechar, devolve o foco pra lupinha que abriu', () => {
     const { container } = render(<PicturesTable view={picturesView(started(3), 'p0')} conn={conn()} serverOffset={0} />);

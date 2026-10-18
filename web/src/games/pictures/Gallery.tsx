@@ -9,6 +9,7 @@ import { SplitLayout } from './SplitLayout';
 import { playPicturesSound } from './sounds';
 import { KIT_NAMES } from './status';
 import { DRAG_THRESHOLD, dropTarget, stickerMove } from './stickers';
+import { useWheelClose, useWheelOpen } from './useWheelZoom';
 
 interface Props {
   view: PicturesRoomView;
@@ -51,11 +52,14 @@ function GuessTape({ coord, rot }: { coord: Coord; rot: number }) {
 }
 
 /**
- * A lupa da galeria: a obra grande, com o artista, o kit e o seu palpite (se tiver). Esc / clique fora / ✕ fecham.
+ * A lupa da galeria: a obra grande, com o artista, o kit e o seu palpite (se tiver). Esc / rodinha pra baixo / clique
+ * fora / ✕ fecham.
  * Ao abrir, o foco vai pro ✕; ao fechar, volta pra quem abriu (como no zoom das fotos).
  */
 function WorkZoom({ seat, work, guess, rot, onClose }: { seat: Seat; work: Work; guess: Coord | null; rot: number; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useWheelClose(dialogRef, onClose);
   useEffect(() => {
     const opener = document.activeElement;
     closeRef.current?.focus();
@@ -74,6 +78,7 @@ function WorkZoom({ seat, work, guess, rot, onClose }: { seat: Seat; work: Work;
   }, [onClose]);
   return (
     <div
+      ref={dialogRef}
       className="pc-zoom"
       role="dialog"
       aria-modal="true"
@@ -93,7 +98,7 @@ function WorkZoom({ seat, work, guess, rot, onClose }: { seat: Seat; work: Work;
             <span className="kt">{KIT_NAMES[work.kit]}</span>
           </span>
         </span>
-        <span className="cap">Esc fecha</span>
+        <span className="cap">rodinha pra baixo ou Esc fecha</span>
         {guess && <GuessTape coord={guess} rot={rot} />}
       </div>
       <button ref={closeRef} className="pc-zoom-x" type="button" title="fechar (Esc)" aria-label="fechar" onClick={onClose}>
@@ -199,6 +204,13 @@ export function Gallery({ view, conn, zoomOpen, onZoom }: Props) {
   function openWork(artist: string) {
     if (!zoomOpen) setWorkZoom(artist);
   }
+  // Rodinha pra cima numa moldura abre a obra grande (as fotos da grade ficam com a mesa).
+  useWheelOpen(rootRef, (t) => {
+    const p = t.closest<HTMLElement>('.pc-wf[data-artist]')?.dataset.artist;
+    if (!p || !others.includes(p) || zoomOpen || workZoom !== null) return false;
+    setWorkZoom(p);
+    return true;
+  });
 
   // ---- arraste (pointer events na janela: o adesivo pode sair da moldura, da grade e até do palco) ----
   const session = useRef<DragSession | null>(null);

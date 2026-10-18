@@ -1,6 +1,7 @@
 import { COORDS, type Coord } from '@cartolina/shared';
 import { useEffect, useRef } from 'react';
 import { Photo } from './Photo';
+import { useWheelClose } from './useWheelZoom';
 
 interface Props {
   grid: readonly string[];
@@ -13,12 +14,14 @@ interface Props {
 }
 
 /**
- * Foto da grade grande: ← → (e ‹ ›) passam pelas 16, Esc / clique fora / ✕ fecham. Ao abrir, o foco vai pro ✕;
+ * Foto da grade grande: ← → (e ‹ ›) passam pelas 16, Esc / rodinha pra baixo / clique fora / ✕ fecham. Ao abrir, o foco vai pro ✕;
  * ao fechar, volta pra quem abriu.
  */
 export function PhotoZoom({ grid, index, secret, onIndex, onClose }: Props) {
   const step = (d: number) => onIndex((index + d + COORDS.length) % COORDS.length);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useWheelClose(dialogRef, onClose);
   useEffect(() => {
     const opener = document.activeElement;
     closeRef.current?.focus();
@@ -41,6 +44,7 @@ export function PhotoZoom({ grid, index, secret, onIndex, onClose }: Props) {
   const coord = COORDS[index]!, id = grid[index];
   return (
     <div
+      ref={dialogRef}
       className="pc-zoom"
       role="dialog"
       aria-modal="true"
@@ -55,7 +59,7 @@ export function PhotoZoom({ grid, index, secret, onIndex, onClose }: Props) {
       <div className="pc-zoom-frame">
         <div className="pic">{id && <Photo id={id} size="full" />}</div>
         <span className="co">{coord}</span>
-        <span className="cap">← → pra ver as outras · Esc fecha</span>
+        <span className="cap">← → pra ver as outras · rodinha pra baixo ou Esc fecha</span>
         {coord === secret && <span className="mine">sua foto</span>}
       </div>
       <button className="pc-zoom-nav r" type="button" title="próxima (→)" aria-label="próxima foto" onClick={() => step(1)}>

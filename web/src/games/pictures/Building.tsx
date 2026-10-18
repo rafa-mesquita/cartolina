@@ -64,7 +64,7 @@ export function Building({ view, conn, onZoom, onWarn, serverOffset }: Props) {
   const secretId = secret ? g.grid[COORDS.indexOf(secret)] : undefined;
   const right = playing ? (
     <div className="pc-building">
-      <button className="pc-secret-card" type="button" title="ver grande" data-sound="none" onClick={() => onZoom(secret)}>
+      <button className="pc-secret-card" type="button" title="ver grande" data-sound="none" data-zoom-photo={secret} onClick={() => onZoom(secret)}>
         <span className="pc-tape" />
         <span className="mini">{secretId && <Photo id={secretId} />}</span>
         <span>

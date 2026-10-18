@@ -18,6 +18,7 @@ import { TopBar, type SealPlus } from './TopBar';
 import { usePicturesSounds } from './useButtonSounds';
 import { useReveal } from './useReveal';
 import { useTableSounds } from './useTableSounds';
+import { useWheelOpen, wheelPhoto } from './useWheelZoom';
 import './pictures.css';
 
 const TOAST_MS = 2400;
@@ -110,6 +111,13 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
 
   const openZoom = useCallback((coord: Coord) => setZoomAt(COORDS.indexOf(coord)), []);
   const closeZoom = useCallback(() => setZoomAt(null), []);
+  // Rodinha pra cima numa foto (grade, cartão da secreta, placar) amplia; pra baixo, o próprio zoom fecha.
+  useWheelOpen(rootRef, (t) => {
+    const c = g.phase === 'gameover' ? null : wheelPhoto(t);
+    if (c === null) return false;
+    openZoom(c);
+    return true;
+  });
 
   const stage = { width, transform: `translate(-50%, -50%) scale(${scale})` } as CSSProperties;
 
