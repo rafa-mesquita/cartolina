@@ -42,6 +42,12 @@ describe('Retratim: o que cada um vê', () => {
     const v = picturesViewFor(s, 'p2');
     expect(v.result?.secrets).toEqual(state.secrets);
     expect(v.result?.order).toEqual(['p0', 'p1', 'p2']);
+    expect(v.result?.grid).toEqual(state.grid);
+  });
+
+  it('a lista de fotos já vistas não vai pra visão', () => {
+    const { state } = started(3);
+    expect(picturesViewFor(state, 'p0')).not.toHaveProperty('shown');
   });
 });
 

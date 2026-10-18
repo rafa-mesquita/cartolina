@@ -147,7 +147,7 @@ export function PicturesTable({ view, conn, serverOffset }: Props) {
             left={
               <>
                 <PhotoGrid grid={g.grid} secret={null} onPhoto={openZoom} onZoom={openZoom} marks={revealMarks} lifted={lifted} />
-                <p className="pc-grid-note">A grade é a mesma a partida toda.</p>
+                <p className="pc-grid-note">As fotos secretas desta rodada trocam na próxima.</p>
               </>
             }
             right={

@@ -217,7 +217,7 @@ export function Gallery({ view, conn, zoomOpen, onZoom, onWarn }: Props) {
         picked={sel ? (guesses[sel] ?? null) : null}
         marks={marks}
       />
-      <p className="pc-grid-note">A grade é a mesma a partida toda.</p>
+      <p className="pc-grid-note">As fotos secretas desta rodada trocam na próxima.</p>
     </>
   );
 

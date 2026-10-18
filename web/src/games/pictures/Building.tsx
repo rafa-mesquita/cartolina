@@ -56,7 +56,7 @@ export function Building({ view, conn, onZoom, onWarn, serverOffset }: Props) {
     <>
       <PhotoGrid grid={g.grid} secret={playing ? secret : null} onPhoto={onZoom} onZoom={onZoom} zoomCursor />
       <p className="pc-grid-note">
-        A grade é a mesma a partida toda. Remonte a sua foto secreta com o kit da rodada; os outros vão tentar adivinhar qual é.
+        As fotos secretas de cada rodada trocam na próxima. Remonte a sua foto secreta com o kit da rodada; os outros vão tentar adivinhar qual é.
       </p>
     </>
   );

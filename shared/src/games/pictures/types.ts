@@ -21,6 +21,8 @@ export type PicturesPhase = 'lobby' | 'building' | 'guessing' | 'reveal' | 'game
 /** O que aconteceu na rodada revelada (para animar e mostrar). */
 export interface PicturesRoundResult {
   round: number;
+  /** As 16 fotos da grade NAQUELA rodada (na ordem de COORDS): a grade muda de uma rodada pra outra. */
+  grid: string[];
   /** Artistas com obra, na ordem dos assentos: a ordem da revelação. */
   order: string[];
   secrets: Record<string, Coord>;
@@ -43,8 +45,13 @@ export interface PicturesState {
   scores: Record<string, number>;
   /** Rodada atual, de 0 a PICTURES_ROUNDS - 1. */
   round: number;
-  /** 16 ids de foto, na ordem de COORDS. Fixa a partida toda. */
+  /**
+   * 16 ids de foto, na ordem de COORDS. Ao começar cada rodada (menos a primeira), cada coordenada que foi segredo de
+   * alguém na rodada anterior ganha uma foto aleatória do baralho (decisão do usuário, 2026-10-17).
+   */
   grid: string[];
+  /** Fotos que já apareceram na grade nesta partida (as 16 iniciais e as que entraram depois). Não vai pra visão. */
+  shown: string[];
   /** Fichas que sobraram no saquinho (as tiradas saem pela partida inteira). */
   bag: Coord[];
   /** jogador → coordenada secreta da rodada (pode repetir entre jogadores). */

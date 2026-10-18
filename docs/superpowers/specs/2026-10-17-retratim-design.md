@@ -22,9 +22,13 @@ Decisões do usuário (2026-10-17):
 
 - **3 a 6 jogadores, 6 rodadas.** Os kits giram: cada um usa cada kit uma vez e
   ninguém divide kit na mesma rodada.
-- **Grade de 16 fotos fixa a partida toda** e **foto secreta pode repetir**
-  (saquinho de 48 fichas, 3 por coordenada), como o original. Revemos depois de
-  jogar.
+- **As fotos usadas são trocadas a cada rodada** (decisão do usuário,
+  2026-10-17, que substitui a anterior "grade de 16 fotos fixa a partida toda"):
+  ao começar a rodada seguinte, cada coordenada que foi a foto secreta de alguém
+  ganha uma foto **aleatória** do baralho, de qualquer tema (as duplas não se
+  mantêm, de propósito, pra ficar imprevisível), nunca uma que já apareceu na
+  partida (§2). **Foto secreta pode repetir** (saquinho de 48 fichas, 3 por
+  coordenada), como o original.
 - **6 kits:** os 5 do original (cubos com grade **4×4**, blocos em **3D**) + o
   kit novo **pontos e linhas**. Quantidades do original (§3).
 - **Obras escondidas** enquanto montam; só aparece a atividade de cada um.
@@ -44,7 +48,8 @@ Decisões do usuário (2026-10-17):
 
 - 3 a 6 jogadores na ordem dos assentos.
 - O servidor sorteia **16 fotos** do baralho (**8 temas × 2 fotos**, §6.4) e monta a grade 4×4 com
-  coordenadas **A–D** (colunas) × **1–4** (linhas). A grade não muda na partida.
+  coordenadas **A–D** (colunas) × **1–4** (linhas). Essas 16 entram na lista de fotos já vistas
+  (`shown`).
 - **Saquinho** com 48 fichas (cada coordenada 3 vezes). Cada ficha tirada sai do
   saquinho pela partida inteira (6 × 6 = 36 ≤ 48, então nunca falta).
 - **Rodízio de kits:** na rodada `r` (0–5), o jogador no assento `i` usa o kit
@@ -71,6 +76,15 @@ Contagem já disparada não para se alguém desmarca "pronto". O host tem
 **"apressar"**: dispara os 30 s na hora (pra quando alguém some sem cair).
 3. **Revelar** (`reveal`): uma obra por vez, na ordem dos assentos (§5.3).
    Depois, placar da rodada; o host clica **"próxima rodada"**.
+4. **Troca das fotos usadas** (decisão do usuário, 2026-10-17; substitui a
+   grade fixa): ao começar a rodada seguinte, cada coordenada que foi a foto
+   secreta de alguém na rodada que passou recebe uma foto aleatória do baralho
+   (`ctx.rng`), de qualquer tema, sem manter as duplas. A foto nova nunca é uma
+   que já apareceu na grade nesta partida (`shown`); se acabarem as nunca
+   usadas, vale qualquer uma que não esteja na grade agora. Coordenada que foi
+   segredo de duas pessoas troca uma vez só; as outras casas ficam como estão.
+   No fim do jogo nada é trocado. O resultado da rodada guarda a grade daquela
+   rodada (`result.grid`, antes da troca), pro histórico e o museu.
 
 Obra **em branco** (o jogador nunca mandou rascunho): não entra na galeria e o
 artista não ganha pontos de artista naquela rodada. Ele ainda palpita.
@@ -127,10 +141,12 @@ precisa refazer o empilhamento.
 
 - `types.ts`: fases `lobby → building → guessing → reveal → (building |
   gameover)`; estado com `players`, `inRound`, `scores`, `round`, `grid` (16
-  ids de foto), `bag` (fichas restantes), `secrets` (coordenada por jogador),
+  ids de foto da rodada), `shown` (fotos que já apareceram na partida; não vai
+  pra visão), `bag` (fichas restantes), `secrets` (coordenada por jogador),
   `kits` (kit por jogador na rodada), `works` (rascunho/obra por jogador),
   `ready`, `guesses` (palpiteiro → artista → coordenada), `confirmed`,
-  `countdownEndsAt`, `result` (resultado da rodada pra animar), `winners`,
+  `countdownEndsAt`, `result` (resultado da rodada pra animar, com a `grid`
+  daquela rodada), `winners`,
   `paused`.
 - Ações: `start`, `draft { work }`, `ready { on }`, `guess { artist, coord |
   null }`, `confirm`, `hurry` (host), `next`, `again`, `lobby`.
@@ -138,7 +154,7 @@ precisa refazer o empilhamento.
   (regras que o schema não pega → `bad_work`), `readyError` (o que impede
   "pronto") e `isBlankWork` (obra que não mostra nada conta como em branco).
 - `rotation.ts`: rodízio de kits; `bag.ts`: saquinho; `grid.ts`: sorteio da
-  grade; `scoring.ts`: `scorePicturesRound(...)` pura; `rules.ts`:
+  grade (`drawGrid`) e troca das fotos usadas (`refreshGrid`); `scoring.ts`: `scorePicturesRound(...)` pura; `rules.ts`:
   `applyPicturesAction` + `settlePictures`; `view.ts`: visão e prazo;
   `schema.ts`: ações.
 - `photos.ts`: `PICTURES_DECK` (ids `p001…p100` + tema), `PICTURES_THEMES` (50 slugs) e
@@ -282,6 +298,11 @@ slugs ASCII (`cachorro`, `chao-da-mata`, `onibus`…) com o nome bonito em
 **8 temas sorteados × 2 fotos** (as duas do tema), embaralhadas na grade: 16
 fotos, 8 duplas parecidas. Baralho com menos de 8 temas de 2 fotos → erro.
 
+Isso vale só pra **grade inicial**. Da 2ª rodada em diante, as casas que foram
+segredo de alguém ganham fotos aleatórias de qualquer tema (§2, decisão do
+usuário em 2026-10-17, que substitui a grade fixa): as duplas vão se
+desfazendo de propósito.
+
 ## 7. Histórico e museu
 
 ### 7.1 Gravação
@@ -289,7 +310,7 @@ fotos, 8 duplas parecidas. Baralho com menos de 8 temas de 2 fotos → erro.
 Tabela nova no D1, só do Retratim (migração própria; as tabelas do DITU não
 mudam). Uma linha por rodada, gravada uma vez no fim da revelação: sala, id da
 partida (sala + momento do "começar"), data, número da rodada, as 16 fotos da
-grade, e por jogador: nome e bichinho daquele momento, coordenada, foto, kit,
+grade **daquela rodada** (`result.grid`; a grade muda de rodada pra rodada), e por jogador: nome e bichinho daquele momento, coordenada, foto, kit,
 **obra (JSON)**, palpites dados, pontos ganhos e placar depois da rodada.
 Partida terminada = chegou à 6ª rodada. Sem login, sem apagar.
 
@@ -329,7 +350,9 @@ Os números mínimos são ponto de partida.
   (36 tiradas sem faltar, repetição possível), regra da metade arredondada pra
   cima + 30 s nas duas fases, `scorePicturesRound` (ninguém/alguns/todos acertaram,
   obra em branco), validação de cada kit, segredos do `viewFor` por fase,
-  presença (queda com rascunho, saída de vez, < 3 ativos), fim e empate.
+  presença (queda com rascunho, saída de vez, < 3 ativos), troca das fotos
+  usadas (só as secretas, sem repetir foto já vista, uma vez por casa, nada no
+  fim), fim e empate.
 - **Base:** prazo do jogo no alarme (`nextDeadline`); ITO e
   Diquisti sem mudança de comportamento.
 - **`server/`:** `POST /rooms { game: 'pictures' }`, limite de rascunho,

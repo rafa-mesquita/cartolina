@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { applyPicturesAction, initialPicturesState, settlePictures } from '../src/games/pictures/rules';
+import { refreshGrid } from '../src/games/pictures/grid';
+import { PICTURES_DECK } from '../src/games/pictures/photos';
 import { kitFor } from '../src/games/pictures/rotation';
-import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
+import { COORDS, PICTURES_COUNTDOWN_MS, type Coord, type PicturesState } from '../src/games/pictures/types';
+import { mulberry32 } from '../src/rng';
 import {
   T0,
   act,
@@ -258,7 +261,7 @@ describe('Retratim: revelação, rodadas e fim', () => {
     expect(s.result!.gained.p3).toBe(3);
   });
 
-  it('próxima rodada: kits giram, grade fica, saquinho diminui; só o host', () => {
+  it('próxima rodada: kits giram, saquinho diminui; só o host', () => {
     const { state, ctx } = started(3);
     const s = toRevealPhase(toGuessingPhase(state, ctx), ctx, rightGuess);
     expect(applyPicturesAction(s, 'p1', { type: 'next' }, ctx)).toEqual({ ok: false, error: 'not_host' });
@@ -266,7 +269,7 @@ describe('Retratim: revelação, rodadas e fim', () => {
     expect(n.phase).toBe('building');
     expect(n.round).toBe(1);
     expect(n.kits).toEqual({ p0: 'laces', p1: 'sticks', p2: 'blocks' });
-    expect(n.grid).toEqual(state.grid);
+    expect(n.grid).toHaveLength(16);
     expect(n.bag).toHaveLength(48 - 6);
     expect(n.works).toEqual({});
     expect(n.scores).toEqual(s.scores);
@@ -286,6 +289,97 @@ describe('Retratim: revelação, rodadas e fim', () => {
     const again = act(state, 'p0', { type: 'again' }, ctx);
     expect(again).toMatchObject({ phase: 'building', round: 0, scores: { p0: 0, p1: 0, p2: 0 } });
     expect(again.bag).toHaveLength(48 - 3);
+  });
+});
+
+describe('Retratim: as fotos usadas são trocadas a cada rodada', () => {
+  /** Revelação da rodada atual com segredos escolhidos (pra controlar quais coordenadas foram usadas). */
+  function revealWith(state: PicturesState, ctx: ReturnType<typeof started>['ctx'], secrets: Record<string, Coord>): PicturesState {
+    return toRevealPhase(toGuessingPhase({ ...state, secrets }, ctx), ctx, rightGuess);
+  }
+  const idx = (c: Coord) => COORDS.indexOf(c);
+  const changedCoords = (a: readonly string[], b: readonly string[]) => COORDS.filter((_, i) => a[i] !== b[i]);
+
+  it('começar guarda as 16 fotos da grade como já vistas', () => {
+    const { state } = started(3);
+    expect(state.shown).toEqual(state.grid);
+  });
+
+  it('as coordenadas secretas ganham foto nova e as outras 16 − k ficam iguais', () => {
+    const { state, ctx } = started(3);
+    const rev = revealWith(state, ctx, { p0: 'A1', p1: 'C2', p2: 'D4' });
+    const n = act(rev, 'p0', { type: 'next' }, ctx);
+    expect(changedCoords(n.grid, state.grid)).toEqual(['A1', 'C2', 'D4']);
+    expect(new Set(n.grid).size).toBe(16);
+    for (const id of n.grid) expect(PICTURES_DECK.some((p) => p.id === id)).toBe(true);
+  });
+
+  it('foto nova nunca repete uma que já apareceu na grade nesta partida', () => {
+    const { state, ctx } = started(4, 7);
+    let s = state;
+    const seen = new Set(state.grid);
+    for (let r = 0; r < 5; r++) {
+      const before = s.grid;
+      s = act(revealWith(s, ctx, { p0: 'A1', p1: 'B2', p2: 'C3', p3: 'D4' }), 'p0', { type: 'next' }, ctx);
+      for (const c of ['A1', 'B2', 'C3', 'D4'] as const) {
+        const fresh = s.grid[idx(c)]!;
+        expect(fresh).not.toBe(before[idx(c)]);
+        expect(seen.has(fresh)).toBe(false);
+        seen.add(fresh);
+      }
+      expect(new Set(s.shown)).toEqual(seen);
+    }
+    expect(s.shown).toHaveLength(16 + 5 * 4);
+  });
+
+  it('coordenada repetida entre jogadores é trocada uma vez só', () => {
+    const { state, ctx } = started(3);
+    const rev = revealWith(state, ctx, { p0: 'B3', p1: 'B3', p2: 'A1' });
+    const n = act(rev, 'p0', { type: 'next' }, ctx);
+    expect(changedCoords(n.grid, state.grid)).toEqual(['A1', 'B3']);
+    expect(n.shown).toHaveLength(16 + 2);
+  });
+
+  it('o resultado guarda a grade daquela rodada (antes da troca)', () => {
+    const { state, ctx } = started(3);
+    const rev = revealWith(state, ctx, { p0: 'A1', p1: 'C2', p2: 'D4' });
+    expect(rev.result!.grid).toEqual(state.grid);
+    const n = act(rev, 'p0', { type: 'next' }, ctx);
+    expect(n.grid).not.toEqual(state.grid);
+    const nextRev = toRevealPhase(toGuessingPhase(n, ctx), ctx, rightGuess);
+    expect(nextRev.result!.grid).toEqual(n.grid);
+  });
+
+  it('no fim do jogo nada é trocado', () => {
+    const { state, ctx } = started(3);
+    let s = state;
+    for (let r = 0; r < 5; r++) s = act(toRevealPhase(toGuessingPhase(s, ctx), ctx, rightGuess), 'p0', { type: 'next' }, ctx);
+    const last = toRevealPhase(toGuessingPhase(s, ctx), ctx, rightGuess);
+    const over = act(last, 'p0', { type: 'next' }, ctx);
+    expect(over.phase).toBe('gameover');
+    expect(over.grid).toEqual(last.grid);
+    expect(over.shown).toEqual(last.shown);
+  });
+
+  it('"jogar de novo" sorteia grade nova e zera as já vistas', () => {
+    const { state, ctx } = started(3);
+    let s = state;
+    for (let r = 0; r < 6; r++) s = act(toRevealPhase(toGuessingPhase(s, ctx), ctx, rightGuess), 'p0', { type: 'next' }, ctx);
+    const again = act(s, 'p0', { type: 'again' }, ctx);
+    expect(again.shown).toEqual(again.grid);
+  });
+
+  it('acabaram as fotos nunca usadas: usa qualquer uma que não esteja na grade agora', () => {
+    const deck = PICTURES_DECK.slice(0, 18);
+    const grid = deck.slice(0, 16).map((p) => p.id);
+    const shown = deck.map((p) => p.id); // as 18 já apareceram
+    const out = refreshGrid(mulberry32(3), grid, shown, ['A1', 'B1', 'C1'], deck);
+    expect(out.grid.slice(3)).toEqual(grid.slice(3));
+    expect(new Set(out.grid).size).toBe(16);
+    for (let i = 0; i < 3; i++) {
+      expect(out.grid[i]).not.toBe(grid[i]);
+      expect(deck.some((p) => p.id === out.grid[i])).toBe(true);
+    }
   });
 });
 

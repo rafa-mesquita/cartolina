@@ -9,6 +9,7 @@ const work = { kit: 'cubes' as const, cells: Array.from({ length: 16 }, (_, i) =
 /** a, b e c jogam; a e b montaram. b acertou a de a; ninguém acertou a de b (c errou, a não palpitou). */
 const res: PicturesRoundResult = {
   round: 2,
+  grid: Array.from({ length: 16 }, (_, i) => `p${String(i + 1).padStart(3, '0')}`),
   order: ['a', 'b'],
   secrets: { a: 'B2', b: 'C3', c: 'A1' },
   kits: { a: 'cubes', b: 'cubes', c: 'cubes' },

@@ -620,8 +620,8 @@ function renderGrid(v) {
   const mine = v.phase === 'building' || v.phase === 'guessing' ? Retratim.COORDS.indexOf(v.mySecret) : -1;
   document.querySelectorAll('#grid .photo').forEach((el) => el.classList.toggle('secret', Number(el.dataset.i) === mine));
   $('#gridNote').textContent = v.phase === 'building'
-    ? 'A grade é a mesma a partida toda. Remonte a sua foto secreta com o kit da rodada; os outros vão tentar adivinhar qual é.'
-    : 'A grade é a mesma a partida toda.';
+    ? 'As fotos secretas de cada rodada trocam na próxima. Remonte a sua foto secreta com o kit da rodada; os outros vão tentar adivinhar qual é.'
+    : 'As fotos secretas desta rodada trocam na próxima.';
 }
 
 /* ---------- montagem ---------- */

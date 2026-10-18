@@ -1,6 +1,6 @@
 import type { ActionResult, GameContext } from '../../game';
 import { drawSecrets, fullBag } from './bag';
-import { drawGrid } from './grid';
+import { drawGrid, refreshGrid } from './grid';
 import { kitsForRound } from './rotation';
 import { scorePicturesRound } from './scoring';
 import {
@@ -24,6 +24,7 @@ export function initialPicturesState(): PicturesState {
     scores: {},
     round: 0,
     grid: [],
+    shown: [],
     bag: [],
     secrets: {},
     kits: {},
@@ -69,11 +70,13 @@ function beginRound(state: PicturesState, ctx: GameContext, round: number): Pict
 function startMatch(ctx: GameContext): ActionResult<PicturesState> {
   if (ctx.active.length < PICTURES_MIN_PLAYERS) return fail('need_3_players');
   const players = [...ctx.active];
+  const grid = drawGrid(ctx.rng);
   const fresh: PicturesState = {
     ...initialPicturesState(),
     players,
     scores: Object.fromEntries(players.map((p) => [p, 0])),
-    grid: drawGrid(ctx.rng),
+    grid,
+    shown: [...grid],
     bag: fullBag(),
   };
   return ok(beginRound(fresh, ctx, 0));
@@ -108,6 +111,7 @@ function toReveal(state: PicturesState): PicturesState {
     countdownEndsAt: null,
     result: {
       round: state.round,
+      grid: state.grid,
       order,
       secrets: state.secrets,
       kits: state.kits,
@@ -164,13 +168,17 @@ function admitReturners(state: PicturesState, ctx: GameContext): PicturesState {
   };
 }
 
-/** Depois da revelação: fim de jogo na 6ª rodada, senão a próxima montagem. */
+/**
+ * Depois da revelação: fim de jogo na 6ª rodada (a grade fica como está), senão a próxima montagem, com as fotos
+ * secretas da rodada que passou trocadas por fotos novas.
+ */
 function afterReveal(state: PicturesState, ctx: GameContext): PicturesState {
   if (state.round + 1 >= PICTURES_ROUNDS) {
     const top = Math.max(...state.players.map((p) => state.scores[p] ?? 0));
     return { ...state, phase: 'gameover', winners: state.players.filter((p) => (state.scores[p] ?? 0) === top) };
   }
-  return beginRound(state, ctx, state.round + 1);
+  const { grid, shown } = refreshGrid(ctx.rng, state.grid, state.shown, Object.values(state.secrets));
+  return beginRound({ ...state, grid, shown }, ctx, state.round + 1);
 }
 
 /** Por que `playerId` não pode agir nesta fase (ou null se pode). */

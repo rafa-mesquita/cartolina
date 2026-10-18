@@ -218,6 +218,23 @@ var Retratim = (() => {
     const picked = themes.flatMap((t) => shuffle(rng, byTheme.get(t)).slice(0, GRID_PER_THEME));
     return shuffle(rng, picked);
   }
+  function refreshGrid(rng, grid, shown, coords, deck = PICTURES_DECK) {
+    const next = [...grid];
+    const seen = new Set(shown);
+    const added = [];
+    for (const c of COORDS.filter((k) => coords.includes(k))) {
+      const fresh = deck.filter((p) => !seen.has(p.id) && !next.includes(p.id));
+      const pool = fresh.length > 0 ? fresh : deck.filter((p) => !next.includes(p.id));
+      if (pool.length === 0) continue;
+      const id = pool[randomInt(rng, pool.length)].id;
+      next[COORDS.indexOf(c)] = id;
+      if (!seen.has(id)) {
+        seen.add(id);
+        added.push(id);
+      }
+    }
+    return { grid: next, shown: [...shown, ...added] };
+  }
 
   // node_modules/zod/v3/external.js
   var external_exports = {};
@@ -4401,6 +4418,7 @@ var Retratim = (() => {
       scores: {},
       round: 0,
       grid: [],
+      shown: [],
       bag: [],
       secrets: {},
       kits: {},
@@ -4440,11 +4458,13 @@ var Retratim = (() => {
   function startMatch(ctx) {
     if (ctx.active.length < PICTURES_MIN_PLAYERS) return fail("need_3_players");
     const players = [...ctx.active];
+    const grid = drawGrid(ctx.rng);
     const fresh = {
       ...initialPicturesState(),
       players,
       scores: Object.fromEntries(players.map((p) => [p, 0])),
-      grid: drawGrid(ctx.rng),
+      grid,
+      shown: [...grid],
       bag: fullBag()
     };
     return ok(beginRound(fresh, ctx, 0));
@@ -4473,6 +4493,7 @@ var Retratim = (() => {
       countdownEndsAt: null,
       result: {
         round: state.round,
+        grid: state.grid,
         order,
         secrets: state.secrets,
         kits: state.kits,
@@ -4522,7 +4543,8 @@ var Retratim = (() => {
       const top = Math.max(...state.players.map((p) => state.scores[p] ?? 0));
       return { ...state, phase: "gameover", winners: state.players.filter((p) => (state.scores[p] ?? 0) === top) };
     }
-    return beginRound(state, ctx, state.round + 1);
+    const { grid, shown } = refreshGrid(ctx.rng, state.grid, state.shown, Object.values(state.secrets));
+    return beginRound({ ...state, grid, shown }, ctx, state.round + 1);
   }
   function playerError(state, playerId, phase) {
     if (state.phase !== phase) return "bad_phase";
