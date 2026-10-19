@@ -7,6 +7,7 @@ import {
   COUP_CLAIM,
   COUP_COST,
   COUP_MIN_PLAYERS,
+  COUP_MUST_COUP_AT,
   COUP_START_COINS,
   COUP_WINDOW_MS,
   type CoupAction,
@@ -249,15 +250,63 @@ function block(state: CoupState, by: string, as: CoupCharacter, ctx: GameContext
   return openWindow(s, 'block', alive(s).filter((p) => p !== by), ctx);
 }
 
+/** Teto de passos automáticos por chamada: todo mundo ausente ainda termina a partida, mas sem laço infinito. */
+const AUTO_STEPS = 1000;
+
+const away = (ctx: GameContext, player: string) => !ctx.active.includes(player);
+
 /**
- * Fecha a janela de reação quando todos que podiam reagir deixaram ou o prazo acabou. Roda depois de cada ação e a
- * cada `tick` da sala (presença e alarme no prazo). Devolve o MESMO objeto quando nada muda (o servidor compara referência).
+ * Um passo: fecha a janela (todos deixaram, ou o prazo acabou) ou joga por um ausente (mais de 30 s fora):
+ * na vez dele, renda (golpe num alvo sorteado com 10+, ou com 7+ se o tesouro está vazio); na janela, "deixa";
+ * perdendo, uma carta sorteada; na troca, fica com as que tinha. Devolve o mesmo objeto se não há o que fazer.
  */
-export function settleCoup(state: CoupState, ctx: GameContext): CoupState {
-  if (state.phase !== 'reaction' || state.window === null) return state;
-  const w = state.window;
-  const allPassed = w.eligible.every((p) => w.passed.includes(p));
-  return allPassed || ctx.now >= w.endsAt ? closeWindow(state, ctx) : state;
+function settleOnce(state: CoupState, ctx: GameContext): CoupState {
+  switch (state.phase) {
+    case 'reaction': {
+      const w = state.window!;
+      const absent = w.eligible.filter((p) => !w.passed.includes(p) && away(ctx, p));
+      const passed = absent.length > 0 ? [...w.passed, ...absent] : w.passed;
+      const next = absent.length > 0 ? { ...state, window: { ...w, passed } } : state;
+      const allPassed = w.eligible.every((p) => passed.includes(p));
+      return allPassed || ctx.now >= w.endsAt ? closeWindow(next, ctx) : next;
+    }
+    case 'turn': {
+      const p = state.turn!;
+      if (!away(ctx, p)) return state;
+      const coins = coinsOf(state, p);
+      // Tesouro vazio: renda não rende nada, e com todo mundo ausente a mesa nunca andaria; com 7+ moedas dá golpe.
+      const stuck = treasury(state) === 0 && coins >= COUP_COST.coup;
+      if (coins < COUP_MUST_COUP_AT && !stuck) return declare(state, p, 'income', null, ctx);
+      const others = alive(state).filter((x) => x !== p);
+      return declare(state, p, 'coup', others[randomInt(ctx.rng, others.length)]!, ctx);
+    }
+    case 'losing': {
+      const p = state.loss!.player;
+      if (!away(ctx, p)) return state;
+      const hidden = hiddenOf(state, p);
+      return loseCard(state, hidden[randomInt(ctx.rng, hidden.length)]!, ctx);
+    }
+    case 'exchange': {
+      const p = state.turn!;
+      return away(ctx, p) ? finishExchange(state, p, hiddenOf(state, p), ctx) : state;
+    }
+    default:
+      return state;
+  }
+}
+
+/**
+ * Fecha janelas e joga pelos ausentes até não haver o que fazer. Roda depois de cada ação e a cada `tick` da sala
+ * (presença e alarme no prazo). Devolve o MESMO objeto quando nada muda (o servidor compara referência).
+ */
+export function settleCoup(input: CoupState, ctx: GameContext): CoupState {
+  let state = input;
+  for (let i = 0; i < AUTO_STEPS; i++) {
+    const next = settleOnce(state, ctx);
+    if (next === state) return state;
+    state = next;
+  }
+  return state;
 }
 
 /** Por que `playerId` não pode reagir na janela aberta (ou null se pode). Prazo vencido = janela fechada. */
