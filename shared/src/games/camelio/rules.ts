@@ -1,8 +1,8 @@
 import type { ActionResult, GameContext } from '../../game';
 import { randomInt, shuffle } from '../../rng';
-import { camelioCardIds } from './deck';
-import { camelioPoints, camelioSpheresInPlay } from './scoring';
-import { CAMELIO_MIN_PLAYERS, type CamelioAction, type CamelioState } from './types';
+import { camelioCard, camelioCardIds } from './deck';
+import { camelioDeckEndWinners, camelioPoints, camelioSpheresInPlay, resolveCamelioPlay } from './scoring';
+import { CAMELIO_MIN_PLAYERS, type CamelioAction, type CamelioFrom, type CamelioPlay, type CamelioState } from './types';
 
 const fail = (error: string): ActionResult<CamelioState> => ({ ok: false, error });
 const ok = (state: CamelioState): ActionResult<CamelioState> => ({ ok: true, state });
@@ -58,6 +58,11 @@ function loserOf(prev: CamelioState, players: readonly string[]): string {
   return pick;
 }
 
+/** Próximo jogador da partida depois de `after` que está ativo (pode ser o próprio `after`, se só ele estiver). */
+function nextActive(players: readonly string[], active: readonly string[], after: string): string | null {
+  return rotateAfter(players, after).find((p) => active.includes(p)) ?? null;
+}
+
 /** Partida nova com os ativos (também usada em "jogar de novo"). */
 function startMatch(state: CamelioState, ctx: GameContext, again: boolean): ActionResult<CamelioState> {
   if (ctx.active.length < CAMELIO_MIN_PLAYERS) return fail('not_enough_players');
@@ -77,6 +82,56 @@ function startMatch(state: CamelioState, ctx: GameContext, again: boolean): Acti
     turn,
     target: camelioTarget(players.length),
   });
+}
+
+/** Uma vez (spec §2.3): pega a carta, põe na mesa de `to`, resolve, repõe a aberta, confere meta e monte, passa a vez. */
+function play(state: CamelioState, playerId: string, from: CamelioFrom, to: string, ctx: GameContext): ActionResult<CamelioState> {
+  if (state.phase !== 'playing' || state.paused) return fail('not_playing');
+  if (state.turn !== playerId) return fail('not_your_turn');
+  if (!state.players.includes(to) || !ctx.active.includes(to)) return fail('bad_target');
+
+  const deck = [...state.deck];
+  let open = state.open;
+  let card: number;
+  if (from === 'open') {
+    if (open === null) return fail('not_playing');
+    card = open;
+    open = deck.pop() ?? null;
+  } else {
+    const top = deck.pop();
+    if (top === undefined) return fail('not_playing');
+    card = top;
+  }
+
+  const res = resolveCamelioPlay(state.table[to] ?? [], state.scored[to] ?? [], card);
+  const entry: CamelioPlay = { by: playerId, from, to, card, outcome: res.outcome, color: camelioCard(card).color, sum: res.sum };
+  let next: CamelioState = {
+    ...state,
+    deck,
+    open,
+    discard: [...state.discard, ...res.discarded],
+    table: { ...state.table, [to]: res.table },
+    scored: { ...state.scored, [to]: res.scored },
+    log: [...state.log, entry],
+  };
+
+  if (camelioPoints(res.scored) >= state.target) {
+    return ok({ ...next, phase: 'over', turn: null, winners: [to], endReason: 'target' });
+  }
+  if (next.deck.length === 0) {
+    if (!next.reshuffled && next.discard.length > 0) {
+      next = { ...next, deck: shuffle(ctx.rng, next.discard), discard: [], reshuffled: true };
+    } else {
+      return ok({
+        ...next,
+        phase: 'over',
+        turn: null,
+        winners: camelioDeckEndWinners(next.players, next.table, next.scored),
+        endReason: 'deck',
+      });
+    }
+  }
+  return ok({ ...next, turn: nextActive(next.players, ctx.active, playerId) });
 }
 
 export function applyCamelioAction(
@@ -99,6 +154,8 @@ export function applyCamelioAction(
       if (!isHost) return fail('not_host');
       if (state.phase === 'lobby') return fail('bad_phase');
       return ok({ ...initialCamelioState(), match: state.match });
+    case 'play':
+      return play(state, playerId, action.from, action.to, ctx);
     default:
       return fail('bad_action');
   }
