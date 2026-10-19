@@ -180,10 +180,16 @@ export interface CoupSeat {
   out: boolean;
 }
 
-/** O que quem vê pode fazer agora (a mesa mostra só esses botões; as regras conferem de novo). */
+/**
+ * O que quem vê pode fazer agora (a mesa mostra só esses botões; as regras conferem de novo).
+ * A visão não tem relógio: depois de `window.endsAt` a mesa esconde os botões da janela (o servidor responderia `window_closed`).
+ * `start`/`restart` não estão aqui; o site decide pelo `hostId` da sala.
+ */
 export interface CoupCan {
   /** Ações que dá pra declarar (só na sua vez). */
   act: CoupActionKind[];
+  /** Na sua vez: em quem as ações com alvo podem mirar (outros vivos). */
+  targets: string[];
   challenge: boolean;
   /** Personagens com que dá pra bloquear agora. */
   block: CoupCharacter[];

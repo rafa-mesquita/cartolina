@@ -12,7 +12,7 @@ import {
   type CoupView,
 } from './types';
 
-const NOTHING: CoupCan = { act: [], challenge: false, block: [], pass: false, lose: false, keep: 0 };
+const NOTHING: CoupCan = { act: [], targets: [], challenge: false, block: [], pass: false, lose: false, keep: 0 };
 
 /** O que `me` pode fazer agora (a mesa mostra só esses botões; as regras conferem de novo). */
 function canFor(state: CoupState, me: string | null): CoupCan {
@@ -20,17 +20,20 @@ function canFor(state: CoupState, me: string | null): CoupCan {
   switch (state.phase) {
     case 'turn': {
       if (state.turn !== me) return NOTHING;
-      const someone = alive(state).find((p) => p !== me) ?? null;
-      return { ...NOTHING, act: COUP_ACTION_KINDS.filter((k) => actError(state, me, k, COUP_TARGETED[k] ? someone : null) === null) };
+      const targets = alive(state).filter((p) => p !== me);
+      // alvo qualquer só pra testar moedas e golpe obrigatório; o alvo de verdade a mesa escolhe em `targets`
+      const probe = targets[0] ?? null;
+      return { ...NOTHING, targets, act: COUP_ACTION_KINDS.filter((k) => actError(state, me, k, COUP_TARGETED[k] ? probe : null) === null) };
     }
     case 'reaction': {
-      const w = state.window!;
-      if (!w.eligible.includes(me) || w.passed.includes(me)) return NOTHING;
+      const w = state.window;
+      const declared = state.declared;
+      if (w === null || declared === null || !w.eligible.includes(me) || w.passed.includes(me)) return NOTHING;
       return {
         ...NOTHING,
         pass: true,
         challenge: canChallenge(state),
-        block: canBlock(state, me) ? [...COUP_BLOCKERS[state.declared!.kind]] : [],
+        block: canBlock(state, me) ? [...COUP_BLOCKERS[declared.kind]] : [],
       };
     }
     case 'losing':
