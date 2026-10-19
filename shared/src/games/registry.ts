@@ -1,6 +1,9 @@
 import type { z } from 'zod';
 import type { GameModule } from '../game';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../players';
+import { coupActionSchema } from './coup/schema';
+import { COUP_MAX_PLAYERS, COUP_MIN_PLAYERS, type CoupAction, type CoupState, type CoupView } from './coup/types';
+import { coup } from './coup/view';
 import { dixitActionSchema } from './dixit/schema';
 import { DIXIT_MIN_PLAYERS, type DixitAction, type DixitState, type DixitView } from './dixit/types';
 import { dixit } from './dixit/view';
@@ -11,11 +14,11 @@ import { picturesActionSchema } from './pictures/schema';
 import { PICTURES_MAX_PLAYERS, PICTURES_MIN_PLAYERS, type PicturesAction, type PicturesState, type PicturesView } from './pictures/types';
 import { pictures } from './pictures/view';
 
-export const GAME_IDS = ['ito', 'dixit', 'pictures'] as const;
+export const GAME_IDS = ['ito', 'dixit', 'pictures', 'coup'] as const;
 export type GameId = (typeof GAME_IDS)[number];
-export type GameState = ItoState | DixitState | PicturesState;
-export type GameView = ItoView | DixitView | PicturesView;
-export type GameAction = ItoAction | DixitAction | PicturesAction;
+export type GameState = ItoState | DixitState | PicturesState | CoupState;
+export type GameView = ItoView | DixitView | PicturesView | CoupView;
+export type GameAction = ItoAction | DixitAction | PicturesAction | CoupAction;
 
 export interface GameEntry {
   id: GameId;
@@ -71,6 +74,17 @@ export const GAMES: Record<GameId, GameEntry> = {
     // Cursor em cima de uma foto entregaria o palpite.
     liveCursors: false,
     // O histórico do Retratim (com o museu) vem no Plano R4.
+    recordsHistory: false,
+  }),
+  coup: defineGame({
+    id: 'coup',
+    module: coup,
+    actionSchema: coupActionSchema,
+    minPlayers: COUP_MIN_PLAYERS,
+    maxPlayers: COUP_MAX_PLAYERS,
+    // Cursor em cima de um assento entregaria o alvo antes da hora.
+    liveCursors: false,
+    // O histórico do Cúpi (as partidas) vem no Plano C4.
     recordsHistory: false,
   }),
 };

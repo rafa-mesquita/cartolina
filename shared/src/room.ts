@@ -1,6 +1,7 @@
 import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
 import { withDixitCounters } from './games/dixit/rules';
 import type { DixitState, DixitView } from './games/dixit/types';
+import type { CoupView } from './games/coup/types';
 import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
@@ -64,6 +65,12 @@ export type PicturesRoomView = RoomView<PicturesView> & { gameId: 'pictures' };
 
 export function isPicturesRoomView(view: RoomView): view is PicturesRoomView {
   return view.gameId === 'pictures';
+}
+
+export type CoupRoomView = RoomView<CoupView> & { gameId: 'coup' };
+
+export function isCoupRoomView(view: RoomView): view is CoupRoomView {
+  return view.gameId === 'coup';
 }
 
 export interface RoomSummary {

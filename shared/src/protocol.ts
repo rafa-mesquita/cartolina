@@ -84,6 +84,16 @@ export const ERROR_CODES = [
   'already_ready',
   'own_work',
   'no_work',
+  'not_your_turn',
+  'not_enough_coins',
+  'must_coup',
+  'bad_target',
+  'cannot_react',
+  'already_passed',
+  'window_closed',
+  'not_losing',
+  'bad_exchange',
+  'bad_block',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -124,6 +134,16 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   already_ready: 'Você já está pronto. Desmarque pra mexer.',
   own_work: 'Não dá pra palpitar na própria obra.',
   no_work: 'Essa pessoa não tem obra nesta rodada.',
+  not_your_turn: 'Não é a sua vez.',
+  not_enough_coins: 'Faltam moedas pra essa ação.',
+  must_coup: 'Com 10 moedas ou mais, só dá pra dar o golpe.',
+  bad_target: 'Escolha outro alvo.',
+  cannot_react: 'Você não pode fazer isso nesta jogada.',
+  already_passed: 'Você já deixou passar.',
+  window_closed: 'Alguém reagiu primeiro.',
+  not_losing: 'Não é você que perde carta agora.',
+  bad_exchange: 'Fique com o mesmo número de cartas que você tinha.',
+  bad_block: 'Esse personagem não bloqueia essa ação.',
 };
 
 export function errorMessage(code: string): string {
