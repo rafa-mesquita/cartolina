@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cama-Leão · protótipo da mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Rye&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="cards.css">
+<style>
+:root{
+  --cream:#f7efe0; --canvas:#f3dcd2; --red:#c8372d; --red-dark:#9e2a22; --navy:#1f2a4a; --navy-soft:#5a6382;
+  --gold:#e8b23a; --line:#e2c9b8; --shadow:0 2px 6px rgba(31,42,74,.18);
+  --logo:'Rye',Georgia,serif; /* só no logo */ --ui:'Fredoka',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;height:100%;overflow:hidden;background:#e9d6c6}
+body{font-family:var(--ui);font-weight:500;color:var(--navy);-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* ---------- palco 1440×900 (lona listrada, vinheta nas bordas) ---------- */
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;
+  background:
+    radial-gradient(ellipse 78% 72% at 50% 54%,transparent 58%,rgba(158,42,34,.16) 100%),
+    repeating-linear-gradient(90deg,var(--cream) 0 44px,var(--canvas) 44px 88px)}
+
+/* ---------- topo ---------- */
+#top{position:absolute;left:0;right:0;top:0;height:72px;display:flex;align-items:center;gap:16px;padding:0 26px;z-index:8;
+  background:var(--cream);border-bottom:2px dashed var(--line)}
+/* bandeirinhas de circo penduradas embaixo da faixa (só enfeite) */
+#top::after{content:'';position:absolute;left:0;right:0;top:calc(100% + 2px);height:13px;pointer-events:none;opacity:.8;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='78' height='13'%3E%3Cpath d='M1 0h24L13 13z' fill='%23c8372d'/%3E%3Cpath d='M27 0h24L39 13z' fill='%23e8b23a'/%3E%3Cpath d='M53 0h24L65 13z' fill='%231f2a4a'/%3E%3C/svg%3E") 10px 0 repeat-x}
+.logo,#top .btns{flex:1 1 0}
+.logo{font:38px/1 var(--logo);color:var(--red);white-space:nowrap;letter-spacing:.5px;text-shadow:0 2px 0 rgba(158,42,34,.16)}
+.logo small{display:block;font:500 11px/1.2 var(--ui);color:var(--navy-soft);letter-spacing:1px;margin-top:3px;text-shadow:none}
+#info{flex:none;text-align:center;font:500 14px/1.2 var(--ui);color:var(--navy-soft);white-space:nowrap}
+#info b{font-weight:600;color:var(--navy)}
+#info .last{color:var(--red)}
+#top .btns{display:flex;justify-content:flex-end;gap:10px}
+.icon-btn{width:38px;height:38px;flex:none;border-radius:50%;border:1.5px solid var(--line);background:var(--cream);box-shadow:var(--shadow);
+  display:grid;place-items:center;font-size:20px;color:var(--navy-soft);padding:0}
+.icon-btn:hover,.icon-btn.on{color:var(--red);border-color:var(--red)}
+
+/* ---------- painel de dev ---------- */
+#dev{position:absolute;right:24px;top:84px;width:330px;padding:14px 16px 16px;border:1.5px solid var(--line);border-radius:12px;background:var(--cream);
+  box-shadow:0 10px 28px rgba(31,42,74,.24);z-index:30;display:none;font-size:13px}
+#dev.on{display:block}
+#dev h4{margin:0 0 8px;font:600 19px/1 var(--ui)}
+#dev .row{display:flex;align-items:center;justify-content:space-between;margin:9px 0;gap:8px}
+#dev .col{margin:12px 0 6px}
+#dev .col .opts{justify-content:flex-start;margin-top:6px}
+#dev .opts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#dev .opts button{padding:4px 10px;border:1.5px solid var(--line);border-radius:999px;background:none;font-size:12px}
+#dev .opts button.on{border-color:var(--red);color:var(--red);font-weight:600}
+#dev .opts.online button.on{border-color:#3b8a3e;color:#2f6f32}
+#dev .opts.online button:not(.on){text-decoration:line-through;color:var(--navy-soft)}
+#dev .wide{width:100%;margin-top:10px;padding:8px;border:1.5px solid var(--red);border-radius:999px;background:var(--red);color:var(--cream);font-weight:600}
+#dev .wide:hover{background:var(--red-dark)}
+#dev .link{display:block;margin-top:10px;text-align:center;color:var(--red);font-weight:600;text-decoration:none}
+#dev .link:hover{text-decoration:underline}
+#dev p{color:var(--navy-soft);font-size:11.5px;line-height:1.45;margin:10px 0 0}
+
+/* ---------- personagens e bandeirinhas ---------- */
+.cr{width:44px;height:44px;flex:none}
+.cr svg{width:100%;height:100%;display:block;overflow:visible}
+.flags{display:flex;gap:3px;align-items:center}
+/* o mastro é a sombra interna da borda esquerda (o clip-path corta sombra de fora) */
+.flag{width:14px;height:16px;flex:none;background:var(--c);clip-path:polygon(0 0,100% 50%,0 100%);box-shadow:inset 2px 0 0 var(--navy)}
+.gone{font:600 12px/1 var(--ui);color:var(--red-dark);padding:4px 9px;border:1.5px dashed var(--red-dark);border-radius:999px}
+
+/* ---------- assentos (os outros, num arco) ---------- */
+#seats{position:absolute;left:0;right:0;top:86px;height:300px;z-index:2}
+.seat{position:absolute;width:230px;min-height:150px;padding:10px 10px 12px;border-radius:16px;background:rgba(247,239,224,.84);
+  border:1.5px solid var(--line);box-shadow:var(--shadow);transition:transform .15s ease,opacity .25s,filter .25s,border-color .25s}
+.seat .head{display:flex;align-items:center;gap:8px;height:44px}
+.seat .nm{font:600 15px/1.1 var(--ui);white-space:nowrap;text-decoration:underline 3px transparent;text-underline-offset:4px;transition:text-decoration-color .25s}
+.seat .head .flags{margin-left:auto}
+/* holofote na vez de alguém */
+.seat.turn{border-color:var(--gold)}
+.seat.turn::before{content:'';position:absolute;inset:-56px -46px -34px;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 42%,rgba(232,178,58,.55),rgba(232,178,58,.2) 46%,transparent 70%)}
+.seat.turn .nm{text-decoration-color:var(--gold)}
+.seat.off{opacity:.45;filter:grayscale(1)}
+.seat.target{outline:2px dashed var(--red);outline-offset:4px;cursor:pointer}
+.seat.hover{outline-style:solid;transform:scale(1.03)}
+
+/* pilhas por cor: as cartas cobertas mostram só a faixa de cima (com as esferas em fila), a de baixo aparece inteira */
+.stacks{display:flex;justify-content:center;align-items:flex-start;gap:6px;margin-top:10px;min-height:86px}
+.stacks.tight{gap:3px}
+.stacks.empty{align-items:center;font-size:12px;color:var(--navy-soft);border:1.5px dashed var(--line);border-radius:10px;opacity:.75}
+.stack{display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px;border-radius:9px}
+.stack.scored{outline:2px dashed var(--gold);background:rgba(232,178,58,.1)}
+.pile{display:flex;flex-direction:column;align-items:center}
+.seat .pile .card+.card{margin-top:-50px}
+.stacks.tight .pile .card+.card{margin-top:-34px}
+#mine .pile .card+.card{margin-top:-70px}
+.pile .card:not(:last-child){place-items:start start;padding:calc(var(--w) * .07) 0 0 calc(var(--w) * .08)}
+.pile .card:not(:last-child) .sphs{grid-template-columns:none;grid-auto-flow:column;gap:calc(var(--w) * .045)}
+.pile .card:not(:last-child) .sph{width:calc(var(--w) * .16);height:calc(var(--w) * .16)}
+.pile .card:not(:last-child) .sph:last-child{grid-column:auto}
+.sum{font:600 13px/1 var(--ui);color:var(--navy-soft);padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.6);white-space:nowrap}
+.stack.scored .sum{color:#9a6d10}
+.sum.hot{color:var(--red);font-weight:700;background:rgba(200,55,45,.13);animation:hot 1.8s ease-in-out infinite}
+@keyframes hot{50%{transform:scale(1.16)}}
+
+/* ---------- picadeiro ---------- */
+#ring{position:absolute;left:50%;top:355px;width:620px;height:230px;margin-left:-310px;border-radius:50%;z-index:1;
+  border:7px double var(--red);
+  background:
+    radial-gradient(ellipse at 50% 56%,rgba(247,239,224,.92) 0 36%,rgba(247,239,224,.4) 60%,transparent 76%),
+    repeating-conic-gradient(from 0deg at 50% 50%,#e8ad9a 0 9deg,#f7e5d7 9deg 18deg);
+  box-shadow:0 0 0 4px var(--cream),0 0 0 6px var(--gold),0 14px 32px rgba(31,42,74,.22),inset 0 0 36px rgba(158,42,34,.3)}
+#deck,#open{position:absolute;top:42px;width:130px;display:flex;flex-direction:column;align-items:center;gap:9px}
+#deck{left:calc(50% - 168px)}
+#open{left:calc(50% + 38px)}
+.slot{position:relative;width:92px;height:132.48px}
+.slot .under{position:absolute;left:0;top:0;width:92px;height:132.48px;border-radius:12.88px;border:2px solid var(--cream);
+  background:repeating-linear-gradient(135deg,var(--navy) 0 6px,#2a375e 6px 12px);box-shadow:0 1px 3px rgba(31,42,74,.35)}
+.slot .none{width:92px;height:132.48px;border-radius:12.88px;border:2px dashed var(--line)}
+.lift{position:relative;transition:transform .16s ease}
+.lift .card{transition:box-shadow .16s}
+#deck.can,#open.can{cursor:pointer}
+#deck.can .lift .card,#open.can .lift .card{box-shadow:0 0 0 2.5px rgba(232,178,58,.85),0 3px 8px rgba(31,42,74,.3)}
+#deck.can:hover .lift,#open.can:hover .lift{transform:translateY(-5px)}
+#deck.picked .lift,#open.picked .lift{transform:translateY(-14px)}
+#deck.picked .lift .card,#open.picked .lift .card{box-shadow:0 0 0 3px var(--gold),0 16px 24px rgba(31,42,74,.38)}
+.cap{font:500 13px/1 var(--ui);color:var(--navy-soft);white-space:nowrap}
+.cap b{color:var(--navy);font-weight:600}
+
+/* ---------- letreiro (caixa parada; o texto troca com fade) ---------- */
+#banner{position:absolute;left:50%;top:332px;width:720px;height:46px;margin-left:-360px;z-index:5;border-radius:12px;padding:0 24px;
+  display:grid;place-items:center;font:500 17px/1 var(--ui);color:var(--cream);white-space:nowrap;overflow:hidden;
+  background:
+    radial-gradient(circle at 9px 5px,rgba(232,178,58,.85) 0 1.6px,transparent 2.3px) 0 0 / 18px 46px repeat-x,
+    radial-gradient(circle at 9px 41px,rgba(232,178,58,.85) 0 1.6px,transparent 2.3px) 0 0 / 18px 46px repeat-x,
+    var(--navy);
+  box-shadow:inset 0 0 0 2px var(--gold),0 6px 16px rgba(31,42,74,.3)}
+#banner .txt{transition:opacity .16s ease}
+#banner .txt.fade{opacity:0}
+#banner b{color:var(--gold);font-weight:600}
+
+/* ---------- a sua mesa ---------- */
+#mine{position:absolute;left:60px;right:60px;bottom:18px;height:260px;z-index:2;border-radius:22px;transition:box-shadow .3s}
+#mine.myturn{box-shadow:0 0 0 3px var(--gold),0 0 28px 6px rgba(232,178,58,.55)}
+#mine .seat{inset:0;width:auto;min-height:0;display:flex;gap:24px;padding:16px 24px;border-radius:22px;background:rgba(247,239,224,.92)}
+#mine .seat.turn::before{display:none}
+#mine .seat.hover{transform:scale(1.01)}
+#mine .who{width:118px;flex:none;display:flex;flex-direction:column;align-items:center;gap:7px;padding-top:12px}
+#mine .cr{width:56px;height:56px}
+#mine .nm{font-size:17px}
+#mine .stacks{flex:1;justify-content:flex-start;gap:14px;margin:0;min-height:0}
+#mine .stacks.empty{justify-content:center;font-size:14px}
+#mine .sum{font-size:15px}
+#mine .pts{width:400px;flex:none;border-left:2px dashed var(--line);padding:4px 0 0 22px;display:flex;flex-direction:column;gap:12px}
+.pts-h{font:500 14px/1 var(--ui);color:var(--navy-soft)}
+.pts-h b{color:var(--navy);font-weight:600}
+.fans{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-end}
+.fan{display:flex;flex-direction:column;align-items:center;gap:6px}
+.leaf{position:relative;height:62px}
+.leaf>span{position:absolute;bottom:0;transform-origin:50% 100%}
+.fans .none{font-size:13px;line-height:1.4;color:var(--navy-soft);opacity:.8;max-width:240px}
+
+/* ---------- aviso ---------- */
+#toast{position:absolute;left:50%;top:590px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--red-dark);color:var(--cream);
+  font:600 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow)}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="logo">Cama-Leão<small>protótipo da mesa · cartolina~</small></div>
+    <div id="info"></div>
+    <div class="btns">
+      <button class="icon-btn" id="soundBtn" title="som ligado"><i class="ti ti-volume"></i></button>
+      <button class="icon-btn" id="devBtn" title="painel do protótipo"><i class="ti ti-adjustments"></i></button>
+    </div>
+  </header>
+  <div id="dev">
+    <h4>protótipo</h4>
+    <div class="row">jogadores<div class="opts" id="optN"></div></div>
+    <div class="row">bots<div class="opts" id="optS"></div></div>
+    <div class="col">online (clique pra derrubar ou trazer de volta)<div class="opts online" id="optO"></div></div>
+    <button class="wide" id="newBtn">nova partida</button>
+    <a class="link" href="cartas.html" target="_blank" rel="noopener">ver as cartas</a>
+    <p>Protótipo descartável: as regras são as reais (as mesmas do servidor), os bots só olham a view, como um jogador. Por enquanto a jogada é por clique: escolha a aberta ou o monte, depois a mesa de alguém (Esc desfaz).</p>
+  </div>
+  <div id="seats"></div>
+  <div id="ring"><div id="deck"></div><div id="open"></div></div>
+  <div id="banner"><span class="txt"></span></div>
+  <div id="mine"></div>
+  <div id="toast"></div>
+</div>
+<script src="../dixit/critters.js"></script>
+<script src="rules.js"></script>
+<script src="cards.js"></script>
+<script src="narrate.js"></script>
+<script src="bot.js"></script>
+<script src="sounds.js"></script>
+<script>
+'use strict';
+/* Protótipo da mesa do Cama-Leão (descartável). Regras: shared/src/games/camelio empacotadas em rules.js. */
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+const ME = 'p0';
+const NAMES = ['você', 'Bia', 'Léo', 'Nina', 'Caio', 'Duda'];
+const CRITTER_COLORS = Object.keys(window.CRITTERS);
+/** Mensagens de shared/src/protocol.ts pros códigos que o Cama-Leão usa. */
+const ERR = {
+  not_your_turn: 'Não é a sua vez.', bad_target: 'Essa pessoa não pode ser escolhida agora.',
+  not_playing: 'A partida não está rolando agora.', not_host: 'Só o host pode fazer isso.',
+  bad_phase: 'Agora não dá pra fazer isso.', not_enough_players: 'Precisa de pelo menos 2 jogadores.',
+};
+const { CAMELIO_COLORS, CAMELIO_EXACT } = CamaLeao;
+const SEAT_W = 230;
+
+// A virada de verdade chega na Task 5 (anim.js); até lá a jogada só aparece no lugar.
+window.Anim = window.Anim || { play: () => Promise.resolve() };
+
+let N = 4, SPEED = 1;
+let ids = [], online = new Set(), state = null;
+/** O que está desenhado agora. Durante a animação continua sendo a view de antes da jogada. */
+let shown = null, animating = false, picked = null;
+/** De quem era a vez no último desenho (pro som de "sua vez" tocar uma vez só). */
+let prevTurn = null;
+/** Mesa sob o mouse com a carta levantada (destaque `.hover`). */
+let hoverPid = null;
+let soundOn = true;
+
+const nameOf = (p) => NAMES[Number(p.slice(1))];
+const critter = (p) => window.CRITTERS[CRITTER_COLORS[Number(p.slice(1)) % CRITTER_COLORS.length]];
+const active = () => ids.filter((p) => online.has(p));
+const ctx = () => ({ hostId: ME, active: active(), rng: Math.random, now: Date.now() });
+const view = () => CamaLeao.camelioViewFor(state, ME);
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2400); }
+
+/* ---------- escala do palco 1440×900 (largura toda) ---------- */
+let APPW = 1440;
+function fit() {
+  let sc = innerHeight / 900, w = innerWidth / sc;
+  if (w < 1440) { sc = innerWidth / 1440; w = 1440; }
+  APPW = Math.round(w); app.style.width = APPW + 'px';
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+}
+addEventListener('resize', () => { fit(); render(shown); });
+
+/* ---------- laço do jogo ---------- */
+/** Igual ao servidor: o schema das ações valida antes das regras. */
+function act(pid, action) {
+  const parsed = CamaLeao.camelioActionSchema.safeParse(action);
+  if (!parsed.success) { console.error('ação inválida (bug do protótipo)', action, parsed.error); toast('Ação inválida (bug do protótipo — veja o console)'); return false; }
+  const res = CamaLeao.applyCamelioAction(state, pid, parsed.data, ctx());
+  if (!res.ok) { if (pid === ME) { toast(ERR[res.error] || res.error); play('error'); } return false; }
+  state = res.state; changed(); return true;
+}
+/** O "servidor" reavaliando presença (alguém caiu ou voltou, no painel de dev). */
+function presence() { const next = CamaLeao.camelioOnPresenceChange(state, ctx()); if (next !== state) { state = next; changed(); } }
+
+/** Toda mudança passa aqui: jogada nova anima a partir do que está desenhado; o resto só redesenha. */
+function changed() {
+  if (animating) return; // o fim da animação chama changed() de novo
+  const v = view();
+  const fresh = shown && v.last && v.match === shown.match && v.playCount === shown.playCount + 1;
+  if (fresh) {
+    animating = true; picked = null;
+    Anim.play(shown, v).then(() => { animating = false; shown = null; changed(); });
+    return;
+  }
+  // carta levantada não sobrevive a perder a vez (pausa, partida nova)
+  if (picked && !(v.phase === 'playing' && !v.paused && v.turn === ME)) picked = null;
+  if (v.phase === 'playing' && v.turn === ME && prevTurn !== ME) play('turn');
+  prevTurn = v.turn;
+  shown = v; render(v); scheduleBot(v);
+}
+
+let botTimer = 0;
+function cancelBot() { clearTimeout(botTimer); botTimer = 0; }
+function scheduleBot(v) {
+  cancelBot();
+  if (v.phase !== 'playing' || v.paused || !v.turn || v.turn === ME || !online.has(v.turn)) return;
+  const p = v.turn;
+  botTimer = setTimeout(() => {
+    botTimer = 0;
+    if (animating || !state || state.turn !== p || state.paused) return;
+    const choice = CamaLeaoBot.choose(CamaLeao.camelioViewFor(state, p), p, active(), Math.random);
+    if (!choice) return; // sem jogada possível: o bot não age
+    act(p, { type: 'play', ...choice });
+  }, (900 + Math.random() * 900) * SPEED);
+}
+
+function newGame() {
+  cancelBot(); picked = null; animating = false; shown = null; prevTurn = null; hoverPid = null;
+  ids = Array.from({ length: N }, (_, i) => `p${i}`);
+  online = new Set(ids);
+  state = CamaLeao.initialCamelioState();
+  act(ME, { type: 'start' });
+  renderDev();
+}
+
+/* ---------- desenho ---------- */
+const sumOf = (cards, color) => cards.reduce((n, c) => (c.color === color ? n + c.spheres : n), 0);
+/** Cores pontuadas, na ordem em que entraram na área de pontos. */
+const scoredColors = (cards) => [...new Set(cards.map((c) => c.color))];
+const flag = (color) => `<span class="flag" style="--c:${CardArt.HEX[color]}" title="pontuou o ${color}" aria-label="pontuou o ${color}"></span>`;
+const ptsTxt = (n) => `${n} ${n === 1 ? 'ponto' : 'pontos'}`;
+const list = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
+
+function seatClass(v, p) {
+  let c = 'seat';
+  if (p === ME) c += ' me';
+  if (v.phase === 'playing' && v.turn === p) c += ' turn';
+  if (!online.has(p)) c += ' off';
+  if (picked && canReceive(p)) { c += ' target'; if (hoverPid === p) c += ' hover'; }
+  return c;
+}
+
+/** Área de jogo de `p`: uma pilha por cor (na ordem de CAMELIO_COLORS), com a soma embaixo. */
+function stacksHTML(v, p, w) {
+  const table = v.table[p] || [];
+  const done = scoredColors(v.scored[p] || []);
+  const colors = CAMELIO_COLORS.filter((color) => table.some((c) => c.color === color));
+  if (!colors.length) return '<div class="stacks empty"><span>mesa vazia</span></div>';
+  // 5 ou 6 cores não cabem num assento de 230px com cartas de 46: encolhe só ali
+  const tight = p !== ME && colors.length >= 5;
+  const cw = tight ? 32 : w;
+  const stacks = colors.map((color) => {
+    const cards = table.filter((c) => c.color === color);
+    const sum = sumOf(cards, color), sc = done.includes(color);
+    const hot = sum === CAMELIO_EXACT - 1;
+    const tip = `${color}: ${sum} de ${CAMELIO_EXACT}${sc ? ' (já pontuado: chegar a 5 perde o ponto)' : ''}`;
+    return `<div class="stack${sc ? ' scored' : ''}" data-color="${color}" title="${tip}">`
+      + `<div class="pile">${cards.map((c) => CardArt.front(c, cw)).join('')}</div>`
+      + `<span class="sum${hot ? ' hot' : ''}">${sum}/${CAMELIO_EXACT}${sc ? ' ⚑' : ''}</span></div>`;
+  }).join('');
+  return `<div class="stacks${tight ? ' tight' : ''}">${stacks}</div>`;
+}
+
+function renderTop(v) {
+  const meta = `meta: <b>${v.target} cores</b>`;
+  const monte = `monte <b>${v.deckCount}</b>`;
+  $('#info').innerHTML = `${meta} · ${monte}${v.reshuffled ? ' · <b class="last">último monte</b>' : ''}`;
+}
+
+/** Os outros, na ordem dos assentos, num arco na largura toda (os das pontas um pouco mais baixos). */
+function renderSeats(v) {
+  const others = (v.players.length ? v.players : ids).filter((p) => p !== ME);
+  const k = others.length;
+  $('#seats').innerHTML = others.map((p, i) => {
+    const x = APPW * (i + 1) / (k + 1);
+    const y = 20 + 40 * (1 - Math.sin(Math.PI * (i + 1) / (k + 1)));
+    const flags = online.has(p) ? scoredColors(v.scored[p] || []).map(flag).join('') : '<span class="gone">caiu</span>';
+    return `<div class="${seatClass(v, p)}" data-pid="${p}" style="left:${Math.round(x - SEAT_W / 2)}px;top:${Math.round(y)}px" title="${nameOf(p)} · ${ptsTxt(v.points[p] || 0)}">`
+      + `<div class="head"><span class="cr">${critter(p)}</span><span class="nm">${nameOf(p)}</span><span class="flags">${flags}</span></div>`
+      + `${stacksHTML(v, p, 46)}</div>`;
+  }).join('');
+}
+
+/** O picadeiro: monte (só o verso do topo) à esquerda, a aberta à direita. */
+function renderRing(v) {
+  const can = canPlay();
+  const deck = $('#deck'), open = $('#open');
+  deck.classList.toggle('can', can && !!v.top);
+  deck.classList.toggle('picked', picked === 'deck');
+  open.classList.toggle('can', can && !!v.open);
+  open.classList.toggle('picked', picked === 'open');
+  const unders = Math.min(2, Math.max(0, v.deckCount - 1));
+  const under = Array.from({ length: unders }, (_, i) => { const d = (unders - i) * 2; return `<span class="under" style="transform:translate(${d}px,${d}px)"></span>`; }).join('');
+  deck.innerHTML = `<div class="slot">${under}${v.top ? `<div class="lift">${CardArt.back(v.top, 92)}</div>` : '<div class="none"></div>'}</div>`
+    + `<span class="cap">monte · <b>${v.deckCount}</b></span>`;
+  open.innerHTML = `<div class="slot">${v.open ? `<div class="lift">${CardArt.front(v.open, 92)}</div>` : '<div class="none"></div>'}</div>`
+    + '<span class="cap">aberta</span>';
+}
+
+/** A sua mesa: personagem, área de jogo (cartas de 64) e área de pontos (leque de 40 por cor). */
+function renderMine(v) {
+  const mine = $('#mine');
+  mine.classList.toggle('myturn', v.phase === 'playing' && !v.paused && v.turn === ME);
+  const scored = v.scored[ME] || [];
+  const done = scoredColors(scored);
+  const STEP = 12;
+  const fans = done.map((color) => {
+    const cs = scored.filter((c) => c.color === color), n = cs.length;
+    const leaf = cs.map((c, i) => `<span style="left:${i * STEP}px;transform:rotate(${((i - (n - 1) / 2) * 7).toFixed(1)}deg)">${CardArt.front(c, 40)}</span>`).join('');
+    return `<div class="fan" data-color="${color}">${flag(color)}<div class="leaf" style="width:${40 + (n - 1) * STEP}px">${leaf}</div></div>`;
+  }).join('');
+  mine.innerHTML = `<div class="${seatClass(v, ME)}" data-pid="${ME}">`
+    + `<div class="who"><span class="cr">${critter(ME)}</span><span class="nm">você</span><span class="flags">${done.map(flag).join('')}</span></div>`
+    + stacksHTML(v, ME, 64)
+    + `<div class="pts"><div class="pts-h">pontos: <b>${done.length}</b> de ${v.target}</div>`
+    + `<div class="fans">${fans || '<span class="none">feche 5 esferas exatas de uma cor pra guardar ela aqui</span>'}</div></div></div>`;
+}
+
+/** Letreiro: a caixa fica parada; o texto troca com fade. */
+function setBanner(html) {
+  const el = $('#banner .txt');
+  if (el.dataset.t === html) return;
+  el.dataset.t = html;
+  el.classList.add('fade');
+  clearTimeout(setBanner.t);
+  setBanner.t = setTimeout(() => { el.innerHTML = html; el.classList.remove('fade'); }, 160);
+}
+function hint(v) {
+  if (v.phase === 'over') {
+    const w = v.winners.map(nameOf);
+    if (v.endReason === 'target') return w[0] === 'você' ? `fim: <b>você ganhou!</b> fechou ${v.target} cores` : `fim: <b>${w[0]} ganhou!</b> fechou ${v.target} cores`;
+    if (w.length > 1) return `o monte acabou: <b>empate entre ${list(w)}</b>`;
+    return w[0] === 'você' ? 'o monte acabou: <b>você ganhou!</b>' : `o monte acabou: <b>${w[0]} ganhou!</b>`;
+  }
+  if (v.phase !== 'playing') return 'preparando a partida…';
+  if (v.paused) return 'pausado: esperando a galera voltar';
+  if (v.turn === ME) return picked ? `agora a mesa de alguém (a sua também vale) · <b>Esc</b> desfaz` : '<b>sua vez:</b> escolha uma carta e depois a mesa de alguém';
+  return `vez de <b>${nameOf(v.turn)}</b>`;
+}
+
+function render(v) {
+  if (!v) return;
+  renderTop(v); renderSeats(v); renderRing(v); renderMine(v); setBanner(hint(v));
+}
+
+/* ---------- o clique (gesto mínimo; o arrasto chega na Task 4) ---------- */
+function canPlay() { return !animating && state && state.phase === 'playing' && !state.paused && state.turn === ME; }
+function canReceive(p) { return state.players.includes(p) && online.has(p); }
+/** Clica na aberta ou no monte: levanta a carta (clicar de novo solta). */
+function pick(from) {
+  if (!canPlay()) { if (state.phase === 'playing') toast(state.paused ? 'Pausado: esperando a galera voltar.' : ERR.not_your_turn); return; }
+  if (from === 'deck' && !shown.top) return;
+  picked = picked === from ? null : from; play('pick'); render(shown);
+}
+/** Clica numa mesa com a carta levantada: joga. */
+function dropOn(p) {
+  if (!picked || !canReceive(p)) return;
+  const from = picked; picked = null;
+  act(ME, { type: 'play', from, to: p });
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && picked) { picked = null; render(shown); } });
+
+app.addEventListener('click', (e) => {
+  if (e.target.closest('#top, #dev')) return;
+  if (e.target.closest('#deck')) { pick('deck'); return; }
+  if (e.target.closest('#open')) { pick('open'); return; }
+  const seat = e.target.closest('.seat[data-pid]');
+  if (seat) dropOn(seat.dataset.pid);
+});
+/** Destaque da mesa sob o mouse enquanto há carta levantada (sem redesenhar). */
+function setHover(pid) {
+  if (pid === hoverPid) return;
+  hoverPid = pid;
+  app.querySelectorAll('.seat[data-pid]').forEach((el) => el.classList.toggle('hover', el.dataset.pid === pid));
+}
+app.addEventListener('mouseover', (e) => {
+  const seat = e.target.closest('.seat[data-pid]');
+  setHover(picked && seat && canReceive(seat.dataset.pid) ? seat.dataset.pid : null);
+});
+app.addEventListener('mouseleave', () => setHover(null));
+
+/* ---------- topo e painel de dev ---------- */
+function paintSound() {
+  setSound(soundOn);
+  $('#soundBtn').innerHTML = `<i class="ti ${soundOn ? 'ti-volume' : 'ti-volume-off'}"></i>`;
+  $('#soundBtn').title = soundOn ? 'som ligado' : 'som desligado';
+}
+$('#soundBtn').onclick = () => { soundOn = !soundOn; paintSound(); };
+$('#devBtn').onclick = () => { const on = $('#dev').classList.toggle('on'); $('#devBtn').classList.toggle('on', on); };
+
+function opts(el, values, isOn, label, set) {
+  el.innerHTML = values.map((x) => `<button class="${isOn(x) ? 'on' : ''}" data-v="${x}">${label(x)}</button>`).join('');
+  el.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; set(b.dataset.v); };
+}
+function renderDev() {
+  opts($('#optN'), [2, 3, 4, 5, 6], (x) => x === N, String, (x) => { N = Number(x); newGame(); });
+  opts($('#optS'), [.4, 1, 2], (x) => x === SPEED, (x) => ({ 0.4: 'rápido', 1: 'normal', 2: 'lento' })[x], (x) => { SPEED = Number(x); renderDev(); if (shown && !animating) scheduleBot(shown); });
+  opts($('#optO'), ids.filter((p) => p !== ME), (p) => online.has(p), nameOf, toggleOnline);
+}
+/** Derruba ou traz de volta um bot e deixa o "servidor" reavaliar a presença. */
+function toggleOnline(p) {
+  if (online.has(p)) online.delete(p); else online.add(p);
+  presence();
+  if (shown && !animating) { render(shown); scheduleBot(shown); }
+  renderDev();
+}
+$('#newBtn').onclick = () => newGame();
+
+paintSound();
+fit(); newGame();
+</script>
+</body>
+</html>
