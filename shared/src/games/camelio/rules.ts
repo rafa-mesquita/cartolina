@@ -84,7 +84,7 @@ function startMatch(state: CamelioState, ctx: GameContext, again: boolean): Acti
   });
 }
 
-/** Uma vez (spec §2.3): pega a carta, põe na mesa de `to`, resolve, repõe a aberta, confere meta e monte, passa a vez. */
+/** Uma jogada (spec §2.3): pega a carta, põe na mesa de `to`, resolve, repõe a aberta, confere meta e monte, passa a vez. */
 function play(state: CamelioState, playerId: string, from: CamelioFrom, to: string, ctx: GameContext): ActionResult<CamelioState> {
   if (state.phase !== 'playing' || state.paused) return fail('not_playing');
   if (state.turn !== playerId) return fail('not_your_turn');
@@ -94,12 +94,12 @@ function play(state: CamelioState, playerId: string, from: CamelioFrom, to: stri
   let open = state.open;
   let card: number;
   if (from === 'open') {
-    if (open === null) return fail('not_playing');
+    if (open === null) return fail('not_playing'); // defensivo: não acontece, toda vez começa com aberta e monte (spec §2.3)
     card = open;
     open = deck.pop() ?? null;
   } else {
     const top = deck.pop();
-    if (top === undefined) return fail('not_playing');
+    if (top === undefined) return fail('not_playing'); // idem: o monte nunca fica vazio entre vezes
     card = top;
   }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { camelioCard } from '../src/games/camelio/deck';
 import { applyCamelioAction, camelioTarget, initialCamelioState } from '../src/games/camelio/rules';
+import { mulberry32 } from '../src/rng';
 import { act, allCards, C, ctxOf, ids, playing, tryAct } from './camelio-helpers';
 
 describe('estado inicial e meta', () => {
@@ -282,6 +283,49 @@ describe('jogar', () => {
     expect(s).toMatchObject({ phase: 'over', endReason: 'target', winners: ['p0'] });
   });
 
+  it('a carta que esvazia o monte e estoura vira o monte novo', () => {
+    const s = act(
+      playing(3, { table: { p0: [C.vermelho4], p1: [], p2: [] }, open: C.azul1, deck: [C.vermelho2], discard: [] }),
+      'p0',
+      { type: 'play', from: 'deck', to: 'p0' },
+      ctx3,
+    );
+    expect(s.log[0]!.outcome).toBe('bust');
+    expect(s.reshuffled).toBe(true);
+    expect(s.phase).toBe('playing');
+    expect([...s.deck].sort((a, b) => a - b)).toEqual([C.vermelho2, C.vermelho4]);
+    expect(s.discard).toEqual([]);
+  });
+
+  it('perder o ponto pela jogada', () => {
+    const s = act(
+      playing(3, { scored: { p0: [C.vermelho3, C.vermelho2], p1: [], p2: [] }, table: { p0: [C.vermelho1], p1: [], p2: [] }, open: C.vermelho4 }),
+      'p0',
+      { type: 'play', from: 'open', to: 'p0' },
+      ctx3,
+    );
+    expect(s.log[0]!.outcome).toBe('lost');
+    expect(s.scored.p0).toEqual([]);
+    expect(s.discard).toEqual(expect.arrayContaining([C.vermelho1, C.vermelho2, C.vermelho3, C.vermelho4]));
+    expect(s.discard).toHaveLength(4);
+  });
+
+  it('fim do monte com empate em tudo: vitória dividida', () => {
+    const s = act(
+      playing(3, {
+        reshuffled: true,
+        deck: [C.azul1],
+        open: C.vermelho1,
+        scored: { p0: [], p1: [C.vermelho3, C.vermelho2], p2: [C.azul2, C.azul3] },
+        table: { p0: [], p1: [C.verde3], p2: [C.amarelo3] },
+      }),
+      'p0',
+      { type: 'play', from: 'deck', to: 'p0' },
+      ctx3,
+    );
+    expect(s).toMatchObject({ phase: 'over', endReason: 'deck', winners: ['p1', 'p2'] });
+  });
+
   it('recusas', () => {
     expect(tryAct(playing(3), 'p1', { type: 'play', from: 'open', to: 'p1' }, ctx3)).toEqual({ ok: false, error: 'not_your_turn' });
     expect(tryAct(playing(3), 'p0', { type: 'play', from: 'open', to: 'p9' }, ctx3)).toEqual({ ok: false, error: 'bad_target' });
@@ -295,23 +339,40 @@ describe('jogar', () => {
 
 describe('partida inteira (simulação)', () => {
   it('nenhuma carta some nem duplica e a partida sempre termina', () => {
-    for (let seed = 1; seed <= 30; seed++) {
-      const ctx = ctxOf(ids(4), seed);
-      let s = act(initialCamelioState(), 'p0', { type: 'start' }, ctx);
-      let steps = 0;
-      while (s.phase === 'playing') {
-        const from = ctx.rng() < 0.5 ? 'open' : 'deck';
-        const to = s.players[Math.floor(ctx.rng() * s.players.length)]!;
-        s = act(s, s.turn!, { type: 'play', from, to }, ctx);
-        const cards = allCards(s);
-        expect(cards).toHaveLength(72);
-        expect(new Set(cards).size).toBe(72);
-        steps++;
-        expect(steps).toBeLessThan(150);
+    const finais = { target: 0, deck: 0, reshuffled: 0 };
+    for (const n of [2, 4]) {
+      for (let seed = 1; seed <= 30; seed++) {
+        const ctx = ctxOf(ids(n), seed);
+        const pick = mulberry32(seed + 1000); // decisões das jogadas; ctx.rng fica só pro motor
+        let s = act(initialCamelioState(), 'p0', { type: 'start' }, ctx);
+        let steps = 0;
+        while (s.phase === 'playing') {
+          const from = pick() < 0.5 ? 'open' : 'deck';
+          const to = s.players[Math.floor(pick() * s.players.length)]!;
+          s = act(s, s.turn!, { type: 'play', from, to }, ctx);
+          const cards = allCards(s);
+          expect(cards).toHaveLength(72);
+          expect(new Set(cards).size).toBe(72);
+          if (s.phase === 'playing') {
+            expect(s.open).not.toBeNull();
+            expect(s.deck.length).toBeGreaterThan(0);
+            expect(s.players).toContain(s.turn);
+          }
+          steps++;
+          expect(steps).toBeLessThan(150);
+        }
+        expect(s.phase).toBe('over');
+        expect(s.turn).toBeNull();
+        expect(s.winners.length).toBeGreaterThan(0);
+        if (s.endReason === 'deck') expect(s.deck).toEqual([]);
+        for (const entry of s.log) expect(entry.color).toBe(camelioCard(entry.card).color);
+        if (s.endReason === 'target') finais.target++;
+        if (s.endReason === 'deck') finais.deck++;
+        if (s.reshuffled) finais.reshuffled++;
       }
-      expect(s.phase).toBe('over');
-      expect(s.winners.length).toBeGreaterThan(0);
-      for (const entry of s.log) expect(entry.color).toBe(camelioCard(entry.card).color);
     }
+    expect(finais.target).toBeGreaterThan(0);
+    expect(finais.deck).toBeGreaterThan(0);
+    expect(finais.reshuffled).toBeGreaterThan(0);
   });
 });
