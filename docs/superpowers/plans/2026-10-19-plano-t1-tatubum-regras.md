@@ -1714,6 +1714,19 @@ describe('presença', () => {
     expect(settleKittens(s, without('p0'))).toMatchObject({ choice: null, current: 'p1' });
   });
 
+  it('o tatu que está na mão de quem escolhe onde esconder conta: sai um tatu do monte', () => {
+    // p0 comprou um tatu e está escolhendo (o tatu não está no monte); p1 cai de vez.
+    const s = {
+      ...table({ hands: { p0: [], p1: [], p2: [] }, draw: ['mico-0', 'tatubum-1'] }),
+      choice: { kind: 'cafune' as const, who: 'p0', tatu: 'tatubum-0', deadline: T0 + 30_000 },
+    };
+    const after = settleKittens(s, without('p1'));
+    expect(after.draw).toEqual(['mico-0']);
+    expect(after.out).toEqual(['tatubum-1']);
+    const hid = act(after, 'p0', { type: 'choose', position: 0 }, without('p1'));
+    expect(hid.draw.filter((c) => c.startsWith('tatubum'))).toHaveLength(1);
+  });
+
   it('a carta no ar de quem saiu não faz efeito', () => {
     const air = act(table({ hands: { p0: ['ataque-0'], p1: [], p2: [] } }), 'p0', { type: 'play', cards: ['ataque-0'] }, ctxOf(all));
     const gone = settleKittens(air, without('p0', 1000));
@@ -1767,15 +1780,27 @@ export function settleKittens(state: KittensState, ctx: GameContext): KittensSta
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [ ] **Step 4: Count the tatu being hidden in `eliminate`** (achado da revisão da Task 3)
+
+Enquanto alguém escolhe onde esconder o tatu (`choice.kind === 'cafune'`), esse tatu não está no monte. Em `shared/src/games/kittens/turn.ts`, dentro de `eliminate`, troque o `if (tatusIn(draw) > alive.length - 1) {` por:
+
+```ts
+  // O tatu que alguém está escondendo (Cafuné) ainda não voltou pro monte, mas conta.
+  const held = state.choice?.kind === 'cafune' ? 1 : 0;
+  if (tatusIn(draw) > 0 && tatusIn(draw) + held > alive.length - 1) {
+```
+
+e atualize o comentário de `eliminate` pra dizer "mais tatus (contando o que está sendo escondido) que vivos − 1".
+
+- [ ] **Step 5: Run tests to verify they pass**
 
 Run: `npm test -w shared -- kittens`
 Expected: PASS (todos os `kittens-*`).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add shared/src/games/kittens/settle.ts shared/test/kittens-presence.test.ts
+git add shared/src/games/kittens/settle.ts shared/src/games/kittens/turn.ts shared/test/kittens-presence.test.ts
 git commit -m "feat(shared): quem cai de vez sai do Tatubum (e leva um tatu do monte)" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
