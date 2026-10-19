@@ -89,6 +89,8 @@ export interface CoupBlock {
 export type CoupWindowKind = 'action' | 'block' | 'blockOnly';
 
 export interface CoupWindow {
+  /** Número da janela na partida (1, 2, 3…): a reação diz de qual janela é, e reação atrasada pra uma janela que já fechou não vale. */
+  id: number;
   kind: CoupWindowKind;
   /** Quem pode reagir nesta janela (vivos, na ordem dos assentos). */
   eligible: string[];
@@ -149,6 +151,8 @@ export interface CoupState {
   winner: string | null;
   /** Placar de vitórias da noite, por jogador (sobrevive ao "jogar de novo"). */
   wins: Record<string, number>;
+  /** Janelas abertas nesta partida (dá o id da próxima). */
+  windows: number;
   /** Diário da partida (recomeça a cada partida). */
   log: CoupLogEntry[];
 }
@@ -158,10 +162,10 @@ export type CoupAction =
   /** "jogar de novo" (só o anfitrião, no fim da partida). */
   | { type: 'restart' }
   | { type: 'act'; kind: CoupActionKind; target?: string }
-  /** "deixa" */
-  | { type: 'pass' }
-  | { type: 'challenge' }
-  | { type: 'block'; as: CoupCharacter }
+  /** "deixa". Nas três reações, `window` = id da janela que o jogador viu (o site sempre manda; sem ele, vale a janela aberta). */
+  | { type: 'pass'; window?: number }
+  | { type: 'challenge'; window?: number }
+  | { type: 'block'; as: CoupCharacter; window?: number }
   | { type: 'lose'; card: CoupCharacter }
   | { type: 'exchange'; keep: CoupCharacter[] };
 

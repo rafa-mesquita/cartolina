@@ -41,6 +41,7 @@ export function initialCoupState(): CoupState {
     out: [],
     winner: null,
     wins: {},
+    windows: 0,
     log: [],
   };
 }
@@ -83,7 +84,8 @@ function startMatch(state: CoupState, ctx: GameContext): ActionResult<CoupState>
 }
 
 function openWindow(state: CoupState, kind: CoupWindowKind, eligible: string[], ctx: GameContext): CoupState {
-  return { ...state, phase: 'reaction', window: { kind, eligible, passed: [], endsAt: ctx.now + COUP_WINDOW_MS } };
+  const id = state.windows + 1;
+  return { ...state, phase: 'reaction', windows: id, window: { id, kind, eligible, passed: [], endsAt: ctx.now + COUP_WINDOW_MS } };
 }
 
 /** A vez passa pro próximo vivo, limpando a jogada. */
@@ -217,7 +219,7 @@ function finishExchange(state: CoupState, player: string, keep: CoupCharacter[],
   });
 }
 
-/** A última carta `card` de `player` volta pro baralho, que é embaralhado, e ele compra outra (dúvida que falhou). */
+/** Uma carta `card` virada pra baixo de `player` volta pro baralho, que é embaralhado, e ele compra outra (dúvida que falhou). */
 function swapCard(state: CoupState, player: string, card: CoupCharacter, ctx: GameContext): CoupState {
   const hand = state.hands[player]!;
   const deck = shuffle(ctx.rng, [...state.deck, card]);
@@ -252,8 +254,9 @@ export function settleCoup(state: CoupState, ctx: GameContext): CoupState {
 }
 
 /** Por que `playerId` não pode reagir na janela aberta (ou null se pode). Prazo vencido = janela fechada. */
-function reactError(state: CoupState, playerId: string, ctx: GameContext): string | null {
+function reactError(state: CoupState, playerId: string, ctx: GameContext, window?: number): string | null {
   if (state.phase !== 'reaction' || state.window === null || ctx.now >= state.window.endsAt) return 'window_closed';
+  if (window !== undefined && window !== state.window.id) return 'window_closed';
   if (!state.players.includes(playerId)) return 'not_player';
   if (!state.window.eligible.includes(playerId)) return 'cannot_react';
   if (state.window.passed.includes(playerId)) return 'already_passed';
@@ -289,19 +292,19 @@ export function applyCoupAction(
       return ok(settleCoup(declare(state, playerId, action.kind, target, ctx), ctx));
     }
     case 'pass': {
-      const e = reactError(state, playerId, ctx);
+      const e = reactError(state, playerId, ctx, action.window);
       if (e) return fail(e);
       const w = state.window!;
       return ok(settleCoup({ ...state, window: { ...w, passed: [...w.passed, playerId] } }, ctx));
     }
     case 'challenge': {
-      const e = reactError(state, playerId, ctx);
+      const e = reactError(state, playerId, ctx, action.window);
       if (e) return fail(e);
       if (!canChallenge(state)) return fail('cannot_react');
       return ok(settleCoup(challenge(state, playerId, ctx), ctx));
     }
     case 'block': {
-      const e = reactError(state, playerId, ctx);
+      const e = reactError(state, playerId, ctx, action.window);
       if (e) return fail(e);
       if (!canBlock(state, playerId)) return fail('cannot_react');
       if (!COUP_BLOCKERS[state.declared!.kind].includes(action.as)) return fail('bad_block');

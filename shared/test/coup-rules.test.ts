@@ -134,7 +134,7 @@ describe('Cúpi: janela de reação', () => {
     let s = act(table(THREE), 'p0', { type: 'act', kind: 'tax' }, ctx3);
     expect(s.phase).toBe('reaction');
     expect(s.declared).toEqual({ actor: 'p0', kind: 'tax', target: null });
-    expect(s.window).toEqual({ kind: 'action', eligible: ['p1', 'p2'], passed: [], endsAt: T0 + COUP_WINDOW_MS });
+    expect(s.window).toEqual({ id: 1, kind: 'action', eligible: ['p1', 'p2'], passed: [], endsAt: T0 + COUP_WINDOW_MS });
     s = act(s, 'p1', { type: 'pass' }, ctx3);
     expect(s.window!.passed).toEqual(['p1']);
     expect(tryAct(s, 'p1', { type: 'pass' }, ctx3)).toEqual({ ok: false, error: 'already_passed' });

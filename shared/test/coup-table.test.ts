@@ -37,6 +37,7 @@ function st(hands: Record<string, { coins?: number; cards: [CoupCharacter, boole
     out: [],
     winner: null,
     wins: {},
+    windows: 0,
     log: [],
   };
 }
@@ -48,7 +49,7 @@ const three = () =>
     p2: { coins: 5, cards: [['ambassador', true], ['duke', false]] },
   });
 
-const win = (kind: CoupWindow['kind']): CoupWindow => ({ kind, eligible: [], passed: [], endsAt: 0 });
+const win = (kind: CoupWindow['kind']): CoupWindow => ({ id: 1, kind, eligible: [], passed: [], endsAt: 0 });
 
 describe('Cúpi: consultas da mesa', () => {
   it('cartas viradas pra baixo, vivos e moedas', () => {

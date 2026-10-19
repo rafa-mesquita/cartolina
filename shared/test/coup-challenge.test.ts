@@ -59,7 +59,7 @@ describe('Cúpi: dúvida da ação', () => {
     s = act(s, 'p1', { type: 'challenge' }, ctx);
     s = act(s, 'p1', { type: 'lose', card: 'duke' }, ctx);
     expect(s.phase).toBe('reaction');
-    expect(s.window).toEqual({ kind: 'blockOnly', eligible: ['p1'], passed: [], endsAt: T0 + COUP_WINDOW_MS });
+    expect(s.window).toEqual({ id: 2, kind: 'blockOnly', eligible: ['p1'], passed: [], endsAt: T0 + COUP_WINDOW_MS });
     expect(tryAct(s, 'p1', { type: 'challenge' }, ctx)).toEqual({ ok: false, error: 'cannot_react' });
     s = act(s, 'p1', { type: 'pass' }, ctx);
     expect(s.out).toEqual(['p1']);
@@ -84,7 +84,7 @@ describe('Cúpi: bloqueio', () => {
     const b = act(s, 'p1', { type: 'block', as: 'ambassador' }, ctx);
     expect(b.block).toEqual({ by: 'p1', as: 'ambassador' });
     expect(b.log.at(-1)).toEqual({ t: 'block', by: 'p1', as: 'ambassador' });
-    expect(b.window).toEqual({ kind: 'block', eligible: ['p0', 'p2'], passed: [], endsAt: T0 + COUP_WINDOW_MS });
+    expect(b.window).toEqual({ id: 2, kind: 'block', eligible: ['p0', 'p2'], passed: [], endsAt: T0 + COUP_WINDOW_MS });
     expect(tryAct(b, 'p1', { type: 'challenge' }, ctx)).toEqual({ ok: false, error: 'cannot_react' });
     expect(tryAct(b, 'p0', { type: 'block', as: 'captain' }, ctx)).toEqual({ ok: false, error: 'cannot_react' });
   });
@@ -102,6 +102,16 @@ describe('Cúpi: bloqueio', () => {
     s = allPass(act(s, 'p1', { type: 'block', as: 'contessa' }, ctx), ctx);
     expect(s.hands.p0!.coins).toBe(0);
     expect(hiddenOf(s, 'p1')).toHaveLength(2);
+  });
+
+  it('reação atrasada, de uma janela que já fechou, não vale na janela nova', () => {
+    let s = act(table(THREE), 'p0', { type: 'act', kind: 'steal', target: 'p1' }, ctx);
+    const first = s.window!.id;
+    s = act(s, 'p1', { type: 'block', as: 'captain' }, ctx);
+    expect(s.window!.id).toBe(first + 1);
+    expect(tryAct(s, 'p2', { type: 'challenge', window: first }, ctx)).toEqual({ ok: false, error: 'window_closed' });
+    expect(tryAct(s, 'p2', { type: 'pass', window: first }, ctx)).toEqual({ ok: false, error: 'window_closed' });
+    expect(act(s, 'p2', { type: 'pass', window: s.window!.id }, ctx).window!.passed).toEqual(['p2']);
   });
 
   it('bloqueio vale quando o prazo acaba', () => {
