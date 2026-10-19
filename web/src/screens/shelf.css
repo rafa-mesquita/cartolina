@@ -32,6 +32,10 @@
   content: ''; position: absolute; left: 50%; top: 12px; width: 62px; height: 18px; transform: translateX(-50%) rotate(3deg);
   background: rgba(242, 165, 65, 0.75); box-shadow: 0 1px 2px rgba(59, 47, 47, 0.25);
 }
+/* Cama-Leão: lona de circo listrada, letreiro vermelho */
+.cover-camelio { background: repeating-linear-gradient(90deg, #f7efe0 0 18px, #f3dcd2 18px 36px); color: #1f2a4a; }
+.cover-camelio b { font: 400 32px/1.05 'Rye', Georgia, serif; color: #c8372d; }
+.cover-camelio span { font: 500 14px/1.25 'Fredoka', system-ui, sans-serif; }
 /* número decorativo no canto, como o da carta da mão */
 .shelf .cover-ito::after {
   content: '87'; content: '87' / ''; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
@@ -50,11 +54,13 @@
 .cover-dixit.mini { font: 400 15px/1 'DM Serif Display', Georgia, serif; }
 .cover-pictures.mini { font: 700 19px/1 'Caveat', cursive; }
 .cover-pictures.mini::before, .cover-pictures.mini::after { display: none; }
+.cover-camelio.mini { font: 400 12px/1.1 'Rye', Georgia, serif; color: #c8372d; }
 /* Cor de cada jogo na página dele (a mesma da capa): o "criar sala" segue. Jogo sem cor aqui fica no rosa. */
 .game-ito { --game: var(--pink); --game-ink: var(--ink); }
 .game-dixit { --game: #2f5d50; --game-ink: #f4ecd8; }
 /* Retratim: o kraft da capa some no fundo da página; o botão vai na tinta azul do álbum */
 .game-pictures { --game: #2f5aa8; --game-ink: #f6eedd; }
+.game-camelio { --game: #c8372d; --game-ink: #f7efe0; }
 .game-page .btn.play { background: var(--game, var(--pink)); color: var(--game-ink, var(--ink)); }
 .join-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
 .join-line > span { font: 21px/1 var(--font-hand); }
