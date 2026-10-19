@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DixitState } from '../src/games/dixit/types';
+import { KITTENS_NOPE_MS, type KittensState } from '../src/games/kittens/types';
 import { GAMES, isGameId } from '../src/games/registry';
 import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
 import { PLAYER_COLORS } from '../src/players';
@@ -9,6 +10,7 @@ import {
   createRoom,
   isDixitRoomView,
   isItoRoomView,
+  isKittensRoomView,
   isPicturesRoomView,
   itoStateOf,
   joinRoom,
@@ -35,12 +37,14 @@ function dixitRoom(n: number): Room {
 }
 
 describe('registro de jogos', () => {
-  it('conhece ITO, Dixit e Retratim', () => {
-    expect(Object.keys(GAMES)).toEqual(['ito', 'dixit', 'pictures']);
+  it('conhece ITO, Dixit, Retratim e Tatubum', () => {
+    expect(Object.keys(GAMES)).toEqual(['ito', 'dixit', 'pictures', 'kittens']);
     expect(GAMES.dixit.minPlayers).toBe(3);
     expect(GAMES.ito.liveCursors).toBe(true);
     expect(GAMES.dixit.liveCursors).toBe(false);
     expect(GAMES.pictures).toMatchObject({ minPlayers: 3, maxPlayers: 6, liveCursors: false, recordsHistory: false });
+    expect(GAMES.kittens).toMatchObject({ minPlayers: 2, maxPlayers: 8, liveCursors: false, recordsHistory: false });
+    expect(isGameId('kittens')).toBe(true);
     expect(isGameId('dixit')).toBe(true);
     expect(isGameId('pictures')).toBe(true);
     expect(isGameId('xadrez')).toBe(false);
@@ -215,5 +219,55 @@ describe('sala de Retratim', () => {
     }
     expect(ERROR_CODES).not.toContain('cubes_incomplete');
     expect(errorMessage('room_full')).toBe('A sala está cheia.');
+  });
+});
+
+function kittensRoom(n: number): Room {
+  let room = createRoom('ABCD', 0, 'kittens');
+  for (let i = 0; i < n; i++) {
+    const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+    if (!res.ok) throw new Error(res.error);
+    room = res.room;
+  }
+  return room;
+}
+
+describe('sala de Tatubum', () => {
+  it('é de Tatubum, cabe 8 e recusa o 9º', () => {
+    const room = kittensRoom(8);
+    expect(isKittensRoomView(roomView(room, null))).toBe(true);
+    expect(roomSummary(room)).toMatchObject({ game: 'kittens', phase: 'lobby' });
+    expect(joinRoom(room, { token: 't8', name: 'P8', color: PLAYER_COLORS[8]! }, 'p8', 0)).toEqual({ ok: false, error: 'room_full' });
+  });
+
+  it('o alarme acorda no fim da janela do Nem vem! e o tick resolve a carta', () => {
+    let room = step(kittensRoom(3), 'p0', { type: 'start' }, 10);
+    const game = room.game as KittensState;
+    // Um Ataque com id próprio na mão de p0, pra não depender do sorteio.
+    room = { ...room, game: { ...game, hands: { ...game.hands, p0: ['ataque-99', ...game.hands.p0!] } } };
+    room = step(room, 'p0', { type: 'play', cards: ['ataque-99'] }, 20);
+    expect(nextAlarmAt(room, 20)).toBe(20 + KITTENS_NOPE_MS);
+    expect(tick(room, 20 + KITTENS_NOPE_MS - 1, rng).game).toBe(room.game);
+    expect(tick(room, 20 + KITTENS_NOPE_MS, rng).game).toMatchObject({ pending: null, current: 'p1', owed: 2 });
+  });
+
+  it('erros do Tatubum têm mensagem em português', () => {
+    for (const code of [
+      'not_alive',
+      'card_in_air',
+      'waiting_choice',
+      'not_your_turn',
+      'not_in_hand',
+      'bad_combo',
+      'bad_target',
+      'bad_ask',
+      'nothing_to_nope',
+      'no_nope',
+      'not_your_choice',
+      'bad_choice',
+    ]) {
+      expect(ERROR_CODES).toContain(code);
+      expect(errorMessage(code)).not.toBe('Algo deu errado.');
+    }
   });
 });

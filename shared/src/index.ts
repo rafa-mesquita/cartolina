@@ -42,4 +42,19 @@ export { scorePicturesRound } from './games/pictures/scoring';
 export { applyPicturesAction, initialPicturesState, settlePictures } from './games/pictures/rules';
 export { pictures, picturesNextDeadline, picturesViewFor } from './games/pictures/view';
 export { picturesActionSchema } from './games/pictures/schema';
+export * from './games/kittens/types';
+export * from './games/kittens/cards';
+export {
+  KITTENS_EXTRA_CAFUNES,
+  KITTENS_HAND_START,
+  KITTENS_PACK,
+  KITTENS_PACK_SIZE,
+  kittensBaseDeck,
+  kittensDeal,
+  kittensPacksFor,
+} from './games/kittens/deck';
+export { applyKittensAction, initialKittensState } from './games/kittens/rules';
+export { settleKittens } from './games/kittens/settle';
+export { kittens, kittensNextDeadline, kittensViewFor } from './games/kittens/view';
+export { kittensActionSchema } from './games/kittens/schema';
 export * from './games/registry';
