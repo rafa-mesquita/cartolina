@@ -16,6 +16,28 @@ function must(res, what) {
   return res.state;
 }
 
+// Frases exatas da narração (ids do baralho: 22 = vermelho 3, 20 = vermelho 2, 0 = verde 1, 47 = bicolor vermelho 3).
+{
+  const nomes = { p0: 'você', p1: 'Léo', p2: 'Bia', p3: 'Nina' };
+  const nameOf = (p) => nomes[p];
+  const casos = [
+    [{ by: 'p1', from: 'open', to: 'p2', card: 22, outcome: 'bust' }, 'Léo deu um 3 vermelho pra Bia: Bia estourou!'],
+    [{ by: 'p1', from: 'open', to: 'p1', card: 22, outcome: 'bust' }, 'Léo ficou com um 3 vermelho: estourou!'],
+    [{ by: 'p0', from: 'deck', to: 'p0', card: 20, outcome: 'scored' }, 'você ficou com o 2 vermelho do monte: fechou o vermelho!'],
+    [{ by: 'p0', from: 'open', to: 'p3', card: 0, outcome: 'none' }, 'você deu um 1 verde pra Nina.'],
+    [{ by: 'p2', from: 'deck', to: 'p0', card: 47, outcome: 'lost' }, 'Bia deu o 3 vermelho do monte pra você: você perdeu o ponto do vermelho!'],
+  ];
+  for (const [last, esperado] of casos) {
+    const got = narrate(last, nameOf);
+    if (got !== esperado) throw new Error(`narração diferente:
+  esperado: ${esperado}
+  veio:     ${got}`);
+  }
+  if (narrate(null, nameOf) !== '') throw new Error('narrate(null) devia devolver ""');
+  const lobby = camelioViewFor(initialCamelioState(), 'p0');
+  if (CamaLeaoBot.choose(lobby, 'p0', ['p0', 'p1'], Math.random) !== null) throw new Error('bot devia devolver null no lobby');
+}
+
 const GAMES_PER_N = 40;
 const report = [];
 for (let n = 2; n <= 6; n++) {

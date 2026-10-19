@@ -94,6 +94,7 @@ Expected: `prototipo/cama-leao/rules.js` criado, sem erro.
 /* Frase do letreiro pra uma jogada (spec §5.4). `nameOf(id)` dá o nome; o humano é "você". */
 (function () {
   function narrate(last, nameOf) {
+    if (!last) return '';
     const card = CamaLeao.camelioCard(last.card);
     const by = nameOf(last.by);
     const what = `${last.from === 'deck' ? 'o' : 'um'} ${card.spheres} ${card.color}${last.from === 'deck' ? ' do monte' : ''}`;
@@ -103,7 +104,7 @@ Expected: `prototipo/cama-leao/rules.js` criado, sem erro.
       case 'scored':
         return `${head}: ${who}fechou o ${card.color}!`;
       case 'bust':
-        return `${head}: estourou!`;
+        return `${head}: ${who}estourou!`;
       case 'lost':
         return `${head}: ${who}perdeu o ponto do ${card.color}!`;
       default:
@@ -114,7 +115,7 @@ Expected: `prototipo/cama-leao/rules.js` criado, sem erro.
 })();
 ```
 
-Exemplos esperados: "Léo deu um 3 vermelho pra Bia: estourou!", "Duda ficou com o 2 azul do monte: fechou o azul!", "você deu um 1 verde pra Nina: Nina fechou o verde!". (Com o humano o texto fica "você ficou com…", minúsculo de propósito: o letreiro começa com o nome.)
+Exemplos esperados: "Léo deu um 3 vermelho pra Bia: Bia estourou!", "Léo ficou com um 4 vermelho: estourou!", "Duda ficou com o 2 azul do monte: fechou o azul!", "você deu um 1 verde pra Nina: Nina fechou o verde!". (Com o humano o texto fica "você ficou com…", minúsculo de propósito: o letreiro começa com o nome.)
 
 - [ ] **Step 4: `bot.js`**
 
@@ -123,10 +124,16 @@ O bot só olha o que um jogador vê (a view). Pra carta do monte, considera toda
 ```js
 'use strict';
 /* Bot do protótipo (spec §5.5): fecha 5 se puder, dá carta que estoura o líder, senão fica com carta que não estoura.
-   Escolhe { from, to } olhando só a view, como um jogador. Referência pros bots de dev do C3. */
+   Escolhe { from, to } olhando só a view, como um jogador: devolve { from, to } ou null se não há jogada.
+   Referência pros bots de dev do C3. */
 (function () {
   const { CAMELIO_DECK, CAMELIO_EXACT, camelioBack } = CamaLeao;
-  const sameBack = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const sameBack = (a, b) =>
+    a.kind === b.kind &&
+    a.color === b.color &&
+    a.spheres === b.spheres &&
+    (a.colors ? a.colors[0] : undefined) === (b.colors ? b.colors[0] : undefined) &&
+    (a.colors ? a.colors[1] : undefined) === (b.colors ? b.colors[1] : undefined);
 
   /** Soma da cor na mesa de `to` com a carta, e o que aconteceria. */
   function outcomeOf(view, to, card) {
@@ -149,8 +156,9 @@ O bot só olha o que um jogador vê (a view). Pra carta do monte, considera toda
       return 1 + sum / CAMELIO_EXACT; // perto de 5 sem passar é bom
     }
     if (o === 'scored') return pts(to) + 1 >= view.target ? -100 : -8;
-    if (o === 'bust') return leader ? 7 : 4;
-    if (o === 'lost') return leader ? 10 : 7;
+    // Só vale a pena estourar/derrubar o líder; quem não lidera quase não compensa (spec §5.5).
+    if (o === 'bust') return leader ? 7 : 0.5;
+    if (o === 'lost') return leader ? 10 : 1.5;
     return 0;
   }
 
@@ -163,6 +171,7 @@ O bot só olha o que um jogador vê (a view). Pra carta do monte, considera toda
 
   /** `active`: quem pode receber carta agora (jogadores da partida que estão online). */
   function choose(view, me, active, rng) {
+    if (view.phase !== 'playing' || view.paused) return null;
     const targets = view.players.filter((p) => active.includes(p));
     const deckCards = view.top ? behind(view) : [];
     let best = null;
@@ -175,7 +184,7 @@ O bot só olha o que um jogador vê (a view). Pra carta do monte, considera toda
         if (!best || score > best.score) best = { from: p.from, to, score };
       }
     }
-    return { from: best.from, to: best.to };
+    return best ? { from: best.from, to: best.to } : null;
   }
 
   window.CamaLeaoBot = { choose, outcomeOf };
@@ -201,6 +210,28 @@ const { initialCamelioState, applyCamelioAction, camelioViewFor, camelioActionSc
 function must(res, what) {
   if (!res.ok) throw new Error(`${what} recusado: ${res.error}`);
   return res.state;
+}
+
+// Frases exatas da narração (ids do baralho: 22 = vermelho 3, 20 = vermelho 2, 0 = verde 1, 47 = bicolor vermelho 3).
+{
+  const nomes = { p0: 'você', p1: 'Léo', p2: 'Bia', p3: 'Nina' };
+  const nameOf = (p) => nomes[p];
+  const casos = [
+    [{ by: 'p1', from: 'open', to: 'p2', card: 22, outcome: 'bust' }, 'Léo deu um 3 vermelho pra Bia: Bia estourou!'],
+    [{ by: 'p1', from: 'open', to: 'p1', card: 22, outcome: 'bust' }, 'Léo ficou com um 3 vermelho: estourou!'],
+    [{ by: 'p0', from: 'deck', to: 'p0', card: 20, outcome: 'scored' }, 'você ficou com o 2 vermelho do monte: fechou o vermelho!'],
+    [{ by: 'p0', from: 'open', to: 'p3', card: 0, outcome: 'none' }, 'você deu um 1 verde pra Nina.'],
+    [{ by: 'p2', from: 'deck', to: 'p0', card: 47, outcome: 'lost' }, 'Bia deu o 3 vermelho do monte pra você: você perdeu o ponto do vermelho!'],
+  ];
+  for (const [last, esperado] of casos) {
+    const got = narrate(last, nameOf);
+    if (got !== esperado) throw new Error(`narração diferente:
+  esperado: ${esperado}
+  veio:     ${got}`);
+  }
+  if (narrate(null, nameOf) !== '') throw new Error('narrate(null) devia devolver ""');
+  const lobby = camelioViewFor(initialCamelioState(), 'p0');
+  if (CamaLeaoBot.choose(lobby, 'p0', ['p0', 'p1'], Math.random) !== null) throw new Error('bot devia devolver null no lobby');
 }
 
 const GAMES_PER_N = 40;

@@ -1,9 +1,15 @@
 'use strict';
 /* Bot do protótipo (spec §5.5): fecha 5 se puder, dá carta que estoura o líder, senão fica com carta que não estoura.
-   Escolhe { from, to } olhando só a view, como um jogador. Referência pros bots de dev do C3. */
+   Escolhe { from, to } olhando só a view, como um jogador: devolve { from, to } ou null se não há jogada.
+   Referência pros bots de dev do C3. */
 (function () {
   const { CAMELIO_DECK, CAMELIO_EXACT, camelioBack } = CamaLeao;
-  const sameBack = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const sameBack = (a, b) =>
+    a.kind === b.kind &&
+    a.color === b.color &&
+    a.spheres === b.spheres &&
+    (a.colors ? a.colors[0] : undefined) === (b.colors ? b.colors[0] : undefined) &&
+    (a.colors ? a.colors[1] : undefined) === (b.colors ? b.colors[1] : undefined);
 
   /** Soma da cor na mesa de `to` com a carta, e o que aconteceria. */
   function outcomeOf(view, to, card) {
@@ -26,8 +32,9 @@
       return 1 + sum / CAMELIO_EXACT; // perto de 5 sem passar é bom
     }
     if (o === 'scored') return pts(to) + 1 >= view.target ? -100 : -8;
-    if (o === 'bust') return leader ? 7 : 4;
-    if (o === 'lost') return leader ? 10 : 7;
+    // Só vale a pena estourar/derrubar o líder; quem não lidera quase não compensa (spec §5.5).
+    if (o === 'bust') return leader ? 7 : 0.5;
+    if (o === 'lost') return leader ? 10 : 1.5;
     return 0;
   }
 
@@ -40,6 +47,7 @@
 
   /** `active`: quem pode receber carta agora (jogadores da partida que estão online). */
   function choose(view, me, active, rng) {
+    if (view.phase !== 'playing' || view.paused) return null;
     const targets = view.players.filter((p) => active.includes(p));
     const deckCards = view.top ? behind(view) : [];
     let best = null;
@@ -52,7 +60,7 @@
         if (!best || score > best.score) best = { from: p.from, to, score };
       }
     }
-    return { from: best.from, to: best.to };
+    return best ? { from: best.from, to: best.to } : null;
   }
 
   window.CamaLeaoBot = { choose, outcomeOf };
