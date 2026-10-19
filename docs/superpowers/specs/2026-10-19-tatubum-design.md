@@ -21,7 +21,7 @@ Decisões do usuário (2026-10-19):
 - **2 a 8 jogadores**, com baralho que cresce com a mesa (§3).
 - **Janela do Nem vem! de 5 s**, fixa, sempre corre, mesmo que ninguém tenha Nem vem! (assim a
   demora não entrega quem tem).
-- **Escolhas pessoais com 30 s** (Favor, Cafuné, trio, 5 diferentes); acabou o tempo, o servidor
+- **Escolhas pessoais com 30 s** (Favor, Cafuné, 5 diferentes; no trio o nome vai junto da jogada); acabou o tempo, o servidor
   escolhe ao acaso. **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
@@ -124,19 +124,23 @@ baralho é o do jogo original.
 - `cards.ts`: tipos de carta (`tatubum`, `cafune`, `nemvem`, `ataque`, `pular`, `favor`,
   `embaralhar`, `espiar`, `capivara`, `mico`, `quati`, `tamandua`, `preguica`), nomes em PT-BR,
   quem aceita Nem vem!. Cada carta física tem id próprio `<tipo>-<n>` (ex.: `ataque-3`) pra animar.
-- `deck.ts`: `buildDeck(n)` e `deal(...)` (§3).
+- `deck.ts`: `kittensBaseDeck(n)` e `kittensDeal(...)` (§3). Os números dos Cafunés são sorteados, pra
+  um Cafuné roubado não entregar de quem era.
 - `types.ts`: fases `lobby → playing → gameover`. Estado: `players` (ordem dos assentos), `alive`,
   `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `current`, `owed`,
   `pending`, `choice`, `peek`, `log`, `winner`.
   - `pending`: `{ by, play: { kind, cards, target, ask }, nopes: { by, card }[], resolvesAt }`.
   - `choice`: `{ kind: 'cafune' | 'favor' | 'cinco', who, deadline, ... }` (o trio não precisa de
     escolha: o nome vai junto da jogada).
-  - `peek`: `{ who, cards }`, apagado na próxima ação de quem espiou ou quando a vez muda.
+  - `peek`: `{ who, cards }`, apagado quando quem espiou compra ou gasta um turno, quando o monte
+    muda (Embaralhar, Cafuné, tatu tirado de quem caiu) ou quando a vez passa.
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
 - Ações (`schema.ts`, zod): `start`, `play { cards: id[], target?, ask? }`, `nope`, `draw`,
   `choose { … }` (posição do tatu, carta do Favor, carta do descarte), `again`, `lobby`.
-- `rules.ts`: `applyKittensAction` (valida turno, posse das cartas, combo, alvo) e
-  `onPresenceChange` (prazos e presença).
+- `rules.ts`: `applyKittensAction` (valida turno, posse das cartas, combo, alvo); `settle.ts`:
+  `settleKittens`, que é o `onPresenceChange` (presença e prazos) e roda antes de cada ação.
+- `turn.ts` (diário, vez, eliminação, vitória), `play.ts` (lê a jogada), `choices.ts` (escolhas e
+  escolha ao acaso).
 - `resolve.ts`: ao vencer o prazo, **Nem vem! em número par → aplica; ímpar → cancela**. Em ambos os
   casos as cartas jogadas e os Nem vem! vão pro descarte.
 - `view.ts`: `viewFor` (§4.3) e `nextDeadline` = o menor entre `pending.resolvesAt` e
@@ -164,7 +168,9 @@ A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o 
 - Favor e par: a carta que trocou de mão aparece só pros dois; os outros leem "Caio roubou uma
   carta da Bia".
 - Cafuné: a posição do tatu só quem escondeu sabe; os outros leem "Ana escondeu o tatu".
-- `choice`: quem escolhe vê as opções; os outros veem quem está escolhendo e o relógio.
+- `choice`: quem escolhe vê as opções; os outros veem quem está escolhendo e o relógio. No Cafuné, a
+  visão não leva o id do tatu (junto com o tatu tirado do monte quando alguém cai, ele entregaria a
+  posição).
 
 ### 4.4 Registro, servidor e histórico
 
@@ -300,7 +306,11 @@ Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca 
   acaso, trio com e sem a carta, 5 diferentes com descarte vazio); prazos das escolhas (acaso no
   fim); segredos do `viewFor`; presença (queda < 30 s, eliminação, tatu removido, carta no ar de
   quem saiu); vitória por explosão e por queda; `nextDeadline`.
-- **`server/`**: `POST /rooms { game: 'kittens' }`; o alarme resolve a carta no ar.
+- **`server/`**: `POST /rooms { game: 'kittens' }`, mão de cada um e erro em PT-BR. O alarme que
+  resolve a carta no ar é testado na sala (`shared/test/room-games.test.ts`: `nextAlarmAt` + `tick`),
+  como no Retratim.
+- **Simulação aleatória** (`shared/test/kittens-fuzz.test.ts`): partidas com jogadas, quedas e prazos
+  ao acaso, conferindo a cada passo que nenhuma carta some e que o monte tem vivos − 1 tatus.
 - **`web/`**: componentes principais com dados de teste; bots.
 - **E2E**: partida curta com 3 navegadores pela página do Tatubum, jogando por WebSocket como o
   `e2e/dixit-historico.spec.ts` onde precisar.
