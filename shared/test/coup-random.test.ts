@@ -28,22 +28,18 @@ function randomMove(state: CoupState, me: string, rng: Rng): CoupAction | null {
   return { type: 'pass', windowId };
 }
 
-/** Quantas vezes cada situação apareceu nas partidas sorteadas (o último teste confere que nenhuma ficou de fora). */
-const cobertura = { challenge: 0, block: 0, blocked: 0, lose: 0, blockOnly: 0 };
-
-function playOut(n: number, seed: number): CoupState {
+/** Joga uma partida até o fim. Devolve o estado final e quantas janelas `blockOnly` abriram (isso o diário não registra). */
+function playOut(n: number, seed: number): { state: CoupState; blockOnly: number } {
   const rng = mulberry32(seed);
   const ctx: GameContext = { hostId: 'p0', active: ids(n), rng, now: T0 };
   const start = applyCoupAction(initialCoupState(), 'p0', { type: 'start' }, ctx);
   if (!start.ok) throw new Error(`seed ${seed}: ${start.error}`);
   let state = start.state;
+  let blockOnly = 0;
   let lastBlockOnly: number | null = null;
   const deck = [...fullDeck()].sort();
   for (let step = 0; step < 3000; step++) {
-    if (state.phase === 'over') {
-      for (const entry of state.log) if (entry.t in cobertura) cobertura[entry.t as keyof typeof cobertura]++;
-      return state;
-    }
+    if (state.phase === 'over') return { state, blockOnly };
     const moves = state.players.flatMap((p) => {
       const move = randomMove(state, p, rng);
       return move ? [{ p, move }] : [];
@@ -55,7 +51,7 @@ function playOut(n: number, seed: number): CoupState {
     state = res.state;
     // Cada janela blockOnly conta uma vez (o id muda quando abre outra).
     if (state.window?.kind === 'blockOnly' && state.window.id !== lastBlockOnly) {
-      cobertura.blockOnly++;
+      blockOnly++;
       lastBlockOnly = state.window.id;
     }
     const onde = `seed ${seed} passo ${step}`;
@@ -66,11 +62,15 @@ function playOut(n: number, seed: number): CoupState {
   throw new Error(`seed ${seed}: a partida não acabou`);
 }
 
+const JOGADORES = [2, 3, 4, 5, 6];
+const SEMENTES = 20;
+const seedOf = (i: number, n: number): number => i * 31 + n;
+
 describe('Cúpi: partidas sorteadas', () => {
-  it.each([2, 3, 4, 5, 6])('com %i jogadores, 20 partidas terminam sem jogada recusada nem carta sumida', (n) => {
-    for (let i = 1; i <= 20; i++) {
-      const seed = i * 31 + n;
-      const state = playOut(n, seed);
+  it.each(JOGADORES)('com %i jogadores, 20 partidas terminam sem jogada recusada nem carta sumida', (n) => {
+    for (let i = 1; i <= SEMENTES; i++) {
+      const seed = seedOf(i, n);
+      const { state } = playOut(n, seed);
       expect(state.winner, `seed ${seed}`).not.toBeNull();
       expect(state.out, `seed ${seed}`).toHaveLength(n - 1);
       expect(state.wins[state.winner!], `seed ${seed}`).toBe(1);
@@ -78,7 +78,15 @@ describe('Cúpi: partidas sorteadas', () => {
   });
 
   // Sem isso, uma mudança que faça a visão parar de oferecer dúvida ou bloqueio deixaria o teste passando sem testar nada.
-  it('as 100 partidas passaram por dúvida, bloqueio, bloqueio barrado, perda de carta e janela só de bloqueio', () => {
+  it('cobertura: as partidas sorteadas passam por dúvida, bloqueio, bloqueio barrado, perda de carta e janela só de bloqueio', () => {
+    const cobertura = { challenge: 0, block: 0, blocked: 0, lose: 0, blockOnly: 0 };
+    for (const n of JOGADORES) {
+      for (let i = 1; i <= SEMENTES; i++) {
+        const { state, blockOnly } = playOut(n, seedOf(i, n));
+        for (const entry of state.log) if (entry.t in cobertura) cobertura[entry.t as keyof typeof cobertura]++;
+        cobertura.blockOnly += blockOnly;
+      }
+    }
     for (const [nome, vezes] of Object.entries(cobertura)) expect(vezes, nome).toBeGreaterThan(0);
   });
 });
