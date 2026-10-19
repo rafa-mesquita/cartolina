@@ -3,6 +3,7 @@ import { kittensKindOf } from './cards';
 import { hideTatu } from './choices';
 import { kittensDeal } from './deck';
 import { parsePlay } from './play';
+import { settleKittens } from './settle';
 import { eliminate, logged, spendTurn } from './turn';
 import { KITTENS_CHOICE_MS, KITTENS_MIN_PLAYERS, KITTENS_NOPE_MS, type KittensAction, type KittensState } from './types';
 
@@ -76,7 +77,8 @@ export function applyKittensAction(
   action: KittensAction,
   ctx: GameContext,
 ): ActionResult<KittensState> {
-  const s = state;
+  // Prazo vencido resolve antes: Nem vem! que chega depois do fim da janela não vale (spec §7).
+  const s = settleKittens(state, ctx);
   const isHost = ctx.hostId === playerId;
   switch (action.type) {
     case 'start':
