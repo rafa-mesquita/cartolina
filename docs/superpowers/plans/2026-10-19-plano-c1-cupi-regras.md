@@ -40,6 +40,7 @@ Valem por cima do código das tasks abaixo:
 - **Reação depois do prazo não vale:** `reactError` recebe `ctx` e devolve `window_closed` com `ctx.now >= window.endsAt`.
 - **Id por janela:** `CoupWindow.id` vem de `CoupState.windowSeq` (que não zera no "jogar de novo"); `pass`/`challenge`/`block` levam `windowId?: number` e, se ele não for o da janela aberta, `window_closed`. Assim um "duvidar" atrasado não vira dúvida do bloqueio que abriu logo depois. O site sempre manda o `windowId`; o schema da Task 6 precisa aceitá-lo (sem isso o zod descarta o campo).
 - O bloqueio virou a função `block(state, by, as, ctx)` em `rules.ts`, ao lado de `challenge`.
+- **Alvos válidos na visão (Task 6):** `CoupCan.targets` lista em quem as ações com alvo podem mirar na sua vez (outros vivos); a mesa e os bots usam isso em vez de refazer a regra.
 - **Tesouro vazio no automático (Task 5):** o ausente dá golpe também com 7+ moedas quando o tesouro está vazio (`mustCoup` em `settleOnce`); sem isso, 6 ausentes esvaziavam o tesouro com todos entre 8 e 9 moedas e a partida nunca acabava. Spec §2 atualizado.
 
 ## Mapa de arquivos
@@ -2002,8 +2003,7 @@ function randomMove(state: CoupState, me: string, rng: Rng): CoupAction | null {
   if (can.act.length > 0) {
     const kind = can.act[randomInt(rng, can.act.length)]!;
     if (!COUP_TARGETED[kind]) return { type: 'act', kind };
-    const targets = view.seats.filter((s) => s.id !== me && !s.out).map((s) => s.id);
-    return { type: 'act', kind, target: targets[randomInt(rng, targets.length)]! };
+    return { type: 'act', kind, target: can.targets[randomInt(rng, can.targets.length)]! };
   }
   if (!can.pass) return null;
   // Como o site: a reação leva o id da janela que o jogador viu.
