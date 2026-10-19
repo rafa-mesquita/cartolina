@@ -28,38 +28,57 @@ function randomMove(state: CoupState, me: string, rng: Rng): CoupAction | null {
   return { type: 'pass', windowId };
 }
 
+/** Quantas vezes cada situação apareceu nas partidas sorteadas (o último teste confere que nenhuma ficou de fora). */
+const cobertura = { challenge: 0, block: 0, blocked: 0, lose: 0, blockOnly: 0 };
+
 function playOut(n: number, seed: number): CoupState {
   const rng = mulberry32(seed);
   const ctx: GameContext = { hostId: 'p0', active: ids(n), rng, now: T0 };
   const start = applyCoupAction(initialCoupState(), 'p0', { type: 'start' }, ctx);
-  if (!start.ok) throw new Error(start.error);
+  if (!start.ok) throw new Error(`seed ${seed}: ${start.error}`);
   let state = start.state;
+  let lastBlockOnly: number | null = null;
   const deck = [...fullDeck()].sort();
   for (let step = 0; step < 3000; step++) {
-    if (state.phase === 'over') return state;
+    if (state.phase === 'over') {
+      for (const entry of state.log) if (entry.t in cobertura) cobertura[entry.t as keyof typeof cobertura]++;
+      return state;
+    }
     const moves = state.players.flatMap((p) => {
       const move = randomMove(state, p, rng);
       return move ? [{ p, move }] : [];
     });
-    if (moves.length === 0) throw new Error(`ninguém pode jogar na fase ${state.phase}`);
+    if (moves.length === 0) throw new Error(`seed ${seed}, passo ${step}: ninguém pode jogar na fase ${state.phase}`);
     const { p, move } = moves[randomInt(rng, moves.length)]!;
     const res = applyCoupAction(state, p, move, ctx);
-    if (!res.ok) throw new Error(`${p} ${JSON.stringify(move)} recusada: ${res.error}`);
+    if (!res.ok) throw new Error(`seed ${seed}, passo ${step}: ${p} ${JSON.stringify(move)} recusada: ${res.error}`);
     state = res.state;
-    expect(cardsOf(state)).toEqual(deck);
-    expect(treasury(state)).toBeGreaterThanOrEqual(0);
-    for (const q of state.players) expect(state.hands[q]!.coins).toBeGreaterThanOrEqual(0);
+    // Cada janela blockOnly conta uma vez (o id muda quando abre outra).
+    if (state.window?.kind === 'blockOnly' && state.window.id !== lastBlockOnly) {
+      cobertura.blockOnly++;
+      lastBlockOnly = state.window.id;
+    }
+    const onde = `seed ${seed} passo ${step}`;
+    expect(cardsOf(state), onde).toEqual(deck);
+    expect(treasury(state), onde).toBeGreaterThanOrEqual(0);
+    for (const q of state.players) expect(state.hands[q]!.coins, `${onde} ${q}`).toBeGreaterThanOrEqual(0);
   }
-  throw new Error('a partida não acabou');
+  throw new Error(`seed ${seed}: a partida não acabou`);
 }
 
 describe('Cúpi: partidas sorteadas', () => {
   it.each([2, 3, 4, 5, 6])('com %i jogadores, 20 partidas terminam sem jogada recusada nem carta sumida', (n) => {
-    for (let seed = 1; seed <= 20; seed++) {
-      const state = playOut(n, seed * 31 + n);
-      expect(state.winner).not.toBeNull();
-      expect(state.out).toHaveLength(n - 1);
-      expect(state.wins[state.winner!]).toBe(1);
+    for (let i = 1; i <= 20; i++) {
+      const seed = i * 31 + n;
+      const state = playOut(n, seed);
+      expect(state.winner, `seed ${seed}`).not.toBeNull();
+      expect(state.out, `seed ${seed}`).toHaveLength(n - 1);
+      expect(state.wins[state.winner!], `seed ${seed}`).toBe(1);
     }
+  });
+
+  // Sem isso, uma mudança que faça a visão parar de oferecer dúvida ou bloqueio deixaria o teste passando sem testar nada.
+  it('as 100 partidas passaram por dúvida, bloqueio, bloqueio barrado, perda de carta e janela só de bloqueio', () => {
+    for (const [nome, vezes] of Object.entries(cobertura)) expect(vezes, nome).toBeGreaterThan(0);
   });
 });
