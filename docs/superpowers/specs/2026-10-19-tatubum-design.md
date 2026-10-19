@@ -229,6 +229,20 @@ Start 2P**; textos em **VT323**. A barrinha do Nem vem! são **5 blocos** (um po
 Tudo com `image-rendering: pixelated`. O "BUM!" é uma explosão em 8 bits. Bichinhos do site nos
 assentos, em quadradinhos com contorno de pixel.
 
+**Fundo: noite no cerrado desenhada em código** (aprovada pelo usuário num mockup, 2026-10-19;
+referência de estilo: tela de menu pixel art de banco de imagens, só o estilo). Um `<canvas>` de
+320×180 ampliado sem suavizar, atrás do lobby e da mesa: céu em faixas `#0f1030 → #17204a →
+#1f3a6b → #2c5a8c` com pontilhado ordenado (Bayer 4×4) nas transições, estrelas, lua, nuvens de
+pixel azul-claras, duas fileiras de árvores tortas do cerrado (copa achatada) em azul-escuro,
+cupinzeiros, capim e vaga-lumes amarelos. Animação leve (estrelas piscando, vaga-lumes, nuvens
+andando devagar), parada quando a aba não está visível. Semente fixa por sala, pra todos verem o
+mesmo cerrado.
+
+**Botões** no estilo da referência: vermelho `#e0605a` com contorno escuro `#1a0f1f`, pontas
+chanfradas (hexágono achatado), luz em cima `#f08a80` e sombra embaixo `#b8423e`, texto creme
+`#fff3e0` em Press Start 2P com sombra `#8c2f2f`. Logo "TATUBUM" em amarelo `#f2c14e` com
+contorno marrom.
+
 **Sons** (baixos, como no Diquisti): papel ao jogar carta, "tic" nos últimos 2 s da barrinha,
 "BUM" abafado na explosão, "ronron" no Cafuné.
 
