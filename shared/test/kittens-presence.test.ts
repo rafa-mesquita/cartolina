@@ -65,6 +65,44 @@ describe('presença', () => {
     expect(hid.draw.filter((c) => c.startsWith('tatubum'))).toHaveLength(1);
   });
 
+  it('quem está escondendo o tatu cai: o tatu vai pra um lugar ao acaso e o monte fica com vivos − 1 tatus', () => {
+    const s = {
+      ...table({
+        hands: { p0: [], p1: [], p2: [], p3: [] },
+        draw: ['mico-0', 'tatubum-1', 'tatubum-2'],
+        current: 'p1',
+      }),
+      choice: { kind: 'cafune' as const, who: 'p1', tatu: 'tatubum-0', deadline: T0 + 30_000 },
+    };
+    const after = settleKittens(s, ctxOf(['p0', 'p2', 'p3'], { now: T0 }));
+    expect(after.alive).toEqual(['p0', 'p2', 'p3']);
+    expect(after.choice).toBeNull();
+    expect(after.draw.filter((c) => c.startsWith('tatubum'))).toHaveLength(2);
+    expect(after.current).toBe('p2');
+    expect(after.owed).toBe(1);
+    // nenhum tatu se perde: cada um está no monte ou fora do jogo
+    for (const t of ['tatubum-0', 'tatubum-1', 'tatubum-2']) {
+      expect(after.draw.includes(t) || after.out.includes(t)).toBe(true);
+    }
+  });
+
+  it('dois caem juntos (um deles na vez): saem os dois e o monte fica com vivos − 1 tatus', () => {
+    const s = table({
+      hands: { p0: [], p1: [], p2: [], p3: [] },
+      draw: ['mico-0', 'tatubum-0', 'pular-0', 'tatubum-1', 'tatubum-2'],
+      current: 'p0',
+    });
+    const after = settleKittens(s, ctxOf(['p2', 'p3'], { now: T0 }));
+    expect(after.alive).toEqual(['p2', 'p3']);
+    expect(after.current).toBe('p2');
+    expect(after.owed).toBe(1);
+    expect(after.draw.filter((c) => c.startsWith('tatubum'))).toHaveLength(1);
+    expect(after.log.filter((e) => e.ev.t === 'left').map((e) => e.ev)).toEqual([
+      { t: 'left', by: 'p0' },
+      { t: 'left', by: 'p1' },
+    ]);
+  });
+
   it('a carta no ar de quem saiu não faz efeito', () => {
     const air = act(table({ hands: { p0: ['ataque-0'], p1: [], p2: [] } }), 'p0', { type: 'play', cards: ['ataque-0'] }, ctxOf(all));
     const gone = settleKittens(air, without('p0', 1000));

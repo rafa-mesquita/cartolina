@@ -42,8 +42,8 @@ export function checkWin(state: KittensState): KittensState {
 
 /**
  * `p` sai da partida (explodiu ou caiu de vez): a mão (e `extraOut`, ex.: o tatu que explodiu) vai pra fora do jogo.
- * Se o monte ficou com mais tatus (contando o que está sendo escondido) que vivos − 1 (quem caiu de vez), um tatu sai também. Se era a vez de `p`, a vez
- * passa pro próximo vivo com 1 turno (os turnos devidos se perdem).
+ * Se o monte ficou com mais tatus (contando o que está sendo escondido) que vivos − 1 (quem caiu de vez), um tatu
+ * sai também. Se era a vez de `p`, a vez passa pro próximo vivo com 1 turno (os turnos devidos se perdem).
  */
 export function eliminate(state: KittensState, p: string, extraOut: string[] = []): KittensState {
   const alive = state.alive.filter((x) => x !== p);
