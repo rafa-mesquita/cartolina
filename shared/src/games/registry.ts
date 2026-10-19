@@ -1,6 +1,9 @@
 import type { z } from 'zod';
 import type { GameModule } from '../game';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../players';
+import { camelioActionSchema } from './camelio/schema';
+import { CAMELIO_MAX_PLAYERS, CAMELIO_MIN_PLAYERS, type CamelioAction, type CamelioState, type CamelioView } from './camelio/types';
+import { camelio } from './camelio/view';
 import { dixitActionSchema } from './dixit/schema';
 import { DIXIT_MIN_PLAYERS, type DixitAction, type DixitState, type DixitView } from './dixit/types';
 import { dixit } from './dixit/view';
@@ -11,11 +14,11 @@ import { picturesActionSchema } from './pictures/schema';
 import { PICTURES_MAX_PLAYERS, PICTURES_MIN_PLAYERS, type PicturesAction, type PicturesState, type PicturesView } from './pictures/types';
 import { pictures } from './pictures/view';
 
-export const GAME_IDS = ['ito', 'dixit', 'pictures'] as const;
+export const GAME_IDS = ['ito', 'dixit', 'pictures', 'camelio'] as const;
 export type GameId = (typeof GAME_IDS)[number];
-export type GameState = ItoState | DixitState | PicturesState;
-export type GameView = ItoView | DixitView | PicturesView;
-export type GameAction = ItoAction | DixitAction | PicturesAction;
+export type GameState = ItoState | DixitState | PicturesState | CamelioState;
+export type GameView = ItoView | DixitView | PicturesView | CamelioView;
+export type GameAction = ItoAction | DixitAction | PicturesAction | CamelioAction;
 
 export interface GameEntry {
   id: GameId;
@@ -71,6 +74,17 @@ export const GAMES: Record<GameId, GameEntry> = {
     // Cursor em cima de uma foto entregaria o palpite.
     liveCursors: false,
     // O histórico do Retratim (com o museu) vem no Plano R4.
+    recordsHistory: false,
+  }),
+  camelio: defineGame({
+    id: 'camelio',
+    module: camelio,
+    actionSchema: camelioActionSchema,
+    minPlayers: CAMELIO_MIN_PLAYERS,
+    maxPlayers: CAMELIO_MAX_PLAYERS,
+    // Tudo é aberto na mesa (só o topo do monte é segredo, e o cursor não entrega nada).
+    liveCursors: true,
+    // O histórico do Cama-Leão vem no Plano C4.
     recordsHistory: false,
   }),
 };

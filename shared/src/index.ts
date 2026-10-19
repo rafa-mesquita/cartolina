@@ -42,4 +42,18 @@ export { scorePicturesRound } from './games/pictures/scoring';
 export { applyPicturesAction, initialPicturesState, settlePictures } from './games/pictures/rules';
 export { pictures, picturesNextDeadline, picturesViewFor } from './games/pictures/view';
 export { picturesActionSchema } from './games/pictures/schema';
+export * from './games/camelio/types';
+export { CAMELIO_DECK, CAMELIO_DECK_SIZE, camelioBack, camelioCard, camelioCardIds } from './games/camelio/deck';
+export {
+  camelioDeckEndWinners,
+  camelioPoints,
+  camelioScoredColors,
+  camelioSphereSum,
+  camelioSpheresInPlay,
+  resolveCamelioPlay,
+  type CamelioPlayResolution,
+} from './games/camelio/scoring';
+export { applyCamelioAction, camelioOnPresenceChange, camelioTarget, initialCamelioState } from './games/camelio/rules';
+export { camelio, camelioViewFor } from './games/camelio/view';
+export { camelioActionSchema } from './games/camelio/schema';
 export * from './games/registry';

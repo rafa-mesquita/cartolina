@@ -17,7 +17,7 @@ export interface CatalogEntry {
   mobile?: boolean;
 }
 
-// Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti e o Pictures como Retratim; os ids internos não mudam.
+// Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti, o Pictures como Retratim e o Camelio como Cama-Leão; os ids internos não mudam.
 const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> = {
   ito: {
     name: 'DITU',
@@ -52,6 +52,19 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       '6 rodadas: cada um usa cada kit uma vez.',
     ],
     playable: true,
+    mobile: false,
+  },
+  camelio: {
+    name: 'Cama-Leão',
+    tagline: 'junte 5 esferas certinhas e empurre o resto pros amigos',
+    rules: [
+      'Na sua vez, pegue a carta aberta ou a do monte, que só mostra metade: a cor ou as esferas.',
+      'Antes de virar, decida: fica com ela ou dá pra alguém, que é obrigado a pegar.',
+      'Exatamente 5 esferas de uma cor valem 1 ponto. Passou de 5, perde as cartas da cor (e o ponto, se já tinha).',
+      'Ganha quem pontuar 3 cores (4 com 2 jogadores).',
+    ],
+    // A mesa vem no Plano C3.
+    playable: false,
     mobile: false,
   },
 };

@@ -7,6 +7,7 @@ import { ERROR_CODES, errorMessage, parseClientMessage } from '../src/protocol';
 import { mulberry32 } from '../src/rng';
 import {
   createRoom,
+  isCamelioRoomView,
   isDixitRoomView,
   isItoRoomView,
   isPicturesRoomView,
@@ -35,14 +36,16 @@ function dixitRoom(n: number): Room {
 }
 
 describe('registro de jogos', () => {
-  it('conhece ITO, Dixit e Retratim', () => {
-    expect(Object.keys(GAMES)).toEqual(['ito', 'dixit', 'pictures']);
+  it('conhece ITO, Dixit, Retratim e Cama-Leão', () => {
+    expect(Object.keys(GAMES)).toEqual(['ito', 'dixit', 'pictures', 'camelio']);
     expect(GAMES.dixit.minPlayers).toBe(3);
     expect(GAMES.ito.liveCursors).toBe(true);
     expect(GAMES.dixit.liveCursors).toBe(false);
     expect(GAMES.pictures).toMatchObject({ minPlayers: 3, maxPlayers: 6, liveCursors: false, recordsHistory: false });
+    expect(GAMES.camelio).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: true, recordsHistory: false });
     expect(isGameId('dixit')).toBe(true);
     expect(isGameId('pictures')).toBe(true);
+    expect(isGameId('camelio')).toBe(true);
     expect(isGameId('xadrez')).toBe(false);
     expect(isGameId(undefined)).toBe(false);
   });
@@ -215,5 +218,48 @@ describe('sala de Retratim', () => {
     }
     expect(ERROR_CODES).not.toContain('cubes_incomplete');
     expect(errorMessage('room_full')).toBe('A sala está cheia.');
+  });
+});
+
+function camelioRoom(n: number): Room {
+  let room = createRoom('ABCD', 0, 'camelio');
+  for (let i = 0; i < n; i++) {
+    const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+    if (!res.ok) throw new Error(res.error);
+    room = res.room;
+  }
+  return room;
+}
+
+describe('sala de Cama-Leão', () => {
+  it('é de Cama-Leão, cabe 6 e recusa o 7º', () => {
+    const room = camelioRoom(6);
+    expect(isCamelioRoomView(roomView(room, null))).toBe(true);
+    expect(roomSummary(room)).toMatchObject({ game: 'camelio', phase: 'lobby' });
+    expect(joinRoom(room, { token: 't6', name: 'P6', color: PLAYER_COLORS[6]! }, 'p6', 0)).toEqual({ ok: false, error: 'room_full' });
+  });
+
+  it('começa com 2 pela sala e a jogada passa pelo schema', () => {
+    let room = step(camelioRoom(2), 'p0', { type: 'start' }, 10);
+    expect(room.game.phase).toBe('playing');
+    expect(room.runStartedAt).toBe(10);
+    expect(roomAction(room, 'p0', { type: 'play', from: 'mao', to: 'p1' }, rng, 11)).toEqual({ ok: false, error: 'bad_action' });
+    const turn = (room.game as { turn: string }).turn;
+    room = step(room, turn, { type: 'play', from: 'open', to: turn }, 11);
+    const view = roomView(room, 'p0');
+    if (!isCamelioRoomView(view)) throw new Error('esperava Cama-Leão');
+    expect(view.game.playCount).toBe(1);
+  });
+
+  it('sem prazo de jogo: acorda só pela presença e expiração', () => {
+    const room = step(camelioRoom(2), 'p0', { type: 'start' }, 10);
+    expect(nextAlarmAt(room, 10)).toBe(room.lastActivity + 6 * 60 * 60 * 1000);
+  });
+
+  it('erros do Cama-Leão têm mensagem em português', () => {
+    for (const code of ['not_your_turn', 'bad_target', 'not_playing']) {
+      expect(ERROR_CODES).toContain(code);
+      expect(errorMessage(code)).not.toBe('Algo deu errado.');
+    }
   });
 });

@@ -84,6 +84,9 @@ export const ERROR_CODES = [
   'already_ready',
   'own_work',
   'no_work',
+  'not_your_turn',
+  'bad_target',
+  'not_playing',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -124,6 +127,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   already_ready: 'Você já está pronto. Desmarque pra mexer.',
   own_work: 'Não dá pra palpitar na própria obra.',
   no_work: 'Essa pessoa não tem obra nesta rodada.',
+  not_your_turn: 'Não é a sua vez.',
+  bad_target: 'Essa pessoa não pode receber carta agora.',
+  not_playing: 'A partida não está rolando agora.',
 };
 
 export function errorMessage(code: string): string {

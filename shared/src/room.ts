@@ -1,6 +1,7 @@
 import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
 import { withDixitCounters } from './games/dixit/rules';
 import type { DixitState, DixitView } from './games/dixit/types';
+import type { CamelioView } from './games/camelio/types';
 import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
@@ -64,6 +65,12 @@ export type PicturesRoomView = RoomView<PicturesView> & { gameId: 'pictures' };
 
 export function isPicturesRoomView(view: RoomView): view is PicturesRoomView {
   return view.gameId === 'pictures';
+}
+
+export type CamelioRoomView = RoomView<CamelioView> & { gameId: 'camelio' };
+
+export function isCamelioRoomView(view: RoomView): view is CamelioRoomView {
+  return view.gameId === 'camelio';
 }
 
 export interface RoomSummary {
