@@ -160,3 +160,19 @@ export function applyCamelioAction(
       return fail('bad_action');
   }
 }
+
+/**
+ * Reavaliado quando alguém entra, sai ou expira a tolerância de desconexão (spec §2.5).
+ * Devolve o MESMO objeto quando nada muda (o servidor compara referência).
+ */
+export function camelioOnPresenceChange(state: CamelioState, ctx: GameContext): CamelioState {
+  if (state.phase !== 'playing') return state;
+  const here = state.players.filter((p) => ctx.active.includes(p));
+  const paused = here.length < CAMELIO_MIN_PLAYERS;
+  const turn =
+    !paused && state.turn !== null && !ctx.active.includes(state.turn)
+      ? nextActive(state.players, ctx.active, state.turn)
+      : state.turn;
+  if (paused === state.paused && turn === state.turn) return state;
+  return { ...state, paused, turn };
+}
