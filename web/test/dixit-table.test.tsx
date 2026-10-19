@@ -427,3 +427,21 @@ describe('mesa do Diquisti: topo', () => {
     expect(screen.getByRole('link', { name: 'histórico' }).getAttribute('href')).toBe('#/dixit/historico');
   });
 });
+
+describe('dica do narrador na barra de cima', () => {
+  it('dica longa aparece inteira: quebra em linhas, letra menor e o texto todo no title', () => {
+    const clue = 'Se vc olhar por muito tempo para o abismo, o abismo tb olha pra vc de volta';
+    const room = told(4, clue);
+    render(<DixitTable view={dixitView(room, othersOf(room)[0]!)} conn={conn()} />);
+    const txt = document.querySelector('.dx-clue .txt')!;
+    expect(txt.textContent).toBe(`“${clue}”`);
+    expect(txt.getAttribute('title')).toBe(clue);
+    expect(txt.classList.contains('long')).toBe(true);
+  });
+
+  it('dica curta continua do tamanho normal', () => {
+    const room = told(4, 'saudade');
+    render(<DixitTable view={dixitView(room, othersOf(room)[0]!)} conn={conn()} />);
+    expect(document.querySelector('.dx-clue .txt')!.classList.contains('long')).toBe(false);
+  });
+});

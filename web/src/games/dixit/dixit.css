@@ -13,10 +13,12 @@
 /* topo */
 .dx-logo { position: absolute; left: 30px; top: 20px; margin: 0; font: 400 34px/1 var(--serif); letter-spacing: .5px; z-index: 8; }
 .dx-logo small { display: block; font: 300 12px/1.4 var(--ui); color: var(--mu); letter-spacing: 1px; margin-top: 4px; }
-.dx-clue { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 7px 20px 7px 8px; border: .75px solid rgba(242,165,65,.7); border-radius: 999px; background: rgba(35,61,54,.85); z-index: 8; max-width: 640px; white-space: nowrap; }
+.dx-clue { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 7px 20px 7px 8px; border: .75px solid rgba(242,165,65,.7); border-radius: 26px; background: rgba(35,61,54,.85); z-index: 8; max-width: 440px; }
 .dx-clue .who { width: 30px; height: 30px; flex: none; }
-.dx-clue .txt { font: italic 400 21px/1.15 var(--serif); overflow: hidden; text-overflow: ellipsis; }
-.dx-clue .txt.muted { font: 300 15px/1 var(--ui); color: var(--mu); font-style: normal; }
+/* A dica inteira cabe entre o logo e as pílulas: até 3 linhas (80 caracteres no máximo), equilibradas. */
+.dx-clue .txt { font: italic 400 21px/1.2 var(--serif); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; text-wrap: balance; }
+.dx-clue .txt.long { font-size: 17px; }
+.dx-clue .txt.muted { font: 300 15px/1 var(--ui); color: var(--mu); font-style: normal; white-space: nowrap; }
 .dx-pills { position: absolute; right: 26px; top: 22px; display: flex; gap: 10px; z-index: 8; }
 .dx-pill { font: 400 13px/1 var(--ui); padding: 9px 14px 8px; border: .75px solid rgba(246,234,210,.45); border-radius: 999px; background: rgba(35,61,54,.85); white-space: nowrap; }
 button.dx-pill:hover { border-color: var(--must); }
