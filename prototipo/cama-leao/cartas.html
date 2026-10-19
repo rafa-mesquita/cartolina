@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cama-Leão · cartas</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cards.css">
+<style>
+body{margin:24px;background:#f7efe0;color:#1f2a4a;font:400 14px/1.4 'Fredoka',system-ui,sans-serif}
+h2{font-weight:500;margin:24px 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.cell{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#5a6382}
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script src="rules.js"></script>
+<script src="cards.js"></script>
+<script>
+'use strict';
+const { CAMELIO_DECK, camelioBack } = CamaLeao;
+const cell = (html, cap) => `<div class="cell">${html}<span>${cap}</span></div>`;
+const kinds = { normal: 'normais', bicolor: 'bicolores', multi: 'multicoloridas' };
+let html = '';
+for (const [kind, title] of Object.entries(kinds)) {
+  html += `<h2>${title}</h2><div class="row">${CAMELIO_DECK.filter((c) => c.kind === kind).map((c) => cell(CardArt.front(c, 64), c.id)).join('')}</div>`;
+}
+// uma carta por verso distinto: normais por cor; bicolores por par + esferas (A1, B1, A3, B3 -> 1 e 3); multicoloridas de 1 e 2 esferas
+const uniq = (list, key) => list.filter((c, i, a) => a.findIndex((x) => key(x) === key(c)) === i);
+const backs = [
+  ...uniq(CAMELIO_DECK.filter((c) => c.kind === 'normal'), (c) => c.color),
+  ...uniq(CAMELIO_DECK.filter((c) => c.kind === 'bicolor'), (c) => `${c.pair.join()}|${c.spheres}`),
+  ...CAMELIO_DECK.filter((c) => c.kind === 'multi' && c.color === 'verde'),
+];
+html += `<h2>versos</h2><div class="row">${backs.map((c) => cell(CardArt.back(camelioBack(c), 92), c.kind)).join('')}</div>`;
+html += `<h2>tamanhos</h2><div class="row">${[40, 64, 92, 120].map((w) => cell(CardArt.front(CAMELIO_DECK[22], w), `${w}px`)).join('')}</div>`;
+document.getElementById('out').innerHTML = html;
+</script>
+</body>
+</html>
