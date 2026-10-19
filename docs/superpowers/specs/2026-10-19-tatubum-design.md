@@ -25,7 +25,10 @@ Decisões do usuário (2026-10-19):
   escolhe ao acaso. **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
-- Identidade **"gibi"** (§5.4), escolhida entre três mockups (cerrado, festa junina, gibi).
+- Identidade **pixel art, paleta "noite no cerrado"** (§5.4). Primeiro foi escolhido o "gibi"
+  (entre cerrado, festa junina e gibi); no mesmo dia o usuário trocou pra pixel art (referência: um
+  tatu em pixel art de banco de imagens, usado só como estilo) e escolheu a paleta entre "noite no
+  cerrado" e "Game Boy".
 - **Só computador por enquanto**; celular e **histórico** ficam pra planos depois.
 - Motor: **pilha de resolução no servidor com prazo** (§4.2).
 
@@ -215,21 +218,25 @@ descarte no centro, carta no ar entre os dois, sua mão embaixo, diário à dire
 - **Explodiu:** quadro vermelho com **BUM!** pra todos por ~2 s; a cadeira vira fantasminha.
 - **Fim:** quadro "Ana sobreviveu!".
 
-### 5.4 Identidade — "gibi"
+### 5.4 Identidade — pixel art "noite no cerrado"
 
-Traço preto grosso (2,5–3 px) em cartas, botões e quadros; fundo amarelo `#fff27a` com
-**retícula** de pontos; vermelho `#e3262b` pra perigo/ação (Nem vem!, BUM!, barrinha); preto
-`#111`; branco nas cartas e balões de legenda. Título e legendas em letra de quadrinho (Bangers no
-mockup); texto de interface numa fonte arredondada legível (Fredoka, já do site). Onomatopeias
-("BUM!", "UFA!", "NEM VEM!") como elemento visual. Bichinhos do site mantidos nos assentos.
+Cara de videogame retrô: fundo noturno `#1b1b2f` com pontilhado de pixel (`#23233d`), barra do
+topo `#0e0e1c`, mesa verde `#2e5a3a` com borda `#0e0e1c`, cartas creme `#f4e9d0` com contorno
+`#2b1a10` em **degrau** (sem cantos arredondados, sombra dura deslocada), destaque amarelo
+`#f2c14e` (vez, botão comprar), vermelho `#e4572e` (Nem vem!, BUM!, perigo). Tatu em marrom
+(`#3b2412` / `#a0703f` / `#c8955a`, focinho e orelha `#e8a0a0`). Títulos e botões em **Press
+Start 2P**; textos em **VT323**. A barrinha do Nem vem! são **5 blocos** (um por segundo).
+Tudo com `image-rendering: pixelated`. O "BUM!" é uma explosão em 8 bits. Bichinhos do site nos
+assentos, em quadradinhos com contorno de pixel.
 
 **Sons** (baixos, como no Diquisti): papel ao jogar carta, "tic" nos últimos 2 s da barrinha,
 "BUM" abafado na explosão, "ronron" no Cafuné.
 
 ## 6. Arte das cartas
 
-- **14 ilustrações**: as 13 cartas + o verso. Estilo gibi (traço preto, cores chapadas, retícula),
-  sem texto na imagem (o nome da carta é desenhado pelo site).
+- **14 ilustrações**: as 13 cartas + o verso. **Pixel art** (sprite de bicho/objeto com contorno
+  escuro, poucas cores, fundo liso, como a referência do tatu), sem texto na imagem (o nome da carta
+  é desenhado pelo site).
 - Geradas no **Google Flow** (mesmo processo do Diquisti, ver `CLAUDE.md`), prompts em
   `docs/kittens/cartas-prompts.md`.
 - Script `npm run kittens:cartas -- <pasta>` converte pra `web/public/kittens/cards/<tipo>.webp`.
