@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { camelioOnPresenceChange, initialCamelioState } from '../src/games/camelio/rules';
+import type { CamelioState } from '../src/games/camelio/types';
 import { ctxOf, deepFreeze, ids, playing } from './camelio-helpers';
 
-const presence = (state: Parameters<typeof camelioOnPresenceChange>[0], active: string[]) =>
+const presence = (state: CamelioState, active: string[]) =>
   camelioOnPresenceChange(deepFreeze(state), ctxOf(active));
 
 describe('presença no Cama-Leão', () => {
@@ -48,5 +49,23 @@ describe('presença no Cama-Leão', () => {
   it('ninguém da partida ativo: pausa, e a vez não some', () => {
     expect(presence(playing(3), [])).toMatchObject({ paused: true, turn: 'p0', phase: 'playing' });
     expect(presence(playing(3), ['p9'])).toMatchObject({ paused: true, turn: 'p0', phase: 'playing' });
+  });
+
+  it('a vez dá a volta na mesa', () => {
+    expect(presence(playing(3, { turn: 'p2' }), ['p0', 'p1'])).toMatchObject({ turn: 'p0' });
+    expect(presence(playing(3, { turn: 'p1' }), ['p0', 'p2'])).toMatchObject({ turn: 'p2' });
+  });
+
+  it('é idempotente: a segunda chamada com a mesma presença devolve o mesmo objeto', () => {
+    for (const act of [['p1', 'p2'], ['p0']]) {
+      const a = presence(playing(3), act);
+      expect(presence(a, act)).toBe(a);
+    }
+  });
+
+  it('quem sai e volta não recupera a vez', () => {
+    const a = presence(playing(3), ['p1', 'p2']);
+    expect(a.turn).toBe('p1');
+    expect(presence(a, ids(3))).toBe(a);
   });
 });
