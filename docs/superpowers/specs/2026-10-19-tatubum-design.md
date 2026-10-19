@@ -158,7 +158,8 @@ A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o 
 
 - Sua mão inteira; dos outros, só a **quantidade** de cartas.
 - Monte: só a quantidade e quantos tatus ainda estão nele (informação que todos podem deduzir).
-- Descarte: público, inteiro.
+- Descarte: público, inteiro. Fora do jogo (`out`: tatus que explodiram, mãos de quem saiu): público
+  também, como no original (as cartas ficam viradas na frente de quem explodiu).
 - `peek`: as cartas só pra quem espiou; os outros leem "Ana espiou o futuro".
 - Favor e par: a carta que trocou de mão aparece só pros dois; os outros leem "Caio roubou uma
   carta da Bia".
