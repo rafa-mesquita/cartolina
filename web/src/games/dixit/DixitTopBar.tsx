@@ -5,6 +5,9 @@ import { loadSoundPref, saveSoundPref } from '../../net/identity';
 import { Critter } from '../../screens/Critter';
 import { phaseLabel } from './status';
 
+/** A partir daqui a dica ganha letra menor (numa linha da pílula cabem uns 35 caracteres). */
+const LONG_CLUE = 32;
+
 /** Liga/desliga o som (mesma preferência do DITU). */
 export function SoundPill() {
   const [on, setOn] = useState(loadSoundPref);
@@ -59,7 +62,10 @@ export function DixitTopBar({ view, name, color, tilt, onTilt, host, onForce }: 
         ) : g.phase === 'storytelling' ? (
           <span className="txt muted">{st === view.you ? 'você narra esta rodada' : `${name(st)} narra esta rodada`}</span>
         ) : g.clue ? (
-          <span className="txt">“{g.clue}”</span>
+          // Dica longa quebra em até 3 linhas com letra menor (cabe a dica toda, 80 caracteres); o title mostra inteira.
+          <span className={g.clue.length > LONG_CLUE ? 'txt long' : 'txt'} title={g.clue}>
+            “{g.clue}”
+          </span>
         ) : (
           <span className="txt muted">dica falada na call</span>
         )}
