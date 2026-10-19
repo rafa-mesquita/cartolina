@@ -243,6 +243,31 @@ chanfradas (hexágono achatado), luz em cima `#f08a80` e sombra embaixo `#b8423e
 `#fff3e0` em Press Start 2P com sombra `#8c2f2f`. Logo "TATUBUM" em amarelo `#f2c14e` com
 contorno marrom.
 
+### 5.5 Animações e efeitos (pedido do usuário, 2026-10-19)
+
+As cartas e a mesa têm que ser **animadas**, no espírito pixel art (movimentos em degrau com
+`steps()`, partículas quadradas, flashes curtos). Lista inicial, pra escolher e calibrar vendo no
+protótipo:
+
+- **Mão:** passar o mouse levanta a carta com um brilho de borda; cartas escolhidas pra combo
+  ficam com a borda piscando.
+- **Comprar:** a carta sai do monte, vira (flip em degraus) e desliza pra mão; pros outros, o verso
+  vai pro assento de quem comprou.
+- **Jogar:** a carta voa da mão pro centro com um rastro de pixels; o ícone da carta anima (2–3
+  quadros) enquanto está no ar.
+- **Nem vem!:** carimbo por cima da carta no ar, com flash vermelho e um "X" na de baixo; os 5
+  blocos da barrinha voltam a acender.
+- **Ataque:** espada de pixel cortando e seta até o próximo; o selo "2 turnos" pulsa.
+- **Embaralhar:** as cartas do monte saltam e trocam de lugar.
+- **Espiar:** pra quem jogou, as 3 de cima levantam e brilham; pros outros, um olho pisca no monte.
+- **Favor / par / trio:** a carta voa de uma mão pra outra (de verso pra quem não pode ver).
+- **Tatubum comprado:** a carta treme, o pavio solta faíscas; com Cafuné, coraçõezinhos de pixel e
+  o tatu se acalma; sem Cafuné, **BUM** com explosão de partículas, tela tremendo e flash.
+- **Vitória:** fogos de pixel em cima do vencedor.
+- **Fundo:** estrelas piscando, vaga-lumes e nuvens andando (§5.4).
+
+Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca de estado).
+
 **Sons** (baixos, como no Diquisti): papel ao jogar carta, "tic" nos últimos 2 s da barrinha,
 "BUM" abafado na explosão, "ronron" no Cafuné.
 
