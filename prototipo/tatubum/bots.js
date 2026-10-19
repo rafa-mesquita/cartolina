@@ -89,7 +89,8 @@
         if (!nope) return null;
         const valendo = p.nopes.length % 2 === 0;
         const contraMim = p.play.target === me || (p.play.kind === 'ataque' && nextAlive(v, p.by) === me);
-        let chance = 0.12;
+        // Sem motivo, a mesa inteira junta dá Nem vem! em ~30% das jogadas (com 7 bots, não em quase todas).
+        let chance = 0.3 / Math.max(1, v.alive.length - 2);
         if (valendo && contraMim) chance = 0.7;
         if (!valendo && p.by === me) chance = 0.55;
         if (Math.random() > chance) return null;
