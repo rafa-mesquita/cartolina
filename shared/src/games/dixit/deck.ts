@@ -1,5 +1,5 @@
 /** Cartas do baralho (arte em web/public/dixit/cards). `npm run dixit:cartas` atualiza este número. */
-export const DIXIT_DECK_SIZE = 184;
+export const DIXIT_DECK_SIZE = 191;
 
 /** Ids estáveis das cartas: d001, d002, … (a arte fica em web/public/dixit/cards/<id>.webp). */
 export function dixitCardIds(size: number = DIXIT_DECK_SIZE): string[] {
