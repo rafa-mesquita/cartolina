@@ -48,6 +48,7 @@ export function checkWin(state: KittensState): KittensState {
 export function eliminate(state: KittensState, p: string, extraOut: string[] = []): KittensState {
   const alive = state.alive.filter((x) => x !== p);
   let draw = state.draw;
+  let peek = state.peek;
   let out = [...state.out, ...extraOut, ...(state.hands[p] ?? [])];
   // O tatu que alguém está escondendo (Cafuné) ainda não voltou pro monte, mas conta.
   const held = state.choice?.kind === 'cafune' ? 1 : 0;
@@ -55,8 +56,9 @@ export function eliminate(state: KittensState, p: string, extraOut: string[] = [
     const i = draw.findIndex((c) => kittensKindOf(c) === 'tatubum');
     out = [...out, draw[i]!];
     draw = draw.filter((_, k) => k !== i);
+    peek = null; // o topo do monte pode ter mudado: o Espiar de quem joga ficaria desatualizado
   }
-  let next: KittensState = { ...state, alive, draw, out, hands: { ...state.hands, [p]: [] } };
+  let next: KittensState = { ...state, alive, draw, out, peek, hands: { ...state.hands, [p]: [] } };
   if (state.current === p) next = passTo(next, nextAlive(next, p), 1);
   return checkWin(next);
 }

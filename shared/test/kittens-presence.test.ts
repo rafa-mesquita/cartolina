@@ -23,6 +23,20 @@ describe('presença', () => {
     expect(after.log.at(-1)!.ev).toEqual({ t: 'left', by: 'p1' });
   });
 
+  it('o Espiar de quem joga some quando um tatu sai do monte (o topo pode ter mudado)', () => {
+    const s = {
+      ...table({ hands: { p0: [], p1: [], p2: [] }, draw: ['tatubum-0', 'pular-0', 'tatubum-1'] }),
+      peek: { who: 'p0', cards: ['tatubum-1', 'pular-0', 'tatubum-0'] },
+    };
+    expect(settleKittens(s, without('p1')).peek).toBeNull();
+  });
+
+  it('o Espiar fica quando nenhum tatu sai do monte', () => {
+    const peek = { who: 'p0', cards: ['tatubum-0', 'pular-0'] };
+    const s = { ...table({ hands: { p0: [], p1: [], p2: [] }, draw: ['pular-0', 'tatubum-0'] }), peek };
+    expect(settleKittens(s, without('p1')).peek).toEqual(peek);
+  });
+
   it('se era a vez de quem saiu, o próximo começa com 1 turno', () => {
     const s = table({ hands: { p0: [], p1: [], p2: [] }, draw: ['tatubum-0', 'tatubum-1'], owed: 2 });
     expect(settleKittens(s, without('p0'))).toMatchObject({ current: 'p1', owed: 1 });

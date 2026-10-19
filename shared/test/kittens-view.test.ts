@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialKittensState } from '../src/games/kittens/rules';
+import { settleKittens } from '../src/games/kittens/settle';
 import { kittens, kittensNextDeadline, kittensViewFor } from '../src/games/kittens/view';
 import { T0, act, ctxOf, ids, table } from './kittens-helpers';
 
@@ -36,6 +37,37 @@ describe('visão do Tatubum', () => {
     const drawn = act(table({ hands: { p0: [], p1: [], p2: [] }, draw: ['mico-0'] }), 'p0', { type: 'draw' }, ctxOf(ids(3)));
     expect(kittensViewFor(drawn, 'p0').log.at(-1)).toEqual({ n: 0, ev: { t: 'draw', by: 'p0', card: 'mico-0' } });
     expect(kittensViewFor(drawn, 'p1').log.at(-1)).toEqual({ n: 0, ev: { t: 'draw', by: 'p0', card: null } });
+  });
+
+  it('Favor e par: a carta só aparece pros dois; espectador não vê', () => {
+    const later = ctxOf(ids(3), { now: T0 + 5000 });
+    const favorAir = act(
+      table({ hands: { p0: ['favor-0'], p1: ['mico-0'], p2: [] }, draw: ['pular-0', 'quati-0'] }),
+      'p0',
+      { type: 'play', cards: ['favor-0'], target: 'p1' },
+      ctxOf(ids(3)),
+    );
+    const gave = act(settleKittens(favorAir, later), 'p1', { type: 'choose', card: 'mico-0' }, later);
+    const gaveEv = (card: string | null) => ({ t: 'gave', from: 'p1', to: 'p0', card });
+    expect(kittensViewFor(gave, 'p0').log.at(-1)!.ev).toEqual(gaveEv('mico-0'));
+    expect(kittensViewFor(gave, 'p1').log.at(-1)!.ev).toEqual(gaveEv('mico-0'));
+    expect(kittensViewFor(gave, 'p2').log.at(-1)!.ev).toEqual(gaveEv(null));
+    expect(kittensViewFor(gave, null).log.at(-1)!.ev).toEqual(gaveEv(null));
+
+    const pairAir = act(
+      table({ hands: { p0: ['capivara-0', 'capivara-1'], p1: ['mico-0'], p2: [] }, draw: ['pular-0', 'quati-0'] }),
+      'p0',
+      { type: 'play', cards: ['capivara-0', 'capivara-1'], target: 'p1' },
+      ctxOf(ids(3)),
+    );
+    const stole = settleKittens(pairAir, later);
+    const last = (viewer: string | null) => kittensViewFor(stole, viewer).log.at(-1)!.ev;
+    expect(last('p0')).toMatchObject({ t: 'stole', card: 'mico-0' });
+    expect(last('p1')).toMatchObject({ t: 'stole', card: 'mico-0' });
+    expect(last('p2')).toMatchObject({ t: 'stole', card: null });
+    expect(last(null)).toMatchObject({ t: 'stole', card: null });
+
+    expect(JSON.stringify(kittensViewFor(s, 'p1'))).not.toContain('tatubum-0');
   });
 });
 
