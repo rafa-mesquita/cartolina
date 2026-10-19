@@ -31,6 +31,14 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.hasHistory).toBe(false);
   });
 
+  it('Cúpi (o Coup) aparece na estante, mas ainda "em breve"', () => {
+    const entry = catalogEntry('coup');
+    expect(entry?.name).toBe('Cúpi');
+    expect(entry?.players).toBe('2 a 6 pessoas');
+    expect(entry?.playable).toBe(false);
+    expect(entry?.hasHistory).toBe(false);
+  });
+
   it('DITU funciona no celular; Diquisti e Retratim ainda não', () => {
     expect(catalogEntry('ito')?.mobile).toBe(true);
     expect(catalogEntry('dixit')?.mobile).toBe(false);

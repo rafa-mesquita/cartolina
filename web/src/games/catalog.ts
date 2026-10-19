@@ -17,7 +17,7 @@ export interface CatalogEntry {
   mobile?: boolean;
 }
 
-// Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti e o Pictures como Retratim; os ids internos não mudam.
+// Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti, o Pictures como Retratim e o Coup como Cúpi; os ids internos não mudam.
 const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> = {
   ito: {
     name: 'DITU',
@@ -53,6 +53,18 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
     ],
     playable: true,
     mobile: false,
+  },
+  coup: {
+    name: 'Cúpi',
+    tagline: 'blefe, duvide e tome o poder',
+    rules: [
+      'Cada um tem 2 cartas secretas de personagem e 2 moedas.',
+      'Na sua vez, faça uma ação. Algumas dizem que você é um personagem (Duque, Assassino, Capitão, Embaixador ou Condessa): pode ser verdade ou blefe.',
+      'Os outros têm 10 segundos pra duvidar ou bloquear. Quem erra a dúvida, ou é pego blefando, perde uma carta.',
+      'Com 7 moedas dá pra dar o golpe; com 10, é obrigatório. Quem perde as 2 cartas sai; o último com carta vence.',
+    ],
+    // A mesa (computador e celular) vem no Plano C2.
+    playable: false,
   },
 };
 

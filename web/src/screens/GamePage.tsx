@@ -77,6 +77,13 @@ function HistoryTab({ game }: { game: GameId }) {
           <p>O histórico do Retratim vem em breve.</p>
         </section>
       );
+    case 'coup':
+      // o histórico do Cúpi vem no Plano C4
+      return (
+        <section className="panel">
+          <p>O histórico do Cúpi vem em breve.</p>
+        </section>
+      );
     default: {
       const _never: never = game;
       throw new Error(`jogo sem histórico: ${String(_never)}`);
