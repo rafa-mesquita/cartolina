@@ -174,6 +174,29 @@
   .stamp { position: absolute; font-family: var(--px); font-size: 26px; padding: 10px 14px; border: 6px solid currentColor; background: rgba(244,233,208,.92); white-space: nowrap; }
   .pop { position: absolute; font-family: var(--px); white-space: nowrap; text-shadow: 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 6px 0 var(--ink), 0 -6px 0 var(--ink), 10px 10px 0 rgba(0,0,0,.45); }
   .flash { position: absolute; inset: 0; }
+  .cross { position: absolute; width: 150px; height: 150px; }
+  .cross::before, .cross::after { content: ''; position: absolute; left: 50%; top: 50%; width: 170px; height: 22px; background: var(--red); box-shadow: 0 0 0 5px var(--ink); translate: -50% -50%; }
+  .cross::before { rotate: 45deg; }
+  .cross::after { rotate: -45deg; }
+  #air .card .art { animation: bob .5s steps(2) infinite; }
+  @keyframes bob { 50% { translate: 0 -4px; } }
+  .seat .chip.think { background: #3b2412; animation: blink .8s steps(2) infinite; }
+
+  /* Zoom de carta (rodinha) */
+  #viewer { position: absolute; left: 650px; top: 400px; z-index: 35; pointer-events: none; transform: translate(-50%, -50%) scale(2.4); }
+  #viewer:empty { display: none; }
+
+  /* Galeria das cartas */
+  #gallery { position: absolute; inset: 0; z-index: 60; background: rgba(14,14,28,.94); padding: 30px 50px; display: flex; flex-direction: column; gap: 14px; }
+  #gallery[hidden] { display: none; }
+  #gallery h2 { margin: 0; font-family: var(--px); font-size: 20px; color: var(--yellow); font-weight: normal; }
+  #gallery .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px 30px; overflow: hidden; padding: 10px 6px; }
+  #gallery .item { display: flex; gap: 22px; align-items: center; }
+  #gallery .item .card { flex: none; }
+  #gallery .item p { margin: 0; font-size: 23px; line-height: 1.05; }
+  #gallery .item b { font-family: var(--px); font-size: 10px; color: var(--yellow); font-weight: normal; display: block; margin-bottom: 6px; }
+  #gallery .foot { display: flex; justify-content: space-between; align-items: center; }
+  #gallery .foot p { margin: 0; font-size: 22px; color: var(--dim); max-width: 1000px; }
   .bigcard { position: absolute; z-index: 32; transform: translate(-50%, -50%) scale(2); }
   .bigcard.shaking { animation: shake .09s steps(2) infinite; }
   @keyframes shake { 50% { translate: 4px -3px; } }
@@ -219,7 +242,10 @@
       <button class="btn ghost" id="more"><span>+</span></button>
     </div>
     <button class="btn yellow" id="play"><span>JOGAR</span></button>
+    <button class="btn" id="cards"><span>AS CARTAS</span></button>
   </div>
+  <div id="gallery" hidden></div>
+  <div id="viewer"></div>
   <div id="over" hidden></div>
   <div id="fxlayer"></div>
   <canvas id="particles"></canvas>
@@ -328,6 +354,7 @@ function onState() {
   if (fresh.some((e) => e.ev.t === 'play' || e.ev.t === 'nope')) airHidden = true;
   for (const id of [...selected]) if (!view.hand.includes(id)) selected.delete(id);
   if (view.phase !== 'playing' || view.current !== ME || view.pending || view.choice) mode = null;
+  if (prev && prev.current !== ME && view.current === ME && view.phase === 'playing') Sound.play('turn');
   render();
   if (!prev || (prev.phase !== 'playing' && view.phase === 'playing')) enqueue(() => dealAnim());
   for (const e of fresh) enqueue(() => animate(e.ev, prev, rects));
@@ -407,7 +434,10 @@ function renderSeats() {
       el.onclick = () => chooseTarget(p);
     }
     const n = v.handCounts[p] ?? 0;
-    const chip = v.choice?.who === p ? '<div class="chip">escolhendo…</div>' : !active.includes(p) && !dead ? '<div class="chip">caiu…</div>' : '';
+    const thinking = v.phase === 'playing' && v.current === p && !dead && !v.pending && !v.choice;
+    const chip = v.choice?.who === p ? '<div class="chip">escolhendo…</div>'
+      : !active.includes(p) && !dead ? '<div class="chip">caiu…</div>'
+      : thinking ? '<div class="chip think">pensando…</div>' : '';
     el.innerHTML = `<img class="tatu" src="${Sprites.tatu(dead ? '#7a7a8a' : colorOf(p)).url}" alt="">
       <div class="who">${nameOf(p)}</div>
       <div class="count"><span class="mini"></span>${dead ? 'fora' : n}</div>${chip}`;
@@ -502,6 +532,7 @@ function renderHand() {
     if (arriving.has(id)) c.classList.add('arriving');
     c.onclick = () => clickCard(id);
     c.ondblclick = () => { selected = new Set([id]); playSelected(); };
+    c.onmouseleave = () => zoom(null);
     hand.appendChild(c);
   });
 }
@@ -777,6 +808,7 @@ async function animate(ev, prev, rects) {
       if (ev.canceled) {
         say(`✗ ${text}`);
         Sound.play('error');
+        await Fx.cross(air);
       } else {
         say(text);
         if (ev.play === 'ataque') {
@@ -799,6 +831,7 @@ async function animate(ev, prev, rects) {
           Sound.play('peek');
           Fx.glitter($('#deck .stack'));
           if (ev.by === ME) say('O FUTURO: as 3 de cima estão ao lado do monte');
+          else Fx.icon(Sprites.card('espiar').url, $('#deck .stack'), { size: 110 });
         }
       }
       await Promise.all(cards.map((id) => Fx.fly({ node: cardEl(id), from: air, to: $('#discard'), dur: 320 })));
@@ -948,6 +981,53 @@ function toast(text) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { $('#toast').textContent = ''; }, 2200);
 }
+
+// ---------------------------------------------------------------- zoom (rodinha, como no Diquisti)
+let zoomed = null;
+function zoom(id) {
+  if (id === zoomed) return;
+  zoomed = id;
+  const v = $('#viewer');
+  v.innerHTML = '';
+  if (id) { v.appendChild(cardEl(id)); Sound.play('zoom'); }
+}
+stage.addEventListener('wheel', (e) => {
+  const card = e.target.closest('.card[data-id]');
+  if (!card) { zoom(null); return; }
+  e.preventDefault();
+  zoom(e.deltaY < 0 ? card.dataset.id : null);
+}, { passive: false });
+
+// ---------------------------------------------------------------- galeria das cartas
+const ABOUT = {
+  tatubum: 'Comprou e não tem Cafuné? Explodiu, tá fora. Tem sempre um a menos que o número de jogadores.',
+  cafune: 'Usado na hora em que você compra o Tatubum: o tatu volta pro monte onde você quiser, em segredo.',
+  nemvem: 'Cancela a carta no ar, mesmo fora da sua vez. Dá pra dar Nem vem! no Nem vem!.',
+  ataque: 'Termina sua vez sem comprar. O próximo joga 2 turnos (ou os seus + 2, se você estava sob ataque).',
+  pular: 'Termina um turno seu sem comprar.',
+  favor: 'Um adversário escolhe uma carta da mão dele pra te dar.',
+  embaralhar: 'Embaralha o monte. Bom quando você sabe que tem tatu em cima.',
+  espiar: 'Você vê as 3 cartas de cima do monte. Só você.',
+  capivara: 'Os bichos sozinhos não fazem nada: junte pares e trios.',
+};
+$('#cards').onclick = () => {
+  const g = $('#gallery');
+  const kinds = ['tatubum', 'cafune', 'nemvem', 'ataque', 'pular', 'favor', 'embaralhar', 'espiar', 'capivara'];
+  g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos (qualquer carta): PAR rouba uma carta ao acaso · TRIO pede uma carta pelo nome · 5 DIFERENTES pega uma do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!.</p></div>';
+  const grid = g.querySelector('.grid');
+  kinds.forEach((k, i) => {
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.appendChild(cardEl(`${k}-${i}`));
+    const p = document.createElement('p');
+    p.innerHTML = `<b>${k === 'capivara' ? 'BICHOS (5 TIPOS)' : cardName(k)}</b>${ABOUT[k]}`;
+    item.appendChild(p);
+    grid.appendChild(item);
+  });
+  g.querySelector('.foot').appendChild(button('VOLTAR', () => { g.hidden = true; }, 'yellow'));
+  g.hidden = false;
+  Sound.play('select');
+};
 
 // ---------------------------------------------------------------- bots
 setInterval(() => {

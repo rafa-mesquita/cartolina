@@ -144,6 +144,36 @@
       t.remove();
     },
 
+    /** Um sprite que pula e some (ex.: o olho do Espiar em cima do monte). */
+    async icon(url, at, { size = 96, hold = 700 } = {}) {
+      const c = pointOf(at);
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'pop';
+      img.style.width = size + 'px';
+      img.style.left = c.x + 'px';
+      img.style.top = c.y + 'px';
+      layer.appendChild(img);
+      await animate(img, [{ transform: 'translate(-50%,-50%) scale(0.2)' }, { transform: 'translate(-50%,-50%) scale(1.2)' }, { transform: 'translate(-50%,-50%) scale(1)' }], { duration: 260, easing: 'steps(5, end)' });
+      await animate(img, [{ transform: 'translate(-50%,-50%) scaleY(1)' }, { transform: 'translate(-50%,-50%) scaleY(0.1)' }, { transform: 'translate(-50%,-50%) scaleY(1)' }], { duration: 240, easing: 'steps(4, end)' });
+      await wait(hold);
+      await animate(img, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'steps(4, end)' });
+      img.remove();
+    },
+
+    /** Um X vermelho em cima de `el` (jogada cancelada). */
+    async cross(el) {
+      const c = box(el);
+      const x = document.createElement('div');
+      x.className = 'cross';
+      x.style.left = c.x + 'px';
+      x.style.top = c.y + 'px';
+      layer.appendChild(x);
+      await animate(x, [{ transform: 'translate(-50%,-50%) scale(2)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }], { duration: 180, easing: 'steps(4, end)' });
+      await wait(450);
+      x.remove();
+    },
+
     shake(ms = 300, px = 8) {
       if (REDUCED) return;
       stage.animate(

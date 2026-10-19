@@ -71,6 +71,8 @@
     fuse: () => noise({ dur: 0.7, filter: 'highpass', f0: 5000, f1: 2500, vol: 0.35 }),
     boom: () => { noise({ dur: 1.1, f0: 1800, f1: 80, vol: 1 }); tone({ f0: 90, f1: 35, dur: 0.6, vol: 0.9 }); },
     win: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone({ f0: f, dur: 0.12, at: i * 0.11, vol: 0.45 })),
+    turn: () => { tone({ type: 'triangle', f0: 659, dur: 0.1, vol: 0.35 }); tone({ type: 'triangle', f0: 880, dur: 0.14, at: 0.1, vol: 0.35 }); },
+    zoom: () => tone({ type: 'sine', f0: 1320, dur: 0.05, vol: 0.25 }),
     error: () => { tone({ f0: 200, dur: 0.07, vol: 0.4 }); tone({ f0: 150, dur: 0.1, at: 0.08, vol: 0.4 }); },
   };
 
