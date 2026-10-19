@@ -1,6 +1,6 @@
 import type { ActionResult, GameContext } from '../../game';
 import { kittensKindOf } from './cards';
-import { hideTatu } from './choices';
+import { giveFavor, hideTatu, pickFromDiscard } from './choices';
 import { kittensDeal } from './deck';
 import { parsePlay } from './play';
 import { settleKittens } from './settle';
@@ -102,12 +102,21 @@ export function applyKittensAction(
       if (s.phase !== 'playing') return fail('bad_phase');
       const c = s.choice;
       if (!c || c.who !== playerId) return fail('not_your_choice');
-      if (c.kind === 'cafune') {
-        const { position } = action;
-        if (position === undefined || (position !== 'random' && position > s.draw.length)) return fail('bad_choice');
-        return ok(hideTatu(s, c, position, ctx.rng));
+      switch (c.kind) {
+        case 'cafune': {
+          const { position } = action;
+          if (position === undefined || (position !== 'random' && position > s.draw.length)) return fail('bad_choice');
+          return ok(hideTatu(s, c, position, ctx.rng));
+        }
+        case 'favor':
+          if (action.card === undefined || !s.hands[playerId]!.includes(action.card)) return fail('bad_choice');
+          return ok(giveFavor(s, c, action.card));
+        case 'cinco':
+          if (action.card === undefined || !c.options.includes(action.card) || !s.discard.includes(action.card)) {
+            return fail('bad_choice');
+          }
+          return ok(pickFromDiscard(s, c, action.card));
       }
-      return fail('bad_choice');
     }
     case 'play': {
       const e = turnError(s, playerId);

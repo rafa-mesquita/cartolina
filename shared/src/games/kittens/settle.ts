@@ -1,4 +1,5 @@
 import type { GameContext } from '../../game';
+import { chooseAtRandom } from './choices';
 import { resolvePending } from './resolve';
 import type { KittensState } from './types';
 
@@ -9,6 +10,7 @@ import type { KittensState } from './types';
 export function settleKittens(state: KittensState, ctx: GameContext): KittensState {
   if (state.phase !== 'playing') return state;
   let s = state;
-  if (s.pending && ctx.now >= s.pending.resolvesAt) s = resolvePending(s, ctx);
+  if (s.choice && ctx.now >= s.choice.deadline) s = chooseAtRandom(s, ctx.rng);
+  if (s.pending &&ctx.now >= s.pending.resolvesAt) s = resolvePending(s, ctx);
   return s;
 }
