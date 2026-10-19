@@ -123,7 +123,7 @@ baralho é o do jogo original.
 
 - `cards.ts`: tipos de carta (`tatubum`, `cafune`, `nemvem`, `ataque`, `pular`, `favor`,
   `embaralhar`, `espiar`, `capivara`, `mico`, `quati`, `tamandua`, `preguica`), nomes em PT-BR,
-  quem aceita Nem vem!. Cada carta física tem id próprio (`c17`) pra animar e esconder.
+  quem aceita Nem vem!. Cada carta física tem id próprio `<tipo>-<n>` (ex.: `ataque-3`) pra animar.
 - `deck.ts`: `buildDeck(n)` e `deal(...)` (§3).
 - `types.ts`: fases `lobby → playing → gameover`. Estado: `players` (ordem dos assentos), `alive`,
   `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `current`, `owed`,
