@@ -60,7 +60,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
     rules: [
       'Na sua vez, pegue a carta aberta ou a do monte, que só mostra metade: a cor ou as esferas.',
       'Antes de virar, decida: fica com ela ou dá pra alguém, que é obrigado a pegar.',
-      'Exatamente 5 esferas de uma cor valem 1 ponto. Passou de 5, perde as cartas da cor (e o ponto, se já tinha).',
+      'Exatamente 5 esferas de uma cor valem 1 ponto. Passou de 5, perde as cartas da cor. Numa cor que já pontuou, chegar a 5 de novo também tira o ponto.',
       'Ganha quem pontuar 3 cores (4 com 2 jogadores).',
     ],
     // A mesa vem no Plano C3.
