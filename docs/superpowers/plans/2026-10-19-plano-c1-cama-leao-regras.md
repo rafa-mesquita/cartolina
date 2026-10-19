@@ -40,7 +40,7 @@ O baralho é montado sempre na mesma ordem (Task 1). Cores na ordem do círculo:
 | ids | tipo | conteúdo |
 |---|---|---|
 | 0–35 | normal | 6 por cor, esferas 1, 1, 2, 2, 3, 4. Verde 0–5, amarelo 6–11, laranja 12–17, vermelho 18–23, roxo 24–29, azul 30–35 (ex.: 18 = vermelho 1, 20 = vermelho 2, 22 = vermelho 3, 23 = vermelho 4) |
-| 36–59 | bicolor | 4 por par (A, B) de cores vizinhas: A1, A2, B2, B3. Pares: verde-amarelo 36–39, amarelo-laranja 40–43, laranja-vermelho 44–47, vermelho-roxo 48–51, roxo-azul 52–55, azul-verde 56–59 (ex.: 46 = vermelho 2 com verso laranja/vermelho) |
+| 36–59 | bicolor | 4 por par (A, B) de cores vizinhas: A1, B1, A3, B3. Pares: verde-amarelo 36–39, amarelo-laranja 40–43, laranja-vermelho 44–47, vermelho-roxo 48–51, roxo-azul 52–55, azul-verde 56–59 (ex.: 47 = vermelho 3 com verso laranja/vermelho). **Atualizado depois da execução:** o plano foi executado com A1, A2, B2, B3, e a revisão final trocou por A1, B1, A3, B3 (o verso de 1 ou 3 esferas entregava a cor); os blocos de código abaixo mostram a versão original. |
 | 60–71 | multicolor | 2 por cor, esferas 1 e 2: verde 60–61, amarelo 62–63, laranja 64–65, vermelho 66–67, roxo 68–69, azul 70–71 |
 
 ## Mapa de arquivos

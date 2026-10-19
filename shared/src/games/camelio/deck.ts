@@ -23,10 +23,11 @@ function buildDeck(): CamelioCard[] {
   }
   CAMELIO_COLORS.forEach((a, i) => {
     const b: CamelioColor = CAMELIO_COLORS[(i + 1) % CAMELIO_COLORS.length]!;
+    // Cada número de esferas existe nas duas cores do par: o verso nunca entrega a cor.
     const faces: [CamelioColor, number][] = [
       [a, 1],
-      [a, 2],
-      [b, 2],
+      [b, 1],
+      [a, 3],
       [b, 3],
     ];
     for (const [color, spheres] of faces) add({ kind: 'bicolor', color, spheres, pair: [a, b] });

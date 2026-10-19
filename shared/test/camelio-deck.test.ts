@@ -27,17 +27,24 @@ describe('baralho do Cama-Leão', () => {
     }
   });
 
-  it('bicolores: 4 por par de cores vizinhas, A1 A2 B2 B3', () => {
+  it('bicolores: 4 por par de cores vizinhas, A1 B1 A3 B3', () => {
     CAMELIO_COLORS.forEach((a, i) => {
       const b = CAMELIO_COLORS[(i + 1) % CAMELIO_COLORS.length]!;
       const cards = ofKind('bicolor').filter((c) => c.pair?.[0] === a && c.pair?.[1] === b);
       expect(cards.map((c) => [c.color, c.spheres])).toEqual([
         [a, 1],
-        [a, 2],
-        [b, 2],
+        [b, 1],
+        [a, 3],
         [b, 3],
       ]);
     });
+  });
+
+  it('todo verso de bicolor é ambíguo: as mesmas esferas existem nas duas cores do par', () => {
+    for (const card of ofKind('bicolor')) {
+      const twins = ofKind('bicolor').filter((c) => c.spheres === card.spheres && c.pair?.join() === card.pair?.join());
+      expect(new Set(twins.map((c) => c.color))).toEqual(new Set(card.pair));
+    }
   });
 
   it('multicoloridas: 1 e 2 esferas em cada cor', () => {
@@ -67,7 +74,7 @@ describe('baralho do Cama-Leão', () => {
     expect(camelioCard(C.azul1)).toMatchObject({ kind: 'normal', color: 'azul', spheres: 1 });
     expect(camelioCard(C.azul2)).toMatchObject({ kind: 'normal', color: 'azul', spheres: 2 });
     expect(camelioCard(C.azul3)).toMatchObject({ kind: 'normal', color: 'azul', spheres: 3 });
-    expect(camelioCard(C.bicVermelho2)).toMatchObject({ kind: 'bicolor', color: 'vermelho', spheres: 2, pair: ['laranja', 'vermelho'] });
+    expect(camelioCard(C.bicVermelho3)).toMatchObject({ kind: 'bicolor', color: 'vermelho', spheres: 3, pair: ['laranja', 'vermelho'] });
     expect(camelioCard(59)).toMatchObject({ kind: 'bicolor', color: 'verde', spheres: 3, pair: ['azul', 'verde'] });
     expect(camelioCard(71)).toMatchObject({ kind: 'multi', color: 'azul', spheres: 2, pair: null });
   });
@@ -75,7 +82,7 @@ describe('baralho do Cama-Leão', () => {
   it('as cartas são congeladas (o baralho é compartilhado entre salas)', () => {
     expect(Object.isFrozen(CAMELIO_DECK)).toBe(true);
     expect(Object.isFrozen(camelioCard(0))).toBe(true);
-    const bic = camelioCard(C.bicVermelho2);
+    const bic = camelioCard(C.bicVermelho3);
     expect(Object.isFrozen(bic.pair)).toBe(true);
     const back = camelioBack(bic);
     if (back.kind !== 'bicolor') throw new Error('esperava bicolor');
@@ -95,7 +102,7 @@ describe('verso da carta', () => {
   });
 
   it('bicolor mostra as esferas e as duas cores', () => {
-    expect(camelioBack(camelioCard(C.bicVermelho2))).toEqual({ kind: 'bicolor', spheres: 2, colors: ['laranja', 'vermelho'] });
+    expect(camelioBack(camelioCard(C.bicVermelho3))).toEqual({ kind: 'bicolor', spheres: 3, colors: ['laranja', 'vermelho'] });
   });
 
   it('multicolor mostra só as esferas', () => {

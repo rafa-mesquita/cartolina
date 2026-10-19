@@ -28,6 +28,8 @@ Decisões do usuário (2026-10-19):
 - **Distribuição do baralho inventada** (não achamos a oficial; o BGG pede
   verificação anti-robô e as lojas não dizem): 6 cores, proposta da §2.1. Ajusta
   depois de jogar o protótipo.
+- **Bicolores ambíguas** (depois da revisão do C1): a primeira proposta (A1, A2,
+  B2, B3) entregava a cor no verso com 1 ou 3 esferas; ficou A1, B1, A3, B3.
 - **Fim com 5–6 jogadores = igual a 3–4** (pontos em 3 cores).
 - **Cor já pontuada:** chegou a 5 **ou passou**, perde o ponto e descarta tudo dela.
 - **Nome na tela:** Cama-Leão.
@@ -49,7 +51,7 @@ tipo:
 | Tipo | Quantas | Verso mostra | Distribuição |
 |---|---|---|---|
 | Normal | 36 (6 por cor) | a cor | esferas 1, 1, 2, 2, 3, 4 em cada cor |
-| Bicolor | 24 (4 por par) | esferas + as 2 cores possíveis | 6 pares de cores vizinhas no círculo (verde-amarelo, amarelo-laranja, laranja-vermelho, vermelho-roxo, roxo-azul, azul-verde); no par (A, B): 1→A, 2→A, 2→B, 3→B |
+| Bicolor | 24 (4 por par) | esferas + as 2 cores possíveis | 6 pares de cores vizinhas no círculo (verde-amarelo, amarelo-laranja, laranja-vermelho, vermelho-roxo, roxo-azul, azul-verde); no par (A, B): A1, B1, A3, B3 (cada número de esferas existe nas duas cores, então o verso nunca entrega a cor) |
 | Multicolor | 12 (2 por cor) | esferas + "qualquer cor" | esferas 1 e 2 em cada cor |
 
 Cada cor soma 24 esferas (13 normais + 8 bicolores + 3 multicolores). Cada carta

@@ -24,7 +24,7 @@ describe('visão do Cama-Leão', () => {
   it('o topo sai só como verso, com as chaves exatas de cada tipo de carta', () => {
     const casos: [number, string[]][] = [
       [C.vermelho3, ['color', 'kind']],
-      [C.bicVermelho2, ['colors', 'kind', 'spheres']],
+      [C.bicVermelho3, ['colors', 'kind', 'spheres']],
       [71, ['kind', 'spheres']],
     ];
     for (const [id, chaves] of casos) {

@@ -18,8 +18,8 @@ export const C = {
   azul1: 30,
   azul2: 32,
   azul3: 34,
-  /** Bicolor laranja/vermelho, de verdade vermelho 2. */
-  bicVermelho2: 46,
+  /** Bicolor laranja/vermelho, de verdade vermelho 3. */
+  bicVermelho3: 47,
 } as const;
 
 export const ids = (n: number): string[] => Array.from({ length: n }, (_, i) => `p${i}`);

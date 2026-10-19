@@ -11,7 +11,7 @@ import { C } from './camelio-helpers';
 
 describe('somas', () => {
   it('soma as esferas de uma cor, pela cor de verdade', () => {
-    expect(camelioSphereSum([C.vermelho3, C.azul1, C.bicVermelho2], 'vermelho')).toBe(5);
+    expect(camelioSphereSum([C.vermelho3, C.azul1, C.bicVermelho3], 'vermelho')).toBe(6);
     expect(camelioSphereSum([C.vermelho3, C.azul1], 'azul')).toBe(1);
     expect(camelioSphereSum([], 'verde')).toBe(0);
   });
@@ -49,7 +49,7 @@ describe('resolveCamelioPlay', () => {
   });
 
   it('bicolor e multicolor contam pela cor de verdade', () => {
-    expect(resolveCamelioPlay([C.vermelho3], [], C.bicVermelho2).outcome).toBe('scored');
+    expect(resolveCamelioPlay([C.vermelho2], [], C.bicVermelho3).outcome).toBe('scored');
   });
 
   it('passou de 5 numa cor nova estoura: as cartas da cor vão pro descarte', () => {
