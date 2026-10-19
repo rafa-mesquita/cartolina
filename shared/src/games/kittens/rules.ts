@@ -105,7 +105,10 @@ export function applyKittensAction(
       switch (c.kind) {
         case 'cafune': {
           const { position } = action;
-          if (position === undefined || (position !== 'random' && position > s.draw.length)) return fail('bad_choice');
+          if (position === undefined) return fail('bad_choice');
+          if (position !== 'random' && (!Number.isInteger(position) || position < 0 || position > s.draw.length)) {
+            return fail('bad_choice');
+          }
           return ok(hideTatu(s, c, position, ctx.rng));
         }
         case 'favor':

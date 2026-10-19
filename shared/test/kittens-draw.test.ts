@@ -81,6 +81,8 @@ describe('Tatubum com Cafuné', () => {
     const after = act(defusing(), 'p0', { type: 'choose', position: 'random' }, ctx);
     expect([...after.draw].sort()).toEqual(['pular-0', 'quati-0', 'tatubum-0']);
     expect(refuse(defusing(), 'p0', { type: 'choose', position: 3 }, ctx)).toBe('bad_choice');
+    expect(refuse(defusing(), 'p0', { type: 'choose', position: -1 }, ctx)).toBe('bad_choice');
+    expect(refuse(defusing(), 'p0', { type: 'choose', position: 0.5 }, ctx)).toBe('bad_choice');
     expect(refuse(defusing(), 'p0', { type: 'choose' }, ctx)).toBe('bad_choice');
     expect(refuse(defusing(), 'p1', { type: 'choose', position: 0 }, ctx)).toBe('not_your_choice');
   });
