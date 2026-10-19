@@ -37,7 +37,7 @@ function st(hands: Record<string, { coins?: number; cards: [CoupCharacter, boole
     out: [],
     winner: null,
     wins: {},
-    windows: 0,
+    windowSeq: 0,
     log: [],
   };
 }

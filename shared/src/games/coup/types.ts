@@ -151,8 +151,8 @@ export interface CoupState {
   winner: string | null;
   /** Placar de vitórias da noite, por jogador (sobrevive ao "jogar de novo"). */
   wins: Record<string, number>;
-  /** Janelas abertas nesta partida (dá o id da próxima). */
-  windows: number;
+  /** Último id de janela usado na sala; não zera no "jogar de novo", pra reação atrasada de outra partida não casar com a janela nova. */
+  windowSeq: number;
   /** Diário da partida (recomeça a cada partida). */
   log: CoupLogEntry[];
 }
@@ -162,10 +162,11 @@ export type CoupAction =
   /** "jogar de novo" (só o anfitrião, no fim da partida). */
   | { type: 'restart' }
   | { type: 'act'; kind: CoupActionKind; target?: string }
-  /** "deixa". Nas três reações, `window` = id da janela que o jogador viu (o site sempre manda; sem ele, vale a janela aberta). */
-  | { type: 'pass'; window?: number }
-  | { type: 'challenge'; window?: number }
-  | { type: 'block'; as: CoupCharacter; window?: number }
+  /** "deixa" */
+  | { type: 'pass'; windowId?: number }
+  /** Nas três reações (deixa, duvidar, bloquear), `windowId` = id da janela que o jogador viu (o site sempre manda; sem ele, vale a janela aberta). */
+  | { type: 'challenge'; windowId?: number }
+  | { type: 'block'; as: CoupCharacter; windowId?: number }
   | { type: 'lose'; card: CoupCharacter }
   | { type: 'exchange'; keep: CoupCharacter[] };
 

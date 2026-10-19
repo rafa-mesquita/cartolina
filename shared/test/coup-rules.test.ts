@@ -56,6 +56,14 @@ describe('Cúpi: início', () => {
     expect(s.winner).toBeNull();
     expect(s.out).toEqual([]);
   });
+
+  it('jogar de novo: o contador de janelas não zera (reação atrasada da partida anterior não casa)', () => {
+    const last = act(table(THREE), 'p0', { type: 'act', kind: 'tax' }, ctx3).window!.id;
+    const over: CoupState = { ...table(THREE), phase: 'over', turn: null, winner: 'p1', wins: { p0: 0, p1: 1 }, windowSeq: last };
+    const s = act(over, 'p0', { type: 'restart' }, ctx3);
+    expect(s.windowSeq).toBe(last);
+    expect(act(s, s.turn!, { type: 'act', kind: 'tax' }, ctx3).window!.id).toBeGreaterThan(last);
+  });
 });
 
 describe('Cúpi: ações sem reação', () => {

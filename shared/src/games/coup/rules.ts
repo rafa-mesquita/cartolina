@@ -41,7 +41,7 @@ export function initialCoupState(): CoupState {
     out: [],
     winner: null,
     wins: {},
-    windows: 0,
+    windowSeq: 0,
     log: [],
   };
 }
@@ -79,13 +79,14 @@ function startMatch(state: CoupState, ctx: GameContext): ActionResult<CoupState>
     deck: deck.slice(2 * players.length),
     turn: first,
     wins,
+    windowSeq: state.windowSeq,
     log: [{ t: 'start', first }],
   });
 }
 
 function openWindow(state: CoupState, kind: CoupWindowKind, eligible: string[], ctx: GameContext): CoupState {
-  const id = state.windows + 1;
-  return { ...state, phase: 'reaction', windows: id, window: { id, kind, eligible, passed: [], endsAt: ctx.now + COUP_WINDOW_MS } };
+  const id = state.windowSeq + 1;
+  return { ...state, phase: 'reaction', windowSeq: id, window: { id, kind, eligible, passed: [], endsAt: ctx.now + COUP_WINDOW_MS } };
 }
 
 /** A vez passa pro próximo vivo, limpando a jogada. */
@@ -242,6 +243,12 @@ function challenge(state: CoupState, by: string, ctx: GameContext): CoupState {
   return startLoss(refunded, of, 'caught', onBlock ? 'resolve' : 'next', ctx);
 }
 
+/** `by` bloqueia a ação declarada como `as`: abre a janela em que os outros vivos podem duvidar do bloqueio. */
+function block(state: CoupState, by: string, as: CoupCharacter, ctx: GameContext): CoupState {
+  const s = logged({ ...state, block: { by, as } }, { t: 'block', by, as });
+  return openWindow(s, 'block', alive(s).filter((p) => p !== by), ctx);
+}
+
 /**
  * Fecha a janela de reação quando todos que podiam reagir deixaram ou o prazo acabou. Roda depois de cada ação e a
  * cada `tick` da sala (presença e alarme no prazo). Devolve o MESMO objeto quando nada muda (o servidor compara referência).
@@ -254,9 +261,9 @@ export function settleCoup(state: CoupState, ctx: GameContext): CoupState {
 }
 
 /** Por que `playerId` não pode reagir na janela aberta (ou null se pode). Prazo vencido = janela fechada. */
-function reactError(state: CoupState, playerId: string, ctx: GameContext, window?: number): string | null {
+function reactError(state: CoupState, playerId: string, ctx: GameContext, windowId?: number): string | null {
   if (state.phase !== 'reaction' || state.window === null || ctx.now >= state.window.endsAt) return 'window_closed';
-  if (window !== undefined && window !== state.window.id) return 'window_closed';
+  if (windowId !== undefined && windowId !== state.window.id) return 'window_closed';
   if (!state.players.includes(playerId)) return 'not_player';
   if (!state.window.eligible.includes(playerId)) return 'cannot_react';
   if (state.window.passed.includes(playerId)) return 'already_passed';
@@ -292,24 +299,23 @@ export function applyCoupAction(
       return ok(settleCoup(declare(state, playerId, action.kind, target, ctx), ctx));
     }
     case 'pass': {
-      const e = reactError(state, playerId, ctx, action.window);
+      const e = reactError(state, playerId, ctx, action.windowId);
       if (e) return fail(e);
       const w = state.window!;
       return ok(settleCoup({ ...state, window: { ...w, passed: [...w.passed, playerId] } }, ctx));
     }
     case 'challenge': {
-      const e = reactError(state, playerId, ctx, action.window);
+      const e = reactError(state, playerId, ctx, action.windowId);
       if (e) return fail(e);
       if (!canChallenge(state)) return fail('cannot_react');
       return ok(settleCoup(challenge(state, playerId, ctx), ctx));
     }
     case 'block': {
-      const e = reactError(state, playerId, ctx, action.window);
+      const e = reactError(state, playerId, ctx, action.windowId);
       if (e) return fail(e);
       if (!canBlock(state, playerId)) return fail('cannot_react');
       if (!COUP_BLOCKERS[state.declared!.kind].includes(action.as)) return fail('bad_block');
-      const s = logged({ ...state, block: { by: playerId, as: action.as } }, { t: 'block', by: playerId, as: action.as });
-      return ok(settleCoup(openWindow(s, 'block', alive(s).filter((p) => p !== playerId), ctx), ctx));
+      return ok(settleCoup(block(state, playerId, action.as, ctx), ctx));
     }
     case 'lose':
       if (state.phase !== 'losing' || state.loss?.player !== playerId) return fail('not_losing');
