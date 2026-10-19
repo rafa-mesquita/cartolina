@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { CamelioState } from '../src/games/camelio/types';
 import type { DixitState } from '../src/games/dixit/types';
-import { GAMES, isGameId } from '../src/games/registry';
+import { GAME_IDS, GAMES, isGameId } from '../src/games/registry';
 import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
 import { PLAYER_COLORS } from '../src/players';
 import { ERROR_CODES, errorMessage, parseClientMessage } from '../src/protocol';
@@ -37,7 +38,8 @@ function dixitRoom(n: number): Room {
 
 describe('registro de jogos', () => {
   it('conhece ITO, Dixit, Retratim e Cama-Leão', () => {
-    expect(Object.keys(GAMES)).toEqual(['ito', 'dixit', 'pictures', 'camelio']);
+    expect(Object.keys(GAMES)).toEqual([...GAME_IDS]);
+    expect(GAME_IDS).toEqual(expect.arrayContaining(['ito', 'dixit', 'pictures', 'camelio']));
     expect(GAMES.dixit.minPlayers).toBe(3);
     expect(GAMES.ito.liveCursors).toBe(true);
     expect(GAMES.dixit.liveCursors).toBe(false);
@@ -244,7 +246,7 @@ describe('sala de Cama-Leão', () => {
     expect(room.game.phase).toBe('playing');
     expect(room.runStartedAt).toBe(10);
     expect(roomAction(room, 'p0', { type: 'play', from: 'mao', to: 'p1' }, rng, 11)).toEqual({ ok: false, error: 'bad_action' });
-    const turn = (room.game as { turn: string }).turn;
+    const turn = (room.game as CamelioState).turn!;
     room = step(room, turn, { type: 'play', from: 'open', to: turn }, 11);
     const view = roomView(room, 'p0');
     if (!isCamelioRoomView(view)) throw new Error('esperava Cama-Leão');

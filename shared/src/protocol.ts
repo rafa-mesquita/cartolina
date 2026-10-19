@@ -128,7 +128,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   own_work: 'Não dá pra palpitar na própria obra.',
   no_work: 'Essa pessoa não tem obra nesta rodada.',
   not_your_turn: 'Não é a sua vez.',
-  bad_target: 'Essa pessoa não pode receber carta agora.',
+  bad_target: 'Essa pessoa não pode ser escolhida agora.',
   not_playing: 'A partida não está rolando agora.',
 };
 
