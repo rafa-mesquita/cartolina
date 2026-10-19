@@ -1,8 +1,9 @@
 import type { ActionResult, GameContext } from '../../game';
 import { randomInt, shuffle } from '../../rng';
 import { shuffledDeck } from './deck';
-import { actError, alive, blockersOf, coinsOf, hiddenOf, isAlive, nextAlive, treasury, without } from './table';
+import { actError, alive, blockersOf, canBlock, canChallenge, coinsOf, hiddenOf, isAlive, nextAlive, treasury, without } from './table';
 import {
+  COUP_BLOCKERS,
   COUP_CLAIM,
   COUP_COST,
   COUP_MIN_PLAYERS,
@@ -216,6 +217,29 @@ function finishExchange(state: CoupState, player: string, keep: CoupCharacter[],
   });
 }
 
+/** A última carta `card` de `player` volta pro baralho, que é embaralhado, e ele compra outra (dúvida que falhou). */
+function swapCard(state: CoupState, player: string, card: CoupCharacter, ctx: GameContext): CoupState {
+  const hand = state.hands[player]!;
+  const deck = shuffle(ctx.rng, [...state.deck, card]);
+  const i = hand.cards.findIndex((c) => !c.revealed && c.character === card);
+  const cards = hand.cards.map((c, j) => (j === i ? { character: deck[0]!, revealed: false } : c));
+  return { ...state, deck: deck.slice(1), hands: { ...state.hands, [player]: { ...hand, cards } } };
+}
+
+/** `by` duvida de quem declarou (a ação, ou o bloqueio na janela do bloqueio). */
+function challenge(state: CoupState, by: string, ctx: GameContext): CoupState {
+  const onBlock = state.window!.kind === 'block';
+  const d = state.declared!;
+  const of = onBlock ? state.block!.by : d.actor;
+  const claim = onBlock ? state.block!.as : COUP_CLAIM[d.kind]!;
+  const had = hiddenOf(state, of).includes(claim);
+  const s = logged({ ...state, window: null }, { t: 'challenge', by, of, claim, had });
+  if (had) return startLoss(swapCard(s, of, claim, ctx), by, 'challengeWrong', onBlock ? 'blocked' : 'proceed', ctx);
+  // Pego blefando: as moedas do Assassino voltam (só ficam perdidas quando ele é bloqueado).
+  const refunded = !onBlock && d.kind === 'assassinate' ? withCoins(s, d.actor, COUP_COST.assassinate) : s;
+  return startLoss(refunded, of, 'caught', onBlock ? 'resolve' : 'next', ctx);
+}
+
 /**
  * Fecha a janela de reação quando todos que podiam reagir deixaram ou o prazo acabou. Roda depois de cada ação e a
  * cada `tick` da sala (presença e alarme no prazo). Devolve o MESMO objeto quando nada muda (o servidor compara referência).
@@ -227,9 +251,9 @@ export function settleCoup(state: CoupState, ctx: GameContext): CoupState {
   return allPassed || ctx.now >= w.endsAt ? closeWindow(state, ctx) : state;
 }
 
-/** Por que `playerId` não pode reagir na janela aberta (ou null se pode). */
-function reactError(state: CoupState, playerId: string): string | null {
-  if (state.phase !== 'reaction' || state.window === null) return 'window_closed';
+/** Por que `playerId` não pode reagir na janela aberta (ou null se pode). Prazo vencido = janela fechada. */
+function reactError(state: CoupState, playerId: string, ctx: GameContext): string | null {
+  if (state.phase !== 'reaction' || state.window === null || ctx.now >= state.window.endsAt) return 'window_closed';
   if (!state.players.includes(playerId)) return 'not_player';
   if (!state.window.eligible.includes(playerId)) return 'cannot_react';
   if (state.window.passed.includes(playerId)) return 'already_passed';
@@ -265,15 +289,25 @@ export function applyCoupAction(
       return ok(settleCoup(declare(state, playerId, action.kind, target, ctx), ctx));
     }
     case 'pass': {
-      const e = reactError(state, playerId);
+      const e = reactError(state, playerId, ctx);
       if (e) return fail(e);
       const w = state.window!;
       return ok(settleCoup({ ...state, window: { ...w, passed: [...w.passed, playerId] } }, ctx));
     }
-    case 'challenge':
-    case 'block':
-      // Dúvidas e bloqueios entram na Task 4.
-      return fail('bad_action');
+    case 'challenge': {
+      const e = reactError(state, playerId, ctx);
+      if (e) return fail(e);
+      if (!canChallenge(state)) return fail('cannot_react');
+      return ok(settleCoup(challenge(state, playerId, ctx), ctx));
+    }
+    case 'block': {
+      const e = reactError(state, playerId, ctx);
+      if (e) return fail(e);
+      if (!canBlock(state, playerId)) return fail('cannot_react');
+      if (!COUP_BLOCKERS[state.declared!.kind].includes(action.as)) return fail('bad_block');
+      const s = logged({ ...state, block: { by: playerId, as: action.as } }, { t: 'block', by: playerId, as: action.as });
+      return ok(settleCoup(openWindow(s, 'block', alive(s).filter((p) => p !== playerId), ctx), ctx));
+    }
     case 'lose':
       if (state.phase !== 'losing' || state.loss?.player !== playerId) return fail('not_losing');
       if (!hiddenOf(state, playerId).includes(action.card)) return fail('not_owner');
