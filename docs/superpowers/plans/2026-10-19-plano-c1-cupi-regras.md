@@ -40,6 +40,7 @@ Valem por cima do código das tasks abaixo:
 - **Reação depois do prazo não vale:** `reactError` recebe `ctx` e devolve `window_closed` com `ctx.now >= window.endsAt`.
 - **Id por janela:** `CoupWindow.id` vem de `CoupState.windowSeq` (que não zera no "jogar de novo"); `pass`/`challenge`/`block` levam `windowId?: number` e, se ele não for o da janela aberta, `window_closed`. Assim um "duvidar" atrasado não vira dúvida do bloqueio que abriu logo depois. O site sempre manda o `windowId`; o schema da Task 6 precisa aceitá-lo (sem isso o zod descarta o campo).
 - O bloqueio virou a função `block(state, by, as, ctx)` em `rules.ts`, ao lado de `challenge`.
+- **Tesouro vazio no automático (Task 5):** o ausente dá golpe também com 7+ moedas quando o tesouro está vazio (`mustCoup` em `settleOnce`); sem isso, 6 ausentes esvaziavam o tesouro com todos entre 8 e 9 moedas e a partida nunca acabava. Spec §2 atualizado.
 
 ## Mapa de arquivos
 

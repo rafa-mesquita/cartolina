@@ -44,8 +44,9 @@ Decisões do usuário (2026-10-19):
 - Cada jogador recebe 2 cartas viradas pra baixo e **2 moedas**. Com **2
   jogadores**, quem começa recebe **1 moeda** (regra oficial).
 - **Tesouro**: 50 moedas no total; o tesouro é 50 menos as moedas dos
-  jogadores. Ganhar moeda com o tesouro vazio dá só o que tiver (na prática
-  nunca acontece).
+  jogadores. Ganhar moeda com o tesouro vazio dá só o que tiver. É raro com
+  gente jogando, mas acontece com muitos no automático (6 ausentes esvaziam o
+  tesouro com todos entre 8 e 9 moedas; ver §2 Presença).
 - **Quem começa:** na primeira partida da sala, sorteado; na revanche, quem
   venceu a anterior (se não estiver jogando, sorteado). A vez segue a ordem dos
   assentos, pulando quem está fora.
@@ -130,7 +131,9 @@ O resto volta pro baralho, que é embaralhado. Sem prazo.
 Depois de 30 s desconectado, o jogador vai pro **automático** até voltar (não é
 eliminado):
 
-- na vez dele: **renda**; com 10 moedas ou mais, **golpe num alvo sorteado**;
+- na vez dele: **renda**; com 10 moedas ou mais, **golpe num alvo sorteado**
+  (também com 7 ou mais se o tesouro estiver vazio, senão a mesa trava; decidido
+  na execução do C1, 2026-10-19);
 - nas janelas de reação: **deixa** (conta na hora, a janela pode fechar antes do
   prazo);
 - quando tem que perder carta: **uma carta sorteada**;
