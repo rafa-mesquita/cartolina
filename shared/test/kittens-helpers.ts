@@ -1,0 +1,68 @@
+import type { ActionResult, GameContext } from '../src/game';
+import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
+import type { KittensAction, KittensState } from '../src/games/kittens/types';
+import { mulberry32 } from '../src/rng';
+
+export const T0 = 1_000_000;
+
+export const ids = (n: number): string[] => Array.from({ length: n }, (_, i) => `p${i}`);
+
+/** Contexto com `p0` como host e relógio em T0, por padrão. */
+export function ctxOf(
+  active: string[],
+  { seed = 1, hostId = 'p0', now = T0 }: { seed?: number; hostId?: string | null; now?: number } = {},
+): GameContext {
+  return { hostId, active, rng: mulberry32(seed), now };
+}
+
+export function must(res: ActionResult<KittensState>): KittensState {
+  if (!res.ok) throw new Error(`ação recusada: ${res.error}`);
+  return res.state;
+}
+
+/** Congela o objeto inteiro: qualquer mutação das regras estoura (ESM é strict). */
+export function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value)) deepFreeze(v);
+  }
+  return value;
+}
+
+export const act = (state: KittensState, playerId: string, action: KittensAction, ctx: GameContext): KittensState =>
+  must(applyKittensAction(deepFreeze(state), playerId, action, ctx));
+
+/** O código de erro de uma ação que tem que ser recusada. */
+export function refuse(state: KittensState, playerId: string, action: KittensAction, ctx: GameContext): string {
+  const res = applyKittensAction(deepFreeze(state), playerId, action, ctx);
+  if (res.ok) throw new Error('esperava recusa');
+  return res.error;
+}
+
+/** Partida começada com `n` jogadores (p0…), vez de p0. */
+export function started(n: number, seed = 1): { state: KittensState; ctx: GameContext } {
+  const ctx = ctxOf(ids(n), { seed });
+  return { state: act(initialKittensState(), 'p0', { type: 'start' }, ctx), ctx };
+}
+
+/** Mesa montada à mão: jogadores = chaves de `hands` (na ordem), todos vivos, vez de `current`. Monte: topo = fim. */
+export function table(opts: {
+  hands: Record<string, string[]>;
+  draw?: string[];
+  discard?: string[];
+  current?: string;
+  owed?: number;
+}): KittensState {
+  const players = Object.keys(opts.hands);
+  return {
+    ...initialKittensState(),
+    phase: 'playing',
+    players,
+    alive: [...players],
+    hands: opts.hands,
+    draw: opts.draw ?? [],
+    discard: opts.discard ?? [],
+    current: opts.current ?? players[0]!,
+    owed: opts.owed ?? 1,
+  };
+}
