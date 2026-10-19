@@ -46,12 +46,18 @@ export interface KittensDeal {
 export function kittensDeal(rng: Rng, players: readonly string[]): KittensDeal {
   const n = players.length;
   const pool = shuffle(rng, kittensBaseDeck(n));
+  // Cafunés embaralhados: se `cafune-i` fosse sempre do assento i, um Cafuné roubado (par/Favor) se denunciaria
+  // quando jogado, e só os dois envolvidos podem saber qual carta trocou de mão (spec §4.3).
+  const cafunes = shuffle(
+    rng,
+    Array.from({ length: n + KITTENS_EXTRA_CAFUNES }, (_, i) => kittensCardId('cafune', i)),
+  );
   const hands: Record<string, string[]> = {};
   players.forEach((p, i) => {
-    hands[p] = [kittensCardId('cafune', i), ...pool.slice(i * KITTENS_HAND_START, (i + 1) * KITTENS_HAND_START)];
+    hands[p] = [cafunes[i]!, ...pool.slice(i * KITTENS_HAND_START, (i + 1) * KITTENS_HAND_START)];
   });
   const rest = pool.slice(n * KITTENS_HAND_START);
-  const extras = Array.from({ length: KITTENS_EXTRA_CAFUNES }, (_, i) => kittensCardId('cafune', n + i));
+  const extras = cafunes.slice(n);
   const tatus = Array.from({ length: n - 1 }, (_, i) => kittensCardId('tatubum', i));
   return { hands, draw: shuffle(rng, [...rest, ...extras, ...tatus]) };
 }

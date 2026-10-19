@@ -45,6 +45,21 @@ export function started(n: number, seed = 1): { state: KittensState; ctx: GameCo
   return { state: act(initialKittensState(), 'p0', { type: 'start' }, ctx), ctx };
 }
 
+/**
+ * Todas as cartas da partida, onde quer que estejam (mãos, monte, descarte, fora do jogo, cartas no ar e o tatu que
+ * está sendo escondido), em ordem alfabética. Serve pra conferir que nenhuma carta some nem se duplica.
+ */
+export function everyCard(state: KittensState): string[] {
+  return [
+    ...Object.values(state.hands).flat(),
+    ...state.draw,
+    ...state.discard,
+    ...state.out,
+    ...(state.pending ? [...state.pending.play.cards, ...state.pending.nopes.map((n) => n.card)] : []),
+    ...(state.choice?.kind === 'cafune' ? [state.choice.tatu] : []),
+  ].sort();
+}
+
 /** Mesa montada à mão: jogadores = chaves de `hands` (na ordem), todos vivos, vez de `current`. Monte: topo = fim. */
 export function table(opts: {
   hands: Record<string, string[]>;

@@ -32,11 +32,26 @@ export function tatusIn(cards: readonly string[]): number {
   return cards.filter((c) => kittensKindOf(c) === 'tatubum').length;
 }
 
-/** Sobrou 1 vivo (ou ninguém): fim de jogo. */
+/**
+ * Sobrou 1 vivo (ou ninguém): fim de jogo. Nenhuma carta some: a carta no ar e os Nem vem! vão pro descarte, e o tatu
+ * que estava sendo escondido (Cafuné) vai pra fora do jogo.
+ */
 export function checkWin(state: KittensState): KittensState {
   if (state.alive.length > 1) return state;
   const winner = state.alive[0] ?? null;
-  const ended: KittensState = { ...state, phase: 'gameover', winner, current: null, owed: 0, pending: null, choice: null, peek: null };
+  const { pending, choice } = state;
+  const ended: KittensState = {
+    ...state,
+    phase: 'gameover',
+    winner,
+    current: null,
+    owed: 0,
+    discard: pending ? [...state.discard, ...pending.play.cards, ...pending.nopes.map((n) => n.card)] : state.discard,
+    out: choice?.kind === 'cafune' ? [...state.out, choice.tatu] : state.out,
+    pending: null,
+    choice: null,
+    peek: null,
+  };
   return winner === null ? ended : logged(ended, { t: 'win', by: winner });
 }
 

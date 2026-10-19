@@ -69,6 +69,23 @@ describe('visão do Tatubum', () => {
 
     expect(JSON.stringify(kittensViewFor(s, 'p1'))).not.toContain('tatubum-0');
   });
+
+  it('o tatu sendo escondido não tem id na visão (senão daria pra saber onde ele foi parar)', () => {
+    const hiding = {
+      ...table({ hands: { p0: [], p1: ['mico-0'], p2: [] }, draw: ['quati-0', 'tatubum-1'] }),
+      choice: { kind: 'cafune' as const, who: 'p0', tatu: 'tatubum-0', deadline: T0 + 30_000 },
+    };
+    for (const viewer of ['p0', 'p1', 'p2', 'p9', null]) {
+      const v = kittensViewFor(hiding, viewer);
+      expect(v.choice).toEqual({ kind: 'cafune', who: 'p0', deadline: T0 + 30_000 });
+      expect(JSON.stringify(v)).not.toContain('tatubum-0');
+    }
+  });
+
+  it('as outras escolhas aparecem como estão', () => {
+    const choice = { kind: 'cinco' as const, who: 'p0', options: ['ataque-0'], deadline: T0 + 30_000 };
+    expect(kittensViewFor({ ...s, choice }, 'p1').choice).toEqual(choice);
+  });
 });
 
 describe('prazo do Tatubum', () => {

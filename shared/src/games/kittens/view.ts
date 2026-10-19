@@ -2,7 +2,7 @@ import type { GameModule } from '../../game';
 import { applyKittensAction, initialKittensState } from './rules';
 import { settleKittens } from './settle';
 import { tatusIn } from './turn';
-import type { KittensAction, KittensEvent, KittensState, KittensView } from './types';
+import type { KittensAction, KittensChoice, KittensChoiceView, KittensEvent, KittensState, KittensView } from './types';
 
 /** Lê o registro só se a chave for própria (ids como '__proto__' não podem cair no protótipo). */
 function own<T>(record: Record<string, T>, key: string | null): T | undefined {
@@ -12,6 +12,16 @@ function own<T>(record: Record<string, T>, key: string | null): T | undefined {
 /** Tira a carta de um evento (pra quem não está no `seenBy`). */
 function hideCard(ev: KittensEvent): KittensEvent {
   return 'card' in ev ? ({ ...ev, card: null } as KittensEvent) : ev;
+}
+
+/**
+ * A escolha sem o id do tatu que está sendo escondido: com ele, quem assiste poderia saber onde o tatu foi parar
+ * (ex.: quando alguém sai, o tatu tirado do monte é o mais de baixo e aparece em `out`).
+ */
+function choiceView(choice: KittensChoice | null): KittensChoiceView | null {
+  if (choice?.kind !== 'cafune') return choice;
+  const { kind, who, deadline } = choice;
+  return { kind, who, deadline };
 }
 
 /**
@@ -33,7 +43,7 @@ export function kittensViewFor(state: KittensState, viewerId: string | null): Ki
     discard: state.discard,
     out: state.out,
     pending: state.pending,
-    choice: state.choice,
+    choice: choiceView(state.choice),
     peek: peek !== null && peek.who === viewerId ? peek.cards : null,
     peekBy: peek?.who ?? null,
     log: state.log.map(({ n, ev, seenBy }) => ({

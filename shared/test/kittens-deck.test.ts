@@ -60,6 +60,18 @@ describe('baralho', () => {
     expect(new Set(all).size).toBe(all.length);
   });
 
+  it('os Cafunés são embaralhados: o id não diz de quem era (um Cafuné roubado não se denuncia)', () => {
+    const players = ps(4);
+    const { hands, draw } = kittensDeal(mulberry32(1), players);
+    const cafunesOf = (cards: readonly string[]) => cards.filter((c) => kittensKindOf(c) === 'cafune');
+    expect(cafunesOf(hands.p0!)).toHaveLength(1);
+    expect(cafunesOf(hands.p0!)[0]).not.toBe('cafune-0');
+    for (const p of players) expect(cafunesOf(hands[p]!)).toHaveLength(1);
+    expect(cafunesOf(draw)).toHaveLength(2);
+    const all = [...players.flatMap((p) => cafunesOf(hands[p]!)), ...cafunesOf(draw)].sort();
+    expect(all).toEqual(Array.from({ length: 6 }, (_, i) => `cafune-${i}`));
+  });
+
   it('mesma semente, mesma distribuição', () => {
     expect(kittensDeal(mulberry32(3), ps(4))).toEqual(kittensDeal(mulberry32(3), ps(4)));
   });

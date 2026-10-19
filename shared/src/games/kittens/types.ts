@@ -39,6 +39,11 @@ export type KittensChoice =
   /** `who` escolhe uma carta de `options` (o descarte de antes da jogada de 5 diferentes). */
   | { kind: 'cinco'; who: string; options: string[]; deadline: number };
 
+/** Escolha como os jogadores veem: sem o id do tatu que está sendo escondido. */
+export type KittensChoiceView =
+  | { kind: 'cafune'; who: string; deadline: number }
+  | Exclude<KittensChoice, { kind: 'cafune' }>;
+
 /** Espiar: as 3 de cima, a do topo primeiro, só pra `who`. */
 export interface KittensPeek {
   who: string;
@@ -118,7 +123,7 @@ export interface KittensView {
   discard: string[];
   out: string[];
   pending: KittensPending | null;
-  choice: KittensChoice | null;
+  choice: KittensChoiceView | null;
   /** As 3 de cima, só pra quem espiou. */
   peek: string[] | null;
   peekBy: string | null;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { settleKittens } from '../src/games/kittens/settle';
-import { T0, act, ctxOf, ids, table } from './kittens-helpers';
+import { T0, act, ctxOf, everyCard, ids, table } from './kittens-helpers';
 
 const all = ids(3);
 /** Ativos sem `p` (a tolerância de 30 s de `p` já acabou). */
@@ -124,5 +124,31 @@ describe('presença', () => {
     const done = settleKittens(gone, without('p0', 5000));
     expect(done).toMatchObject({ pending: null, current: 'p1', owed: 1 });
     expect(done.log.at(-1)!.ev).toEqual({ t: 'resolved', by: 'p0', play: 'ataque', canceled: true });
+  });
+
+  describe('fim de jogo: nenhuma carta some', () => {
+    const two = ctxOf(['p0', 'p1']);
+    /** p1 cai de vez e a tolerância já acabou: p0 vence. */
+    const p1Gone = ctxOf(['p0'], { now: T0 + 40_000 });
+
+    it('o tatu que estava sendo escondido vai pra fora do jogo', () => {
+      const s = table({ hands: { p0: ['cafune-0', 'mico-0'], p1: ['mico-1'] }, draw: ['quati-0', 'tatubum-0'] });
+      const hiding = act(s, 'p0', { type: 'draw' }, two);
+      expect(hiding.choice).toMatchObject({ kind: 'cafune', tatu: 'tatubum-0' });
+      const over = settleKittens(hiding, p1Gone);
+      expect(over).toMatchObject({ phase: 'gameover', winner: 'p0', choice: null });
+      expect(over.out).toContain('tatubum-0');
+      expect(everyCard(over)).toEqual(everyCard(s));
+    });
+
+    it('a carta no ar e os Nem vem! vão pro descarte', () => {
+      const s = table({ hands: { p0: ['ataque-0', 'mico-0'], p1: ['nemvem-0'] }, draw: ['quati-0', 'tatubum-0'] });
+      const air = act(s, 'p0', { type: 'play', cards: ['ataque-0'] }, two);
+      const noped = act(air, 'p1', { type: 'nope' }, ctxOf(['p0', 'p1'], { now: T0 + 100 }));
+      const over = settleKittens(noped, p1Gone);
+      expect(over).toMatchObject({ phase: 'gameover', winner: 'p0', pending: null });
+      expect(over.discard).toEqual(['ataque-0', 'nemvem-0']);
+      expect(everyCard(over)).toEqual(everyCard(s));
+    });
   });
 });
