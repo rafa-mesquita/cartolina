@@ -33,6 +33,14 @@
 - O placar de vitórias da noite (`wins`) e o número da partida (`match`) vivem no estado do jogo e passam de uma partida pra outra no "jogar de novo" (`restart`).
 - Quem começa a revanche é o `winner` da partida anterior, se estiver entre os ativos; senão, sorteado.
 
+### Atualizações durante a execução (2026-10-19)
+
+Valem por cima do código das tasks abaixo:
+
+- **Reação depois do prazo não vale:** `reactError` recebe `ctx` e devolve `window_closed` com `ctx.now >= window.endsAt`.
+- **Id por janela:** `CoupWindow.id` vem de `CoupState.windowSeq` (que não zera no "jogar de novo"); `pass`/`challenge`/`block` levam `windowId?: number` e, se ele não for o da janela aberta, `window_closed`. Assim um "duvidar" atrasado não vira dúvida do bloqueio que abriu logo depois. O site sempre manda o `windowId`; o schema da Task 6 precisa aceitá-lo (sem isso o zod descarta o campo).
+- O bloqueio virou a função `block(state, by, as, ctx)` em `rules.ts`, ao lado de `challenge`.
+
 ## Mapa de arquivos
 
 Criar:
@@ -1789,6 +1797,14 @@ describe('Cúpi: schema das ações', () => {
     }
   });
 
+  it('o id da janela chega às regras (não é descartado)', () => {
+    expect(coupActionSchema.parse({ type: 'pass', windowId: 3 })).toEqual({ type: 'pass', windowId: 3 });
+    expect(coupActionSchema.parse({ type: 'challenge', windowId: 3 })).toEqual({ type: 'challenge', windowId: 3 });
+    expect(coupActionSchema.parse({ type: 'block', as: 'duke', windowId: 3 })).toEqual({ type: 'block', as: 'duke', windowId: 3 });
+    expect(coupActionSchema.safeParse({ type: 'pass', windowId: -1 }).success).toBe(false);
+    expect(coupActionSchema.safeParse({ type: 'pass', windowId: 1.5 }).success).toBe(false);
+  });
+
   it('recusa ação, personagem ou troca inválidos', () => {
     for (const a of [
       { type: 'act', kind: 'fly' },
@@ -1920,14 +1936,16 @@ import { z } from 'zod';
 import { COUP_ACTION_KINDS, COUP_CHARACTERS, type CoupAction } from './types';
 
 const character = z.enum(COUP_CHARACTERS);
+/** Id da janela que o jogador viu (sem ele o zod descartaria o campo e a reação atrasada voltaria a valer). */
+const windowId = z.number().int().nonnegative().optional();
 
 export const coupActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('start') }),
   z.object({ type: z.literal('restart') }),
   z.object({ type: z.literal('act'), kind: z.enum(COUP_ACTION_KINDS), target: z.string().min(1).max(64).optional() }),
-  z.object({ type: z.literal('pass') }),
-  z.object({ type: z.literal('challenge') }),
-  z.object({ type: z.literal('block'), as: character }),
+  z.object({ type: z.literal('pass'), windowId }),
+  z.object({ type: z.literal('challenge'), windowId }),
+  z.object({ type: z.literal('block'), as: character, windowId }),
   z.object({ type: z.literal('lose'), card: character }),
   z.object({ type: z.literal('exchange'), keep: z.array(character).min(1).max(2) }),
 ]);
@@ -1987,10 +2005,12 @@ function randomMove(state: CoupState, me: string, rng: Rng): CoupAction | null {
     return { type: 'act', kind, target: targets[randomInt(rng, targets.length)]! };
   }
   if (!can.pass) return null;
+  // Como o site: a reação leva o id da janela que o jogador viu.
+  const windowId = view.window!.id;
   const r = rng();
-  if (can.challenge && r < 0.15) return { type: 'challenge' };
-  if (can.block.length > 0 && r < 0.35) return { type: 'block', as: can.block[randomInt(rng, can.block.length)]! };
-  return { type: 'pass' };
+  if (can.challenge && r < 0.15) return { type: 'challenge', windowId };
+  if (can.block.length > 0 && r < 0.35) return { type: 'block', as: can.block[randomInt(rng, can.block.length)]!, windowId };
+  return { type: 'pass', windowId };
 }
 
 function playOut(n: number, seed: number): CoupState {
