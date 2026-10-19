@@ -140,7 +140,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   bad_target: 'Escolha outro alvo.',
   cannot_react: 'Você não pode fazer isso nesta jogada.',
   already_passed: 'Você já deixou passar.',
-  window_closed: 'Alguém reagiu primeiro.',
+  window_closed: 'Essa janela já fechou.',
   not_losing: 'Não é você que perde carta agora.',
   bad_exchange: 'Fique com o mesmo número de cartas que você tinha.',
   bad_block: 'Esse personagem não bloqueia essa ação.',

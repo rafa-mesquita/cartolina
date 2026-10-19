@@ -18,6 +18,10 @@ describe('Cúpi: início', () => {
     expect(tryAct(table(THREE), 'p0', { type: 'start' }, ctx3)).toEqual({ ok: false, error: 'bad_phase' });
   });
 
+  it('mais de 6 ativos: recusa', () => {
+    expect(applyCoupAction(initialCoupState(), 'p0', { type: 'start' }, ctxOf(ids(7)))).toEqual({ ok: false, error: 'room_full' });
+  });
+
   it('com 4: 2 cartas e 2 moedas cada, baralho com 7, vez de alguém da partida, placar zerado', () => {
     const s = act(initialCoupState(), 'p0', { type: 'start' }, ctxOf(ids(4)));
     expect(s.phase).toBe('turn');

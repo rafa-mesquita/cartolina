@@ -6,6 +6,7 @@ import {
   COUP_BLOCKERS,
   COUP_CLAIM,
   COUP_COST,
+  COUP_MAX_PLAYERS,
   COUP_MIN_PLAYERS,
   COUP_MUST_COUP_AT,
   COUP_START_COINS,
@@ -57,6 +58,7 @@ function withCoins(state: CoupState, player: string, delta: number): CoupState {
 /** Partida nova com os ativos (também no "jogar de novo"); começa quem venceu a anterior, se estiver jogando. */
 function startMatch(state: CoupState, ctx: GameContext): ActionResult<CoupState> {
   if (ctx.active.length < COUP_MIN_PLAYERS) return fail('not_enough_players');
+  if (ctx.active.length > COUP_MAX_PLAYERS) return fail('room_full');
   const players = [...ctx.active];
   const deck = shuffledDeck(ctx.rng);
   const first =

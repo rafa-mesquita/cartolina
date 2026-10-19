@@ -247,6 +247,7 @@ describe('sala de Cúpi', () => {
     const first = game().turn!;
     room = step(room, first, { type: 'act', kind: 'tax' }, 10);
     expect(nextAlarmAt(room, 10)).toBe(10 + COUP_WINDOW_MS);
+    expect(tick(room, 10 + COUP_WINDOW_MS - 1, rng).game).toBe(room.game);
     expect(tick(room, 10 + COUP_WINDOW_MS - 1, rng).game.phase).toBe('reaction');
     room = tick(room, 10 + COUP_WINDOW_MS, rng);
     expect(game().phase).toBe('turn');
