@@ -95,7 +95,7 @@ export interface CamelioView {
   points: Record<string, number>;
   /** Última jogada (pra animar), ou null antes da primeira. */
   last: CamelioPlay | null;
-  /** Quantas jogadas a partida já teve: muda a cada jogada, mesmo se a anterior for igual. */
+  /** Quantas jogadas a partida já teve: muda a cada jogada, mesmo se a anterior for igual. Volta a 0 numa partida nova: pra animar, use `match` + `playCount`. */
   playCount: number;
   winners: string[];
   endReason: CamelioEndReason | null;

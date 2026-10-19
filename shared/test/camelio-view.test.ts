@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { camelioCard } from '../src/games/camelio/deck';
-import { initialCamelioState } from '../src/games/camelio/rules';
+import { camelioBack, camelioCard } from '../src/games/camelio/deck';
+import { applyCamelioAction, camelioOnPresenceChange, initialCamelioState } from '../src/games/camelio/rules';
 import { camelioActionSchema } from '../src/games/camelio/schema';
 import { camelio, camelioViewFor } from '../src/games/camelio/view';
 import { act, C, ctxOf, ids, playing } from './camelio-helpers';
@@ -19,8 +19,19 @@ describe('visão do Cama-Leão', () => {
     expect(v).not.toHaveProperty('deck');
     expect(v).not.toHaveProperty('discard');
     expect(v.top).not.toHaveProperty('id');
-    const topCard = camelioCard(s.deck[s.deck.length - 1]!);
-    if (topCard.kind !== 'normal') expect(JSON.stringify(v.top)).not.toContain(`"color":"${topCard.color}"`);
+  });
+
+  it('o topo sai só como verso, com as chaves exatas de cada tipo de carta', () => {
+    const casos: [number, string[]][] = [
+      [C.vermelho3, ['color', 'kind']],
+      [C.bicVermelho2, ['colors', 'kind', 'spheres']],
+      [71, ['kind', 'spheres']],
+    ];
+    for (const [id, chaves] of casos) {
+      const v = camelioViewFor(playing(3, { deck: [C.verde1, id] }), 'p0');
+      expect(v.top).toEqual(camelioBack(camelioCard(id)));
+      expect(Object.keys(v.top!).sort()).toEqual(chaves);
+    }
   });
 
   it('mesas e pontos abertos pra todo mundo, com as cartas inteiras', () => {
@@ -52,6 +63,9 @@ describe('visão do Cama-Leão', () => {
   it('o módulo junta as peças', () => {
     expect(camelio.id).toBe('camelio');
     expect(camelio.initialState()).toEqual(initialCamelioState());
+    expect(camelio.viewFor).toBe(camelioViewFor);
+    expect(camelio.applyAction).toBe(applyCamelioAction);
+    expect(camelio.onPresenceChange).toBe(camelioOnPresenceChange);
   });
 });
 
