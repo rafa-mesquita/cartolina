@@ -49,4 +49,31 @@ describe('Cama-Leão no servidor', () => {
     const err = await waiting.client.next('error');
     expect(err).toMatchObject({ code: 'not_your_turn', message: 'Não é a sua vez.' });
   });
+
+  it('dois jogadores jogam até o fim, e o host joga de novo', async () => {
+    const code = await newGameRoom('camelio');
+    const players = await joined(code, 2);
+    const host = players[0]!;
+    host.client.send({ t: 'action', action: { type: 'start' } });
+    const started = await Promise.all(players.map((p) => p.client.state<CamelioRoomView>(isPlaying)));
+
+    // O host acompanha o estado; quem tem a vez compra do monte pra si mesmo.
+    let view = started[0]!;
+    for (let n = 0; n < 200 && view.game.phase === 'playing'; n++) {
+      const actor = players.find((p) => p.id === view.game.turn)!;
+      actor.client.send({ t: 'action', action: { type: 'play', from: 'deck', to: actor.id } });
+      view = await host.client.state<CamelioRoomView>((r) => r.game.playCount === n + 1 || r.game.phase === 'over');
+    }
+
+    expect(view.game.phase).toBe('over');
+    expect(view.game.winners.length).toBeGreaterThan(0);
+    expect(['target', 'deck']).toContain(view.game.endReason);
+    expect(view.game.turn).toBeNull();
+
+    host.client.send({ t: 'action', action: { type: 'again' } });
+    const novo = await host.client.state<CamelioRoomView>(
+      (r) => r.game.phase === 'playing' && r.game.match === 2 && r.game.playCount === 0,
+    );
+    expect(novo.game.match).toBe(2);
+  });
 });
