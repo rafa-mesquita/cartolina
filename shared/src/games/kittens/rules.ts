@@ -2,8 +2,9 @@ import type { ActionResult, GameContext } from '../../game';
 import { kittensKindOf } from './cards';
 import { hideTatu } from './choices';
 import { kittensDeal } from './deck';
+import { parsePlay } from './play';
 import { eliminate, logged, spendTurn } from './turn';
-import { KITTENS_CHOICE_MS, KITTENS_MIN_PLAYERS, type KittensAction, type KittensState } from './types';
+import { KITTENS_CHOICE_MS, KITTENS_MIN_PLAYERS, KITTENS_NOPE_MS, type KittensAction, type KittensState } from './types';
 
 const fail = (error: string): ActionResult<KittensState> => ({ ok: false, error });
 const ok = (state: KittensState): ActionResult<KittensState> => ({ ok: true, state });
@@ -105,6 +106,33 @@ export function applyKittensAction(
         return ok(hideTatu(s, c, position, ctx.rng));
       }
       return fail('bad_choice');
+    }
+    case 'play': {
+      const e = turnError(s, playerId);
+      if (e) return fail(e);
+      const play = parsePlay(s, playerId, action);
+      if (typeof play === 'string') return fail(play);
+      const hand = s.hands[playerId]!.filter((c) => !play.cards.includes(c));
+      const next: KittensState = {
+        ...s,
+        hands: { ...s.hands, [playerId]: hand },
+        pending: { by: playerId, play, nopes: [], resolvesAt: ctx.now + KITTENS_NOPE_MS },
+      };
+      return ok(logged(next, { t: 'play', by: playerId, play: play.kind, target: play.target, ask: play.ask }));
+    }
+    case 'nope': {
+      if (s.phase !== 'playing') return fail('bad_phase');
+      if (!s.alive.includes(playerId)) return fail('not_alive');
+      if (!s.pending) return fail('nothing_to_nope');
+      const card = s.hands[playerId]!.find((c) => kittensKindOf(c) === 'nemvem');
+      if (card === undefined) return fail('no_nope');
+      const pending = {
+        ...s.pending,
+        nopes: [...s.pending.nopes, { by: playerId, card }],
+        resolvesAt: ctx.now + KITTENS_NOPE_MS,
+      };
+      const hands = { ...s.hands, [playerId]: s.hands[playerId]!.filter((c) => c !== card) };
+      return ok(logged({ ...s, pending, hands }, { t: 'nope', by: playerId }));
     }
     default:
       return fail('bad_action');
