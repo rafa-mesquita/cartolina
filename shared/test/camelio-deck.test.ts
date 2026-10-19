@@ -72,6 +72,17 @@ describe('baralho do Cama-Leão', () => {
     expect(camelioCard(71)).toMatchObject({ kind: 'multi', color: 'azul', spheres: 2, pair: null });
   });
 
+  it('as cartas são congeladas (o baralho é compartilhado entre salas)', () => {
+    expect(Object.isFrozen(CAMELIO_DECK)).toBe(true);
+    expect(Object.isFrozen(camelioCard(0))).toBe(true);
+    const bic = camelioCard(C.bicVermelho2);
+    expect(Object.isFrozen(bic.pair)).toBe(true);
+    const back = camelioBack(bic);
+    if (back.kind !== 'bicolor') throw new Error('esperava bicolor');
+    expect(Object.isFrozen(back.colors)).toBe(false);
+    expect(back.colors).not.toBe(bic.pair);
+  });
+
   it('carta desconhecida estoura', () => {
     expect(() => camelioCard(72)).toThrow();
     expect(() => camelioCard(-1)).toThrow();

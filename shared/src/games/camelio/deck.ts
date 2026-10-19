@@ -9,7 +9,15 @@ const MULTI_SPHERES = [1, 2] as const;
  */
 function buildDeck(): CamelioCard[] {
   const cards: CamelioCard[] = [];
-  const add = (card: Omit<CamelioCard, 'id'>) => cards.push({ id: cards.length, ...card });
+  // O baralho é um só pro servidor inteiro (todas as salas): mutar uma carta tem que estourar.
+  const add = (card: Omit<CamelioCard, 'id'>) =>
+    cards.push(
+      Object.freeze({
+        id: cards.length,
+        ...card,
+        pair: card.pair && (Object.freeze([...card.pair]) as [CamelioColor, CamelioColor]),
+      }),
+    );
   for (const color of CAMELIO_COLORS) {
     for (const spheres of NORMAL_SPHERES) add({ kind: 'normal', color, spheres, pair: null });
   }
@@ -26,7 +34,7 @@ function buildDeck(): CamelioCard[] {
   for (const color of CAMELIO_COLORS) {
     for (const spheres of MULTI_SPHERES) add({ kind: 'multi', color, spheres, pair: null });
   }
-  return cards;
+  return Object.freeze(cards) as CamelioCard[];
 }
 
 export const CAMELIO_DECK: readonly CamelioCard[] = buildDeck();
