@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tatubum · protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+  :root {
+    --ink: #2b1a10; --night: #0e0e1c; --paper: #f4e9d0; --yellow: #f2c14e; --red: #e4572e;
+    --btn: #e0605a; --btn-edge: #1a0f1f; --btn-hi: #f08a80; --btn-lo: #b8423e; --cream: #fff3e0;
+    --txt: #f4e9d0; --dim: #9fb0d8;
+    --px: 'Press Start 2P', monospace; --vt: 'VT323', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--night); overflow: hidden; }
+  body { font-family: var(--vt); color: var(--txt); user-select: none; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 900px; transform-origin: center; overflow: hidden; image-rendering: pixelated; }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  img { image-rendering: pixelated; }
+
+  /* Botões chanfrados (aprovados no mockup) */
+  .btn { position: relative; display: inline-flex; height: 46px; min-width: 150px; padding: 4px; border: none; background: var(--btn-edge); cursor: pointer;
+    clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
+  .btn > span { flex: 1; height: 100%; background: var(--btn); display: flex; align-items: center; justify-content: center; padding: 0 22px; white-space: nowrap;
+    clip-path: polygon(11px 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 11px 100%, 0 50%);
+    font-family: var(--px); font-size: 13px; color: var(--cream); text-shadow: 2px 2px 0 #8c2f2f; box-shadow: inset 0 4px 0 var(--btn-hi), inset 0 -5px 0 var(--btn-lo); }
+  .btn:hover > span { background: #ea736c; }
+  .btn:active > span { transform: translateY(2px); }
+  .btn.yellow > span { background: var(--yellow); color: var(--ink); text-shadow: 2px 2px 0 #c9962c; box-shadow: inset 0 4px 0 #f7d886, inset 0 -5px 0 #c9962c; }
+  .btn.yellow:hover > span { background: #f6cd6b; }
+  .btn.ghost > span { background: #2c3a66; text-shadow: 2px 2px 0 #141f42; box-shadow: inset 0 4px 0 #3f5590, inset 0 -5px 0 #1a2a50; }
+  .btn.small { height: 36px; min-width: 0; }
+  .btn.small > span { font-size: 10px; padding: 0 16px; }
+  .btn[disabled] { cursor: default; filter: grayscale(.85) brightness(.7); }
+
+  /* Barra do topo */
+  #topbar { position: absolute; left: 0; right: 0; top: 0; height: 48px; background: rgba(14,14,28,.88); display: flex; align-items: center; justify-content: space-between; padding: 0 18px; box-shadow: 0 4px 0 #050510; z-index: 5; }
+  #logo { font-family: var(--px); font-size: 18px; color: var(--yellow); text-shadow: 2px 0 0 #3b2412, -2px 0 0 #3b2412, 0 2px 0 #3b2412, 0 -2px 0 #3b2412, 3px 3px 0 #050510; }
+  #turn { font-family: var(--px); font-size: 12px; color: var(--cream); }
+  #turn b { color: var(--yellow); }
+  #turn .owed { color: var(--red); margin-left: 8px; animation: blink 0.9s steps(2) infinite; }
+  #topright { display: flex; gap: 8px; }
+
+  /* Assentos dos bots */
+  #seats { position: absolute; left: 0; right: 0; top: 60px; height: 170px; z-index: 2; }
+  .seat { position: absolute; width: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px; cursor: default; }
+  .seat .tatu { width: 80px; height: 44px; }
+  .seat .who { font-family: var(--px); font-size: 10px; color: var(--cream); text-shadow: 2px 2px 0 #050510; margin-top: 4px; }
+  .seat .count { display: flex; align-items: center; gap: 6px; font-size: 22px; line-height: 1; color: var(--dim); }
+  .seat .mini { width: 14px; height: 19px; background: #1f3a6b; box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink); }
+  .seat .chip { font-family: var(--px); font-size: 8px; padding: 4px 6px; background: #2c3a66; color: var(--cream); margin-top: 2px; }
+  .seat.turn { background: rgba(242,193,78,.16); box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow); }
+  .seat.turn .who::before { content: '▶ '; color: var(--yellow); }
+  .seat.dead { opacity: .55; filter: grayscale(1); }
+  .seat.winner { z-index: 45; background: rgba(242,193,78,.25); box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow); }
+  .seat.winner .who::before { content: '♛ '; color: var(--yellow); }
+  .seat.dead .who::after { content: ' ✝'; }
+  .seat.targetable { cursor: pointer; animation: pulse .6s steps(2) infinite; }
+  .seat.targetable:hover { background: rgba(228,87,46,.25); }
+  .seat.hit { animation: hit .5s steps(4); }
+  @keyframes pulse { 50% { box-shadow: 0 -3px 0 var(--red), 0 3px 0 var(--red), -3px 0 0 var(--red), 3px 0 0 var(--red); } }
+  @keyframes hit { 25% { transform: translateX(-50%) translateY(-8px); } 75% { transform: translateX(-50%) translateY(4px); } }
+  @keyframes blink { 50% { opacity: .35; } }
+
+  /* Legenda em quadrinho */
+  #caption { position: absolute; left: 650px; top: 238px; transform: translateX(-50%); min-width: 380px; max-width: 760px; padding: 10px 18px 8px; background: var(--paper); color: var(--ink);
+    font-size: 28px; line-height: 1; text-align: center; box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 6px 8px 0 rgba(0,0,0,.35); z-index: 4; }
+  #caption:empty { display: none; }
+  #caption .timer { color: var(--red); margin-left: 8px; }
+
+  /* Mesa */
+  #table { position: absolute; left: 200px; top: 300px; width: 900px; height: 270px; background: #2e5a3a; z-index: 1;
+    box-shadow: 0 -6px 0 var(--night), 0 6px 0 var(--night), -6px 0 0 var(--night), 6px 0 0 var(--night), 10px 14px 0 rgba(0,0,0,.4);
+    background-image: radial-gradient(#33653f 1.5px, transparent 1.6px); background-size: 8px 8px; }
+  .slot { position: absolute; top: 40px; width: 140px; height: 190px; display: flex; align-items: center; justify-content: center; }
+  .slot .label { position: absolute; bottom: -30px; left: 0; right: 0; text-align: center; font-size: 22px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
+  #deck { left: 90px; cursor: pointer; }
+  #deck .stack { position: relative; width: 112px; height: 156px; }
+  #deck .stack .card { position: absolute; left: 0; top: 0; }
+  #deck.shuffling .stack .card { animation: shuffle .12s steps(2) 6; }
+  #deck.mine:hover .stack .card:last-child { transform: translate(-4px, -10px); }
+  @keyframes shuffle { 50% { translate: 10px -6px; } }
+  #air { left: 380px; }
+  #air .card { position: absolute; }
+  #air .empty { width: 112px; height: 156px; border: 4px dashed rgba(244,233,208,.35); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 22px; color: rgba(244,233,208,.5); }
+  #bar { position: absolute; left: 380px; top: 248px; width: 140px; display: flex; justify-content: center; gap: 6px; }
+  #bar i { width: 18px; height: 12px; background: #1a2a20; box-shadow: 0 0 0 3px var(--night); }
+  #bar i.on { background: var(--red); }
+  #bar i.on.last { animation: blink .3s steps(2) infinite; }
+  #discard { left: 670px; }
+  #discard .card { position: absolute; }
+  #future { position: absolute; left: 230px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
+  #future .tag { font-family: var(--px); font-size: 8px; color: var(--yellow); margin-bottom: 2px; }
+  #future .card { transform: scale(.42); transform-origin: left top; margin-bottom: -88px; }
+
+  /* Cartas */
+  .card { width: 112px; height: 156px; background: var(--paper); color: var(--ink); position: relative; display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 5px 8px 0 rgba(0,0,0,.35); }
+  .card .band { width: 100%; height: 14px; }
+  .card .art { width: 80px; height: auto; margin-top: 12px; }
+  .card .name { font-family: var(--px); font-size: 9px; margin-top: auto; text-align: center; padding: 0 4px; }
+  .card .hint { font-size: 16px; line-height: 1; margin: 4px 0 8px; color: #6b5440; text-align: center; padding: 0 4px; }
+  .card.back { background: #1f3a6b; background-image: radial-gradient(#2c5a8c 1.5px, transparent 1.6px); background-size: 10px 10px; justify-content: center; }
+  .card.back .art { width: 74px; margin-top: 0; }
+  .card.back .name { color: var(--yellow); margin: 10px 0 0; font-size: 9px; text-shadow: 2px 2px 0 var(--ink); }
+  .card.tatubum { background: #3b2412; color: var(--cream); }
+  .card.tatubum .hint { color: var(--yellow); }
+  .flying { position: absolute; left: 0; top: 0; z-index: 30; pointer-events: none; }
+
+  /* Mão */
+  #hand { position: absolute; left: 190px; width: 940px; bottom: 26px; height: 200px; z-index: 6; }
+  #hand .card { position: absolute; bottom: 0; cursor: pointer; transition: none; }
+  #hand .card:hover { bottom: 14px; }
+  #hand .card.sel { bottom: 34px; box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); animation: selblink .5s steps(2) infinite; }
+  #hand .card.arriving { visibility: hidden; }
+  #hand.giving .card:hover { bottom: 30px; box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
+  #hand.myturn::before { content: 'SUA VEZ'; position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-family: var(--px); font-size: 11px; color: var(--yellow); text-shadow: 2px 2px 0 #050510; animation: blink 1s steps(2) infinite; }
+  #hand .dead { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); font-family: var(--px); font-size: 14px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
+  @keyframes selblink { 50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 5px 8px 0 rgba(0,0,0,.35); } }
+
+  #actions { position: absolute; right: 26px; bottom: 30px; width: 250px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; z-index: 7; }
+  #actions .btn { width: 100%; }
+  #actions .hint { font-size: 22px; color: var(--dim); text-align: center; text-shadow: 2px 2px 0 #050510; }
+  #nope.btn { height: 64px; }
+  #nope.btn > span { font-size: 15px; background: var(--red); animation: nopepulse .5s steps(2) infinite; }
+  @keyframes nopepulse { 50% { background: #f06b45; } }
+
+  /* Diário */
+  #log { position: absolute; right: 20px; top: 300px; width: 296px; height: 270px; padding: 10px 12px; background: rgba(14,14,28,.82); box-shadow: 0 -4px 0 #050510, 0 4px 0 #050510, -4px 0 0 #050510, 4px 0 0 #050510; z-index: 3; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+  #log .h { font-family: var(--px); font-size: 9px; color: var(--yellow); margin-bottom: 6px; }
+  #log p { margin: 0 0 3px; font-size: 19px; line-height: 1.05; color: var(--txt); }
+  #log p.me { color: #ffd27e; }
+  #log p.bad { color: #ff9b7a; }
+
+  /* Painéis (escolhas) */
+  #panel { position: absolute; left: 650px; top: 300px; transform: translateX(-50%); z-index: 20; min-width: 560px; padding: 22px 26px; background: #141f42;
+    box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
+  #panel:empty { display: none; }
+  #panel h2 { margin: 0 0 6px; font-family: var(--px); font-size: 16px; color: var(--yellow); font-weight: normal; }
+  #panel p { margin: 0 0 14px; font-size: 24px; }
+  #panel .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  #panel .cards { display: flex; gap: 14px; margin: 22px 0 8px; }
+  #panel .cards .card { cursor: pointer; }
+  #panel .cards .card:hover { transform: translateY(-8px); }
+  #panel input[type=range] { width: 100%; accent-color: var(--yellow); margin: 6px 0 14px; }
+  #panel .pos { font-family: var(--px); font-size: 12px; color: var(--cream); margin-bottom: 4px; }
+  #panel .timer { float: right; font-family: var(--px); font-size: 12px; color: var(--red); }
+
+  /* Menu e fim */
+  #menu, #over { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+  #menu[hidden], #over[hidden] { display: none; }
+  #stage.menu-open :is(#table, #log, #hand, #actions, #seats, #caption, #panel) { display: none; }
+  #over { background: rgba(14,14,28,.55); }
+  .biglogo { font-family: var(--px); font-size: 64px; color: var(--yellow); text-shadow: 5px 0 0 #3b2412, -5px 0 0 #3b2412, 0 5px 0 #3b2412, 0 -5px 0 #3b2412, 9px 9px 0 #050510; margin-bottom: 8px; }
+  .sub { font-family: var(--px); font-size: 13px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
+  .picker { display: flex; align-items: center; gap: 16px; }
+  .picker .n { font-family: var(--px); font-size: 26px; color: var(--cream); width: 60px; text-align: center; text-shadow: 3px 3px 0 #050510; }
+  #menu .btn, #over .btn { min-width: 260px; height: 54px; }
+  #menu .btn > span, #over .btn > span { font-size: 15px; }
+  #menu .picker .btn { min-width: 64px; height: 46px; }
+
+  #dev { position: absolute; left: 14px; bottom: 12px; z-index: 8; display: flex; flex-direction: column; gap: 6px; }
+  #dev .lbl { font-size: 18px; color: var(--dim); text-shadow: 2px 2px 0 #050510; }
+
+  #toast { position: absolute; left: 50%; bottom: 270px; transform: translateX(-50%); z-index: 50; padding: 8px 16px; background: var(--red); color: var(--cream); font-family: var(--px); font-size: 11px;
+    box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink); }
+  #toast:empty { display: none; }
+
+  /* Efeitos */
+  #fxlayer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+  #particles { position: absolute; inset: 0; width: 1440px; height: 900px; z-index: 31; pointer-events: none; image-rendering: pixelated; }
+  .stamp { position: absolute; font-family: var(--px); font-size: 26px; padding: 10px 14px; border: 6px solid currentColor; background: rgba(244,233,208,.92); white-space: nowrap; }
+  .pop { position: absolute; font-family: var(--px); white-space: nowrap; text-shadow: 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 6px 0 var(--ink), 0 -6px 0 var(--ink), 10px 10px 0 rgba(0,0,0,.45); }
+  .flash { position: absolute; inset: 0; }
+  .bigcard { position: absolute; z-index: 32; transform: translate(-50%, -50%) scale(2); }
+  .bigcard.shaking { animation: shake .09s steps(2) infinite; }
+  @keyframes shake { 50% { translate: 4px -3px; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+<div id="stage" class="menu-open">
+  <canvas id="bg"></canvas>
+  <div id="topbar">
+    <div id="logo">TATUBUM</div>
+    <div id="turn"></div>
+    <div id="topright">
+      <button class="btn small ghost" id="sound"><span>SOM: SIM</span></button>
+      <button class="btn small ghost" id="tomenu"><span>MENU</span></button>
+    </div>
+  </div>
+  <div id="seats"></div>
+  <div id="caption"></div>
+  <div id="table">
+    <div class="slot" id="deck"><div class="stack"></div><div class="label"></div></div>
+    <div id="future"></div>
+    <div class="slot" id="air"></div>
+    <div id="bar"></div>
+    <div class="slot" id="discard"><div class="label">descarte</div></div>
+  </div>
+  <div id="log"></div>
+  <div id="hand"></div>
+  <div id="actions"></div>
+  <div id="panel"></div>
+  <div id="dev">
+    <div class="lbl">protótipo · teste</div>
+    <button class="btn small ghost" id="drop"><span>DERRUBAR UM BOT</span></button>
+    <button class="btn small ghost" id="speed"><span>BOTS: NORMAIS</span></button>
+  </div>
+  <div id="toast"></div>
+  <div id="menu">
+    <div class="biglogo">TATUBUM</div>
+    <div class="sub">quantos bots na mesa?</div>
+    <div class="picker">
+      <button class="btn ghost" id="less"><span>−</span></button>
+      <div class="n" id="nbots">3</div>
+      <button class="btn ghost" id="more"><span>+</span></button>
+    </div>
+    <button class="btn yellow" id="play"><span>JOGAR</span></button>
+  </div>
+  <div id="over" hidden></div>
+  <div id="fxlayer"></div>
+  <canvas id="particles"></canvas>
+</div>
+
+<script src="rules.js"></script>
+<script src="sprites.js"></script>
+<script src="cerrado.js"></script>
+<script src="sounds.js"></script>
+<script src="fx.js"></script>
+<script src="bots.js"></script>
+<script>
+'use strict';
+const T = Tatubum;
+const $ = (s) => document.querySelector(s);
+const stage = $('#stage');
+
+// ---------------------------------------------------------------- palco
+let scale = 1;
+function fit() {
+  scale = Math.min(innerWidth / 1440, innerHeight / 900);
+  stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+addEventListener('resize', fit);
+fit();
+Fx.init(stage, $('#fxlayer'), $('#particles'), () => scale);
+Cerrado.start($('#bg'), Math.floor(Math.random() * 1e9));
+
+// ---------------------------------------------------------------- jogadores e regras reais
+const NAMES = ['Você', 'Ana', 'Caio', 'Bia', 'Duda', 'Léo', 'Mari', 'Zé'];
+const COLORS = ['#ff8fab', '#7eddb5', '#9ec5ff', '#ffd27e', '#c9a8ee', '#f7a072', '#a3e4ef', '#d8d88a'];
+const ME = 'p0';
+let players = [];
+let active = [];
+let state = T.initialKittensState();
+let view = null;
+let rng = T.mulberry32((Math.random() * 2 ** 32) >>> 0);
+let botSpeed = 1;
+const botMem = {};
+
+const idx = (p) => Number(p.slice(1));
+const nameOf = (p) => NAMES[idx(p)];
+const colorOf = (p) => COLORS[idx(p)];
+const kindOf = (c) => T.kittensKindOf(c);
+const cardName = (k) => T.KITTENS_CARD_NAMES[k].toUpperCase();
+const PLAY_LABEL = { ataque: 'ATAQUE', pular: 'PULAR', favor: 'FAVOR', embaralhar: 'EMBARALHAR', espiar: 'ESPIAR', par: 'PAR', trio: 'TRIO', cinco: '5 DIFERENTES' };
+
+function ctx() {
+  return { hostId: ME, active, rng, now: Date.now() };
+}
+
+/** Toda ação passa pelo schema e pelas regras reais, como no servidor. */
+function dispatch(pid, action) {
+  const parsed = T.kittensActionSchema.safeParse(action);
+  const res = parsed.success ? T.applyKittensAction(state, pid, parsed.data, ctx()) : { ok: false, error: 'bad_action' };
+  if (!res.ok) {
+    if (pid === ME) { toast(T.errorMessage(res.error)); Sound.play('error'); }
+    return false;
+  }
+  state = res.state;
+  onState();
+  return true;
+}
+
+// Alarme: o servidor resolveria os prazos; aqui um intervalo faz isso.
+setInterval(() => {
+  if (state.phase === 'playing') {
+    const next = T.settleKittens(state, ctx());
+    if (next !== state) { state = next; onState(); }
+  }
+  tickTimers();
+}, 100);
+
+// ---------------------------------------------------------------- fila de efeitos
+const queue = [];
+let running = false;
+function enqueue(fn) {
+  queue.push(fn);
+  if (!running) runQueue();
+}
+async function runQueue() {
+  running = true;
+  while (queue.length) {
+    try { await queue.shift()(); } catch (e) { console.error(e); }
+  }
+  running = false;
+  if (arriving.size || airHidden) { arriving.clear(); airHidden = false; render(); }
+}
+
+// ---------------------------------------------------------------- estado da tela
+let lastN = -1;
+let selected = new Set();
+let mode = null; // { type: 'target', play } | { type: 'ask', play }
+const arriving = new Set();
+let airHidden = false;
+let captionText = '';
+let lastTic = 0;
+
+function onState() {
+  const prev = view;
+  const rects = handRects();
+  view = T.kittensViewFor(state, ME);
+  const fresh = view.log.filter((e) => e.n > lastN);
+  if (view.log.length) lastN = view.log[view.log.length - 1].n;
+  for (const id of view.hand) if (!prev || !prev.hand.includes(id)) arriving.add(id);
+  if (fresh.some((e) => e.ev.t === 'play' || e.ev.t === 'nope')) airHidden = true;
+  for (const id of [...selected]) if (!view.hand.includes(id)) selected.delete(id);
+  if (view.phase !== 'playing' || view.current !== ME || view.pending || view.choice) mode = null;
+  render();
+  if (!prev || (prev.phase !== 'playing' && view.phase === 'playing')) enqueue(() => dealAnim());
+  for (const e of fresh) enqueue(() => animate(e.ev, prev, rects));
+  // Carta que apareceu sem efeito nenhum pra trazê-la não pode ficar escondida.
+  if (!running && !queue.length && (arriving.size || airHidden)) { arriving.clear(); airHidden = false; render(); }
+}
+
+function handRects() {
+  const out = {};
+  document.querySelectorAll('#hand .card').forEach((el) => { out[el.dataset.id] = Fx.box(el); });
+  return out;
+}
+
+// ---------------------------------------------------------------- desenho das cartas
+function cardEl(id, { back = false } = {}) {
+  const el = document.createElement('div');
+  if (back || !id) {
+    el.className = 'card back';
+    el.innerHTML = `<img class="art" src="${Sprites.tatu('#a0703f').url}" alt=""><div class="name">TATUBUM</div>`;
+    return el;
+  }
+  const k = kindOf(id);
+  const st = Sprites.style[k];
+  el.className = 'card ' + k;
+  el.dataset.id = id;
+  el.innerHTML = `<div class="band" style="background:${st.band}"></div><img class="art" src="${Sprites.card(k).url}" alt=""><div class="name">${cardName(k)}</div><div class="hint">${st.hint}</div>`;
+  return el;
+}
+
+// ---------------------------------------------------------------- render
+function render() {
+  if (!view) return;
+  renderTop();
+  renderSeats();
+  renderTable();
+  renderHand();
+  renderActions();
+  renderPanel();
+  renderLog();
+  renderOver();
+  $('#caption').innerHTML = captionText;
+}
+
+function renderTop() {
+  const v = view;
+  if (v.phase !== 'playing' || !v.current) { $('#turn').innerHTML = ''; return; }
+  const who = v.current === ME ? '<b>SUA VEZ</b>' : `vez de <b>${nameOf(v.current).toUpperCase()}</b>`;
+  $('#turn').innerHTML = who + (v.owed > 1 ? `<span class="owed">· ${v.owed} TURNOS</span>` : '');
+}
+
+function seatPos(i, n) {
+  // Bots em arco no topo.
+  const t = n === 1 ? 0.5 : i / (n - 1);
+  const x = 230 + t * 980;
+  const y = 18 + (1 - Math.sin(t * Math.PI)) * 34;
+  return { x, y };
+}
+
+function renderSeats() {
+  const v = view;
+  const bots = players.filter((p) => p !== ME);
+  const box = $('#seats');
+  box.innerHTML = '';
+  bots.forEach((p, i) => {
+    const { x, y } = seatPos(i, bots.length);
+    const el = document.createElement('div');
+    el.className = 'seat';
+    el.dataset.p = p;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    const dead = v.phase !== 'lobby' && !v.alive.includes(p);
+    if (dead) el.classList.add('dead');
+    if (v.winner === p) el.classList.add('winner');
+    if (v.current === p) el.classList.add('turn');
+    if (mode?.type === 'target' && validTarget(p)) {
+      el.classList.add('targetable');
+      el.onclick = () => chooseTarget(p);
+    }
+    const n = v.handCounts[p] ?? 0;
+    const chip = v.choice?.who === p ? '<div class="chip">escolhendo…</div>' : !active.includes(p) && !dead ? '<div class="chip">caiu…</div>' : '';
+    el.innerHTML = `<img class="tatu" src="${Sprites.tatu(dead ? '#7a7a8a' : colorOf(p)).url}" alt="">
+      <div class="who">${nameOf(p)}</div>
+      <div class="count"><span class="mini"></span>${dead ? 'fora' : n}</div>${chip}`;
+    box.appendChild(el);
+  });
+}
+
+function anchorOf(p) {
+  if (p === ME) return $('#hand');
+  return document.querySelector(`.seat[data-p="${p}"] .tatu`) ?? $('#deck');
+}
+
+function renderTable() {
+  const v = view;
+  const deck = $('#deck');
+  const stack = deck.querySelector('.stack');
+  stack.innerHTML = '';
+  const layers = Math.min(5, Math.ceil(v.drawCount / 6));
+  for (let i = 0; i < layers; i++) {
+    const b = cardEl(null, { back: true });
+    b.style.transform = `translate(${-i * 3}px, ${-i * 3}px)`;
+    stack.appendChild(b);
+  }
+  deck.querySelector('.label').textContent = `monte ${v.drawCount} · ${v.tatusInDraw} tatu${v.tatusInDraw === 1 ? '' : 's'}`;
+  deck.classList.toggle('mine', canDraw());
+  deck.onclick = () => { if (canDraw()) draw(); };
+
+  const fut = $('#future');
+  fut.innerHTML = '';
+  if (v.peek) {
+    fut.innerHTML = '<div class="tag">O FUTURO ↓</div>';
+    v.peek.forEach((id) => fut.appendChild(cardEl(id)));
+  }
+
+  const air = $('#air');
+  air.innerHTML = '';
+  if (v.pending && !airHidden) {
+    const cards = [...v.pending.play.cards, ...v.pending.nopes.map((n) => n.card)];
+    cards.forEach((id, i) => {
+      const c = cardEl(id);
+      c.style.transform = `translate(${(i - (cards.length - 1) / 2) * 16}px, ${-i * 4}px) rotate(${(i % 2 ? 6 : -5)}deg)`;
+      air.appendChild(c);
+    });
+  } else if (!v.pending) {
+    air.innerHTML = `<div class="empty">${v.current === ME && v.phase === 'playing' ? 'jogue<br>aqui' : ''}</div>`;
+  }
+
+  const disc = $('#discard');
+  disc.querySelectorAll('.card').forEach((c) => c.remove());
+  v.discard.slice(-3).forEach((id, i, arr) => {
+    const c = cardEl(id);
+    c.style.transform = `rotate(${(i - arr.length + 1) * 7 + 3}deg)`;
+    disc.appendChild(c);
+  });
+  renderBar();
+}
+
+function renderBar() {
+  const bar = $('#bar');
+  const p = view?.pending;
+  if (!p) { bar.innerHTML = ''; return; }
+  const left = Math.max(0, Math.ceil((p.resolvesAt - Date.now()) / 1000));
+  if (left !== lastTic && left > 0) { lastTic = left; if (left <= 3) Sound.play('tic'); }
+  bar.innerHTML = Array.from({ length: 5 }, (_, i) => `<i class="${i < left ? 'on' : ''}${i === left - 1 ? ' last' : ''}"></i>`).join('');
+}
+
+function tickTimers() {
+  if (!view) return;
+  renderBar();
+  const t = document.querySelector('[data-timer]');
+  if (t && view.choice) t.textContent = Math.max(0, Math.ceil((view.choice.deadline - Date.now()) / 1000)) + 's';
+}
+
+function renderHand() {
+  const v = view;
+  const hand = $('#hand');
+  hand.innerHTML = '';
+  hand.classList.toggle('myturn', v.phase === 'playing' && v.current === ME && !v.pending && !v.choice);
+  hand.classList.toggle('giving', v.choice?.kind === 'favor' && v.choice.who === ME);
+  if (v.phase === 'playing' && !v.alive.includes(ME)) {
+    hand.innerHTML = '<div class="dead">VOCÊ EXPLODIU · AGORA SÓ ASSISTE</div>';
+    return;
+  }
+  const n = v.hand.length;
+  const step = Math.min(118, (940 - 112) / Math.max(1, n - 1));
+  const width = step * (n - 1) + 112;
+  v.hand.forEach((id, i) => {
+    const c = cardEl(id);
+    c.style.left = (940 - width) / 2 + i * step + 'px';
+    c.style.zIndex = i;
+    if (selected.has(id)) c.classList.add('sel');
+    if (arriving.has(id)) c.classList.add('arriving');
+    c.onclick = () => clickCard(id);
+    c.ondblclick = () => { selected = new Set([id]); playSelected(); };
+    hand.appendChild(c);
+  });
+}
+
+// ---------------------------------------------------------------- jogada do humano
+function canDraw() {
+  const v = view;
+  return v && v.phase === 'playing' && v.current === ME && v.alive.includes(ME) && !v.pending && !v.choice;
+}
+
+function clickCard(id) {
+  const v = view;
+  if (v.choice?.kind === 'favor' && v.choice.who === ME) {
+    dispatch(ME, { type: 'choose', card: id });
+    return;
+  }
+  if (selected.has(id)) selected.delete(id);
+  else selected.add(id);
+  mode = null;
+  Sound.play('select');
+  render();
+}
+
+/** O que as cartas escolhidas formam (espelho de play.ts, só pra mostrar o botão certo). */
+function selectedPlay() {
+  const kinds = [...selected].map(kindOf);
+  if (!kinds.length) return null;
+  const same = kinds.every((k) => k === kinds[0]);
+  if (kinds.length === 1) return ['ataque', 'pular', 'favor', 'embaralhar', 'espiar'].includes(kinds[0]) ? kinds[0] : null;
+  if (kinds.length === 2 && same) return 'par';
+  if (kinds.length === 3 && same) return 'trio';
+  if (kinds.length === 5 && new Set(kinds).size === 5) return 'cinco';
+  return null;
+}
+
+function validTarget(p) {
+  return p !== ME && view.alive.includes(p) && (view.handCounts[p] ?? 0) > 0;
+}
+
+function playSelected() {
+  const kind = selectedPlay();
+  if (!kind) return;
+  const play = { cards: [...selected] };
+  if (kind === 'favor' || kind === 'par' || kind === 'trio') {
+    mode = { type: 'target', play, kind };
+    captionText = 'Escolha um adversário <span class="timer">↑</span>';
+    render();
+    return;
+  }
+  send(play);
+}
+
+function chooseTarget(p) {
+  const play = { ...mode.play, target: p };
+  if (mode.kind === 'trio') {
+    mode = { type: 'ask', play };
+    captionText = `Que carta você pede pra ${nameOf(p)}?`;
+    render();
+    return;
+  }
+  send(play);
+}
+
+function send(play) {
+  mode = null;
+  if (dispatch(ME, { type: 'play', ...play })) selected.clear();
+  render();
+}
+
+function draw() {
+  dispatch(ME, { type: 'draw' });
+}
+
+function nope() {
+  dispatch(ME, { type: 'nope' });
+}
+
+function renderActions() {
+  const v = view;
+  const box = $('#actions');
+  box.innerHTML = '';
+  if (v.phase !== 'playing' || !v.alive.includes(ME)) return;
+  const myNopes = v.hand.filter((c) => kindOf(c) === 'nemvem').length;
+  if (v.pending && myNopes) {
+    const b = button(`NEM VEM! (${myNopes})`, nope);
+    b.id = 'nope';
+    box.appendChild(b);
+  }
+  if (v.current === ME && !v.pending && !v.choice) {
+    const kind = selectedPlay();
+    if (mode?.type === 'ask') {
+      box.appendChild(hint('escolha a carta no painel'));
+    } else if (mode?.type === 'target') {
+      box.appendChild(hint('clique num adversário'));
+      box.appendChild(button('CANCELAR', () => { mode = null; captionText = ''; render(); }, 'ghost'));
+    } else if (selected.size) {
+      const b = button(kind ? `JOGAR ${PLAY_LABEL[kind]}` : 'NÃO FORMA JOGADA', playSelected);
+      if (!kind) b.disabled = true;
+      box.appendChild(b);
+    } else {
+      box.appendChild(hint('escolha cartas pra jogar ou'));
+    }
+    box.appendChild(button('COMPRAR', draw, 'yellow'));
+  }
+}
+
+function button(label, onClick, cls = '') {
+  const b = document.createElement('button');
+  b.className = 'btn ' + cls;
+  b.innerHTML = `<span>${label}</span>`;
+  b.onclick = onClick;
+  return b;
+}
+function hint(text) {
+  const d = document.createElement('div');
+  d.className = 'hint';
+  d.textContent = text;
+  return d;
+}
+
+// ---------------------------------------------------------------- painéis de escolha
+let cafunePos = 0;
+function renderPanel() {
+  const v = view;
+  const panel = $('#panel');
+  const c = v.choice;
+  const timer = '<span class="timer" data-timer></span>';
+  if (mode?.type === 'ask') {
+    panel.innerHTML = `<h2>QUAL CARTA VOCÊ PEDE?</h2><p>Se ${nameOf(mode.play.target)} tiver, tem que te dar.</p><div class="row"></div>`;
+    const row = panel.querySelector('.row');
+    T.KITTENS_CARD_KINDS.filter((k) => k !== 'tatubum').forEach((k) => {
+      row.appendChild(button(cardName(k), () => send({ ...mode.play, ask: k }), 'small'));
+    });
+    row.appendChild(button('CANCELAR', () => { mode = null; render(); }, 'small ghost'));
+    return;
+  }
+  if (!c || c.who !== ME) { panel.innerHTML = ''; return; }
+  if (c.kind === 'cafune') {
+    const max = v.drawCount;
+    cafunePos = Math.min(cafunePos, max);
+    panel.innerHTML = `<h2>UFA! ONDE ESCONDER O TATU? ${timer}</h2><p>Só você vai saber. O monte tem ${max} carta${max === 1 ? '' : 's'}.</p>
+      <div class="pos"></div><input type="range" min="0" max="${max}" step="1" value="${cafunePos}"><div class="row"></div>`;
+    const pos = panel.querySelector('.pos');
+    const label = (n) => (n === 0 ? 'no topo (o próximo compra!)' : n === max ? 'no fundo' : `${n + 1}ª carta de cima`);
+    pos.textContent = label(cafunePos);
+    const range = panel.querySelector('input');
+    range.oninput = () => { cafunePos = Number(range.value); pos.textContent = label(cafunePos); };
+    const row = panel.querySelector('.row');
+    row.appendChild(button('ESCONDER AQUI', () => dispatch(ME, { type: 'choose', position: cafunePos }), 'yellow'));
+    row.appendChild(button('NO TOPO', () => dispatch(ME, { type: 'choose', position: 0 }), 'small'));
+    row.appendChild(button('NO FUNDO', () => dispatch(ME, { type: 'choose', position: max }), 'small'));
+    row.appendChild(button('ALEATÓRIO', () => dispatch(ME, { type: 'choose', position: 'random' }), 'small ghost'));
+  } else if (c.kind === 'favor') {
+    panel.innerHTML = `<h2>FAVOR PRA ${nameOf(c.to).toUpperCase()} ${timer}</h2><p>Clique numa carta da sua mão pra dar.</p>`;
+    panel.style.top = '300px';
+  } else if (c.kind === 'cinco') {
+    panel.innerHTML = `<h2>PEGUE UMA DO DESCARTE ${timer}</h2><div class="cards"></div>`;
+    const row = panel.querySelector('.cards');
+    c.options.filter((id) => v.discard.includes(id)).slice(-8).forEach((id) => {
+      const el = cardEl(id);
+      el.onclick = () => dispatch(ME, { type: 'choose', card: id });
+      row.appendChild(el);
+    });
+  }
+  tickTimers();
+}
+
+// ---------------------------------------------------------------- diário
+const logLines = [];
+/** "Você" só com maiúscula no começo da frase. */
+function textOf(ev, prevPending) {
+  return rawText(ev, prevPending).replace(/(?!^)Você/g, 'você');
+}
+function rawText(ev, prevPending) {
+  const n = (p) => nameOf(p);
+  switch (ev.t) {
+    case 'play': return `${n(ev.by)} jogou ${PLAY_LABEL[ev.play]}${ev.target ? ' em ' + n(ev.target) : ''}${ev.ask ? ', pedindo ' + cardName(ev.ask) : ''}`;
+    case 'nope': return `${n(ev.by)}: NEM VEM!`;
+    case 'resolved': {
+      const whose = (label) => (ev.by === ME ? `Seu ${label}` : `${label} de ${n(ev.by)}`);
+      if (ev.canceled) return `${whose(PLAY_LABEL[ev.play])} foi cancelado`;
+      return {
+        ataque: `${whose(PLAY_LABEL.ataque)} valeu!`,
+        pular: `${n(ev.by)} pulou`,
+        embaralhar: `${n(ev.by)} embaralhou o monte`,
+        espiar: `${n(ev.by)} espiou o futuro`,
+        favor: `${prevPending?.play.target ? n(prevPending.play.target) : 'alguém'} vai dar uma carta pra ${n(ev.by)}`,
+        par: `${whose('PAR')} valeu!`,
+        trio: `${whose('TRIO')} valeu!`,
+        cinco: `${n(ev.by)} vai pegar uma do descarte`,
+      }[ev.play];
+    }
+    case 'draw': return ev.card ? `Você comprou ${cardName(kindOf(ev.card))}` : `${n(ev.by)} comprou uma carta`;
+    case 'cafune': return `${n(ev.by)} comprou o TATUBUM… e fez CAFUNÉ!`;
+    case 'hid': return `${n(ev.by)} escondeu o tatu no monte`;
+    case 'boom': return `${n(ev.by)} EXPLODIU!`;
+    case 'left': return `${n(ev.by)} caiu e saiu do jogo`;
+    case 'gave': return ev.card ? `${n(ev.from)} deu ${cardName(kindOf(ev.card))} pra ${n(ev.to)}` : `${n(ev.from)} deu uma carta pra ${n(ev.to)}`;
+    case 'stole': return ev.card ? `${n(ev.to)} roubou ${cardName(kindOf(ev.card))} de ${n(ev.from)}` : `${n(ev.to)} roubou uma carta de ${n(ev.from)}`;
+    case 'asked': return ev.card ? `${n(ev.from)} teve que dar ${cardName(ev.ask)} pra ${n(ev.to)}` : `${n(ev.from)} não tinha ${cardName(ev.ask)}`;
+    case 'picked': return `${n(ev.by)} pegou ${ev.card ? cardName(kindOf(ev.card)) : 'uma carta'} do descarte`;
+    case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
+  }
+  return '';
+}
+function pushLog(text, cls = '') {
+  logLines.push({ text, cls });
+  if (logLines.length > 14) logLines.shift();
+  renderLog();
+}
+function renderLog() {
+  $('#log').innerHTML = '<div class="h">DIÁRIO</div>' + logLines.map((l) => `<p class="${l.cls}">${l.text}</p>`).join('');
+}
+
+function say(text) {
+  captionText = text;
+  $('#caption').innerHTML = text;
+}
+
+// ---------------------------------------------------------------- animações (dirigidas pelo diário)
+async function dealAnim() {
+  say('Distribuindo as cartas…');
+  Sound.play('shuffle');
+  const deck = $('#deck .stack');
+  const targets = players.filter((p) => p !== ME);
+  for (let r = 0; r < 2; r++) {
+    for (const p of targets) {
+      Fx.fly({ node: cardEl(null, { back: true }), from: deck, to: anchorOf(p), dur: 260, scaleTo: 0.4 });
+      await Fx.wait(45);
+    }
+  }
+  const flights = [...view.hand].map((id, i) => Fx.wait(i * 110).then(async () => {
+    const el = document.querySelector(`#hand .card[data-id="${id}"]`);
+    if (!el) return;
+    Sound.play('draw');
+    await Fx.fly({ node: cardEl(null, { back: true }), from: deck, to: el, dur: 320, flipTo: cardEl(id) });
+    arriving.delete(id);
+    el.classList.remove('arriving');
+  }));
+  await Promise.all(flights);
+  say(view.current === ME ? 'Sua vez! Jogue cartas ou compre.' : `Vez de ${nameOf(view.current)}`);
+}
+
+async function animate(ev, prev, rects) {
+  const text = textOf(ev, prev?.pending);
+  const mine = ev.by === ME || ev.to === ME || ev.from === ME;
+  pushLog(text, ev.t === 'boom' ? 'bad' : mine ? 'me' : '');
+  const air = $('#air');
+  switch (ev.t) {
+    case 'play': {
+      say(text);
+      Sound.play('card');
+      const cards = view.pending?.play.cards ?? prev?.pending?.play.cards ?? [];
+      const from = (id) => (ev.by === ME && rects[id] ? rects[id] : anchorOf(ev.by));
+      await Promise.all(cards.map((id, i) => Fx.wait(i * 70).then(() => Fx.fly({ node: cardEl(id), from: from(id), to: air, dur: 420, rot: (i % 2 ? 6 : -5), trail: '#f2c14e' }))));
+      airHidden = false;
+      renderTable();
+      if (ev.play === 'ataque') Fx.sparks(air);
+      break;
+    }
+    case 'nope': {
+      say(text);
+      airHidden = false;
+      renderTable();
+      Sound.play('nope');
+      Fx.flash('#e4572e', 140);
+      await Fx.stamp(air, 'NEM VEM!');
+      break;
+    }
+    case 'resolved': {
+      const pend = prev?.pending;
+      const cards = pend ? [...pend.play.cards, ...pend.nopes.map((x) => x.card)] : [];
+      if (ev.canceled) {
+        say(`✗ ${text}`);
+        Sound.play('error');
+      } else {
+        say(text);
+        if (ev.play === 'ataque') {
+          Sound.play('attack');
+          Fx.slash(air);
+          const next = view.current;
+          if (next) {
+            const s = next === ME ? $('#hand') : document.querySelector(`.seat[data-p="${next}"]`);
+            s?.classList.add('hit');
+            setTimeout(() => s?.classList.remove('hit'), 600);
+            Fx.pop(`${view.owed} TURNOS!`, next === ME ? { x: 650, y: 600 } : Fx.box(s), { size: 34, hold: 500, color: '#e4572e' });
+          }
+        } else if (ev.play === 'pular') Sound.play('skip');
+        else if (ev.play === 'embaralhar') {
+          Sound.play('shuffle');
+          $('#deck').classList.add('shuffling');
+          Fx.glitter($('#deck .stack'), '#c9a8ee');
+          setTimeout(() => $('#deck').classList.remove('shuffling'), 800);
+        } else if (ev.play === 'espiar') {
+          Sound.play('peek');
+          Fx.glitter($('#deck .stack'));
+          if (ev.by === ME) say('O FUTURO: as 3 de cima estão ao lado do monte');
+        }
+      }
+      await Promise.all(cards.map((id) => Fx.fly({ node: cardEl(id), from: air, to: $('#discard'), dur: 320 })));
+      await Fx.wait(250);
+      break;
+    }
+    case 'draw': {
+      Sound.play('draw');
+      if (ev.by === ME && ev.card) {
+        say(text);
+        const el = document.querySelector(`#hand .card[data-id="${ev.card}"]`);
+        await Fx.fly({ node: cardEl(null, { back: true }), from: $('#deck .stack'), to: el ?? $('#hand'), dur: 420, flipTo: cardEl(ev.card) });
+        arriving.delete(ev.card);
+        el?.classList.remove('arriving');
+      } else {
+        await Fx.fly({ node: cardEl(null, { back: true }), from: $('#deck .stack'), to: anchorOf(ev.by), dur: 380, scaleTo: 0.45 });
+      }
+      if (view.current === ME && !view.pending && !view.choice) say('Sua vez! Jogue cartas ou compre.');
+      break;
+    }
+    case 'cafune':
+    case 'boom': {
+      say(`${nameOf(ev.by)} comprou o… TATUBUM!`);
+      const big = cardEl('tatubum-0');
+      big.classList.add('bigcard', 'shaking');
+      big.style.left = '720px';
+      big.style.top = '470px';
+      $('#fxlayer').appendChild(big);
+      Sound.play('fuse');
+      const sp = setInterval(() => Fx.sparks({ x: 735, y: 340 }), 120);
+      await Fx.wait(1100);
+      clearInterval(sp);
+      if (ev.t === 'cafune') {
+        big.classList.remove('shaking');
+        Sound.play('cafune');
+        Fx.hearts({ x: 720, y: 470 });
+        say(text);
+        await Fx.pop('UFA!', { x: 720, y: 260 }, { size: 60, hold: 700, color: '#ff8fab' });
+        big.remove();
+      } else {
+        big.remove();
+        Sound.play('boom');
+        Fx.flash('#fff3c4', 220);
+        Fx.shake(600, 14);
+        Fx.boom({ x: 720, y: 470 });
+        say(text);
+        await Fx.pop('BUM!', { x: 720, y: 450 }, { size: 150, hold: 900, color: '#e4572e' });
+      }
+      break;
+    }
+    case 'hid': {
+      say(text);
+      Sound.play('card');
+      await Fx.fly({ node: cardEl(null, { back: true }), from: anchorOf(ev.by), to: $('#deck .stack'), dur: 420, scaleFrom: 0.6 });
+      break;
+    }
+    case 'left': {
+      say(text);
+      Sound.play('error');
+      await Fx.wait(600);
+      break;
+    }
+    case 'gave':
+    case 'stole':
+    case 'asked':
+    case 'picked': {
+      say(text);
+      Sound.play('give');
+      const card = ev.card;
+      if (ev.t === 'asked' && !card) { await Fx.wait(700); break; }
+      const from = ev.t === 'picked' ? $('#discard') : ev.from === ME && card && rects[card] ? rects[card] : anchorOf(ev.from);
+      const toP = ev.t === 'picked' ? ev.by : ev.to;
+      const target = toP === ME && card ? document.querySelector(`#hand .card[data-id="${card}"]`) ?? $('#hand') : anchorOf(toP);
+      await Fx.fly({ node: cardEl(card, { back: !card }), from, to: target, dur: 520, trail: '#ff8fab' });
+      if (card) { arriving.delete(card); document.querySelector(`#hand .card[data-id="${card}"]`)?.classList.remove('arriving'); }
+      break;
+    }
+    case 'win': {
+      say(text);
+      Sound.play('win');
+      Fx.fireworks({ x: 720, y: 420 });
+      await Fx.pop(ev.by === ME ? 'VOCÊ VENCEU!' : `${nameOf(ev.by).toUpperCase()} VENCEU!`, { x: 720, y: 420 }, { size: 52, hold: 1400 });
+      renderOver(true);
+      break;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- fim e menu
+function renderOver(force = false) {
+  const over = $('#over');
+  if (view?.phase !== 'gameover' || (running && !force)) { over.hidden = true; return; }
+  over.hidden = false;
+  over.innerHTML = `<div class="biglogo" style="font-size:44px">${view.winner === ME ? 'VOCÊ SOBREVIVEU!' : (view.winner ? nameOf(view.winner).toUpperCase() + ' SOBREVIVEU!' : 'FIM')}</div>`;
+  over.appendChild(button('JOGAR DE NOVO', () => { dispatch(ME, { type: 'again' }); }, 'yellow'));
+  over.appendChild(button('MENU', toMenu));
+}
+
+let nbots = 3;
+$('#less').onclick = () => { nbots = Math.max(1, nbots - 1); $('#nbots').textContent = nbots; Sound.play('select'); };
+$('#more').onclick = () => { nbots = Math.min(7, nbots + 1); $('#nbots').textContent = nbots; Sound.play('select'); };
+$('#play').onclick = () => {
+  players = Array.from({ length: nbots + 1 }, (_, i) => `p${i}`);
+  active = [...players];
+  for (const p of players) botMem[p] = {};
+  state = T.initialKittensState();
+  view = null;
+  lastN = -1;
+  logLines.length = 0;
+  $('#menu').hidden = true;
+  stage.classList.remove('menu-open');
+  dispatch(ME, { type: 'start' });
+};
+function toMenu() {
+  state = T.initialKittensState();
+  view = null;
+  $('#over').hidden = true;
+  $('#menu').hidden = false;
+  stage.classList.add('menu-open');
+  ['#seats', '#hand', '#actions', '#panel', '#log', '#turn', '#caption', '#air', '#future', '#bar'].forEach((s) => { $(s).innerHTML = ''; });
+  captionText = '';
+}
+$('#tomenu').onclick = toMenu;
+$('#sound').onclick = () => { const m = Sound.toggle(); $('#sound span').textContent = m ? 'SOM: NÃO' : 'SOM: SIM'; };
+$('#drop').onclick = () => {
+  const alive = view?.alive.filter((p) => p !== ME && active.includes(p)) ?? [];
+  if (!alive.length) return;
+  const p = alive[Math.floor(Math.random() * alive.length)];
+  active = active.filter((x) => x !== p);
+  toast(`${nameOf(p)} caiu (passou dos 30 s)`);
+};
+$('#speed').onclick = () => {
+  botSpeed = botSpeed === 1 ? 0.35 : 1;
+  $('#speed span').textContent = botSpeed === 1 ? 'BOTS: NORMAIS' : 'BOTS: RÁPIDOS';
+};
+addEventListener('keydown', (e) => {
+  if (!view || view.phase !== 'playing') return;
+  if (e.key === 'n' || e.key === 'N') nope();
+  if (e.key === ' ' && canDraw()) { e.preventDefault(); draw(); }
+  if (e.key === 'Enter') playSelected();
+  if (e.key === 'Escape') { mode = null; selected.clear(); render(); }
+});
+
+let toastTimer = 0;
+function toast(text) {
+  $('#toast').textContent = text;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $('#toast').textContent = ''; }, 2200);
+}
+
+// ---------------------------------------------------------------- bots
+setInterval(() => {
+  if (state.phase !== 'playing') return;
+  for (const p of players) {
+    if (p === ME || !active.includes(p)) continue;
+    // Enquanto os efeitos rodam, os bots só podem reagir à carta no ar (a janela de 5 s não espera a animação).
+    if (running && !state.pending) continue;
+    const mem = botMem[p];
+    if (mem.timer) continue;
+    const d = Bots.decide(T.kittensViewFor(state, p), p, mem);
+    if (!d) continue;
+    mem.timer = setTimeout(() => {
+      mem.timer = null;
+      if (!running || d.action.type === 'nope') dispatch(p, d.action);
+    }, d.delay * botSpeed);
+  }
+}, 250);
+</script>
+</body>
+</html>
