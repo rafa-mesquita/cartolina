@@ -35,7 +35,7 @@
 /* Cúpi: cartaz de propaganda, papel creme com faixa vermelha no alto */
 .cover-coup { background: linear-gradient(#c8312b 0 16px, #efe6d2 16px); color: #1d1a17; }
 .cover-coup b { font: 400 48px/0.95 'Bebas Neue', Impact, sans-serif; letter-spacing: 0.03em; }
-.cover-coup span { font: 400 14px/1.25 'Oswald', system-ui, sans-serif; color: #6b6152; }
+.cover-coup span:not(.cover-badge) { font: 400 14px/1.25 'Oswald', system-ui, sans-serif; color: #6b6152; }
 /* número decorativo no canto, como o da carta da mão */
 .shelf .cover-ito::after {
   content: '87'; content: '87' / ''; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
@@ -90,6 +90,7 @@
   .cover { width: 150px; height: 200px; padding: 12px; }
   .cover b { font-size: 26px; }
   .cover-dixit b { font-size: 24px; }
+  .cover-coup b { font-size: 34px; }
   .cover span { font-size: 15px; }
   .shelf .cover-ito::after { font-size: 15px; min-width: 26px; right: 8px; top: 8px; }
   .game-page .panel, .game-head, .tabs { width: 100%; }

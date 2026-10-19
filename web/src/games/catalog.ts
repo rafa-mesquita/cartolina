@@ -59,9 +59,9 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
     tagline: 'blefe, duvide e tome o poder',
     rules: [
       'Cada um tem 2 cartas secretas de personagem e 2 moedas.',
-      'Na sua vez, faça uma ação. Algumas dizem que você é um personagem (Duque, Assassino, Capitão, Embaixador ou Condessa): pode ser verdade ou blefe.',
-      'Os outros têm 10 segundos pra duvidar ou bloquear. Quem erra a dúvida, ou é pego blefando, perde uma carta.',
-      'Com 7 moedas dá pra dar o golpe; com 10, é obrigatório. Quem perde as 2 cartas sai; o último com carta vence.',
+      'Na sua vez, faça uma ação. Algumas dizem que você tem um personagem (Duque, Assassino, Capitão ou Embaixador): pode ser verdade ou blefe.',
+      'Os outros têm 10 segundos pra duvidar, ou pra bloquear dizendo ter outro personagem (a Condessa barra o Assassino). Quem erra a dúvida, ou é pego blefando, perde uma carta.',
+      'Com 7 moedas dá pra dar o golpe: o alvo perde uma carta, sem bloqueio. Com 10, é obrigatório. Quem perde as 2 cartas sai; o último com carta vence.',
     ],
     // A mesa (computador e celular) vem no Plano C2.
     playable: false,
