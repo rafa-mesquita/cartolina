@@ -273,7 +273,9 @@ aparece o aviso de jogar no computador.
   assentos), `winners` (nomes), `final` (por jogador: cores pontuadas e esferas na
   mesa) e `plays` (o `log` com nomes no lugar dos ids e a carta como
   `{ color, spheres, kind }`). Uma partida tem ~70 a 140 jogadas.
-- **Banco:** migração nova `0004_camelio_matches.sql`, que só **cria** a tabela
+- **Banco:** migração nova `NNNN_camelio_matches.sql` (próximo número livre no
+  `main` na hora do C4; hoje seria 0004, mas Tatubum e Cúpi estão sendo feitos em
+  paralelo), que só **cria** a tabela
   `camelio_matches` (`id`, `room_code`, `match_key`, `played_at`, `record_json`;
   `UNIQUE (room_code, match_key)`; índice por `played_at DESC`). Não toca em
   nenhuma outra tabela; segura pra aplicar sozinha na publicação. Teste de
