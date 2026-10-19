@@ -307,7 +307,7 @@ aparece o aviso de jogar no computador.
   vitória dividida, quem começa no "jogar de novo", pular quem caiu, pausa com
   menos de 2, erros da §2.7, schema zod.
 - **`server`:** sala com 2 jogadores do `start` ao fim; no C4, gravação única
-  (reconectar não duplica) e a migração 0004.
+  (reconectar não duplica) e a migração nova.
 - **`web`:** componentes (pilhas/somas, versos, arrastar e clicar, letreiro) e um
   **E2E** de uma partida curta com 2 navegadores (com baralho fixo por seed de
   teste, se precisar); no C4, um E2E do histórico jogando por WebSocket direto
@@ -325,7 +325,7 @@ Cada plano em `docs/superpowers/plans/`, cada um com o próprio PR; merge no `ma
    sons. O Rafa joga e aprova (e a gente ajusta o baralho se precisar).
 3. **C3 — mesa no site:** `web/src/games/camelio/`, porta o protótipo; catálogo
    `playable: true`; E2E de 2 navegadores; README e `CLAUDE.md` (tabela de jogos).
-4. **C4 — histórico:** migração 0004, registro, rota, aba com partidas e galera.
+4. **C4 — histórico:** migração nova, registro, rota, aba com partidas e galera.
 
 ## 9. Fora desta versão
 
