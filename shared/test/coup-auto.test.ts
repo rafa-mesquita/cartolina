@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { initialCoupState, settleCoup } from '../src/games/coup/rules';
 import { hiddenOf } from '../src/games/coup/table';
+import type { CoupCharacter } from '../src/games/coup/types';
 import { THREE, act, allPass, ctxOf, ids, table } from './coup-helpers';
 
 const all = ctxOf(ids(3));
@@ -33,6 +34,21 @@ describe('Cúpi: automático de quem está ausente', () => {
     expect(s.hands.p0!.coins).toBe(5);
   });
 
+  it('tesouro vazio: o ausente com 7+ moedas dá golpe em vez de renda', () => {
+    const coins = { p0: 9, p1: 9, p2: 8, p3: 8, p4: 8, p5: 8 };
+    const hands = Object.fromEntries(ids(6).map((p) => [p, ['duke', 'captain'] as CoupCharacter[]]));
+    const s = settleCoup(table(hands, { coins, deck: [] }), ctxOf(ids(6).slice(1)));
+    expect(s.phase).toBe('losing');
+    expect(s.hands.p0!.coins).toBe(2);
+  });
+
+  it('tesouro com moedas: o ausente com 9 faz renda, não golpe', () => {
+    const s = settleCoup(table(THREE, { coins: { p0: 9 } }), without('p0'));
+    expect(s.hands.p0!.coins).toBe(10);
+    expect(s.turn).toBe('p1');
+    expect(s.phase).toBe('turn');
+  });
+
   it('ausente que perde carta: uma sorteada (e a vez dele, se vier, também é automática)', () => {
     const s = act(table(THREE, { coins: { p0: 7 } }), 'p0', { type: 'act', kind: 'coup', target: 'p1' }, all);
     const done = settleCoup(s, without('p1'));
@@ -51,10 +67,12 @@ describe('Cúpi: automático de quem está ausente', () => {
   });
 
   it('todo mundo ausente: a partida termina sozinha', () => {
+    // Com 6 jogadores o tesouro (50 moedas) esvazia no caminho: passa também pelo golpe do tesouro vazio.
     const started = act(initialCoupState(), 'p0', { type: 'start' }, ctxOf(ids(6)));
     const done = settleCoup(started, ctxOf([]));
     expect(done.phase).toBe('over');
     expect(done.out).toHaveLength(5);
     expect(done.wins[done.winner!]).toBe(1);
+    expect(done.log.length).toBeLessThan(600);
   });
 });

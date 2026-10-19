@@ -265,18 +265,18 @@ function settleOnce(state: CoupState, ctx: GameContext): CoupState {
     case 'reaction': {
       const w = state.window!;
       const absent = w.eligible.filter((p) => !w.passed.includes(p) && away(ctx, p));
-      const passed = absent.length > 0 ? [...w.passed, ...absent] : w.passed;
-      const next = absent.length > 0 ? { ...state, window: { ...w, passed } } : state;
-      const allPassed = w.eligible.every((p) => passed.includes(p));
+      let next = state;
+      if (absent.length > 0) next = { ...state, window: { ...w, passed: [...w.passed, ...absent] } };
+      const allPassed = w.eligible.every((p) => next.window!.passed.includes(p));
       return allPassed || ctx.now >= w.endsAt ? closeWindow(next, ctx) : next;
     }
     case 'turn': {
       const p = state.turn!;
       if (!away(ctx, p)) return state;
       const coins = coinsOf(state, p);
-      // Tesouro vazio: renda não rende nada, e com todo mundo ausente a mesa nunca andaria; com 7+ moedas dá golpe.
-      const stuck = treasury(state) === 0 && coins >= COUP_COST.coup;
-      if (coins < COUP_MUST_COUP_AT && !stuck) return declare(state, p, 'income', null, ctx);
+      // Com o tesouro vazio as 50 moedas estão com os vivos (no máximo 6), então alguém tem 7+: o golpe destrava a mesa.
+      const mustCoup = coins >= COUP_MUST_COUP_AT || (treasury(state) === 0 && coins >= COUP_COST.coup);
+      if (!mustCoup) return declare(state, p, 'income', null, ctx);
       const others = alive(state).filter((x) => x !== p);
       return declare(state, p, 'coup', others[randomInt(ctx.rng, others.length)]!, ctx);
     }
