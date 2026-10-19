@@ -128,8 +128,8 @@ baralho é o do jogo original.
 - `types.ts`: fases `lobby → playing → gameover`. Estado: `players` (ordem dos assentos), `alive`,
   `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `current`, `owed`,
   `pending`, `choice`, `peek`, `log`, `winner`.
-  - `pending`: `{ by, play: { cards, kind, target?, ask? }, nopes: string[], resolvesAt }`.
-  - `choice`: `{ kind: 'cafune' | 'favor' | 'pick5', who, deadline, ... }` (o trio não precisa de
+  - `pending`: `{ by, play: { kind, cards, target, ask }, nopes: { by, card }[], resolvesAt }`.
+  - `choice`: `{ kind: 'cafune' | 'favor' | 'cinco', who, deadline, ... }` (o trio não precisa de
     escolha: o nome vai junto da jogada).
   - `peek`: `{ who, cards }`, apagado na próxima ação de quem espiou ou quando a vez muda.
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
