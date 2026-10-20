@@ -67,7 +67,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | Carta | Cópias por pacote | Efeito | Aceita Nem vem!? |
 |---|---|---|---|
 | **Tatubum** | (fora do pacote: vivos − 1) | Quem compra e não tem Cafuné **explode** e sai do jogo. | não |
-| **Cafuné** | (fora do pacote: 1 por jogador + 2) | Jogado na hora em que você compra um Tatubum. Você escolhe **em segredo** onde o tatu volta no monte (topo, 2ª, …, fundo, ou aleatório). Gasta 1 turno. | não |
+| **Desarme** (id `cafune`) | (fora do pacote: 1 por jogador + 2) | Jogado na hora em que você compra um Tatubum. **Quem comprou joga o Desarme à mão** (arrasta pro tatu ou clica; pedido do Rafa, 2026-10-20: "ter a sensação de que jogou"): a mesa toda vê o tatu tremendo até lá (escolha `tatu`, 30 s; sem resposta, o Desarme vai sozinho e o tatu volta pra um lugar sorteado). Depois você escolhe **em segredo** onde o tatu volta no monte (topo, 2ª, …, fundo, ou aleatório; mais 30 s). Gasta 1 turno. | não |
 | **Nem vem!** | 5 | Cancela a carta no ar. Pode ser jogado fora da vez, por qualquer vivo (até por quem jogou a carta). Nem vem! em cima de Nem vem! vale. | sim |
 | **Ataque** | 4 | Termina seu turno sem comprar. O próximo vivo joga **2 turnos**, ou, se você estava sob ataque (`owed ≥ 2`), **os seus turnos devidos + 2**. | sim |
 | **Pular** | 4 | Gasta 1 turno sem comprar. | sim |
