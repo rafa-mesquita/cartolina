@@ -54,7 +54,27 @@ diário** (`log`), igual ao protótipo. O jogo inteiro é carregado sob demanda 
 
 ## Ajustes do Rafa (depois de jogar o protótipo)
 
-_(vazio — preencher antes de executar)_
+Primeira rodada de pedidos (2026-10-19), já aplicados no protótipo (commit `0109a97`) e valendo aqui:
+
+1. **Sem faixas nos lados:** palco com o `fitStage` do Diquisti (altura manda, largura cresce até a da
+   janela). Fundo do cerrado com largura variável (`startCerrado(canvas, seed, width)`), assentos
+   espalhados pela largura toda, bloco central (`--bw` até 1760) com mesa e mão crescendo junto.
+2. **Entrar igual aos outros jogos:** estante → criar sala → link/código → apelido e bichinho (o
+   formulário de entrada do site); lobby com a cara do Tatubum.
+3. **Cartas de arrastar como no Diquisti** (molde `web/src/games/dixit/useHandDrag.ts`/`handOrder.ts`):
+   reordenar na mão (ordem só local), soltar na mesa joga (a seleção inteira, se a carta faz parte dela),
+   soltar Favor/par/trio num adversário joga nele, soltar Nem vem! com carta no ar dá Nem vem!, no Favor
+   que eu devo soltar entrega. Clique seleciona; duplo clique joga sozinha.
+4. **Bichinhos do site em pixel art nos assentos** (e no lobby): `critterSvg(color)` desenhado numa grade
+   26×26 e cores encaixadas na paleta do próprio SVG (função `pixelize` do `prototipo/tatubum/sprites.js`).
+   Vai pra `sprites.ts` com teste (todas as 18 cores geram imagem; no jsdom, mock do canvas/Image).
+5. **Quantidade de cartas dos adversários bem visível:** leque de versinhos (até 9) + número grande amarelo
+   em Press Start 2P.
+6. **Histórico como os outros jogos:** fica no Plano T4 (spec §7a), logo depois deste.
+
+Ajustes nas tasks: a Task 3 (lobby) passa a usar os bichinhos em pixel art; a Task 4 (mesa) ganha o palco
+de largura variável, a contagem grande e o arrastar (com testes: soltar na mesa manda `play`, soltar num
+assento manda `play` com `target`, soltar Nem vem! manda `nope`, reordenar não manda nada).
 
 ## Mapa de arquivos
 

@@ -29,7 +29,14 @@ Decisões do usuário (2026-10-19):
   (entre cerrado, festa junina e gibi); no mesmo dia o usuário trocou pra pixel art (referência: um
   tatu em pixel art de banco de imagens, usado só como estilo) e escolheu a paleta entre "noite no
   cerrado" e "Game Boy".
-- **Só computador por enquanto**; celular e **histórico** ficam pra planos depois.
+- **Só computador por enquanto**; celular fica pra depois.
+- **Entrar igual aos outros jogos** (pedido depois de jogar o protótipo, 2026-10-19): criar sala pela
+  estante, link/código, apelido e o mesmo bichinho dos outros jogos (o formulário de entrada é o do site);
+  só a cara é do Tatubum.
+- **Histórico como o dos outros jogos** (mesmo dia): partidas + estatísticas da galera (§7a). Plano
+  próprio logo depois da mesa.
+- **Mesa na largura toda da tela** (sem faixas nos lados), **cartas de arrastar** como no Diquisti e
+  **bichinhos do site em pixel art** nos assentos (§5).
 - Motor: **pilha de resolução no servidor com prazo** (§4.2).
 
 ## 2. Regras implementadas
@@ -194,13 +201,27 @@ A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o 
 
 ## 5. Telas
 
-Mesa como palco fixo 1440×900 escalado (padrão do site). Adversários em arco no topo, monte e
-descarte no centro, carta no ar entre os dois, sua mão embaixo, diário à direita.
+Palco de 900 de altura escalado, **que cresce na largura até a da janela** (como o `fitStage` do
+Diquisti): o fundo do cerrado, o topo e os assentos ocupam a tela toda; o bloco central (mesa, mão,
+diário) cresce junto até 1760 de largura. Adversários em arco no topo, monte e descarte no centro, carta
+no ar entre os dois, sua mão embaixo, diário à direita.
+
+**Assentos:** o **bichinho que a pessoa escolheu ao entrar** (os mesmos dos outros jogos), convertido em
+pixel art (o SVG do site desenhado numa grade de 26×26 com as cores encaixadas na paleta do próprio
+bichinho; aprovado no protótipo). Embaixo, o nome e a **quantidade de cartas bem visível**: leque de
+versinhos + número grande em amarelo na fonte pixelada.
+
+**Lobby:** o mesmo fluxo dos outros jogos (estante → criar sala → link/código → apelido e bichinho), com
+a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art na lista de quem está).
 
 ### 5.1 Jogar
 
-- Clicar numa carta da mão levanta a carta; clicar de novo (ou arrastar pro meio) joga.
-- Favor e combos pedem o alvo: os adversários válidos ganham contorno e você clica num deles.
+- **Arrastar, como no Diquisti:** arrastar uma carta dentro da mão troca a ordem (a ordem é só do seu
+  PC); arrastar pra mesa joga (se a carta faz parte da seleção, vai a seleção inteira: par, trio, 5);
+  arrastar Favor/par/trio até um adversário já joga nele; arrastar Nem vem! pra mesa com carta no ar dá
+  Nem vem!; no Favor que você deve, arrastar a carta pra mesa entrega.
+- Clicar seleciona (a carta sobe); duplo clique joga uma carta sozinha; o botão "JOGAR …" também joga.
+- Favor e combos sem alvo pedem o alvo: os adversários válidos ganham contorno e você clica num deles.
 - Selecionar 2, 3 ou 5 cartas que formam combo mostra o botão "jogar par / trio / 5". No trio,
   aparece a lista de nomes pra pedir.
 - Botão **"comprar"** sempre à vista na sua vez.
@@ -288,6 +309,26 @@ Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca 
 - Script `npm run kittens:cartas -- <pasta>` converte pra `web/public/kittens/cards/<tipo>.webp`.
 - Até lá (T1, protótipo e T2), arte provisória: ícone + cor por tipo.
 
+## 7a. Histórico (pedido do usuário, 2026-10-19)
+
+No molde do Diquisti (`docs/superpowers/specs/2026-10-17-diquisti-historico-design.md`), com a cara do
+Tatubum.
+
+- **Gravação:** uma linha por **partida terminada** (alguém venceu), numa tabela nova do D1 (migração
+  que só cria). Guarda: sala, id da partida (sala + momento do "começar"), data, número de jogadores, e por
+  jogador: nome e bichinho daquele momento, **posição de saída** (1º a explodir, 2º… ou vencedor), como
+  saiu (explodiu / caiu), **Nem vem! dados** e **Cafunés usados**. Partida com bot não grava; partida que
+  volta pro lobby antes do fim não grava. Grava uma vez só (`ON CONFLICT DO NOTHING`), como os outros.
+- **Regras:** o estado ganha contadores por jogador (Nem vem! dados, Cafunés usados) e a ordem de saída,
+  porque o diário guarda só as últimas 30 entradas.
+- **Aba "histórico"** (`#/kittens/historico`):
+  1. **Partidas:** mais novas primeiro, 20 por página + "carregar mais"; data, vencedor com o bichinho, e
+     a fila de quem explodiu, na ordem.
+  2. **Estatísticas da galera** (top 3 com bichinho), escolhidas pelo usuário: **quem mais vence**
+     (% de vitórias, mín. 3 partidas), **quem explode primeiro** (vezes que foi o 1º a sair, mín. 3
+     partidas) e **rei do Nem vem!** (média de Nem vem! por partida, mín. 3 partidas).
+- `GET /history/kittens` público, no-cache, mesmo limite por IP dos outros.
+
 ## 7. Erros e casos de borda
 
 - Ação fora da vez, carta que não está na mão, combo inválido, alvo sem carta ou morto, Nem vem!
@@ -322,9 +363,11 @@ Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca 
    "Tatubum · em breve", teste no servidor.
 2. **Protótipo** (`prototipo/tatubum/`): só front, regras reais empacotadas (como o do Retratim),
    bots, pra sentir o ritmo dos 5 s e das escolhas.
-3. **Plano T2 — mesa no site:** telas, sons, bots, `playable: true`, E2E.
-4. **Plano T3 — artes:** prompts, Flow, script e as cartas no site.
-5. Depois, cada um no seu plano: **histórico** e **celular**.
+3. **Plano T2 — mesa no site:** lobby, telas, arrastar, bichinhos em pixel art, sons, bots,
+   `playable: true`, E2E.
+4. **Plano T4 — histórico** (§7a): contadores nas regras, tabela no D1, rota e aba.
+5. **Plano T3 — artes:** prompts, Flow, script e as cartas no site.
+6. Depois, no seu plano: **celular**.
 
 **Sessões em paralelo:** o Cama-Leão (`camelio`) está sendo feito em outra worktree e mexe nos
 mesmos arquivos compartilhados (`registry.ts`, `catalog.ts`, `history.ts`, `Game.tsx`). Quem
@@ -333,7 +376,6 @@ mergear depois resolve o conflito (normalmente só somar as duas entradas).
 ## 10. Fora de escopo (esta versão)
 
 - Celular.
-- Histórico de partidas.
 - Expansões (Imploding Kittens, Streaking Kittens etc.) e cartas novas.
 - Arte diferente por cópia da mesma carta.
 - Tempo de turno.
