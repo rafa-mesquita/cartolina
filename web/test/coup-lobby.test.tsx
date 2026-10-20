@@ -131,7 +131,7 @@ describe('rota da sala de Cúpi', () => {
     expect(await screen.findByRole('button', { name: 'começar' })).toBeTruthy();
     const playing = viewOf(coupRoom(2), 'p0');
     rerender(<Game conn={conn()} snap={snap(playing)} view={playing} />);
-    expect(await screen.findByText('mesa em construção')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'diário' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'começar' })).toBeNull();
   });
 });

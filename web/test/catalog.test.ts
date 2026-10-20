@@ -42,6 +42,7 @@ describe('catálogo de jogos do site', () => {
 
   it('DITU e Cúpi funcionam no celular; Diquisti e Retratim ainda não', () => {
     expect(catalogEntry('ito')?.mobile).toBe(true);
+    expect(catalogEntry('coup')?.mobile).toBe(true);
     expect(catalogEntry('dixit')?.mobile).toBe(false);
     expect(catalogEntry('pictures')?.mobile).toBe(false);
   });
