@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type CSSProperties } from 'react';
 import type { CoupSeat, CoupView, SeatView } from '@cartolina/shared';
 import { Critter } from '../../screens/Critter';
 import { CardBack, CardFace } from './CardFace';
@@ -28,7 +28,8 @@ interface Props {
 export const Seats = memo(function Seats({ game, roomSeats, you, nameOf, aiming, onTarget }: Props) {
   const targets = aiming ? game.can.targets : [];
   return (
-    <div className="cp-opps">
+    // celular: grade de até 5 colunas
+    <div className="cp-opps" style={{ '--cols': Math.min(5, Math.max(1, game.players.length - 1)) } as CSSProperties}>
       {opponents(game, you).map((s) => {
         const room = roomSeats.find((r) => r.id === s.id);
         const turn = game.turn === s.id && game.phase !== 'over';

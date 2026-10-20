@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import type { CoupCharacter, CoupView } from '@cartolina/shared';
 import { CHARACTER_ICONS, CHARACTER_NAMES } from './names';
 import { LOSS_SUB, joinNames, lossTitle, type NameOf } from './texts';
@@ -17,6 +17,8 @@ interface Props {
   onKeepToggle: (i: number) => void;
   onExchange: (keep: CoupCharacter[]) => void;
   onRestart: () => void;
+  /** Celular: o painel é uma folha que sobe de baixo (um diálogo com o título do painel). */
+  sheet: boolean;
 }
 
 /** Carta clicável dos painéis (ícone + nome; "nova" nas compradas da troca). */
@@ -49,12 +51,14 @@ function ScoreChips({ game, nameOf }: { game: CoupView; nameOf: NameOf }) {
 export const Panels = memo(function Panels(p: Props) {
   const { game, nameOf } = p;
   const c = game.can;
+  const titleId = useId();
+  const box = p.sheet ? ({ role: 'dialog', 'aria-labelledby': titleId } as const) : {};
   if (game.phase === 'over' && game.winner !== null) {
     const outs = game.out.filter((id) => id !== game.winner).map(nameOf);
     return (
-      <div className="cp-panel">
+      <div className="cp-panel" {...box}>
         <div className="cp-info">
-          <h3 className="win">{nameOf(game.winner)} tomou o poder</h3>
+          <h3 className="win" id={titleId}>{nameOf(game.winner)} tomou o poder</h3>
           {game.winnerCards.length > 0 && (
             <p>
               ficou com <em>{joinNames(game.winnerCards.map((x) => CHARACTER_NAMES[x]))}</em>
@@ -80,9 +84,9 @@ export const Panels = memo(function Panels(p: Props) {
   if (c.lose && game.loss) {
     const chosen = p.loseSel >= 0 ? (game.myCards[p.loseSel] ?? null) : null;
     return (
-      <div className="cp-panel">
+      <div className="cp-panel" {...box}>
         <div className="cp-info">
-          <h3>{lossTitle(game.loss.reason)}</h3>
+          <h3 id={titleId}>{lossTitle(game.loss.reason)}</h3>
           <p>{LOSS_SUB}</p>
           <button type="button" className="cp-pbtn red" disabled={chosen === null} onClick={() => chosen && p.onLose(chosen)}>
             {chosen ? `revelar ${CHARACTER_NAMES[chosen]}` : 'revelar'}
@@ -100,9 +104,9 @@ export const Panels = memo(function Panels(p: Props) {
     const pool = [...game.myCards, ...game.myDrawn];
     const ready = p.keepSel.length === c.keep;
     return (
-      <div className="cp-panel">
+      <div className="cp-panel" {...box}>
         <div className="cp-info">
-          <h3>
+          <h3 id={titleId}>
             Fique com {c.keep} das {pool.length} cartas
           </h3>
           <p>

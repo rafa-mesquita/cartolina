@@ -20,14 +20,17 @@
   display: block; width: 100%; min-height: 44px; padding: 12px 24px; border: 2px solid var(--ink); border-radius: 4px;
   background: var(--red); color: var(--paper); font: 400 22px/1 var(--title); letter-spacing: 1.5px; white-space: nowrap;
 }
-.coup .cp-btn:hover { filter: brightness(1.08); }
 .coup .cp-btn.ghost { background: none; color: var(--ink); font-size: 18px; }
-.coup .cp-btn.ghost:hover { background: rgba(29, 26, 23, .07); filter: none; }
 .coup .dx-pill {
   align-self: flex-start; min-height: 44px; padding: 8px 14px; border: 2px solid var(--ink); border-radius: 4px; background: var(--paper);
   font: 500 14px/1 var(--ui); color: var(--ink-soft); white-space: nowrap;
 }
-.coup button.dx-pill:hover { color: var(--red); }
+/* hover só onde tem mouse (no celular o toque deixaria o botão "aceso") */
+@media (hover: hover) {
+  .coup .cp-btn:hover { filter: brightness(1.08); }
+  .coup .cp-btn.ghost:hover { background: rgba(29, 26, 23, .07); filter: none; }
+  .coup button.dx-pill:hover { color: var(--red-text); }
+}
 
 /* lobby */
 .coup .cp-lobby {
@@ -258,7 +261,8 @@
 
 /* diário */
 .coup .cp-diary { flex: none; width: 260px; border-left: 2px solid var(--ink); background: var(--paper); display: flex; flex-direction: column; min-height: 0; }
-.coup .cp-diary h2 { margin: 0; padding: 14px 18px 10px; font: 400 30px/1 var(--title); letter-spacing: .06em; border-bottom: 2px solid var(--ink); }
+.coup .cp-diary-head { flex: none; border-bottom: 2px solid var(--ink); }
+.coup .cp-diary h2 { margin: 0; padding: 14px 18px 10px; font: 400 30px/1 var(--title); letter-spacing: .06em; }
 .coup .cp-log { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 8px 0 14px; list-style: none; font-size: 14.5px; line-height: 1.3; }
 .coup .cp-log li { padding: 6px 18px; border-bottom: 1px dashed rgba(29, 26, 23, .22); color: var(--ink-soft); }
 .coup .cp-log li::first-letter { text-transform: uppercase; }
@@ -276,3 +280,134 @@
   .coup .cp-logo { font-size: 56px; }
   .coup .cp-sheet { padding: 16px; }
 }
+
+/* ---------- celular em pé: sem palco fixo, layout fluido da altura da tela, sem rolagem ---------- */
+.coup--phone .cp-app {
+  position: fixed; inset: 0; width: auto; height: 100vh; height: 100dvh; transform: none;
+  background: linear-gradient(var(--red) 0 5px, var(--cream) 5px);
+}
+.coup--phone .cp-top { height: 50px; margin-top: 5px; padding: 0 8px 0 12px; gap: 6px; }
+.coup--phone .cp-top h1 { font-size: 28px; }
+.coup--phone .cp-score { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.coup--phone .cp-top .dx-pill { flex: none; min-height: 44px; padding: 6px 10px; font-size: 12.5px; }
+.coup--phone .cp-main { flex-direction: column; }
+.coup--phone .cp-table { min-height: 0; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); gap: 8px; }
+/* oponentes: grade de até 5 colunas */
+.coup--phone .cp-opps { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 6px; }
+.coup--phone .cp-opp { width: auto; min-height: 72px; padding: 6px 2px 5px; gap: 4px; border-radius: 4px; }
+.coup--phone .cp-opp .critter { left: 3px; top: 3px; width: 16px; height: 16px; }
+.coup--phone .cp-nm { font-size: 13px; flex-direction: column; align-items: center; gap: 1px; }
+.coup--phone .cp-tag { font-size: 8.5px; letter-spacing: .06em; }
+.coup--phone .cp-hand { gap: 3px; }
+.coup--phone .cp-card.s { width: 16px; height: 22px; border-width: 1.5px; border-radius: 2px; }
+.coup--phone .cp-card.s em { display: none; }
+.coup--phone .cp-card.s i, .coup--phone .cp-card.s.dead i { font-size: 11px; }
+.coup--phone .cp-card.s.dead::after { opacity: .7; }
+.coup--phone .cp-coins { font-size: 13px; gap: 2px; }
+.coup--phone .cp-coins i { font-size: 13px; }
+.coup--phone .cp-coins.gone { font-size: 10px; letter-spacing: .08em; }
+.coup--phone .cp-opp.turn { box-shadow: 0 0 0 1px var(--red); }
+/* última linha do diário: toque abre a folha */
+.coup--phone .cp-lastline {
+  display: flex; align-items: center; gap: 8px; flex: none; min-height: 44px; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 4px;
+  background: var(--paper); text-align: left; font: 400 14px/1.2 var(--ui);
+}
+.coup--phone .cp-lastline .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coup--phone .cp-lastline .txt::first-letter { text-transform: uppercase; }
+.coup--phone .cp-lastline .ph-char, .coup--phone .cp-lastline .ph-em { color: var(--red-text); }
+.coup--phone .cp-lastline .more { flex: none; font: 400 16px/1 var(--title); letter-spacing: .06em; color: var(--ink-soft); }
+/* palco: ocupa o que sobra */
+.coup--phone .cp-felt { padding: 30px 10px 12px; gap: 12px; }
+.coup--phone .cp-felt.has-band { padding-top: 64px; }
+.coup--phone .cp-corner { top: 7px; font-size: 10.5px; gap: 4px; }
+.coup--phone .cp-corner em { font-size: 18px; }
+.coup--phone .cp-corner i { font-size: 14px; }
+.coup--phone .cp-corner.treasury { left: 9px; }
+.coup--phone .cp-corner.deck { right: 9px; }
+.coup--phone .cp-big { font-size: 36px; }
+.coup--phone .cp-big.mid { font-size: 26px; }
+.coup--phone .cp-sub { font-size: 14px; }
+.coup--phone .cp-sub button { display: inline-block; min-height: 44px; padding: 0 6px; }
+.coup--phone .cp-decl { font-size: 24px; }
+.coup--phone .cp-decl small { font-size: 14px; }
+.coup--phone .cp-clock { width: 100%; gap: 8px; }
+.coup--phone .cp-secs { font-size: 22px; }
+.coup--phone .cp-reacts { width: 100%; gap: 8px; }
+.coup--phone .cp-react { flex: 1 1 130px; min-width: 0; min-height: 52px; padding: 0 12px; font-size: 18px; }
+.coup--phone .cp-wait { font-size: 16px; min-height: 52px; }
+.coup--phone .cp-passed { font-size: 12.5px; }
+.coup--phone .cp-moment { gap: 10px; padding: 10px; }
+.coup--phone .cp-mt { font-size: 40px; }
+.coup--phone .cp-mt2 { font-size: 30px; }
+.coup--phone .cp-ms { font-size: 20px; }
+.coup--phone .cp-ms.ink { font-size: 14px; }
+.coup--phone .cp-moment .cp-card.l { width: 64px; height: 90px; gap: 6px; }
+.coup--phone .cp-moment .cp-card.l i { font-size: 22px; }
+.coup--phone .cp-moment .cp-card.l em { font-size: 14px; }
+.coup--phone .cp-stamp { font-size: 36px; padding: 5px 12px 2px; border-width: 3px; }
+.coup--phone .cp-moment.band { padding: 6px 10px; gap: 4px 10px; }
+.coup--phone .cp-moment.band .cp-mt { font-size: 22px; }
+.coup--phone .cp-moment.band .cp-mt2, .coup--phone .cp-moment.band .cp-ms { font-size: 17px; }
+.coup--phone .cp-moment.band .cp-ms.ink { font-size: 12px; }
+.coup--phone .cp-moment.band .cp-card.l { width: 22px; height: 30px; }
+.coup--phone .cp-moment.band .cp-card.l i { font-size: 13px; }
+.coup--phone .cp-moment.band .cp-card.l em { display: none; }
+.coup--phone .cp-moment.band .cp-stamp { font-size: 17px; padding: 2px 6px 0; border-width: 2px; }
+/* sua mão + ações 4×2 */
+.coup--phone .cp-mebox { height: auto; }
+.coup--phone .cp-me {
+  height: auto; padding: 8px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 8px 10px; align-items: end;
+}
+.coup--phone .cp-me.watching { display: flex; padding: 14px 8px; }
+.coup--phone .cp-watch { font-size: 22px; text-align: center; }
+.coup--phone .cp-myright { display: contents; }
+.coup--phone .cp-myhand { grid-column: 1; grid-row: 1; gap: 6px; align-items: flex-end; }
+.coup--phone .cp-myline { grid-column: 2; grid-row: 1; align-self: end; font-size: 22px; flex-direction: column; align-items: flex-start; gap: 4px; }
+.coup--phone .cp-myline .cp-tag { font-size: 10.5px; letter-spacing: .08em; }
+.coup--phone .cp-myhand .cp-card.l { width: 64px; height: 90px; gap: 6px; }
+.coup--phone .cp-myhand .cp-card.l i { font-size: 24px; }
+.coup--phone .cp-myhand .cp-card.l em { font-size: 12.5px; }
+.coup--phone .cp-myhand .cp-card.m { width: 44px; height: 62px; gap: 3px; }
+.coup--phone .cp-myhand .cp-card.m i { font-size: 16px; }
+.coup--phone .cp-myhand .cp-card.m em { font-size: 10px; }
+.coup--phone .cp-acts { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.coup--phone .cp-act { min-height: 46px; padding: 4px 5px; align-items: center; text-align: center; gap: 0; }
+.coup--phone .cp-an { font-size: 12.5px; line-height: 1.1; letter-spacing: .03em; }
+.coup--phone .cp-act small { display: none; }
+.coup--phone .cp-has { right: 3px; top: 3px; font-size: 0; gap: 0; }
+.coup--phone .cp-has::before { width: 7px; height: 7px; }
+/* painéis (perder carta, troca, fim) e diário: folhas que sobem de baixo */
+.coup--phone .cp-panel, .coup--phone .cp-diary {
+  position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; z-index: 20; border: 2px solid var(--ink); border-bottom: 0;
+  border-radius: 12px 12px 0 0; box-shadow: 0 -6px 0 rgba(29, 26, 23, .12); animation: cp-sheet-up .25s ease-out;
+}
+@keyframes cp-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+.coup--phone .cp-panel {
+  inset: auto 0 0 0; max-height: 85dvh; overflow: auto; flex-direction: column; align-items: stretch; gap: 14px;
+  padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+}
+.coup--phone .cp-panel h3 { font-size: 30px; }
+.coup--phone .cp-panel h3.win { font-size: 34px; }
+.coup--phone .cp-panel p { font-size: 15px; }
+.coup--phone .cp-info { display: contents; }
+.coup--phone .cp-info > * { order: 1; }
+.coup--phone .cp-pick { order: 2; justify-content: center; gap: 8px; }
+.coup--phone .cp-info .cp-pbtn { order: 3; }
+.coup--phone .cp-panel > .cp-pbtn, .coup--phone .cp-panel > .cp-hostwait { order: 4; }
+.coup--phone .cp-hostwait { text-align: center; }
+.coup--phone .cp-pscore em { font-size: 22px; }
+.coup--phone .cp-pickc { width: 76px; height: 106px; gap: 6px; }
+.coup--phone .cp-pickc i { font-size: 22px; }
+.coup--phone .cp-pickc em { font-size: 14px; }
+.coup--phone .cp-pbtn { min-height: 50px; width: 100%; }
+.coup--phone .cp-pbtn.huge { font-size: 22px; }
+.coup--phone .cp-diary { height: 72dvh; border-left: 2px solid var(--ink); }
+.coup--phone .cp-diary-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 16px; }
+.coup--phone .cp-diary h2 { padding: 0; }
+.coup--phone .cp-close {
+  min-height: 44px; padding: 0 14px; border: 2px solid var(--ink); border-radius: 4px; background: var(--paper);
+  font: 500 15px/1 var(--ui); letter-spacing: .05em; text-transform: uppercase;
+}
+.coup--phone .cp-log { font-size: 15px; }
+.coup--phone .cp-scrim { position: fixed; inset: 0; z-index: 19; background: rgba(29, 26, 23, .35); }
+.coup--phone .cp-app .cp-toast { position: fixed; bottom: auto; top: 64px; white-space: normal; max-width: 90vw; text-align: center; }

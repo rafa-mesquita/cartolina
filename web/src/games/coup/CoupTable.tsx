@@ -1,11 +1,12 @@
 import { COUP_TARGETED, type CoupActionKind, type CoupCharacter, type CoupRoomView } from '@cartolina/shared';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
+import { useLayout } from '../../lib/device';
 import { JOIN_ERRORS, type ConnStatus, type GameConn } from '../../net/connection';
 import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
 import { useWindowClock, windowLeft } from './clock';
-import { Diary } from './Diary';
+import { Diary, LastLine } from './Diary';
 import { useMoments } from './moments';
 import { MyArea } from './MyArea';
 import { Panels } from './Panels';
@@ -48,7 +49,9 @@ const NO_KEEP: number[] = [];
 const freshUi = (key: string): Ui => ({ key, aiming: null, lose: -1, keep: NO_KEEP, sent: false });
 
 /**
- * A mesa do Cúpi no computador: palco 1440×900 escalado com o topo, os oponentes, o palco (feltro), a sua área e o diário.
+ * A mesa do Cúpi: no computador, palco 1440×900 escalado com o topo, os oponentes, o palco (feltro), a sua área e o diário.
+ * No celular em pé (`coup--phone`), os mesmos componentes em coluna, na altura da tela: topo fino, oponentes em grade,
+ * a faixa com a última linha do diário (abre a folha do diário), o palco, a sua mão e as ações; painéis viram folhas.
  * Tudo que é jogo vem de `view.game`; aqui só mora o estado da interface (alvo, carta a perder, cartas da troca).
  */
 export function CoupTable({ view, conn, serverOffset, status }: Props) {
@@ -57,6 +60,12 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   const me = view.you !== null && g.players.includes(view.you) ? view.you : null;
   const names = useMemo(() => nameFrom(view), [view]);
   const { scale, width } = useStageFit();
+  const phone = useLayout() === 'phone';
+  // folha do diário (só no celular): voltar pro computador fecha
+  const [diaryOpen, setDiaryOpen] = useState(false);
+  if (!phone && diaryOpen) setDiaryOpen(false);
+  const openDiary = useCallback(() => setDiaryOpen(true), []);
+  const closeDiary = useCallback(() => setDiaryOpen(false), []);
   const rootRef = useRef<HTMLDivElement>(null);
   const { toast, say } = useToast(TOAST_MS);
 
@@ -155,16 +164,18 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   const onExchange = useCallback((keep: CoupCharacter[]) => send({ type: 'exchange', keep }), [send]);
   const onRestart = useCallback(() => send({ type: 'restart' }), [send]);
 
-  // Esc sai do modo "escolher alvo"
+  // Esc sai do modo "escolher alvo" (e fecha a folha do diário)
   const hasAim = aiming !== null;
   useEffect(() => {
-    if (!hasAim) return undefined;
+    if (!hasAim && !diaryOpen) return undefined;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setUi((u) => ({ ...u, aiming: null }));
+      if (e.key !== 'Escape') return;
+      if (diaryOpen) setDiaryOpen(false);
+      else setUi((u) => ({ ...u, aiming: null }));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [hasAim]);
+  }, [hasAim, diaryOpen]);
 
   // Modo alvo: o foco vai pro primeiro assento-alvo; ao mirar ou cancelar, volta pro botão da ação.
   const prevAim = useRef<CoupActionKind | null>(null);
@@ -179,12 +190,13 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
 
   const stage = { width, transform: `translate(-50%, -50%) scale(${scale})` } as CSSProperties;
   return (
-    <div className="coup" ref={rootRef} data-button-sounds="">
-      <div className="cp-app" style={stage}>
-        <TopBar wins={g.wins} nameOf={names.nameOf} />
+    <div className={phone ? 'coup coup--phone' : 'coup'} ref={rootRef} data-button-sounds="">
+      <div className="cp-app" style={phone ? undefined : stage}>
+        <TopBar wins={g.wins} nameOf={names.nameOf} phone={phone} me={me} />
         <main className="cp-main">
           <section className="cp-table">
             <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={names.nameOf} aiming={hasAim} onTarget={onTarget} />
+            {phone && <LastLine log={g.log} names={names} onOpen={openDiary} />}
             <Stage game={g} names={names} clock={clock} aiming={aiming} onCancelAim={onCancelAim} onReact={onReact} moment={moment} />
             <div className="cp-mebox">
               <MyArea game={g} me={me} aiming={aiming} onAct={onAct} />
@@ -199,11 +211,13 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
                 onKeepToggle={onKeepToggle}
                 onExchange={onExchange}
                 onRestart={onRestart}
+                sheet={phone}
               />
             </div>
           </section>
-          <Diary log={g.log} match={g.match} names={names} />
+          <Diary log={g.log} match={g.match} names={names} phone={phone} open={diaryOpen} onClose={closeDiary} />
         </main>
+        {phone && diaryOpen && <div className="cp-scrim" aria-hidden="true" onClick={closeDiary} />}
         <div role="status" aria-live="polite">
           {toast && (
             <div key={toast.id} className="cp-toast">
