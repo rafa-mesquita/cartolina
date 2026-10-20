@@ -16,8 +16,8 @@
     {
       "name": "prototipo-cupi",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "http-server", ".", "-p", "5178", "-c-1", "--silent"],
-      "port": 5178
+      "runtimeArgs": ["--yes", "http-server", ".", "-p", "5185", "-c-1", "--silent"],
+      "port": 5185
     },
     {
       "name": "prototipo",

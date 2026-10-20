@@ -17,7 +17,7 @@
 - Worktree `C:\Users\rafam\Desktop\Rpositórios Github - claude\Pessoal\Jogos de tabuleiro\.claude\worktrees\cupi`, branch `feat/cupi`. Sem push, sem merge, nunca `git stash`. Use o Bash (no Git Bash o `rtk` não existe).
 - **Protótipo é descartável.** Nada aqui entra no site (`web/`) nem no `shared/`. Não mexa em `shared/src`: se achar um bug nas regras, pare e reporte.
 - Tudo em português (textos da tela, comentários). Commits `feat(prototipo): …`, terminando com `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- Como ver: `npx http-server . -p 5178 -c-1` na raiz da worktree e abrir `http://localhost:5178/prototipo/coup/`. O controlador confere cada task no navegador; quem implementa confere ao menos que a página carrega e que o JS não tem erro de sintaxe (`node --check` em cada `.js` solto; o script inline pode ser extraído pra conferir).
+- Como ver: `npx http-server . -p 5185 -c-1` na raiz da worktree e abrir `http://localhost:5185/prototipo/coup/`. O controlador confere cada task no navegador; quem implementa confere ao menos que a página carrega e que o JS não tem erro de sintaxe (`node --check` em cada `.js` solto; o script inline pode ser extraído pra conferir).
 - O jogador humano é sempre `p0` e é o anfitrião. Bots são `p1…p5`.
 - **Computador:** palco fixo de **1440×900**, escalado pra caber na janela (`fit()`, como em `prototipo/retratim/index.html`). **Celular** (`matchMedia('(max-width: 640px)')`): sem palco fixo, layout fluido em pé (Task 4).
 
@@ -178,8 +178,8 @@ Acrescente em `.claude/launch.json` (dentro de `configurations`, depois de `prot
     {
       "name": "prototipo-cupi",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "http-server", ".", "-p", "5178", "-c-1", "--silent"],
-      "port": 5178
+      "runtimeArgs": ["--yes", "http-server", ".", "-p", "5185", "-c-1", "--silent"],
+      "port": 5185
     },
 ```
 
