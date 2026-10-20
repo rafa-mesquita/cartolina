@@ -48,7 +48,8 @@
       const list = byKind[b] ?? [];
       if (list.length < 2) continue;
       const pair = list.slice(0, 2);
-      if (b === 'mico') { if (tgs.length) options.push({ cards: pair, target: pick(tgs) }); }
+      // Par de Mico não tem alvo: os outros descartam uma carta (só vale a pena se alguém tiver carta).
+      if (b === 'mico') { if (tgs.length) options.push({ cards: pair }); }
       else if (b === 'preguica') options.push({ cards: pair, ask: pick(BICHOS) });
       else options.push({ cards: pair });
     }
@@ -59,6 +60,23 @@
     return options.length ? pick(options) : null;
   }
 
+  /** Quanto a carta vale pra quem a segura (menor = descarta primeiro): bicho sozinho < bicho em par < ação < Nem vem! < Desarme. */
+  function keepValue(card, hand) {
+    const k = kind(card);
+    if (BICHOS.includes(k)) return hand.filter((x) => kind(x) === k).length >= 2 ? 1 : 0;
+    if (k === 'espiar' || k === 'embaralhar') return 2;
+    if (k === 'favor' || k === 'pular') return 3;
+    if (k === 'ataque') return 4;
+    if (k === 'nemvem') return 5;
+    return 6; // Desarme: a última coisa a largar
+  }
+
+  /** Par de Mico: a carta menos valiosa da mão (empate: sorteia), nunca o Desarme se houver outra. */
+  function leastValuable(hand) {
+    const lowest = Math.min(...hand.map((c) => keepValue(c, hand)));
+    return pick(hand.filter((c) => keepValue(c, hand) === lowest));
+  }
+
   window.Bots = {
     /**
      * O que o bot `me` faz agora, olhando a visão `v`. `mem` é a memória do bot (ele mesmo guarda o que já decidiu).
@@ -67,6 +85,11 @@
       if (v.phase !== 'playing' || !v.alive.includes(me)) return null;
       const hand = v.hand;
 
+      if (v.choice && v.choice.kind === 'mico') {
+        // Par de Mico: quem ainda está na espera descarta a carta que menos faz falta.
+        if (!v.choice.waiting.includes(me) || !hand.length) return null;
+        return { action: { type: 'choose', card: leastValuable(hand) }, delay: between(1000, 2000) };
+      }
       if (v.choice && v.choice.who === me) {
         const c = v.choice;
         if (c.kind === 'cafune') {

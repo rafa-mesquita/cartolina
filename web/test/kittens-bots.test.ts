@@ -91,8 +91,50 @@ describe('decisão do bot do Tatubum', () => {
   });
 
   it('escolha dos 5 diferentes: prefere o Cafuné entre as opções', () => {
-    const v = p1View([], { choice: { kind: 'cinco', who: 'p1', options: ['pular-1', 'cafune-2', 'espiar-3'], deadline: 9000 } });
-    expect(decideKittens(v, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', card: 'cafune-2' });
+    const v = p1View([], { choice: { kind: 'cinco', who: 'p1', options: ['pular-1', 'cafune-2', 'espiar-3'], left: 2, deadline: 9000 } });
+    const d = decideKittens(v, newKittensMemory(), () => 0.5)!;
+    expect(d.action).toEqual({ type: 'choose', card: 'cafune-2' });
+    // São duas pegadas: a chave muda com o que falta, então o bot também responde à segunda.
+    const second = p1View([], { choice: { kind: 'cinco', who: 'p1', options: ['pular-1', 'espiar-3'], left: 1, deadline: 9000 } });
+    const d2 = decideKittens(second, newKittensMemory(), () => 0.5)!;
+    expect(d2.key).not.toBe(d.key);
+    expect(d2.action).toEqual({ type: 'choose', card: 'pular-1' });
+  });
+
+  describe('par de Mico: descarta uma carta quando está na espera', () => {
+    const mico = (waiting: string[]) => ({ kind: 'mico' as const, by: 'p0', waiting, deadline: 9000 });
+
+    it('prefere bicho (sozinho antes do que está em par); nunca o Desarme se tiver outra', () => {
+      const hand = ['cafune-1', 'ataque-2', 'capivara-3', 'capivara-4', 'quati-5', 'nemvem-6'];
+      const v = p1View(hand, { choice: mico(['p1', 'p2']) });
+      const d = decideKittens(v, newKittensMemory(), () => 0.5)!;
+      expect(d.key).toBe('choice:mico:9000');
+      expect(d.action).toEqual({ type: 'choose', card: 'quati-5' });
+      for (const r of [0, 0.5, 0.99]) {
+        const a = decideKittens(p1View(['cafune-1', 'pular-2'], { choice: mico(['p1']) }), newKittensMemory(), () => r)!.action as { card: string };
+        expect(a.card).toBe('pular-2');
+      }
+      // só bichos em par: ainda é bicho
+      const pairs = decideKittens(p1View(['cafune-1', 'ataque-2', 'mico-3', 'mico-4'], { choice: mico(['p1']) }), newKittensMemory(), () => 0)!.action as { card: string };
+      expect(pairs.card).toMatch(/^mico-/);
+    });
+
+    it('só tem Desarme: descarta ele mesmo (é a única opção)', () => {
+      const v = p1View(['cafune-1'], { choice: mico(['p1']) });
+      expect(decideKittens(v, newKittensMemory(), () => 0)!.action).toEqual({ type: 'choose', card: 'cafune-1' });
+    });
+
+    it('quem não está na espera (ou já descartou) fica quieto, e quem jogou também', () => {
+      expect(decideKittens(p1View(['quati-1'], { choice: mico(['p2']) }), newKittensMemory(), () => 0)).toBeNull();
+      const by = withGame(viewOf(started(3), 'p0'), { hand: ['quati-1'], choice: mico(['p1', 'p2']) });
+      expect(decideKittens(by, newKittensMemory(), () => 0)).toBeNull();
+    });
+  });
+
+  it('joga o par de Mico sem alvo', () => {
+    const base = viewOf(started(3), 'p0');
+    const a = decideKittens(withGame(base, { hand: ['mico-0', 'mico-1'], peek: null, owed: 1 }), newKittensMemory(), () => 0)!.action;
+    expect(a).toEqual({ type: 'play', cards: ['mico-0', 'mico-1'] });
   });
 
   it('escolha dos outros: espera, não faz nada', () => {
@@ -187,7 +229,7 @@ describe('decisão do bot do Tatubum', () => {
         const g = viewOf(room, 'p0').game;
         if (g.phase !== 'playing') break;
         // quem precisa agir: o dono da escolha, o da vez (se nada no ar) ou todos (nope)
-        const actors = g.choice ? [g.choice.who] : g.pending ? g.alive : g.current ? [g.current] : [];
+        const actors = g.choice ? (g.choice.kind === 'mico' ? g.choice.waiting : [g.choice.who]) : g.pending ? g.alive : g.current ? [g.current] : [];
         let acted = false;
         for (const who of actors) {
           const d = decideKittens(viewOf(room, who), newKittensMemory(), rng);

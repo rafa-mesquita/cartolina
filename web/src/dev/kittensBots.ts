@@ -95,7 +95,8 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     if (list.length < 2) continue;
     const pair = list.slice(0, 2);
     if (b === 'mico') {
-      if (targets.length) options.push({ cards: pair, target: pickOne(rng, targets) });
+      // Sem alvo: os outros descartam uma carta (só vale a pena se alguém tiver carta).
+      if (targets.length) options.push({ cards: pair });
     } else if (b === 'preguica') {
       options.push({ cards: pair, ask: pickOne(rng, BICHOS) });
     } else {
@@ -109,6 +110,32 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
   return options.length ? pickOne(rng, options) : null;
 }
 
+/** Quanto a carta vale pra quem a segura (menor = descarta primeiro): bicho sozinho < bicho em par < ação < Nem vem! < Desarme. */
+function keepValue(card: string, hand: readonly string[]): number {
+  const k = kittensKindOf(card);
+  if (k && BICHOS.includes(k)) return hand.filter((x) => kittensKindOf(x) === k).length >= 2 ? 1 : 0;
+  switch (k) {
+    case 'espiar':
+    case 'embaralhar':
+      return 2;
+    case 'favor':
+    case 'pular':
+      return 3;
+    case 'ataque':
+      return 4;
+    case 'nemvem':
+      return 5;
+    default:
+      return 6; // Desarme (e o que vier): a última coisa a largar
+  }
+}
+
+/** Par de Mico: a carta menos valiosa da mão (empate: sorteia), nunca o Desarme se houver outra. */
+export function leastValuable(hand: readonly string[], rng: Rng): string {
+  const lowest = Math.min(...hand.map((c) => keepValue(c, hand)));
+  return pickOne(rng, hand.filter((c) => keepValue(c, hand) === lowest));
+}
+
 /**
  * O que o bot faz agora (ou null). `key` identifica a etapa, pra não agir duas vezes nela.
  * `mem` é mutada: guarda o Nem vem! já considerado e as jogadas do turno.
@@ -117,9 +144,20 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
   const g = view.game, me = view.you;
   if (!me || g.phase !== 'playing' || !g.alive.includes(me)) return null;
 
+  if (g.choice?.kind === 'mico') {
+    // Par de Mico: quem ainda está na espera descarta a carta que menos faz falta.
+    if (!g.choice.waiting.includes(me) || !g.hand.length) return null;
+    return {
+      key: `choice:mico:${g.choice.deadline}`,
+      delay: between(rng, 1000, 2000),
+      action: { type: 'choose', card: leastValuable(g.hand, rng) },
+    };
+  }
+
   if (g.choice && g.choice.who === me) {
     const c = g.choice;
-    const key = `choice:${c.kind}:${c.deadline}`;
+    // Nos 5 diferentes são duas pegadas: `left` na chave faz o bot responder a segunda também.
+    const key = c.kind === 'cinco' ? `choice:cinco:${c.deadline}:${c.left}` : `choice:${c.kind}:${c.deadline}`;
     if (c.kind === 'cafune') {
       // Às vezes deixa o tatu bem em cima pro próximo.
       const position = rng() < 0.35 ? 0 : Math.floor(rng() * (g.drawCount + 1));
