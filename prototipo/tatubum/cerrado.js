@@ -5,7 +5,9 @@
  * segundo. Canvas pequeno (288×180) ampliado sem suavizar pro palco de 1440×900.
  */
 (function () {
-  const W = 288, H = 180;
+  // Largura em pixels do cerrado: muda com a proporção da janela (altura fixa de 180).
+  let W = 288;
+  const H = 180;
   const B = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]; // Bayer 4×4
 
   function rngOf(seed) {
@@ -41,7 +43,7 @@
     band(40, 80, '#17204a', '#1f3a6b');
     band(80, 112, '#1f3a6b', '#2c5a8c');
     band(112, H, '#2c5a8c', '#2c5a8c');
-    const mx = 232, my = 26;
+    const mx = W - 56, my = 26;
     for (let y = -9; y <= 9; y++) {
       for (let x = -9; x <= 9; x++) {
         const d = x * x + y * y;
@@ -86,19 +88,19 @@
       const hgt = Math.round(4 + Math.sin(x / 37) * 3 + Math.sin(x / 11) * 1.5);
       for (let y = 0; y < hgt; y++) px(x, 112 - y, '#1a2f5a');
     }
-    for (let i = 0; i < 13; i++) tree(Math.floor(R() * W), 112, 10 + Math.floor(R() * 8), '#223a68', 12 + Math.floor(R() * 8));
+    for (let i = 0; i < Math.round((13 * W) / 288); i++) tree(Math.floor(R() * W), 112, 10 + Math.floor(R() * 8), '#223a68', 12 + Math.floor(R() * 8));
     band(128, H, '#141f42', '#141f42');
     for (let x = 0; x < W; x++) {
       const hgt = Math.round(3 + Math.sin(x / 23 + 1) * 2);
       for (let y = 0; y < hgt; y++) px(x, 128 - y, '#141f42');
     }
-    for (let i = 0; i < 8; i++) tree(Math.floor(R() * W), 130, 18 + Math.floor(R() * 12), '#0f1733', 16 + Math.floor(R() * 10));
+    for (let i = 0; i < Math.round((8 * W) / 288); i++) tree(Math.floor(R() * W), 130, 18 + Math.floor(R() * 12), '#0f1733', 16 + Math.floor(R() * 10));
     mound(36, 150, 14, '#0f1733');
-    mound(244, 152, 10, '#0f1733');
+    mound(W - 44, 152, 10, '#0f1733');
     band(150, H, '#0b1028', '#090c1e');
     for (let x = 0; x < W; x++) if (R() < 0.5) px(x, 149, '#0b1028');
-    grass(152, '#132048', 110);
-    grass(170, '#0f1a3c', 80);
+    grass(152, '#132048', Math.round((110 * W) / 288));
+    grass(170, '#0f1a3c', Math.round((80 * W) / 288));
   }
 
   function cloudShape(R, w) {
@@ -109,8 +111,9 @@
 
   window.Cerrado = {
     /** Desenha e anima o cerrado em `canvas` (288×180). A mesma `seed` dá o mesmo cerrado. */
-    start(canvas, seed = 7) {
+    start(canvas, seed = 7, width = 288) {
       this.stop();
+      W = width;
       canvas.width = W;
       canvas.height = H;
       const g = canvas.getContext('2d');
@@ -119,7 +122,7 @@
       drawSky(sky.getContext('2d'));
       const land = layer();
       drawLand(land.getContext('2d'), R);
-      const stars = Array.from({ length: 64 }, () => ({
+      const stars = Array.from({ length: Math.round((64 * W) / 288) }, () => ({
         x: Math.floor(R() * W), y: Math.floor(R() * 92), big: R() < 0.08, phase: R() * Math.PI * 2, speed: 0.5 + R() * 2,
       }));
       const clouds = [
@@ -128,7 +131,7 @@
         { x: 178, y: 58, s: cloudShape(R, 38), v: 0.8 },
         { x: 52, y: 70, s: cloudShape(R, 26), v: 0.5 },
       ];
-      const flies = Array.from({ length: 14 }, () => ({
+      const flies = Array.from({ length: Math.round((14 * W) / 288) }, () => ({
         x: R() * W, y: 118 + R() * 55, ax: R() * Math.PI * 2, ay: R() * Math.PI * 2, blink: R() * Math.PI * 2,
       }));
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

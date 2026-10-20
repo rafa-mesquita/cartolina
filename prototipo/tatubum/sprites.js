@@ -303,7 +303,52 @@
     return cache.get(key);
   }
 
+  /**
+   * Bichinho do site em pixel art: desenha o SVG do personagem numa grade pequena (GRID×GRID), corta a
+   * transparência pela metade e encaixa cada pixel na cor mais próxima da paleta do próprio desenho.
+   */
+  const GRID = 26;
+  const hexes = (svg) => [...new Set((svg.match(/#[0-9a-fA-F]{6}/g) ?? []).map((h) => h.toLowerCase()))];
+  const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  function pixelize(svgText) {
+    return new Promise((resolve) => {
+      // viewBox maior que o 64×64 original: chapéus, antenas e orelhas saem do círculo.
+      const svg = svgText.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace('viewBox="0 0 64 64"', 'viewBox="-4 -8 72 72" width="72" height="72"');
+      const palette = hexes(svg).map(rgb);
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = GRID;
+        c.height = GRID;
+        const g = c.getContext('2d');
+        g.drawImage(img, 0, 0, GRID, GRID);
+        const data = g.getImageData(0, 0, GRID, GRID);
+        const d = data.data;
+        for (let i = 0; i < d.length; i += 4) {
+          if (d[i + 3] < 110) { d[i + 3] = 0; continue; }
+          // Desfaz a mistura com o transparente antes de procurar a cor mais próxima.
+          const a = d[i + 3] / 255;
+          const px = [d[i] / a, d[i + 1] / a, d[i + 2] / a];
+          let best = palette[0], dist = Infinity;
+          for (const p of palette) {
+            const dd = (p[0] - px[0]) ** 2 + (p[1] - px[1]) ** 2 + (p[2] - px[2]) ** 2;
+            if (dd < dist) { dist = dd; best = p; }
+          }
+          d[i] = best[0]; d[i + 1] = best[1]; d[i + 2] = best[2]; d[i + 3] = 255;
+        }
+        g.putImageData(data, 0, 0);
+        resolve(c.toDataURL());
+      };
+      img.onerror = () => resolve('');
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+
   window.Sprites = {
+    /** Bichinho do site (pela cor do jogador) em pixel art: Promise da URL da imagem (com cache). */
+    critter(color) {
+      return cached('critter:' + color, () => pixelize(Tatubum.critterSvg(color)));
+    },
     style: CARD_STYLE,
     /** Sprite da carta do tipo `kind`: { url, w, h }. */
     card(kind) {

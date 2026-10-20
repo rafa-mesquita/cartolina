@@ -7,3 +7,6 @@ export { KITTENS_CARD_KINDS, KITTENS_CARD_NAMES, kittensKindOf } from '../../sha
 export { KITTENS_CHOICE_MS, KITTENS_NOPE_MS } from '../../shared/src/games/kittens/types';
 export { errorMessage } from '../../shared/src/protocol';
 export { mulberry32 } from '../../shared/src/rng';
+export { PLAYER_COLORS } from '../../shared/src/players';
+// Bichinhos do site (os mesmos dos outros jogos), pra virar pixel art nos assentos.
+export { critterSvg } from '../../web/src/brand/critters';

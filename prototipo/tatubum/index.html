@@ -16,7 +16,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--night); overflow: hidden; }
   body { font-family: var(--vt); color: var(--txt); user-select: none; }
-  #stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 900px; transform-origin: center; overflow: hidden; image-rendering: pixelated; }
+  #stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 900px; --w: 1440px; transform-origin: center; overflow: hidden; image-rendering: pixelated; }
   #bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
   img { image-rendering: pixelated; }
 
@@ -47,9 +47,14 @@
   #seats { position: absolute; left: 0; right: 0; top: 60px; height: 170px; z-index: 2; }
   .seat { position: absolute; width: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px; cursor: default; }
   .seat .tatu { width: 80px; height: 44px; }
+  .seat .critter { width: 68px; height: 68px; filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)); }
   .seat .who { font-family: var(--px); font-size: 10px; color: var(--cream); text-shadow: 2px 2px 0 #050510; margin-top: 4px; }
-  .seat .count { display: flex; align-items: center; gap: 6px; font-size: 22px; line-height: 1; color: var(--dim); }
-  .seat .mini { width: 14px; height: 19px; background: #1f3a6b; box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink); }
+  .seat .count { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .seat .count .fan { position: relative; width: 44px; height: 34px; }
+  .seat .count .fan i { position: absolute; left: 14px; top: 2px; width: 16px; height: 23px; background: #1f3a6b; transform-origin: 50% 120%;
+    box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink); background-image: linear-gradient(#f2c14e, #f2c14e); background-size: 6px 4px; background-repeat: no-repeat; background-position: center; }
+  .seat .count b { font-family: var(--px); font-size: 20px; font-weight: normal; color: var(--yellow); text-shadow: 3px 3px 0 #050510, -2px 0 0 #050510, 0 -2px 0 #050510; min-width: 26px; }
+  .seat .count.out { font-family: var(--px); font-size: 11px; color: var(--dim); }
   .seat .chip { font-family: var(--px); font-size: 8px; padding: 4px 6px; background: #2c3a66; color: var(--cream); margin-top: 2px; }
   .seat.turn { background: rgba(242,193,78,.16); box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow); }
   .seat.turn .who::before { content: '▶ '; color: var(--yellow); }
@@ -65,13 +70,13 @@
   @keyframes blink { 50% { opacity: .35; } }
 
   /* Legenda em quadrinho */
-  #caption { position: absolute; left: 650px; top: 238px; transform: translateX(-50%); min-width: 380px; max-width: 760px; padding: 10px 18px 8px; background: var(--paper); color: var(--ink);
+  #caption { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 238px; transform: translateX(-50%); min-width: 380px; max-width: 760px; padding: 10px 18px 8px; background: var(--paper); color: var(--ink);
     font-size: 28px; line-height: 1; text-align: center; box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 6px 8px 0 rgba(0,0,0,.35); z-index: 4; }
   #caption:empty { display: none; }
   #caption .timer { color: var(--red); margin-left: 8px; }
 
   /* Mesa */
-  #table { position: absolute; left: 200px; top: 300px; width: 900px; height: 270px; background: #2e5a3a; z-index: 1;
+  #table { position: absolute; left: 200px; top: 300px; width: calc(var(--bw) - 540px); height: 270px; background: #2e5a3a; z-index: 1;
     box-shadow: 0 -6px 0 var(--night), 0 6px 0 var(--night), -6px 0 0 var(--night), 6px 0 0 var(--night), 10px 14px 0 rgba(0,0,0,.4);
     background-image: radial-gradient(#33653f 1.5px, transparent 1.6px); background-size: 8px 8px; }
   .slot { position: absolute; top: 40px; width: 140px; height: 190px; display: flex; align-items: center; justify-content: center; }
@@ -82,14 +87,14 @@
   #deck.shuffling .stack .card { animation: shuffle .12s steps(2) 6; }
   #deck.mine:hover .stack .card:last-child { transform: translate(-4px, -10px); }
   @keyframes shuffle { 50% { translate: 10px -6px; } }
-  #air { left: 380px; }
+  #air { left: calc(50% - 70px); }
   #air .card { position: absolute; }
   #air .empty { width: 112px; height: 156px; border: 4px dashed rgba(244,233,208,.35); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 22px; color: rgba(244,233,208,.5); }
-  #bar { position: absolute; left: 380px; top: 248px; width: 140px; display: flex; justify-content: center; gap: 6px; }
+  #bar { position: absolute; left: calc(50% - 70px); top: 248px; width: 140px; display: flex; justify-content: center; gap: 6px; }
   #bar i { width: 18px; height: 12px; background: #1a2a20; box-shadow: 0 0 0 3px var(--night); }
   #bar i.on { background: var(--red); }
   #bar i.on.last { animation: blink .3s steps(2) infinite; }
-  #discard { left: 670px; }
+  #discard { left: auto; right: 90px; }
   #discard .card { position: absolute; }
   #future { position: absolute; left: 230px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
   #future .tag { font-family: var(--px); font-size: 8px; color: var(--yellow); margin-bottom: 2px; }
@@ -110,11 +115,20 @@
   .flying { position: absolute; left: 0; top: 0; z-index: 30; pointer-events: none; }
 
   /* Mão */
-  #hand { position: absolute; left: 190px; width: 940px; bottom: 26px; height: 200px; z-index: 6; }
+  #hand { position: absolute; left: 190px; width: calc(var(--bw) - 500px); bottom: 26px; height: 200px; z-index: 6; }
   #hand .card { position: absolute; bottom: 0; cursor: pointer; transition: none; }
   #hand .card:hover { bottom: 14px; }
   #hand .card.sel { bottom: 34px; box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); animation: selblink .5s steps(2) infinite; }
   #hand .card.arriving { visibility: hidden; }
+  #hand .card { touch-action: none; }
+  #hand .card.dragging { opacity: .25; }
+  .card img { -webkit-user-drag: none; user-select: none; }
+  .card.ghost { position: absolute; left: 0; top: 0; z-index: 40; pointer-events: none;
+    box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 12px 18px 0 rgba(0,0,0,.4); }
+  .card.ghost[data-n]::after { content: '×' attr(data-n); position: absolute; right: -14px; top: -14px; padding: 6px 7px; background: var(--red); color: var(--cream); font-family: var(--px); font-size: 12px; box-shadow: 0 0 0 3px var(--ink); }
+  #stage.dragging #table { box-shadow: 0 -6px 0 var(--yellow), 0 6px 0 var(--yellow), -6px 0 0 var(--yellow), 6px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.4); }
+  #table.drop { background-color: #3b7349; }
+  .seat.drop { background: rgba(228,87,46,.3); box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
   #hand.giving .card:hover { bottom: 30px; box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
   #hand.myturn::before { content: 'SUA VEZ'; position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-family: var(--px); font-size: 11px; color: var(--yellow); text-shadow: 2px 2px 0 #050510; animation: blink 1s steps(2) infinite; }
   #hand .dead { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); font-family: var(--px); font-size: 14px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
@@ -135,7 +149,7 @@
   #log p.bad { color: #ff9b7a; }
 
   /* Painéis (escolhas) */
-  #panel { position: absolute; left: 650px; top: 300px; transform: translateX(-50%); z-index: 20; min-width: 560px; padding: 22px 26px; background: #141f42;
+  #panel { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 300px; transform: translateX(-50%); z-index: 20; min-width: 560px; padding: 22px 26px; background: #141f42;
     box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
   #panel:empty { display: none; }
   #panel h2 { margin: 0 0 6px; font-family: var(--px); font-size: 16px; color: var(--yellow); font-weight: normal; }
@@ -168,9 +182,14 @@
     box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink); }
   #toast:empty { display: none; }
 
+  /* Bloco central (mesa, mão, diário): 1440 de largura, centralizado no palco que cresce até a largura da janela */
+  #board { --bw: 1440px; position: absolute; left: 50%; top: 0; width: var(--bw); height: 900px; transform: translateX(-50%); pointer-events: none; z-index: 3; }
+  #board > * { pointer-events: auto; }
+  #board > #caption, #board > #viewer { pointer-events: none; }
+
   /* Efeitos */
   #fxlayer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
-  #particles { position: absolute; inset: 0; width: 1440px; height: 900px; z-index: 31; pointer-events: none; image-rendering: pixelated; }
+  #particles { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 31; pointer-events: none; image-rendering: pixelated; }
   .stamp { position: absolute; font-family: var(--px); font-size: 26px; padding: 10px 14px; border: 6px solid currentColor; background: rgba(244,233,208,.92); white-space: nowrap; }
   .pop { position: absolute; font-family: var(--px); white-space: nowrap; text-shadow: 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 6px 0 var(--ink), 0 -6px 0 var(--ink), 10px 10px 0 rgba(0,0,0,.45); }
   .flash { position: absolute; inset: 0; }
@@ -183,7 +202,7 @@
   .seat .chip.think { background: #3b2412; animation: blink .8s steps(2) infinite; }
 
   /* Zoom de carta (rodinha) */
-  #viewer { position: absolute; left: 650px; top: 400px; z-index: 35; pointer-events: none; transform: translate(-50%, -50%) scale(2.4); }
+  #viewer { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 400px; z-index: 35; pointer-events: none; transform: translate(-50%, -50%) scale(2.4); }
   #viewer:empty { display: none; }
 
   /* Galeria das cartas */
@@ -215,6 +234,7 @@
     </div>
   </div>
   <div id="seats"></div>
+  <div id="board">
   <div id="caption"></div>
   <div id="table">
     <div class="slot" id="deck"><div class="stack"></div><div class="label"></div></div>
@@ -227,12 +247,14 @@
   <div id="hand"></div>
   <div id="actions"></div>
   <div id="panel"></div>
+  <div id="viewer"></div>
+  <div id="toast"></div>
+  </div>
   <div id="dev">
     <div class="lbl">protótipo · teste</div>
     <button class="btn small ghost" id="drop"><span>DERRUBAR UM BOT</span></button>
     <button class="btn small ghost" id="speed"><span>BOTS: NORMAIS</span></button>
   </div>
-  <div id="toast"></div>
   <div id="menu">
     <div class="biglogo">TATUBUM</div>
     <div class="sub">quantos bots na mesa?</div>
@@ -245,7 +267,6 @@
     <button class="btn" id="cards"><span>AS CARTAS</span></button>
   </div>
   <div id="gallery" hidden></div>
-  <div id="viewer"></div>
   <div id="over" hidden></div>
   <div id="fxlayer"></div>
   <canvas id="particles"></canvas>
@@ -264,19 +285,35 @@ const $ = (s) => document.querySelector(s);
 const stage = $('#stage');
 
 // ---------------------------------------------------------------- palco
+// A altura manda; a largura cresce até a da janela (sem faixas vazias nos lados), como no Diquisti.
 let scale = 1;
+let stageW = 1440;
+const bgSeed = Math.floor(Math.random() * 1e9);
+let bgWidth = 0;
 function fit() {
-  scale = Math.min(innerWidth / 1440, innerHeight / 900);
+  scale = innerHeight / 900;
+  stageW = innerWidth / scale;
+  if (stageW < 1440) { scale = innerWidth / 1440; stageW = 1440; }
+  stageW = Math.round(stageW);
+  stage.style.width = stageW + 'px';
   stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  const p = $('#particles');
+  p.width = Math.ceil(stageW / 4);
+  p.height = 225;
+  // O cerrado é redesenhado só quando a largura muda bastante (o resize dispara muito).
+  const w = Math.round((180 * stageW) / 900);
+  if (Math.abs(w - bgWidth) > 2) { bgWidth = w; Cerrado.start($('#bg'), bgSeed, w); }
+  // O bloco central cresce com a tela (até 1760), pra mesa e mão aproveitarem a largura.
+  $('#board').style.setProperty('--bw', Math.min(stageW, 1760) + 'px');
+  if (view) { renderSeats(); renderHand(); }
 }
 addEventListener('resize', fit);
-fit();
 Fx.init(stage, $('#fxlayer'), $('#particles'), () => scale);
-Cerrado.start($('#bg'), Math.floor(Math.random() * 1e9));
 
 // ---------------------------------------------------------------- jogadores e regras reais
 const NAMES = ['Você', 'Ana', 'Caio', 'Bia', 'Duda', 'Léo', 'Mari', 'Zé'];
-const COLORS = ['#ff8fab', '#7eddb5', '#9ec5ff', '#ffd27e', '#c9a8ee', '#f7a072', '#a3e4ef', '#d8d88a'];
+// As cores (e os bichinhos) dos jogadores são as do site.
+const COLORS = T.PLAYER_COLORS;
 const ME = 'p0';
 let players = [];
 let active = [];
@@ -406,9 +443,10 @@ function renderTop() {
 }
 
 function seatPos(i, n) {
-  // Bots em arco no topo.
+  // Bots em arco no topo, usando a largura toda do palco.
   const t = n === 1 ? 0.5 : i / (n - 1);
-  const x = 230 + t * 980;
+  const margin = 210;
+  const x = margin + t * (stageW - 2 * margin);
   const y = 18 + (1 - Math.sin(t * Math.PI)) * 34;
   return { x, y };
 }
@@ -438,9 +476,15 @@ function renderSeats() {
     const chip = v.choice?.who === p ? '<div class="chip">escolhendo…</div>'
       : !active.includes(p) && !dead ? '<div class="chip">caiu…</div>'
       : thinking ? '<div class="chip think">pensando…</div>' : '';
-    el.innerHTML = `<img class="tatu" src="${Sprites.tatu(dead ? '#7a7a8a' : colorOf(p)).url}" alt="">
+    // Leque de versinhos (até 9) + o número grande: dá pra ver de longe quantas cartas cada um tem.
+    const shown = Math.min(n, 9);
+    const fan = Array.from({ length: shown }, (_, k) => `<i style="rotate:${(k - (shown - 1) / 2) * 9}deg"></i>`).join('');
+    el.innerHTML = `<img class="tatu critter" alt="">
       <div class="who">${nameOf(p)}</div>
-      <div class="count"><span class="mini"></span>${dead ? 'fora' : n}</div>${chip}`;
+      ${dead ? '<div class="count out">FORA</div>' : `<div class="count"><span class="fan">${fan}</span><b>${n}</b></div>`}${chip}`;
+    // O bichinho em pixel art fica pronto num instante (e depois vem do cache).
+    const img = el.querySelector('.critter');
+    Sprites.critter(colorOf(p)).then((url) => { img.src = url; });
     box.appendChild(el);
   });
 }
@@ -521,20 +565,138 @@ function renderHand() {
     hand.innerHTML = '<div class="dead">VOCÊ EXPLODIU · AGORA SÓ ASSISTE</div>';
     return;
   }
-  const n = v.hand.length;
-  const step = Math.min(118, (940 - 112) / Math.max(1, n - 1));
+  const order = orderedHand();
+  const n = order.length;
+  const hw = hand.clientWidth || 940;
+  const step = Math.min(118, (hw - 112) / Math.max(1, n - 1));
   const width = step * (n - 1) + 112;
-  v.hand.forEach((id, i) => {
+  order.forEach((id, i) => {
     const c = cardEl(id);
-    c.style.left = (940 - width) / 2 + i * step + 'px';
+    c.style.left = (hw - width) / 2 + i * step + 'px';
     c.style.zIndex = i;
     if (selected.has(id)) c.classList.add('sel');
     if (arriving.has(id)) c.classList.add('arriving');
-    c.onclick = () => clickCard(id);
+    c.onpointerdown = (e) => startDrag(e, id);
     c.ondblclick = () => { selected = new Set([id]); playSelected(); };
     c.onmouseleave = () => zoom(null);
     hand.appendChild(c);
   });
+}
+
+// ---------------------------------------------------------------- ordem da mão e arrastar (como no Diquisti)
+/** A ordem da mão é só daqui do PC: as cartas novas entram no fim. */
+let handOrder = [];
+function orderedHand() {
+  const hand = view.hand;
+  handOrder = [...handOrder.filter((id) => hand.includes(id)), ...hand.filter((id) => !handOrder.includes(id))];
+  return handOrder;
+}
+
+let drag = null;
+const needsTarget = (kind) => kind === 'favor' || kind === 'par' || kind === 'trio';
+
+function stagePoint(e) {
+  const r = stage.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale };
+}
+
+/** Onde o ponteiro está: um assento, a mesa ou a mão (ou nada). */
+function dropTarget(e) {
+  for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+    const seat = el.closest?.('.seat');
+    if (seat) return { type: 'seat', p: seat.dataset.p, el: seat };
+    if (el.closest?.('#table')) return { type: 'table', el: $('#table') };
+    if (el.closest?.('#hand')) return { type: 'hand', el: $('#hand') };
+  }
+  return null;
+}
+
+function startDrag(e, id) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  drag = { id, x0: e.clientX, y0: e.clientY, moved: false, ghost: null, ids: [id], hover: null };
+  addEventListener('pointermove', onDragMove);
+  addEventListener('pointerup', onDragEnd, { once: true });
+}
+
+function onDragMove(e) {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return;
+  if (!drag.moved) {
+    drag.moved = true;
+    // Arrastar uma carta da seleção leva a seleção inteira (par, trio, 5 diferentes).
+    drag.ids = selected.has(drag.id) && selected.size > 1 ? orderedHand().filter((x) => selected.has(x)) : [drag.id];
+    const g = cardEl(drag.id);
+    g.classList.add('ghost');
+    if (drag.ids.length > 1) g.dataset.n = drag.ids.length;
+    $('#fxlayer').appendChild(g);
+    drag.ghost = g;
+    drag.ids.forEach((x) => document.querySelector(`#hand .card[data-id="${x}"]`)?.classList.add('dragging'));
+    stage.classList.add('dragging');
+    zoom(null);
+    Sound.play('select');
+  }
+  const p = stagePoint(e);
+  drag.ghost.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -60%) rotate(-4deg) scale(1.08)`;
+  const t = dropTarget(e);
+  const el = t && t.type !== 'hand' ? t.el : null;
+  if (drag.hover !== el) {
+    drag.hover?.classList.remove('drop');
+    el?.classList.add('drop');
+    drag.hover = el;
+  }
+}
+
+function onDragEnd(e) {
+  removeEventListener('pointermove', onDragMove);
+  const d = drag;
+  drag = null;
+  if (!d) return;
+  if (!d.moved) { clickCard(d.id); return; }
+  d.ghost.remove();
+  d.hover?.classList.remove('drop');
+  stage.classList.remove('dragging');
+  document.querySelectorAll('#hand .card.dragging').forEach((c) => c.classList.remove('dragging'));
+  const t = dropTarget(e);
+  if (!t) { render(); return; }
+  if (t.type === 'hand') { reorder(d.ids, e); return; }
+  dropPlay(d.ids, t);
+}
+
+/** Solta dentro da mão: as cartas arrastadas entram onde o ponteiro está. */
+function reorder(ids, e) {
+  const x = stagePoint(e).x;
+  const rest = orderedHand().filter((id) => !ids.includes(id));
+  let at = 0;
+  for (const id of rest) {
+    const el = document.querySelector(`#hand .card[data-id="${id}"]`);
+    if (el && Fx.box(el).x < x) at++;
+  }
+  handOrder = [...rest.slice(0, at), ...ids, ...rest.slice(at)];
+  Sound.play('select');
+  renderHand();
+}
+
+/** Solta na mesa ou num adversário: joga (ou dá o Favor, ou dá Nem vem!). */
+function dropPlay(ids, t) {
+  const v = view;
+  if (v.choice?.kind === 'favor' && v.choice.who === ME) {
+    if (ids.length === 1) dispatch(ME, { type: 'choose', card: ids[0] });
+    render();
+    return;
+  }
+  if (v.pending && ids.length === 1 && kindOf(ids[0]) === 'nemvem') { nope(); return; }
+  selected = new Set(ids);
+  const kind = selectedPlay();
+  if (!kind) { toast('Essas cartas não formam jogada.'); Sound.play('error'); render(); return; }
+  if (needsTarget(kind)) {
+    mode = { type: 'target', play: { cards: ids }, kind };
+    if (t.type === 'seat' && validTarget(t.p)) { chooseTarget(t.p); return; }
+    captionText = 'Escolha um adversário <span class="timer">↑</span>';
+    render();
+    return;
+  }
+  send({ cards: ids });
 }
 
 // ---------------------------------------------------------------- jogada do humano
@@ -1028,6 +1190,8 @@ $('#cards').onclick = () => {
   g.hidden = false;
   Sound.play('select');
 };
+
+fit();
 
 // ---------------------------------------------------------------- bots
 setInterval(() => {
