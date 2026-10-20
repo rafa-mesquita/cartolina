@@ -19,6 +19,7 @@ describe('estante de jogos', () => {
     expect(screen.getByRole('link', { name: /DITU/ }).getAttribute('href')).toBe('#/ito');
     expect(screen.getByRole('link', { name: /Diquisti/ }).getAttribute('href')).toBe('#/dixit');
     expect(screen.getByRole('link', { name: /Retratim/ }).getAttribute('href')).toBe('#/pictures');
+    expect(screen.getByRole('link', { name: /Tatubum/ }).getAttribute('href')).toBe('#/kittens');
     const camelioLink = screen.getByRole('link', { name: /Cama-Leão/ });
     expect(camelioLink.getAttribute('href')).toBe('#/camelio');
     expect(within(camelioLink).getByText('em breve')).toBeTruthy(); // a mesa do Cama-Leão vem no C3

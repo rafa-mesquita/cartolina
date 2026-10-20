@@ -88,7 +88,7 @@ function startMatch(state: CamelioState, ctx: GameContext, again: boolean): Acti
 function play(state: CamelioState, playerId: string, from: CamelioFrom, to: string, ctx: GameContext): ActionResult<CamelioState> {
   if (state.phase !== 'playing' || state.paused) return fail('not_playing');
   if (state.turn !== playerId) return fail('not_your_turn');
-  if (!state.players.includes(to) || !ctx.active.includes(to)) return fail('bad_target');
+  if (!state.players.includes(to) || !ctx.active.includes(to)) return fail('cant_receive');
 
   const deck = [...state.deck];
   let open = state.open;

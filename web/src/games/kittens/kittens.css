@@ -1,0 +1,368 @@
+/* Tatubum (id interno `kittens`): pixel art, noite no cerrado. Tudo escopado em .kittens, classes kt-. */
+.kittens {
+  --kt-ink: #2b1a10;
+  --kt-night: #0e0e1c;
+  --kt-paper: #f4e9d0;
+  --kt-yellow: #f2c14e;
+  --kt-red: #e4572e;
+  --kt-btn: #e0605a;
+  --kt-btn-edge: #1a0f1f;
+  --kt-btn-hi: #f08a80;
+  --kt-btn-lo: #b8423e;
+  --kt-cream: #fff3e0;
+  --kt-dim: #9fb0d8;
+  --kt-px: 'Press Start 2P', monospace;
+  --kt-vt: 'VT323', monospace;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--kt-night);
+  color: var(--kt-paper);
+  font-family: var(--kt-vt);
+  image-rendering: pixelated;
+}
+.kittens img { image-rendering: pixelated; }
+
+/* Fundo do cerrado: canvas pequeno esticado na tela toda */
+.kt-bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+
+/* Botões chanfrados (aprovados no mockup) */
+.kt-btn { position: relative; display: inline-flex; height: 50px; min-width: 150px; padding: 4px; border: none; background: var(--kt-btn-edge); cursor: pointer;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
+.kt-btn > span { flex: 1; height: 100%; background: var(--kt-btn); display: flex; align-items: center; justify-content: center; padding: 0 24px; white-space: nowrap;
+  clip-path: polygon(11px 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 11px 100%, 0 50%);
+  font-family: var(--kt-px); font-size: 13px; color: var(--kt-cream); text-shadow: 2px 2px 0 #8c2f2f; box-shadow: inset 0 4px 0 var(--kt-btn-hi), inset 0 -5px 0 var(--kt-btn-lo); }
+.kt-btn:hover > span { background: #ea736c; }
+.kt-btn:active > span { transform: translateY(2px); }
+.kt-btn.yellow > span { background: var(--kt-yellow); color: var(--kt-ink); text-shadow: 2px 2px 0 #c9962c; box-shadow: inset 0 4px 0 #f7d886, inset 0 -5px 0 #c9962c; }
+.kt-btn.yellow:hover > span { background: #f6cd6b; }
+.kt-btn.ghost > span { background: #2c3a66; text-shadow: 2px 2px 0 #141f42; box-shadow: inset 0 4px 0 #3f5590, inset 0 -5px 0 #1a2a50; }
+.kt-btn.small { height: 38px; min-width: 0; }
+.kt-btn.small > span { font-size: 10px; padding: 0 16px; }
+
+/* Lobby */
+.kt-lobby { position: relative; z-index: 1; height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 22px; padding: 24px; }
+.kt-logo { margin: 0; font-family: var(--kt-px); font-weight: normal; font-size: clamp(36px, 6vw, 72px); color: var(--kt-yellow);
+  text-shadow: 5px 0 0 #3b2412, -5px 0 0 #3b2412, 0 5px 0 #3b2412, 0 -5px 0 #3b2412, 9px 9px 0 #050510; }
+.kt-sub { margin: -6px 0 4px; font-family: var(--kt-px); font-size: 12px; color: var(--kt-cream); text-shadow: 2px 2px 0 #050510; }
+.kt-panel { width: min(760px, 100%); padding: 22px 26px; background: rgba(20, 31, 66, .92);
+  box-shadow: 0 -5px 0 var(--kt-yellow), 0 5px 0 var(--kt-yellow), -5px 0 0 var(--kt-yellow), 5px 0 0 var(--kt-yellow), 10px 14px 0 rgba(0, 0, 0, .5); }
+.kt-panel h2 { margin: 0 0 14px; font-family: var(--kt-px); font-weight: normal; font-size: 14px; color: var(--kt-yellow); }
+.kt-panel p { margin: 0 0 12px; font-size: 24px; line-height: 1.1; }
+.kt-people { list-style: none; margin: 0 0 18px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.kt-people li { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; background: rgba(14, 14, 28, .6); }
+.kt-people li.off { opacity: .45; }
+.kt-people img { width: 64px; height: 64px; filter: drop-shadow(3px 3px 0 rgba(5, 5, 16, .6)); }
+.kt-people .who { font-family: var(--kt-px); font-size: 10px; color: var(--kt-cream); text-align: center; }
+.kt-people .kt-tag { font-size: 18px; color: var(--kt-dim); }
+.kt-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.kt-warn { color: #ff9b7a; font-size: 22px; }
+.kt-link { width: 100%; margin-top: 10px; padding: 6px 10px; font-family: var(--kt-vt); font-size: 20px; background: var(--kt-paper); color: var(--kt-ink); border: 3px solid var(--kt-ink); }
+.kt-pill { font-family: var(--kt-px); font-size: 9px; padding: 8px 10px; background: #2c3a66; color: var(--kt-cream); border: none; cursor: pointer; box-shadow: 0 0 0 3px #050510; }
+/* Bots (modo teste, BotControls com estilo inline do site): borda clara e a largura dos painéis, pra ler na noite */
+.kt-lobby section[aria-label="modo teste"] { width: min(760px, 100%) !important; border-color: var(--kt-dim) !important; }
+.kt-lobby section[aria-label="modo teste"] .hint { color: var(--kt-cream); font-size: 20px; }
+.kt-toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 50; padding: 10px 16px; background: var(--kt-red); color: var(--kt-cream); font-family: var(--kt-px); font-size: 11px;
+  box-shadow: 0 -4px 0 var(--kt-ink), 0 4px 0 var(--kt-ink), -4px 0 0 var(--kt-ink), 4px 0 0 var(--kt-ink); }
+
+/* ================================================================ Mesa (porta do protótipo)
+ * Tudo escopado em .kittens .kt-mesa: as classes do protótipo ficam como estão, menos as que batem com regras sem
+ * escopo do CSS do site (global.css: btn, hint, critter, tag; table.css do ITO, que fica no bundle principal: card,
+ * row, name, seat → kt-btn, kt-hint, kt-critter, kt-ftag, kt-card, kt-row, kt-name, kt-seat); keyframes com prefixo kt-.
+ * O teste da mesa confere que nenhuma regra sem escopo do site pega classe da mesa. */
+.kittens .kt-mesa {
+  --ink: #2b1a10; --night: #0e0e1c; --paper: #f4e9d0; --yellow: #f2c14e; --red: #e4572e;
+  --btn: #e0605a; --btn-edge: #1a0f1f; --btn-hi: #f08a80; --btn-lo: #b8423e; --cream: #fff3e0;
+  --txt: #f4e9d0; --dim: #9fb0d8;
+  --px: 'Press Start 2P', monospace; --vt: 'VT323', monospace;
+}
+.kittens .kt-mesa * { box-sizing: border-box; }
+/* Reset de defesa (especificidade 0,2,0, abaixo de qualquer regra da mesa): o que uma regra genérica do site
+ * pudesse pôr numa classe nossa (margem negativa, 3D, will-change, z-index) volta ao normal. Pointer-events
+ * fica de fora: os efeitos do #fxlayer herdam o "none" dele. */
+.kittens .kt-mesa :where(*) { margin: 0; will-change: auto; transform-style: flat; z-index: auto; }
+.kittens .kt-mesa { position: absolute; inset: 0; overflow: hidden; background: var(--night); font-family: var(--vt); color: var(--txt); user-select: none; }
+.kittens .kt-mesa #stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 900px; --w: 1440px; transform-origin: center; overflow: hidden; image-rendering: pixelated; }
+.kittens .kt-mesa #bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.kittens .kt-mesa img { image-rendering: pixelated; }
+
+/* Botões chanfrados (aprovados no mockup) */
+.kittens .kt-mesa .kt-btn { position: relative; display: inline-flex; height: 46px; min-width: 150px; padding: 4px; border: none; background: var(--btn-edge); cursor: pointer;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
+.kittens .kt-mesa .kt-btn > span { flex: 1; height: 100%; background: var(--btn); display: flex; align-items: center; justify-content: center; padding: 0 22px; white-space: nowrap;
+  clip-path: polygon(11px 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 11px 100%, 0 50%);
+  font-family: var(--px); font-size: 13px; color: var(--cream); text-shadow: 2px 2px 0 #8c2f2f; box-shadow: inset 0 4px 0 var(--btn-hi), inset 0 -5px 0 var(--btn-lo); }
+.kittens .kt-mesa .kt-btn:hover > span { background: #ea736c; }
+.kittens .kt-mesa .kt-btn:active > span { transform: translateY(2px); }
+.kittens .kt-mesa .kt-btn.yellow > span { background: var(--yellow); color: var(--ink); text-shadow: 2px 2px 0 #c9962c; box-shadow: inset 0 4px 0 #f7d886, inset 0 -5px 0 #c9962c; }
+.kittens .kt-mesa .kt-btn.yellow:hover > span { background: #f6cd6b; }
+.kittens .kt-mesa .kt-btn.ghost > span { background: #2c3a66; text-shadow: 2px 2px 0 #141f42; box-shadow: inset 0 4px 0 #3f5590, inset 0 -5px 0 #1a2a50; }
+.kittens .kt-mesa .kt-btn.small { height: 36px; min-width: 0; }
+.kittens .kt-mesa .kt-btn.small > span { font-size: 10px; padding: 0 16px; }
+.kittens .kt-mesa .kt-btn[disabled] { cursor: default; filter: grayscale(.85) brightness(.7); }
+
+/* Barra do topo */
+.kittens .kt-mesa #topbar { position: absolute; left: 0; right: 0; top: 0; height: 48px; background: rgba(14,14,28,.88); display: flex; align-items: center; justify-content: space-between; padding: 0 18px; box-shadow: 0 4px 0 #050510; z-index: 5; }
+.kittens .kt-mesa #logo { font-family: var(--px); font-size: 18px; color: var(--yellow); text-shadow: 2px 0 0 #3b2412, -2px 0 0 #3b2412, 0 2px 0 #3b2412, 0 -2px 0 #3b2412, 3px 3px 0 #050510; }
+.kittens .kt-mesa #turn { font-family: var(--px); font-size: 12px; color: var(--cream); }
+.kittens .kt-mesa #turn b { color: var(--yellow); }
+.kittens .kt-mesa #turn .owed { color: var(--red); margin-left: 8px; animation: kt-blink 0.9s steps(2) infinite; }
+.kittens .kt-mesa #topright { display: flex; gap: 8px; }
+
+/* Assentos dos outros jogadores */
+.kittens .kt-mesa #seats { position: absolute; left: 0; right: 0; top: 60px; height: 170px; z-index: 2; }
+.kittens .kt-mesa .kt-seat { position: absolute; width: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px; cursor: default; }
+.kittens .kt-mesa .kt-seat .tatu { width: 80px; height: 44px; }
+.kittens .kt-mesa .kt-seat .kt-critter { width: 68px; height: 68px; filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa .kt-seat .who { font-family: var(--px); font-size: 10px; color: var(--cream); text-shadow: 2px 2px 0 #050510; margin-top: 4px; }
+.kittens .kt-mesa .kt-seat .count { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.kittens .kt-mesa .kt-seat .count .fan { position: relative; width: 44px; height: 34px; }
+.kittens .kt-mesa .kt-seat .count .fan i { position: absolute; left: 14px; top: 2px; width: 16px; height: 23px; background: #1f3a6b; transform-origin: 50% 120%;
+  box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink); background-image: linear-gradient(#f2c14e, #f2c14e); background-size: 6px 4px; background-repeat: no-repeat; background-position: center; }
+.kittens .kt-mesa .kt-seat .count b { font-family: var(--px); font-size: 20px; font-weight: normal; color: var(--yellow); text-shadow: 3px 3px 0 #050510, -2px 0 0 #050510, 0 -2px 0 #050510; min-width: 26px; }
+.kittens .kt-mesa .kt-seat .count.out { font-family: var(--px); font-size: 11px; color: var(--dim); }
+.kittens .kt-mesa .kt-seat .chip { font-family: var(--px); font-size: 8px; padding: 4px 6px; background: #2c3a66; color: var(--cream); margin-top: 2px; }
+.kittens .kt-mesa .kt-seat.turn { background: rgba(242,193,78,.16); box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow); }
+.kittens .kt-mesa .kt-seat.turn .who::before { content: '▶ '; color: var(--yellow); }
+.kittens .kt-mesa .kt-seat.dead { opacity: .55; filter: grayscale(1); }
+.kittens .kt-mesa .kt-seat .order { position: absolute; top: -14px; font-family: var(--px); font-size: 9px; padding: 4px 6px; background: rgba(14,14,28,.85); color: var(--dim); }
+.kittens .kt-mesa .kt-seat .order.next { background: var(--yellow); color: var(--ink); box-shadow: 2px 2px 0 #050510; animation: kt-nextbob 1s steps(2) infinite; }
+.kittens .kt-mesa .kt-seat.next .kt-critter { filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)) drop-shadow(0 0 6px rgba(242,193,78,.7)); }
+@keyframes kt-nextbob { 50% { transform: translateY(-3px); } }
+.kittens .kt-mesa .turnflow { position: absolute; transform: translate(-50%, -50%); font-family: var(--px); font-size: 9px; color: var(--dim); text-shadow: 2px 2px 0 #050510; white-space: nowrap; pointer-events: none; }
+.kittens .kt-mesa .turnflow b { font-weight: normal; font-size: 22px; color: var(--yellow); opacity: .8; vertical-align: -4px; }
+.kittens .kt-mesa .kt-seat.winner { z-index: 45; background: rgba(242,193,78,.25); box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow); }
+.kittens .kt-mesa .kt-seat.winner .who::before { content: '♛ '; color: var(--yellow); }
+.kittens .kt-mesa .kt-seat.dead .who::after { content: ' ✝'; }
+.kittens .kt-mesa .kt-seat.targetable { cursor: pointer; animation: kt-pulse .6s steps(2) infinite; }
+.kittens .kt-mesa .kt-seat.targetable:hover { background: rgba(228,87,46,.25); }
+.kittens .kt-mesa .kt-seat.hit { animation: kt-hit .5s steps(4); }
+/* Tatu Latidor na frente do jogador: cartinha ao lado do bichinho (à vista de todos; a rodinha dá zoom) */
+.kittens .kt-mesa .kt-seat .kt-front { position: absolute; right: -4px; top: 18px; width: 52px; height: 58px; }
+.kittens .kt-mesa .kt-seat .kt-front .kt-card { position: absolute; top: 0; transform: scale(.36); transform-origin: left top; }
+.kittens .kt-mesa .kt-seat .kt-front .kt-card.arriving, .kittens .kt-mesa #front .kt-card.arriving { visibility: hidden; }
+/* Mau-olhado: olho roxo no canto de quem está cego */
+.kittens .kt-mesa .kt-seat .kt-cursed { position: absolute; left: 2px; top: 20px; width: 34px; height: 25px; animation: kt-cursebob 1.2s steps(2) infinite; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa .kt-cursed svg, .kittens .kt-mesa .kt-blindtag svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
+@keyframes kt-cursebob { 50% { translate: 0 -3px; } }
+@keyframes kt-pulse { 50% { box-shadow: 0 -3px 0 var(--red), 0 3px 0 var(--red), -3px 0 0 var(--red), 3px 0 0 var(--red); } }
+@keyframes kt-hit { 25% { transform: translateX(-50%) translateY(-8px); } 75% { transform: translateX(-50%) translateY(4px); } }
+@keyframes kt-blink { 50% { opacity: .35; } }
+
+/* Legenda em quadrinho */
+.kittens .kt-mesa #caption { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 238px; transform: translateX(-50%); min-width: 380px; max-width: 760px; padding: 10px 18px 8px; background: var(--paper); color: var(--ink);
+  font-size: 28px; line-height: 1; text-align: center; box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 6px 8px 0 rgba(0,0,0,.35); z-index: 4; }
+.kittens .kt-mesa #caption:empty { display: none; }
+.kittens .kt-mesa #caption .timer { color: var(--red); margin-left: 8px; }
+
+/* Mesa */
+.kittens .kt-mesa #table { position: absolute; left: 200px; top: 300px; width: calc(var(--bw) - 540px); height: 270px; background: #2e5a3a; z-index: 1;
+  box-shadow: 0 -6px 0 var(--night), 0 6px 0 var(--night), -6px 0 0 var(--night), 6px 0 0 var(--night), 10px 14px 0 rgba(0,0,0,.4);
+  background-image: radial-gradient(#33653f 1.5px, transparent 1.6px); background-size: 8px 8px; }
+.kittens .kt-mesa .slot { position: absolute; top: 40px; width: 140px; height: 190px; display: flex; align-items: center; justify-content: center; }
+.kittens .kt-mesa .slot .label { position: absolute; bottom: -30px; left: 0; right: 0; text-align: center; font-size: 22px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
+.kittens .kt-mesa #deck { left: 90px; cursor: pointer; }
+.kittens .kt-mesa #deck .stack { position: relative; width: 112px; height: 156px; }
+.kittens .kt-mesa #deck .stack .kt-card { position: absolute; left: 0; top: 0; }
+.kittens .kt-mesa #deck.shuffling .stack .kt-card { animation: kt-shuffle .12s steps(2) 6; }
+.kittens .kt-mesa #deck.mine:hover .stack .kt-card:last-child { transform: translate(-4px, -10px); }
+@keyframes kt-shuffle { 50% { translate: 10px -6px; } }
+.kittens .kt-mesa #air { left: calc(50% - 70px); }
+.kittens .kt-mesa #air .kt-card { position: absolute; }
+.kittens .kt-mesa #air .empty { width: 112px; height: 156px; border: 4px dashed rgba(244,233,208,.35); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 22px; color: rgba(244,233,208,.5); }
+.kittens .kt-mesa #bar { position: absolute; left: calc(50% - 70px); top: 248px; width: 140px; display: flex; justify-content: center; gap: 6px; }
+.kittens .kt-mesa #bar i { width: 18px; height: 12px; background: #1a2a20; box-shadow: 0 0 0 3px var(--night); }
+.kittens .kt-mesa #bar i.on { background: var(--red); }
+.kittens .kt-mesa #bar i.on.last { animation: kt-blink .3s steps(2) infinite; }
+.kittens .kt-mesa #discard { left: auto; right: 90px; }
+.kittens .kt-mesa #discard .kt-card { position: absolute; }
+.kittens .kt-mesa #discard { cursor: zoom-in; }
+/* Olho do descarte: abre o quadro com todas as cartas da pilha */
+.kittens .kt-mesa #eye { position: absolute; right: 22px; top: 62px; width: 56px; padding: 8px 0 6px; border: none; background: #141f42; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  box-shadow: 0 -3px 0 var(--night), 0 3px 0 var(--night), -3px 0 0 var(--night), 3px 0 0 var(--night), 4px 6px 0 rgba(0,0,0,.35); }
+.kittens .kt-mesa #eye svg { width: 36px; height: 24px; shape-rendering: crispEdges; display: block; }
+.kittens .kt-mesa #eye b { font-family: var(--px); font-size: 9px; font-weight: normal; color: var(--yellow); text-shadow: 2px 2px 0 #050510; }
+.kittens .kt-mesa #eye:hover { background: #2c3a66; }
+.kittens .kt-mesa #eye.pick { animation: kt-eyepulse .5s steps(2) infinite; }
+@keyframes kt-eyepulse { 50% { background: #3b2412; box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow), 4px 6px 0 rgba(0,0,0,.35); } }
+.kittens .kt-mesa #future { position: absolute; left: 230px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
+.kittens .kt-mesa #future .kt-ftag { font-family: var(--px); font-size: 8px; color: var(--yellow); margin-bottom: 2px; }
+.kittens .kt-mesa #future .kt-card { transform: scale(.38); transform-origin: left top; margin-bottom: -96px; }
+
+/* Cartas */
+.kittens .kt-mesa .kt-card { width: 112px; height: 156px; background: var(--paper); color: var(--ink); position: relative; display: flex; flex-direction: column; align-items: center;
+  box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 5px 8px 0 rgba(0,0,0,.35); }
+.kittens .kt-mesa .kt-card .band { width: 100%; height: 14px; }
+.kittens .kt-mesa .kt-card .art { width: 80px; height: auto; max-height: 80px; flex: none; margin-top: 12px; }
+.kittens .kt-mesa .kt-card .kt-name { font-family: var(--px); font-size: 9px; margin-top: auto; text-align: center; padding: 0 4px; }
+.kittens .kt-mesa .kt-card .kt-hint { font-size: 16px; line-height: 1; margin: 4px 0 8px; color: #6b5440; text-align: center; padding: 0 4px; }
+.kittens .kt-mesa .kt-card.back { background: #1f3a6b; background-image: radial-gradient(#2c5a8c 1.5px, transparent 1.6px); background-size: 10px 10px; justify-content: center; }
+.kittens .kt-mesa .kt-card.back .art { width: 74px; margin-top: 0; }
+.kittens .kt-mesa .kt-card.back .kt-name { color: var(--yellow); margin: 10px 0 0; font-size: 9px; text-shadow: 2px 2px 0 var(--ink); }
+/* Cada carta com o cerrado na cor dela de fundo (pedido do Rafa); nome e frase em tinta escura com contorno claro */
+.kittens .kt-mesa .kt-card:not(.back) { background-size: 100% 100%; background-color: var(--paper); }
+.kittens .kt-mesa .kt-card:not(.back) .kt-name { text-shadow: 1px 1px 0 rgba(255,255,255,.55); }
+.kittens .kt-mesa .kt-card:not(.back) .kt-hint { color: var(--ink); text-shadow: 1px 1px 0 rgba(255,255,255,.45); }
+.kittens .kt-mesa .kt-card .art.flow { width: 84px; height: 74px; flex: none; object-fit: contain; object-position: center bottom; margin-top: 10px; filter: drop-shadow(3px 3px 0 rgba(43,26,16,.3)); }
+.kittens .kt-mesa .kt-card.flow-back { padding: 0; overflow: hidden; }
+.kittens .kt-mesa .kt-card.flow-back .back-art { width: 100%; height: 100%; object-fit: cover; }
+.kittens .kt-mesa .flying { position: absolute; left: 0; top: 0; z-index: 30; pointer-events: none; }
+
+/* Mão */
+.kittens .kt-mesa #hand { position: absolute; left: 190px; width: calc(var(--bw) - 500px); bottom: 26px; height: 200px; z-index: 6; }
+.kittens .kt-mesa #hand .kt-card { position: absolute; bottom: 0; cursor: pointer; transition: none; }
+.kittens .kt-mesa #hand .kt-card:hover { bottom: 14px; }
+.kittens .kt-mesa #hand .kt-card.sel { bottom: 34px; box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); animation: kt-selblink .5s steps(2) infinite; }
+.kittens .kt-mesa #hand .kt-card.arriving { visibility: hidden; }
+.kittens .kt-mesa #hand .kt-card { touch-action: none; }
+.kittens .kt-mesa #hand .kt-card.dragging { opacity: .25; }
+.kittens .kt-mesa .kt-card img { -webkit-user-drag: none; user-select: none; }
+.kittens .kt-mesa .kt-card.ghost { position: absolute; left: 0; top: 0; z-index: 40; pointer-events: none;
+  box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 12px 18px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa .kt-card.ghost[data-n]::after { content: '×' attr(data-n); position: absolute; right: -14px; top: -14px; padding: 6px 7px; background: var(--red); color: var(--cream); font-family: var(--px); font-size: 12px; box-shadow: 0 0 0 3px var(--ink); }
+.kittens .kt-mesa #stage.dragging #table { box-shadow: 0 -6px 0 var(--yellow), 0 6px 0 var(--yellow), -6px 0 0 var(--yellow), 6px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa #table.drop { background-color: #3b7349; }
+.kittens .kt-mesa .kt-seat.drop { background: rgba(228,87,46,.3); box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
+.kittens .kt-mesa #hand.giving .kt-card:hover { bottom: 30px; box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
+/* Comprou o Tatubum: só o Desarme acende (e pulsa); o resto da mão apaga */
+.kittens .kt-mesa #hand.defusing .kt-card:not(.cafune) { filter: grayscale(.75) brightness(.55); cursor: not-allowed; }
+.kittens .kt-mesa #hand.defusing .kt-card.cafune { bottom: 22px; animation: kt-defusepulse .45s steps(2) infinite; }
+.kittens .kt-mesa #hand.defusing .kt-card.cafune:hover { bottom: 36px; }
+@keyframes kt-defusepulse {
+  0% { box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 0 0 0 8px rgba(242,193,78,.35), 5px 8px 0 rgba(0,0,0,.35); }
+  50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 0 0 0 14px rgba(242,193,78,.55), 5px 8px 0 rgba(0,0,0,.35); }
+}
+.kittens .kt-mesa #hand.myturn::before { content: 'SUA VEZ'; position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-family: var(--px); font-size: 11px; color: var(--yellow); text-shadow: 2px 2px 0 #050510; animation: kt-blink 1s steps(2) infinite; }
+/* Mau-olhado: a mão vira (versos) e a faixa roxa fica até comprar; ao pegar o olhado, as cartas embaralham */
+.kittens .kt-mesa #hand.kt-blind::before { display: none; }
+.kittens .kt-mesa #hand.kt-shuffling .kt-card { animation: kt-shuffle .12s steps(2) 7; }
+.kittens .kt-mesa .kt-blindtag { position: absolute; left: 50%; top: -52px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 12px; padding: 7px 16px 7px 10px; background: #3a2266; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 -4px 0 #c86fd4, 0 4px 0 #c86fd4, -4px 0 0 #c86fd4, 4px 0 0 #c86fd4, 6px 8px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa .kt-blindtag svg { width: 40px; height: 29px; }
+.kittens .kt-mesa .kt-blindtag b { font-family: var(--px); font-size: 14px; font-weight: normal; color: #f3e6ff; text-shadow: 2px 2px 0 #1a0f2e; animation: kt-blink 1s steps(2) infinite; }
+.kittens .kt-mesa .kt-blindtag span { font-size: 22px; color: #e0c8ff; }
+/* Cartas na sua frente (Tatu Latidor), ao lado da mão */
+.kittens .kt-mesa #front { position: absolute; left: 34px; bottom: 34px; width: 120px; height: 150px; z-index: 6; }
+.kittens .kt-mesa #front:empty { display: none; }
+.kittens .kt-mesa #front .kt-ftag { position: absolute; left: 0; top: -18px; font-family: var(--px); font-size: 8px; color: var(--yellow); text-shadow: 2px 2px 0 #050510; white-space: nowrap; }
+.kittens .kt-mesa #front .kt-card { position: absolute; top: 4px; transform: scale(.78); transform-origin: left top; }
+.kittens .kt-mesa #hand .dead { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); font-family: var(--px); font-size: 14px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
+@keyframes kt-selblink { 50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 5px 8px 0 rgba(0,0,0,.35); } }
+
+.kittens .kt-mesa #actions { position: absolute; right: 26px; bottom: 30px; width: 250px; display: flex; flex-direction: column; gap: 12px; align-items: stretch; z-index: 7; }
+.kittens .kt-mesa #actions .kt-btn { width: 100%; }
+.kittens .kt-mesa #actions .kt-hint { font-size: 22px; color: var(--dim); text-align: center; text-shadow: 2px 2px 0 #050510; }
+.kittens .kt-mesa #nope.kt-btn { height: 64px; }
+.kittens .kt-mesa #nope.kt-btn > span { font-size: 15px; background: var(--red); animation: kt-nopepulse .5s steps(2) infinite; }
+@keyframes kt-nopepulse { 50% { background: #f06b45; } }
+
+/* Diário */
+.kittens .kt-mesa #log { position: absolute; right: 20px; top: 300px; width: 296px; height: 270px; padding: 10px 12px; background: rgba(14,14,28,.82); box-shadow: 0 -4px 0 #050510, 0 4px 0 #050510, -4px 0 0 #050510, 4px 0 0 #050510; z-index: 3; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+.kittens .kt-mesa #log .h { font-family: var(--px); font-size: 9px; color: var(--yellow); margin-bottom: 6px; }
+.kittens .kt-mesa #log p { margin: 0 0 3px; font-size: 19px; line-height: 1.05; color: var(--txt); }
+.kittens .kt-mesa #log p.me { color: #ffd27e; }
+.kittens .kt-mesa #log p.bad { color: #ff9b7a; }
+
+/* Painéis (escolhas) */
+.kittens .kt-mesa #panel { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 300px; transform: translateX(-50%); z-index: 20; min-width: 560px; padding: 22px 26px; background: #141f42;
+  box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
+.kittens .kt-mesa #panel:empty { display: none; }
+.kittens .kt-mesa #panel h2 { margin: 0 0 6px; font-family: var(--px); font-size: 16px; color: var(--yellow); font-weight: normal; }
+.kittens .kt-mesa #panel p { margin: 0 0 14px; font-size: 24px; }
+.kittens .kt-mesa #panel .kt-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.kittens .kt-mesa #panel .cards { display: flex; gap: 14px; margin: 22px 0 8px; }
+.kittens .kt-mesa #panel .cards .kt-card { cursor: pointer; }
+.kittens .kt-mesa #panel .cards .kt-card:hover { transform: translateY(-8px); }
+.kittens .kt-mesa #panel input[type=range] { width: 100%; accent-color: var(--yellow); margin: 6px 0 14px; }
+.kittens .kt-mesa #panel .pos { font-family: var(--px); font-size: 12px; color: var(--cream); margin-bottom: 4px; }
+.kittens .kt-mesa #panel .timer { float: right; font-family: var(--px); font-size: 12px; color: var(--red); }
+
+/* Fim */
+.kittens .kt-mesa #over { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+.kittens .kt-mesa #over[hidden] { display: none; }
+/* Fim: primeiro só o nome (com os fogos aparecendo), depois o fundo escurece e os botões vêm */
+.kittens .kt-mesa #over { background: transparent; pointer-events: none; }
+.kittens .kt-mesa #over.dim { background: rgba(14,14,28,.55); pointer-events: auto; }
+.kittens .kt-mesa #over .popin { animation: kt-popin .3s steps(6, end) both; }
+@keyframes kt-popin { 0% { transform: scale(.2) rotate(-8deg); } 70% { transform: scale(1.25) rotate(-5deg); } 100% { transform: scale(1) rotate(-3deg); } }
+
+/* Quadro do descarte (olho) e escolha dos 5 diferentes */
+.kittens .kt-mesa #pile { position: absolute; inset: 0; z-index: 55; background: rgba(5,5,16,.72); display: flex; align-items: center; justify-content: center; }
+.kittens .kt-mesa #pile[hidden] { display: none; }
+.kittens .kt-mesa #pile .box { width: min(1180px, calc(100% - 80px)); max-height: 790px; display: flex; flex-direction: column; padding: 22px 26px 18px; background: #141f42;
+  box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
+.kittens .kt-mesa #pile h2 { margin: 0 0 6px; font-family: var(--px); font-size: 18px; color: var(--yellow); font-weight: normal; }
+.kittens .kt-mesa #pile h2 .timer { float: right; font-size: 14px; color: var(--red); }
+.kittens .kt-mesa #pile .psub { margin: 0; font-family: var(--vt); font-size: 26px; color: var(--txt); }
+.kittens .kt-mesa #pile .grid { display: flex; flex-wrap: wrap; gap: 26px 20px; overflow-y: auto; padding: 34px 16px 34px; margin: 6px 0 10px; min-height: 230px; scrollbar-color: var(--yellow) #0e0e1c; }
+.kittens .kt-mesa #pile .grid .kt-card { flex: none; }
+.kittens .kt-mesa #pile .grid .kt-card:hover { transform: scale(1.35); z-index: 2; }
+.kittens .kt-mesa #pile .grid .kt-card.pickable { cursor: pointer; animation: kt-selblink .5s steps(2) infinite;
+  box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); }
+.kittens .kt-mesa #pile .grid .kt-card.off { filter: grayscale(.8) brightness(.5); }
+.kittens .kt-mesa #pile .grid .none { font-size: 28px; color: var(--dim); margin: auto; }
+.kittens .kt-mesa #pile .foot { display: flex; justify-content: space-between; align-items: center; }
+.kittens .kt-mesa #pile .foot .note { font-size: 22px; color: var(--dim); }
+.kittens .kt-mesa .biglogo { font-family: var(--px); font-size: 64px; color: var(--yellow); text-shadow: 5px 0 0 #3b2412, -5px 0 0 #3b2412, 0 5px 0 #3b2412, 0 -5px 0 #3b2412, 9px 9px 0 #050510; margin-bottom: 8px; }
+.kittens .kt-mesa .sub { font-family: var(--px); font-size: 13px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
+.kittens .kt-mesa #over .kt-btn { min-width: 260px; height: 54px; }
+.kittens .kt-mesa #over .kt-btn > span { font-size: 15px; }
+
+.kittens .kt-mesa #toast { position: absolute; left: 50%; bottom: 270px; transform: translateX(-50%); z-index: 50; padding: 8px 16px; background: var(--red); color: var(--cream); font-family: var(--px); font-size: 11px;
+  box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink); }
+.kittens .kt-mesa #toast:empty { display: none; }
+
+/* Bloco central (mesa, mão, diário): 1440 de largura, centralizado no palco que cresce até a largura da janela */
+.kittens .kt-mesa #board { --bw: 1440px; position: absolute; left: 50%; top: 0; width: var(--bw); height: 900px; transform: translateX(-50%); pointer-events: none; z-index: 3; }
+.kittens .kt-mesa #board > * { pointer-events: auto; }
+.kittens .kt-mesa #board > #caption, .kittens .kt-mesa #board > #viewer { pointer-events: none; }
+
+/* Efeitos */
+.kittens .kt-mesa #fxlayer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+.kittens .kt-mesa #particles { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 31; pointer-events: none; image-rendering: pixelated; }
+.kittens .kt-mesa .stamp { position: absolute; font-family: var(--px); font-size: 26px; padding: 10px 14px; border: 6px solid currentColor; background: rgba(244,233,208,.92); white-space: nowrap; }
+.kittens .kt-mesa .pop { position: absolute; font-family: var(--px); white-space: nowrap; text-shadow: 6px 0 0 var(--ink), -6px 0 0 var(--ink), 0 6px 0 var(--ink), 0 -6px 0 var(--ink), 10px 10px 0 rgba(0,0,0,.45); }
+.kittens .kt-mesa .flash { position: absolute; inset: 0; }
+.kittens .kt-mesa .cross { position: absolute; width: 150px; height: 150px; }
+.kittens .kt-mesa .cross::before, .kittens .kt-mesa .cross::after { content: ''; position: absolute; left: 50%; top: 50%; width: 170px; height: 22px; background: var(--red); box-shadow: 0 0 0 5px var(--ink); translate: -50% -50%; }
+.kittens .kt-mesa .cross::before { rotate: 45deg; }
+.kittens .kt-mesa .cross::after { rotate: -45deg; }
+.kittens .kt-mesa #air .kt-card .art { animation: kt-bob .5s steps(2) infinite; }
+@keyframes kt-bob { 50% { translate: 0 -4px; } }
+.kittens .kt-mesa .kt-seat .chip.think { background: #3b2412; animation: kt-blink .8s steps(2) infinite; }
+
+/* Zoom de carta (rodinha) */
+.kittens .kt-mesa #viewer { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 380px; z-index: 35; pointer-events: none; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 34px; }
+.kittens .kt-mesa #viewer:empty { display: none; }
+.kittens .kt-mesa #viewer .vcard { width: 246px; height: 343px; }
+.kittens .kt-mesa #viewer .vcard .kt-card { transform: scale(2.2); transform-origin: 0 0; }
+.kittens .kt-mesa #viewer .vtext { width: 420px; padding: 20px 22px; background: rgba(14,14,28,.94); box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
+.kittens .kt-mesa #viewer .vtext h3 { margin: 0 0 12px; font-family: var(--px); font-weight: normal; font-size: 16px; color: var(--yellow); }
+.kittens .kt-mesa #viewer .vtext p { margin: 0; font-family: var(--vt); font-size: 26px; line-height: 1.15; color: var(--txt); }
+.kittens .kt-mesa #viewer .vtext b { color: var(--yellow); font-weight: normal; }
+
+/* Galeria das cartas */
+.kittens .kt-mesa #gallery { position: absolute; inset: 0; z-index: 60; background: rgba(14,14,28,.94); padding: 30px 50px; display: flex; flex-direction: column; gap: 14px; }
+.kittens .kt-mesa #gallery[hidden] { display: none; }
+.kittens .kt-mesa #gallery h2 { margin: 0; font-family: var(--px); font-size: 20px; color: var(--yellow); font-weight: normal; }
+/* 17 cartas: 4 colunas e rolagem (a rodinha rola a galeria) */
+.kittens .kt-mesa #gallery .grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px 26px; overflow-y: auto; padding: 10px 6px; scrollbar-color: var(--yellow) #0e0e1c; }
+.kittens .kt-mesa #gallery .item { display: flex; gap: 22px; align-items: center; }
+.kittens .kt-mesa #gallery .item .kt-card { flex: none; }
+.kittens .kt-mesa #gallery .item p { margin: 0; font-size: 23px; line-height: 1.05; }
+.kittens .kt-mesa #gallery .item b { font-family: var(--px); font-size: 10px; color: var(--yellow); font-weight: normal; display: block; margin-bottom: 6px; }
+.kittens .kt-mesa #gallery .foot { display: flex; justify-content: space-between; align-items: center; }
+.kittens .kt-mesa #gallery .foot p { margin: 0; font-size: 22px; color: var(--dim); max-width: 1000px; }
+/* Tatu soldado do desarme: anda com o corpo balançando em 2 quadros e dá um tranco ao cortar o fio */
+.kittens .kt-mesa .soldier { position: absolute; left: 0; top: 0; z-index: 33; width: 190px; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(6px 6px 0 rgba(5,5,16,.45)); }
+.kittens .kt-mesa .soldier.walking { animation: kt-march .24s steps(2) infinite; }
+.kittens .kt-mesa .soldier.snip { animation: kt-snip .15s steps(2) 3; }
+@keyframes kt-march { 50% { translate: 0 -6px; } }
+@keyframes kt-snip { 50% { translate: 6px 0; } }
+.kittens .kt-mesa .bigcard { position: absolute; z-index: 32; transform: translate(-50%, -50%) scale(2); }
+.kittens .kt-mesa .bigcard.shaking { animation: kt-shake .09s steps(2) infinite; }
+/* O tatu de quem tem que jogar o Desarme: dá pra soltar o Desarme nele (ou clicar) */
+.kittens .kt-mesa .bigcard.live { pointer-events: auto; cursor: pointer; }
+.kittens .kt-mesa .bigcard.drop { filter: drop-shadow(0 0 0 #f2c14e) drop-shadow(0 0 10px #f2c14e); }
+@keyframes kt-shake { 50% { translate: 4px -3px; } }
+@media (prefers-reduced-motion: reduce) { .kittens .kt-mesa * { animation: none !important; } }

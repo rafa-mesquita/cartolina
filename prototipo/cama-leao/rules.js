@@ -225,7 +225,7 @@ var CamaLeao = (() => {
   function play(state, playerId, from, to, ctx) {
     if (state.phase !== "playing" || state.paused) return fail("not_playing");
     if (state.turn !== playerId) return fail("not_your_turn");
-    if (!state.players.includes(to) || !ctx.active.includes(to)) return fail("bad_target");
+    if (!state.players.includes(to) || !ctx.active.includes(to)) return fail("cant_receive");
     const deck = [...state.deck];
     let open = state.open;
     let card;

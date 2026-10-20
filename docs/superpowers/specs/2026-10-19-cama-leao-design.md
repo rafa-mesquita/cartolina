@@ -135,7 +135,7 @@ fica **ligado** (`liveCursors: true`): não há nada escondido que ele entregue.
 
 - `not_your_turn`: jogar fora da vez (inclui duas jogadas quase ao mesmo tempo: a
   primeira vale);
-- `bad_target`: `to` fora da partida ou inativo;
+- `cant_receive`: `to` fora da partida ou inativo (código próprio: o `bad_target` do `main` tem a mensagem do Tatubum);
 - `not_playing`: jogar fora da fase de jogo ou com a partida pausada;
 - `not_host`, `bad_phase`, `not_enough_players`: como nos outros jogos.
 

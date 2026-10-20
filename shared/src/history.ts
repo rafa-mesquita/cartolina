@@ -82,6 +82,8 @@ export interface HistoryResponses {
   dixit: DixitHistoryResponse;
   /** O Retratim ainda não grava histórico (vem no R4, com o museu): a rota responde 404 antes de chegar aqui. */
   pictures: never;
+  /** O Tatubum também não grava histórico por enquanto (plano próprio): a rota responde 404 antes de chegar aqui. */
+  kittens: never;
   /** O Cama-Leão ainda não grava histórico (vem no C4): a rota responde 404 antes de chegar aqui. */
   camelio: never;
 }
@@ -194,6 +196,8 @@ export function pendingHistoryRecord(room: Room, now: number, id: string): Pendi
     }
     case 'pictures':
       return null; // histórico e museu do Retratim vêm no R4
+    case 'kittens':
+      return null; // o histórico do Tatubum vem num plano próprio
     case 'camelio':
       return null; // histórico do Cama-Leão vem no C4
     default: {

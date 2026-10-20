@@ -328,8 +328,8 @@ describe('jogar', () => {
 
   it('recusas', () => {
     expect(tryAct(playing(3), 'p1', { type: 'play', from: 'open', to: 'p1' }, ctx3)).toEqual({ ok: false, error: 'not_your_turn' });
-    expect(tryAct(playing(3), 'p0', { type: 'play', from: 'open', to: 'p9' }, ctx3)).toEqual({ ok: false, error: 'bad_target' });
-    expect(tryAct(playing(3), 'p0', { type: 'play', from: 'open', to: 'p2' }, ctxOf(['p0', 'p1']))).toEqual({ ok: false, error: 'bad_target' });
+    expect(tryAct(playing(3), 'p0', { type: 'play', from: 'open', to: 'p9' }, ctx3)).toEqual({ ok: false, error: 'cant_receive' });
+    expect(tryAct(playing(3), 'p0', { type: 'play', from: 'open', to: 'p2' }, ctxOf(['p0', 'p1']))).toEqual({ ok: false, error: 'cant_receive' });
     expect(tryAct(initialCamelioState(), 'p0', { type: 'play', from: 'open', to: 'p0' }, ctx3)).toEqual({ ok: false, error: 'not_playing' });
     expect(tryAct(playing(3, { paused: true }), 'p0', { type: 'play', from: 'open', to: 'p0' }, ctx3)).toEqual({ ok: false, error: 'not_playing' });
     const over = playing(3, { phase: 'over', turn: null, winners: ['p0'], endReason: 'target' });
