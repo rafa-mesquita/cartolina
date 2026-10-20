@@ -89,8 +89,11 @@ Aceitam Nem vem! (que cancela o combo todo). Regras dos combos redesenhadas pelo
 - **Trio** (3 cartas iguais, **de qualquer tipo**), sem alvo nem pedido: você rouba **um Desarme** de um
   adversário sorteado **entre os que têm Desarme**. Ninguém tem: não acontece nada. Todos veem quem
   perdeu o Desarme.
-- **5 diferentes** (5 nomes diferentes, quaisquer cartas): você escolhe (30 s) uma carta do **descarte
-  como estava antes desta jogada**. Descarte vazio = nada.
+- **5 diferentes** (5 nomes diferentes, quaisquer cartas): você escolhe (30 s) **duas cartas** do **descarte
+  como estava antes desta jogada** (pedido do Rafa, 2026-10-20; uma de cada vez, no quadro do descarte). Descarte
+  com 1 carta = só ela; vazio = nada. Prazo vencido: o que faltar sai ao acaso.
+- **Quadro do descarte:** um olho ao lado da pilha de descarte abre um quadro com todas as cartas do descarte
+  (qualquer um, a qualquer hora). A escolha dos 5 diferentes acontece nesse quadro.
 
 ### Par de cada bicho (pedido do Rafa, 2026-10-20)
 
@@ -98,7 +101,7 @@ Sozinho o bicho continua não fazendo nada.
 
 | Par de… | Pede | Efeito |
 |---|---|---|
-| Mico-leão | um adversário com carta | O adversário **escolhe** uma carta da mão dele pra te dar (30 s; depois, ao acaso). Só vocês dois sabem qual foi. É o mesmo fluxo do Favor. |
+| Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) |
 | Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
 | Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: nada. Todos veem de onde veio. |
@@ -106,9 +109,13 @@ Sozinho o bicho continua não fazendo nada.
 
 Regras de motor:
 - `playKindOf`: 2 iguais só vira `par` se for bicho; 3 iguais de qualquer tipo é `trio`.
-- `parsePlay`: alvo exigido só no Favor e no par de Mico (`bad_target`); pedido (`ask`) exigido só no par
+- `parsePlay`: alvo exigido só no Favor (`bad_target`); pedido (`ask`) exigido só no par
   de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Trio ignora alvo e pedido.
-- Par de Mico reaproveita a escolha `favor` (`who` = alvo, `to` = quem jogou) e o evento `gave`.
+- Par de Mico: escolha `{ kind: 'mico', by, waiting, deadline }` (`waiting` = quem ainda tem que descartar; pública).
+  Cada um em `waiting` manda `choose { card }` com uma carta da própria mão; evento público `{ t: 'discarded', by, card }`.
+  Prazo vencido: cada um que falta descarta uma ao acaso. Quem sai do jogo sai do `waiting`. `waiting` vazio fecha a escolha.
+- 5 diferentes: a escolha `cinco` ganha `left` (quantas ainda pegar, 2 ou 1); cada `choose { card }` pega uma e o `left` cai;
+  em 0 (ou sem opções) a escolha fecha.
 - Escolha nova `{ kind: 'quati', who, deadline }`; na visão, só `who` recebe `card` = a carta de cima.
   Ação: `choose` com `keep: boolean`. Evento `{ t: 'delayed', by, moved }` (público).
 - Tamanduá: eventos `{ t: 'draw', by, card }` (só quem comprou vê) pra cada carta que fica na mão e
