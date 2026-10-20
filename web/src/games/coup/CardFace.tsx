@@ -1,6 +1,7 @@
 import type { CoupCharacter } from '@cartolina/shared';
 import { characterArtUrl } from './art';
 import { CHARACTER_NAMES } from './names';
+import type { TipProps } from './Tip';
 
 /** Tamanhos das cartas: s = cartinha dos oponentes (52×72), m = perdida na sua mão (84×118), l = sua mão (120×168). */
 export type CardSize = 's' | 'm' | 'l';
@@ -40,12 +41,18 @@ export function CardArt({ card, alt, band = true }: { card: CoupCharacter; alt: 
 /**
  * Frente de uma carta: a arte do personagem com o nome na faixa de baixo. `dead` = perdida (arte apagada em cinza e um
  * risco vermelho na diagonal; o nome vai também no `title`). A pequena (`s`, dos oponentes) mostra só a arte.
+ * Com `tip` (as suas cartas), a carta ganha a dica rápida e entra no Tab (o foco também mostra a dica).
  */
-export function CardFace({ card, size, dead = false }: { card: CoupCharacter; size: CardSize; dead?: boolean }) {
+export function CardFace({ card, size, dead = false, tip }: { card: CoupCharacter; size: CardSize; dead?: boolean; tip?: TipProps }) {
   const name = CHARACTER_NAMES[card];
   const label = dead ? `${name} (perdida)` : name;
   return (
-    <span className={`cp-card face ${size}${dead ? ' dead' : ''}`} title={dead || size === 's' ? label : undefined}>
+    <span
+      className={`cp-card face ${size}${dead ? ' dead' : ''}${tip ? ' tipped' : ''}`}
+      title={dead || size === 's' ? label : undefined}
+      tabIndex={tip ? 0 : undefined}
+      {...tip}
+    >
       <CardArt card={card} alt={label} band={size !== 's'} />
     </span>
   );
