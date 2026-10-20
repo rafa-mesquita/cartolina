@@ -21,11 +21,13 @@ import {
   roomSummary,
   roomView,
   tick,
+  type CoupMatchRecord,
   type DixitRoundRecord,
   type Room,
   type RoundRecord,
   type ServerMessage,
 } from '@cartolina/shared';
+import { insertCoupMatch } from './coup-history-db';
 import { insertDixitRound } from './dixit-history-db';
 import { insertRound } from './history-db';
 import { isStale, nextWakeAt } from './liveness';
@@ -37,11 +39,13 @@ import { isStale, nextWakeAt } from './liveness';
  */
 export type PendingRound =
   | { game: 'dixit'; key: string; record: DixitRoundRecord }
+  | { game: 'coup'; key: string; record: CoupMatchRecord }
   | { game?: 'ito'; groupId?: string; key: string; record: RoundRecord };
 
 /** Grava o pendente na tabela do jogo dele (o UNIQUE de cada tabela absorve repetições). */
 export async function insertPending(db: D1Database, round: PendingRound): Promise<void> {
   if (round.game === 'dixit') await insertDixitRound(db, round.record, round.key);
+  else if (round.game === 'coup') await insertCoupMatch(db, round.record);
   else await insertRound(db, 'ito', round.record, round.key);
 }
 

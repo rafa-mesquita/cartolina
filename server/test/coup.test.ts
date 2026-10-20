@@ -12,9 +12,10 @@ describe('Cúpi no servidor', () => {
     expect(body).toMatchObject({ exists: true, game: 'coup', phase: 'lobby' });
   });
 
-  it('o histórico do Cúpi ainda não existe (vem no Plano C4)', async () => {
+  it('o histórico do Cúpi responde', async () => {
     const res = await SELF.fetch('https://x/history/coup');
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ game: 'coup' });
   });
 
   it('começa com 2: cada um vê só as próprias cartas e a mesma vez', async () => {
