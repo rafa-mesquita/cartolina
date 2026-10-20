@@ -1,0 +1,78 @@
+# Cartas do Tatubum: prompts (Google Flow, Nano Banana 2.1) — rascunho pro Plano T3
+
+## Decisões do Rafa (2026-10-19, lote de teste)
+
+- **Projeto no Flow:** https://flow.google.com/project/ce2b408e-ef7b-4a34-a82d-5837a7bf831a (só do Tatubum;
+  Imagem, 1:1, x2).
+- **Cartas com arte do Flow; efeitos do jogo continuam em código** (o BUM e a tela tremendo foram aprovados).
+- **Cor de fundo por categoria** (a cor vai no prompt e no fundo da carta): **Tatubum** vermelho-alaranjado
+  `#e4572e`; **desarme** amarelo de alerta `#f2c14e`; **bichos dos pares** verde-água `#5cc8b8`; **cartas de
+  efeito** (Nem vem!, Ataque, Pular, Favor, Embaralhar, Espiar) todas no creme `#f4e9d0`.
+- **Desarme** (era o "Cafuné" da mão fazendo carinho): **tatu das Forças Armadas** (capacete verde com a
+  bandeira, colete camuflado) com alicate corta-fio. No jogo, a mesma arte recortada vira o soldadinho que
+  entra andando pela mesa e corta o fio do Tatubum (`prototipo/tatubum/art/soldado.png`).
+- **Escolhidas:** Tatubum = B do lote vermelho; Nem vem! = B (creme); Capivara = A (verde-água); **capa e
+  verso** = o tatu-bola enrolado no céu estrelado com a lua (A) — já é a capa da estante. Desarme: A ou B
+  ainda a escolher. Artes provisórias no protótipo: `prototipo/tatubum/art/*.webp`.
+- Prompts que funcionaram (fim trocando a cor do fundo):
+  - Tatubum: `…curled into a tight ball, a lit fuse… bright yellow sparks… small pixel explosion stars around it… on a flat solid bright red-orange background (#e4572e)…`
+  - Desarme: `a small brown three-banded armadillo soldier of the Brazilian armed forces, wearing an olive green military helmet and a camouflage vest, holding a big pair of red wire cutters about to cut a wire, focused and brave face, a few bomb disposal tools hanging from its belt… on a flat solid bright warning-yellow background (#f2c14e)…`
+  - Capivara: o da tabela abaixo, com `on a flat solid aqua-green background (#5cc8b8)`.
+
+## Lote 3 (2026-10-19): uma cor por carta, todas com arte do Flow
+
+- **Toda carta tem a sua cor** e um cerrado de dia desenhado em código nessa cor; a faixa do topo é a cor
+  25% mais escura. O prompt pede o fundo liso na mesma cor, e o recorte (preenchimento a partir da borda,
+  que para no contorno escuro) tira o fundo sem comer partes do bicho da mesma cor.
+- Cores: Tatubum `#e4572e`, Desarme `#f2c14e`, Nem vem! `#c86fd4`, Ataque `#9aa7bd`, Pular `#5aa0e6`,
+  Favor `#f29bc0`, Embaralhar `#8d7ae6`, Espiar `#3fa7c9`, Capivara `#5cc8b8`, Mico-leão `#f4a259`,
+  Quati `#c79a6a`, Tamanduá `#b0b8c8`, Preguiça `#a8bf6a`.
+- Cenas usadas (começo e fim padrão, fundo `flat solid <cor> background (#hex)`), favoritas com coração no Flow:
+  - Ataque: tatu guerreiro avançando com espada de aço erguida e capa vermelha.
+  - Pular: tatu saltando por cima de uma cerquinha de madeira, setas azuis pra direita.
+  - Favor: tatu de olhos brilhando oferecendo um presente amarelo com laço vermelho, coraçãozinho rosa.
+  - Embaralhar: tatu fazendo malabarismo com três cartas de verso azul.
+  - Espiar: tatu olhando por um binóculo preto, olhos enormes nas lentes.
+  - Mico-leão, Quati, Tamanduá, Preguiça: os bichos da tabela abaixo.
+- Na carta a arte fica numa caixa de 84×74 px, alinhada por baixo, longe do nome e da frase (pedido do Rafa:
+  nenhum desenho atrapalha o texto).
+
+## Rascunho original
+
+Rascunho de 2026-10-19. Identidade: pixel art, paleta "noite no cerrado" (spec §5.4).
+A arte entra no meio da carta (o nome e a frase são desenhados pelo site), num quadro **1:1**.
+
+Configuração sugerida no Flow: **Imagem**, **1:1**, **x2** (como no Diquisti, o Rafa dá coração na que fica).
+Primeiro um **lote de teste** com 3 cartas (Tatubum, Nem vem!, Capivara) pra aprovar o estilo antes do resto.
+
+Prompt = **começo** + cena + **fim**:
+
+- **Começo:** `Pixel art sprite in a 16-bit retro video game style:`
+- **Fim:** `Single centered subject with breathing room around it, on a flat solid cream background (#f4e9d0). Crisp hard-edged pixels, limited palette, dark brown one-pixel outline, no anti-aliasing, no gradients, no blur, no text, no letters, no numbers, no border, no frame.`
+
+Cuidado conhecido: imagem de IA "em pixel art" costuma sair com pixels de tamanhos diferentes e borda
+borrada. O script de importação reduz pra uma grade fixa (ex.: 64×64, vizinho mais próximo) e amplia de volta,
+o que limpa a maior parte. Se mesmo assim ficar ruim, a alternativa é manter os sprites desenhados à mão do
+protótipo (`prototipo/tatubum/sprites.js`) e só refiná-los.
+
+## Cartas
+
+| # | Carta | Cena |
+|---|---|---|
+| 1 | **Tatubum** | a brown three-banded armadillo (tatu-bola) curled into a tight ball, a lit fuse sticking out of its shell with bright orange and yellow sparks, two nervous eyes peeking out between the shell bands |
+| 2 | **Cafuné** | a human hand gently petting the head of a relaxed brown armadillo that smiles with closed eyes, three small pink pixel hearts floating above |
+| 3 | **Nem vem!** | an open palm raised in a firm stop gesture inside a bold red circle, short white motion lines around the fingers |
+| 4 | **Ataque** | a small brown armadillo warrior charging forward with a tiny steel sword held high and a short red cape, determined face |
+| 5 | **Pular** | a small brown armadillo jumping high over a little wooden hurdle, a dotted arc showing its jump, two blue chevron arrows pointing right |
+| 6 | **Favor** | a small brown armadillo holding out a yellow gift box with a red ribbon, hopeful sparkling eyes |
+| 7 | **Embaralhar** | three playing cards with dark blue backs spinning in mid-air in a swirl, purple motion lines |
+| 8 | **Espiar** | a small brown armadillo looking through a brass spyglass, its single eye hugely magnified in the lens |
+| 9 | **Capivara** | a calm capybara sitting with half-closed relaxed eyes and a small orange on top of its head |
+| 10 | **Mico-leão** | a golden lion tamarin face with a bright fluffy orange mane and curious dark eyes |
+| 11 | **Quati** | a coati standing on its hind legs, long pointed snout, ringed brown and cream tail raised |
+| 12 | **Tamanduá** | a giant anteater walking, very long thin snout, bushy grey tail and the black and white diagonal stripe on its shoulder |
+| 13 | **Preguiça** | a three-toed sloth hanging from a short branch with a sleepy happy smile |
+| 14 | **Verso** | a brown armadillo curled into a ball with an unlit fuse, centered on a night-blue background full of tiny pixel stars (this one replaces the cream background in the ending) |
+
+Depois de escolhidas: `npm run kittens:cartas -- <pasta>` (a criar no T3) converte pra
+`web/public/kittens/cards/<tipo>.webp`.

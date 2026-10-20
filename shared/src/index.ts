@@ -48,4 +48,20 @@ export { fullDeck as coupFullDeck } from './games/coup/deck';
 export { applyCoupAction, initialCoupState, settleCoup } from './games/coup/rules';
 export { coup, coupNextDeadline, coupViewFor } from './games/coup/view';
 export { coupActionSchema } from './games/coup/schema';
+export * from './games/kittens/types';
+export * from './games/kittens/cards';
+export {
+  KITTENS_EXTRA_CAFUNES,
+  KITTENS_HAND_START,
+  KITTENS_LATIDOS,
+  KITTENS_PACK,
+  KITTENS_PACK_SIZE,
+  kittensBaseDeck,
+  kittensDeal,
+  kittensPacksFor,
+} from './games/kittens/deck';
+export { applyKittensAction, initialKittensState } from './games/kittens/rules';
+export { settleKittens } from './games/kittens/settle';
+export { kittens, kittensNextDeadline, kittensViewFor } from './games/kittens/view';
+export { kittensActionSchema } from './games/kittens/schema';
 export * from './games/registry';

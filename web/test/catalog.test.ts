@@ -31,6 +31,15 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.hasHistory).toBe(false);
   });
 
+  it('Tatubum (o Exploding Kittens) aparece na estante e dá pra jogar', () => {
+    const entry = catalogEntry('kittens');
+    expect(entry?.name).toBe('Tatubum');
+    expect(entry?.players).toBe('2 a 8 pessoas');
+    expect(entry?.playable).toBe(true);
+    expect(entry?.hasHistory).toBe(false);
+    expect(entry?.mobile).toBe(false);
+  });
+
   it('Cúpi (o Coup) aparece na estante e já dá pra jogar, no computador e no celular', () => {
     const entry = catalogEntry('coup');
     expect(entry?.name).toBe('Cúpi');

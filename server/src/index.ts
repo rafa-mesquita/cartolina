@@ -84,6 +84,9 @@ async function historyPageOf(env: Env, game: GameId, before: number | null): Pro
     case 'pictures':
       // sem `recordsHistory` a rota já respondeu 404; o histórico do Retratim vem no R4
       throw new Error('o Retratim ainda não tem histórico');
+    case 'kittens':
+      // sem `recordsHistory` a rota já respondeu 404; o histórico do Tatubum vem num plano próprio
+      throw new Error('o Tatubum ainda não tem histórico');
     case 'coup':
       return coupHistoryPage(env.DB, before);
     default: {

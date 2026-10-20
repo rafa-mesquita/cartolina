@@ -1,4 +1,4 @@
-import { isCoupRoomView, isDixitRoomView, isItoRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
+import { isCoupRoomView, isDixitRoomView, isItoRoomView, isKittensRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
@@ -12,6 +12,9 @@ import { Toasts } from './Toasts';
 // Retratim (kits de fotos, ícones do Tabler, sons) vira um chunk à parte: quem só joga ITO/Diquisti não baixa nada disso.
 const PicturesLobby = lazy(() => import('../games/pictures/PicturesLobby').then((m) => ({ default: m.PicturesLobby })));
 const PicturesTable = lazy(() => import('../games/pictures/PicturesTable').then((m) => ({ default: m.PicturesTable })));
+// Tatubum (pixel art, cerrado, sons 8-bit) também vem num chunk à parte.
+const KittensLobby = lazy(() => import('../games/kittens/KittensLobby').then((m) => ({ default: m.KittensLobby })));
+const KittensTable = lazy(() => import('../games/kittens/KittensTable').then((m) => ({ default: m.KittensTable })));
 
 // O Cúpi também fica num chunk à parte (CSS, sons e a mesa só baixam pra quem entra numa sala dele).
 const CoupLobby = lazy(() => import('../games/coup/CoupLobby').then((m) => ({ default: m.CoupLobby })));
@@ -48,6 +51,17 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
         {reconnecting}
         <Suspense fallback={null}>
           {view.game.phase === 'lobby' ? <PicturesLobby view={view} conn={conn} /> : <PicturesTable view={view} conn={conn} serverOffset={snap.serverOffset} />}
+        </Suspense>
+      </>
+    );
+  }
+  if (isKittensRoomView(view)) {
+    // Sala de Tatubum (id interno `kittens`): a mesa tem os próprios avisos.
+    return (
+      <>
+        {reconnecting}
+        <Suspense fallback={null}>
+          {view.game.phase === 'lobby' ? <KittensLobby view={view} conn={conn} /> : <KittensTable view={view} conn={conn} serverOffset={snap.serverOffset} />}
         </Suspense>
       </>
     );
