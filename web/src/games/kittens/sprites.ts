@@ -20,7 +20,7 @@ export interface SpriteImage {
 
 const K = '#2b1a10';
 
-/** Reserva provisória das cartas novas de 2026-10-20 (Latidor, Mau-olhado, Feitiço, Boto) até terem sprite/arte: um "?". */
+/** Sprite de reserva das cartas sem desenho próprio (as cartas novas de 2026-10-20 só têm a arte do Flow): um "?". */
 const UNKNOWN: SpriteMap = {
   pal: { y: '#f2c14e' },
   rows: ['..kkkkkk..', '.kyyyyyyk.', 'kyykkkkyyk', '.kk...kyyk', '.....kyyk.', '....kyyk..', '....kyyk..', '.....kk...', '....kyyk..', '.....kk...'],
@@ -287,11 +287,10 @@ export const CARD_STYLE: Record<KittensCardKind, { band: string; hint: string }>
   quati: { band: '#3b8a4a', hint: 'par: vê a de cima' },
   tamandua: { band: '#3b8a4a', hint: 'par: compra 2' },
   preguica: { band: '#3b8a4a', hint: 'par: puxa um bicho' },
-  // Provisório (cartas novas de 2026-10-20).
-  latido: { band: '#d98c3a', hint: 'AU AU!' },
-  olhado: { band: '#7a4fb8', hint: 'deixa alguém cego' },
-  feitico: { band: '#4fb88a', hint: 'a carta de baixo' },
-  boto: { band: '#3b8a4a', hint: 'bicho coringa' },
+  latido: { band: '#b5653a', hint: 'late pro outro' },
+  olhado: { band: '#5b3f9e', hint: 'deixa alguém cego' },
+  feitico: { band: '#2f8f6b', hint: 'a de baixo do monte' },
+  boto: { band: '#3b8a4a', hint: 'vira qualquer bicho' },
 };
 
 function render(rows: readonly string[], pal: Record<string, string>): SpriteImage {
