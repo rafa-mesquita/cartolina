@@ -313,7 +313,7 @@ Atenção ao caso "view sem jogada nova durante a animação com a fila vazia": 
 
 **Files:** Modify `CamelioTable.tsx`; Test `web/test/camelio-table.test.tsx` (acrescentar).
 
-- Quando `usePlayback` expõe `anim`, num `useLayoutEffect` a mesa chama `playTurnAnim(stageEl, anim.prev, anim.next, { nameOf, say: setBannerText, sound: playCamelioSound, dropFrom, layout: stackLayout, scale })`, e no `done` chama `done()` do playback. Guarde o `stop` e chame no desmonte e quando o `match` mudar.
+- Quando `usePlayback` expõe `anim`, num `useLayoutEffect` a mesa chama `playTurnAnim(stageEl, anim.prev, anim.next, { nameOf, say: setBannerText, sound: playCamelioSound, dropFrom, layout: (pid, n) => stackLayout(pid === view.you, n), scale })`, e no `done` chama `done(anim.id)` do playback (uma vez por animação; no cleanup só `stop()`, sem `done`). Quando `view.game.match !== anim.prev.match` (partida nova), chama `stop()` e `done(anim.id)`. O `scale` vai por ref (não nas deps do efeito). Guarde o `stop` e chame no desmonte e quando o `match` mudar.
 - Durante a animação a mesa desenha `shown` (a view de antes), sem `.target`/`.picked` e sem trocar o letreiro (a anim é dona dele).
 - [ ] **Step 1: testes que falham** (anim mockada, controlando quando o `done` resolve com um `Promise` manual):
   - view nova com uma jogada: `playTurnAnim` é chamado uma vez com `prev`/`next` certos; até o `done` resolver, a mesa mostra a contagem antiga do monte; depois, a nova;
