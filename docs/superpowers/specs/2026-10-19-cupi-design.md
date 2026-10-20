@@ -258,7 +258,8 @@ ritmo dos 10 s e ajustar o fluxo antes da mesa real. Entrada temporária no
 - **Embaixo:** suas duas cartas com a arte, suas moedas e as 7 ações (apagadas
   fora da sua vez; as que você não pode pagar ficam apagadas também).
 - **Coluna à direita:** o diário, com a última entrada destacada.
-- **Placar da noite:** linha discreta embaixo da mesa.
+- **Placar da noite:** linha discreta no topo, à direita (como no protótipo
+  aprovado); em destaque na tela de fim.
 
 ### 5.2 Celular (em pé)
 
