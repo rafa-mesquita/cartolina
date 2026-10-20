@@ -19,7 +19,8 @@ describe('estante de jogos', () => {
     expect(screen.getByRole('link', { name: /Diquisti/ }).getAttribute('href')).toBe('#/dixit');
     expect(screen.getByRole('link', { name: /Retratim/ }).getAttribute('href')).toBe('#/pictures');
     expect(screen.getByRole('link', { name: /Tatubum/ }).getAttribute('href')).toBe('#/kittens');
-    expect(screen.queryByText('em breve')).toBeNull(); // todos já dá pra jogar
+    expect(screen.getByRole('link', { name: /Cúpi/ }).getAttribute('href')).toBe('#/coup');
+    expect(screen.queryByText('em breve')).toBeNull(); // todos os jogos da estante já dão pra jogar
     expect(screen.queryByText(/grupo/i)).toBeNull();
     expect(screen.queryByText(/Dixit/)).toBeNull();
   });

@@ -42,6 +42,12 @@ export { scorePicturesRound } from './games/pictures/scoring';
 export { applyPicturesAction, initialPicturesState, settlePictures } from './games/pictures/rules';
 export { pictures, picturesNextDeadline, picturesViewFor } from './games/pictures/view';
 export { picturesActionSchema } from './games/pictures/schema';
+export * from './games/coup/types';
+export * from './games/coup/record';
+export { fullDeck as coupFullDeck } from './games/coup/deck';
+export { applyCoupAction, initialCoupState, settleCoup } from './games/coup/rules';
+export { coup, coupNextDeadline, coupViewFor } from './games/coup/view';
+export { coupActionSchema } from './games/coup/schema';
 export * from './games/kittens/types';
 export * from './games/kittens/cards';
 export {

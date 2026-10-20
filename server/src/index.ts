@@ -1,5 +1,6 @@
 import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse, type HistoryResponseOf } from '@cartolina/shared';
 import { CODE_RE, randomCode } from './codes';
+import { coupHistoryPage } from './coup-history-page';
 import { dixitHistoryPage } from './dixit-history-page';
 import { MAX_BODY_BYTES, TOO_LARGE, allowedOrigin, readSmallJson, underLimit, type Limiter } from './guard';
 import { HISTORY_PAGE_SIZE, allRounds, listRounds } from './history-db';
@@ -86,6 +87,8 @@ async function historyPageOf(env: Env, game: GameId, before: number | null): Pro
     case 'kittens':
       // sem `recordsHistory` a rota já respondeu 404; o histórico do Tatubum vem num plano próprio
       throw new Error('o Tatubum ainda não tem histórico');
+    case 'coup':
+      return coupHistoryPage(env.DB, before);
     default: {
       const _never: never = game;
       throw new Error(`jogo sem página de histórico: ${String(_never)}`);

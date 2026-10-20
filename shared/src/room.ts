@@ -1,6 +1,7 @@
 import { GAMES, type GameAction, type GameId, type GameState, type GameView } from './games/registry';
 import { withDixitCounters } from './games/dixit/rules';
 import type { DixitState, DixitView } from './games/dixit/types';
+import type { CoupState, CoupView } from './games/coup/types';
 import type { KittensView } from './games/kittens/types';
 import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
@@ -73,6 +74,12 @@ export function isKittensRoomView(view: RoomView): view is KittensRoomView {
   return view.gameId === 'kittens';
 }
 
+export type CoupRoomView = RoomView<CoupView> & { gameId: 'coup' };
+
+export function isCoupRoomView(view: RoomView): view is CoupRoomView {
+  return view.gameId === 'coup';
+}
+
 export interface RoomSummary {
   game: GameId;
   phase: GameState['phase'];
@@ -91,6 +98,11 @@ export function itoStateOf(room: Room): ItoState | null {
 /** Estado do Diquisti, ou null se a sala é de outro jogo. */
 export function dixitStateOf(room: Room): DixitState | null {
   return room.gameId === 'dixit' ? (room.game as DixitState) : null;
+}
+
+/** Estado do Cúpi, ou null se a sala é de outro jogo. */
+export function coupStateOf(room: Room): CoupState | null {
+  return room.gameId === 'coup' ? (room.game as CoupState) : null;
 }
 
 type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &

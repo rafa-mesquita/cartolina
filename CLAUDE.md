@@ -11,8 +11,9 @@ No ar: site https://rafa-mesquita.github.io/cartolina/ · servidor https://carto
 | **Diquisti** (nosso Dixit) | `dixit` | jogável no computador; celular ainda não |
 | **Retratim** (nosso Pictures) | `pictures` | jogável no computador; histórico/museu ainda não |
 | **Tatubum** (nosso Exploding Kittens) | `kittens` | jogável no computador, com bots também no site publicado; histórico e celular ainda não |
+| **Cúpi** (nosso Coup) | `coup` | jogável no computador e no celular; artes dos 5 personagens do Flow prontas (C3 feito) |
 
-O id interno nunca muda: rotas, banco, registro e testes usam `ito`/`dixit`/`pictures`/`kittens`. Só o que o jogador vê usa o nome novo.
+O id interno nunca muda: rotas, banco, registro e testes usam `ito`/`dixit`/`pictures`/`kittens`/`coup`. Só o que o jogador vê usa o nome novo.
 
 ## Regras de trabalho (importante)
 
@@ -120,6 +121,7 @@ As cartas do Diquisti (191 até agora) e as fotos do Retratim são geradas no **
   - atualize `DIXIT_DECK_SIZE` (`shared/src/games/dixit/deck.ts`), o teste `shared/test/dixit-deck.test.ts` e o `web/public/dixit/cards/cartas.json`;
   - um PR por lote.
 - **Fotos do Retratim:** `npm run pictures:fotos -- <pasta>` (recorte 4:3, 1200×900 + miniatura 480×360). Estilo: foto realista de celular, 1 opção por prompt.
+- **Cartas do Cúpi:** `npm run coup:cartas -- <pasta>` (recorte 2:3, WebP 600×900) em `web/public/coup/cartas/<personagem>.webp`; prompts em `docs/coup/cartas-prompts.md`. A mesa usa via `characterArtUrl` (`web/src/games/coup/art.ts`).
 
 ## Versão de celular
 
