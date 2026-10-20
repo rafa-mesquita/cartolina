@@ -33,7 +33,7 @@ import { insertRound } from './history-db';
 import { isStale, nextWakeAt } from './liveness';
 
 /**
- * Rodada revelada ainda não confirmada no D1 (fila durável no storage do DO, uma chave por rodada).
+ * Rodada revelada (ou, no Cúpi, a partida inteira) ainda não confirmada no D1 (fila durável no storage do DO, uma chave por rodada ou partida).
  * Entra no mesmo `put` que marca `recordedRevealKey`, então nem queda do DO nem falha do D1 perdem a rodada.
  * Pendentes deixados por um servidor antigo (antes da estante) têm só `groupId` e eram do ITO.
  */

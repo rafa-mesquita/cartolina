@@ -12,7 +12,10 @@ export async function insertCoupMatch(db: D1Database, r: CoupMatchRecord): Promi
     .run();
 }
 
-/** Partidas mais recentes primeiro (pelo fim); `before` pagina por esse fim (exclusivo). */
+/**
+ * Partidas mais recentes primeiro (pelo fim); `before` pagina por esse fim (exclusivo). Mesma limitação do Diquisti:
+ * duas partidas que terminam no mesmo ms bem na divisa de uma página fazem a segunda ser pulada (improvável).
+ */
 export async function listCoupMatches(db: D1Database, before: number | null, limit: number): Promise<CoupMatchRecord[]> {
   const order = 'ORDER BY played_at DESC, id DESC LIMIT ?';
   const stmt =

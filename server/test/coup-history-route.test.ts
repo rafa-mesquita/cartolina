@@ -72,7 +72,11 @@ describe('histórico do Cúpi no servidor', () => {
     const body = (await res.json()) as CoupHistoryResponse;
     expect(body.game).toBe('coup');
     expect(body.stats).toBeNull();
-    const match = body.matches.find((m) => m.roomCode === code)!;
+
+    // A partida vem direto do D1: a página 1 do histórico pode estar cheia de partidas de outros testes.
+    const row = await env.DB.prepare('SELECT record_json FROM coup_matches WHERE room_code = ?').bind(code).first<{ record_json: string }>();
+    expect(row).not.toBeNull();
+    const match = JSON.parse(row!.record_json) as CoupMatchRecord;
     expect(match.players.map((p) => p.name)).toEqual(['P0', 'P1']);
     expect(match.out).toHaveLength(1);
     const outName = match.out[0]!.name;
