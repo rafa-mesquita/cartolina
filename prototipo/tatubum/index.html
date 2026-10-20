@@ -966,7 +966,8 @@ function rawText(ev, prevPending) {
     case 'play': return `${n(ev.by)} jogou ${PLAY_LABEL[ev.play]}${ev.target ? ' em ' + n(ev.target) : ''}${ev.ask ? ', pedindo ' + cardName(ev.ask) : ''}`;
     case 'nope': return `${n(ev.by)}: NEM VEM!`;
     case 'resolved': {
-      const whose = (label) => (ev.by === ME ? `Seu ${label}` : `${label} de ${n(ev.by)}`);
+      // "Sua RODA", "Seu PAR": a roda de capivara é a única feminina.
+      const whose = (label) => (ev.by === ME ? `${label.startsWith('RODA') ? 'Sua' : 'Seu'} ${label}` : `${label} de ${n(ev.by)}`);
       if (ev.canceled) return `${whose(PLAY_LABEL[ev.play])} foi cancelado`;
       return {
         ataque: `${whose(PLAY_LABEL.ataque)} valeu!`,
