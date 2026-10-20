@@ -4,6 +4,8 @@ import { MomentView } from './Moment';
 import type { Moment } from './moments';
 import { CHARACTER_NAMES } from './names';
 import { PhraseView } from './Phrase';
+import { reactionTip } from './rules';
+import { useTip } from './Tip';
 import { actionLabel, declaration, joinNames, type Names } from './texts';
 
 /** Reações da janela (sempre com o id da janela vista). */
@@ -15,6 +17,20 @@ export function passedLine(w: CoupWindow, names: Names): string {
   const parts = w.passed.map((p) => `${names.nameOf(p)} deixou`);
   if (rest.length > 0) parts.push(`${rest.length > 1 ? 'faltam' : 'falta'} ${joinNames(rest.map(names.nameOf))}`);
   return parts.join(' · ');
+}
+
+/** Botão da janela (duvidar, bloquear como X, deixa), com a dica rápida do que ele faz. */
+function ReactButton({ reaction, onReact }: { reaction: Reaction; onReact: (r: Reaction) => void }) {
+  const r = reaction;
+  const { props, tip } = useTip(r.type === 'block' ? reactionTip('block', r.as) : reactionTip(r.type));
+  return (
+    <>
+      <button type="button" className={`cp-react${r.type === 'pass' ? '' : ' red'}`} onClick={() => onReact(r)} {...props}>
+        {r.type === 'challenge' ? 'duvidar' : r.type === 'block' ? `bloquear como ${CHARACTER_NAMES[r.as]}` : 'deixa'}
+      </button>
+      {tip}
+    </>
+  );
 }
 
 interface Props {
@@ -114,19 +130,11 @@ function StageMain({ game, names, clock, aiming, onCancelAim, onReact }: Omit<Pr
             <div className="cp-wait">tempo esgotado…</div>
           ) : c.pass ? (
             <div className="cp-reacts">
-              {c.challenge && (
-                <button type="button" className="cp-react red" onClick={() => onReact({ type: 'challenge' })}>
-                  duvidar
-                </button>
-              )}
+              {c.challenge && <ReactButton reaction={{ type: 'challenge' }} onReact={onReact} />}
               {c.block.map((ch) => (
-                <button key={ch} type="button" className="cp-react red" onClick={() => onReact({ type: 'block', as: ch })}>
-                  bloquear como {CHARACTER_NAMES[ch]}
-                </button>
+                <ReactButton key={ch} reaction={{ type: 'block', as: ch }} onReact={onReact} />
               ))}
-              <button type="button" className="cp-react" onClick={() => onReact({ type: 'pass' })}>
-                deixa
-              </button>
+              <ReactButton reaction={{ type: 'pass' }} onReact={onReact} />
             </div>
           ) : (
             <div className="cp-wait">esperando os outros…</div>

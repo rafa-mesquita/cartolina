@@ -86,8 +86,8 @@ const GENDER: Record<CoupCharacter, { art: 'o' | 'a'; um: 'um' | 'uma' }> = {
   contessa: { art: 'a', um: 'uma' },
 };
 
-/** "o Duque" / "a Condessa" (texto puro). */
-const the = (c: CoupCharacter): string => `${GENDER[c].art} ${CHARACTER_NAMES[c]}`;
+/** "o Duque" / "a Condessa" (texto puro; a colinha de regras também usa). */
+export const the = (c: CoupCharacter): string => `${GENDER[c].art} ${CHARACTER_NAMES[c]}`;
 
 const ACTION: Record<CoupActionKind, { name: string; hint: string }> = {
   income: { name: 'renda', hint: `+${COUP_GAIN.income}` },

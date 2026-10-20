@@ -12,6 +12,7 @@ import { useMoments } from './moments';
 import { MyArea } from './MyArea';
 import { Panels } from './Panels';
 import { Seats } from './Seats';
+import { RulesSheet } from './RulesSheet';
 import { playCoupSound } from './sounds';
 import { Stage, type Reaction } from './Stage';
 import { nameFrom } from './texts';
@@ -48,6 +49,14 @@ interface Ui {
 /** Nada marcado (o mesmo array sempre: o painel memorizado não redesenha a cada tique do relógio). */
 const NO_KEEP: number[] = [];
 const freshUi = (key: string): Ui => ({ key, aiming: null, lose: -1, keep: NO_KEEP, sent: false });
+
+/** Colinha de regras: `at` = situação em que abriu (null = fechada); `auto` = fechou sozinha (a situação pediu você). */
+interface Rules {
+  at: string | null;
+  auto: boolean;
+}
+const RULES_CLOSED: Rules = { at: null, auto: false };
+const RULES_AUTO_CLOSED: Rules = { at: null, auto: true };
 
 /**
  * A mesa do Cúpi: no computador, palco 1440×900 escalado com o topo, os oponentes, o palco (feltro), a sua área e o diário.
@@ -89,6 +98,17 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
       }),
     [key],
   );
+
+  // Colinha de regras: guarda a situação em que abriu (`rules.at`). Se a situação muda pra uma que pede você (reagir,
+  // perder carta, trocar), ela fecha sozinha pra você não perder o prazo; aberta numa situação que já pedia você, fica.
+  const needsYou = g.can.pass || g.can.lose || g.can.keep > 0;
+  const [rules, setRules] = useState<Rules>(RULES_CLOSED);
+  const rulesStale = rules.at !== null && rules.at !== key && needsYou;
+  if (rulesStale) setRules(RULES_AUTO_CLOSED);
+  const rulesOpen = rules.at !== null && !rulesStale;
+  const rulesAuto = rules.auto;
+  const toggleRules = useCallback(() => setRules((r) => (r.at === null ? { at: key, auto: false } : RULES_CLOSED)), [key]);
+  const closeRules = useCallback(() => setRules(RULES_CLOSED), []);
   // Recusas do servidor (que não são de entrada na sala) viram aviso no palco.
   useEffect(
     () =>
@@ -167,18 +187,19 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   const onExchange = useCallback((keep: CoupCharacter[]) => send({ type: 'exchange', keep }), [send]);
   const onRestart = useCallback(() => send({ type: 'restart' }), [send]);
 
-  // Esc sai do modo "escolher alvo" (e fecha a folha do diário)
+  // Esc sai do modo "escolher alvo" (e fecha, antes, a folha do diário ou a colinha de regras)
   const hasAim = aiming !== null;
   useEffect(() => {
-    if (!hasAim && !diaryOpen) return undefined;
+    if (!hasAim && !diaryOpen && !rulesOpen) return undefined;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (diaryOpen) setDiaryOpen(false);
+      else if (rulesOpen) setRules(RULES_CLOSED);
       else setUi((u) => ({ ...u, aiming: null }));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [hasAim, diaryOpen]);
+  }, [hasAim, diaryOpen, rulesOpen]);
 
   // Modo alvo: o foco vai pro primeiro assento-alvo; ao mirar ou cancelar, volta pro botão da ação.
   const prevAim = useRef<CoupActionKind | null>(null);
@@ -199,6 +220,22 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
     if (was && !diaryOpen) rootRef.current?.querySelector<HTMLElement>('.cp-lastline')?.focus();
   }, [diaryOpen]);
 
+  // Colinha fechada ("fechar", fundo, Esc ou sozinha): o foco que estava nela volta pro botão "regras" — ou, se ela
+  // fechou sozinha porque abriu a janela pra você, pro primeiro botão da janela (duvidar, bloquear ou deixa). Se o foco
+  // estava em outro lugar (fechou sozinha com você na mesa), ninguém mexe nele.
+  const rulesWasOpen = useRef(false);
+  const canPass = g.can.pass;
+  useEffect(() => {
+    const was = rulesWasOpen.current;
+    rulesWasOpen.current = rulesOpen;
+    if (!was || rulesOpen) return;
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (!lost) return;
+    const root = rootRef.current;
+    const react = rulesAuto && canPass ? root?.querySelector<HTMLElement>('.cp-reacts button') : null;
+    (react ?? root?.querySelector<HTMLElement>('.cp-rulesbtn'))?.focus();
+  }, [rulesOpen, rulesAuto, canPass]);
+
   // celular: reagindo na janela (o modo compacto da tela baixa esconde as ações, que estão todas apagadas)
   const reacting = phone && g.phase === 'reaction' && g.can.pass;
   const rootClass = ['coup', phone ? 'coup--phone' : '', reacting ? 'cp-reacting' : ''].filter(Boolean).join(' ');
@@ -206,7 +243,7 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   return (
     <div className={rootClass} ref={rootRef} data-button-sounds="">
       <div className="cp-app" style={phone ? undefined : stage}>
-        <TopBar wins={g.wins} nameOf={names.nameOf} phone={phone} me={me} />
+        <TopBar wins={g.wins} nameOf={names.nameOf} phone={phone} me={me} rulesOpen={rulesOpen} onRules={toggleRules} />
         <main className="cp-main">
           <section className="cp-table">
             <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={names.nameOf} aiming={hasAim} onTarget={onTarget} />
@@ -230,8 +267,10 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
             </div>
           </section>
           <Diary log={g.log} match={g.match} names={names} phone={phone} open={diaryOpen} onClose={closeDiary} />
+          {rulesOpen && <RulesSheet phone={phone} onClose={closeRules} />}
         </main>
         {phone && diaryOpen && <div className="cp-scrim" aria-hidden="true" onClick={closeDiary} />}
+        {phone && rulesOpen && !diaryOpen && <div className="cp-scrim" aria-hidden="true" onClick={closeRules} />}
         <div role="status" aria-live="polite">
           {toast && (
             <div key={toast.id} className="cp-toast">
