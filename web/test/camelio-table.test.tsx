@@ -376,6 +376,49 @@ describe('mesa do Cama-Leão: o clique', () => {
     fireEvent.click(screen.getByLabelText(otherLabel));
     expect(c.sendAction).toHaveBeenCalledTimes(2);
   });
+
+  it('reconectando, a carta não levanta nem arrasta (sem aviso novo: o "reconectando…" já está na tela)', () => {
+    const { room, me, other, otherLabel } = myTurn();
+    const c = conn();
+    const view = camelioView(room, me);
+    const { container, rerender } = render(<CamelioTable view={view} conn={c} status="reconnecting" />);
+    const open = screen.getByLabelText('carta aberta');
+    fireEvent.click(open);
+    expect(open.classList.contains('picked')).toBe(false);
+    fireEvent.click(screen.getByLabelText(otherLabel));
+    fireEvent.pointerDown(open.querySelector('.lift > .card')!, { button: 0, pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { pointerId: 1, buttons: 1, clientX: 130, clientY: 100 });
+    expect(container.querySelector('.drag-clone')).toBeNull();
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 130, clientY: 100 });
+    expect(c.sendAction).not.toHaveBeenCalled();
+    expect(container.querySelector('.cl-toast')!.classList.contains('on')).toBe(false);
+    // voltou: joga normal
+    rerender(<CamelioTable view={view} conn={c} status="joined" />);
+    fireEvent.click(open);
+    fireEvent.click(screen.getByLabelText(otherLabel));
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'play', from: 'open', to: other });
+  });
+
+  it('a conexão caindo no meio do gesto solta a carta levantada e devolve a arrastada', () => {
+    const { room, me, otherLabel } = myTurn();
+    const c = conn();
+    const view = camelioView(room, me);
+    const { container, rerender } = render(<CamelioTable view={view} conn={c} status="joined" />);
+    const open = screen.getByLabelText('carta aberta');
+    fireEvent.click(open);
+    expect(open.classList.contains('picked')).toBe(true);
+    rerender(<CamelioTable view={view} conn={c} status="reconnecting" />);
+    expect(open.classList.contains('picked')).toBe(false);
+    fireEvent.click(screen.getByLabelText(otherLabel));
+    rerender(<CamelioTable view={view} conn={c} status="joined" />);
+    fireEvent.pointerDown(open.querySelector('.lift > .card')!, { button: 0, pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(window, { pointerId: 1, buttons: 1, clientX: 130, clientY: 100 });
+    expect(container.querySelector('.drag-clone')).toBeTruthy();
+    rerender(<CamelioTable view={view} conn={c} status="reconnecting" />);
+    expect(container.querySelector('.drag-clone')).toBeNull();
+    expect(open.classList.contains('dragging')).toBe(false);
+    expect(c.sendAction).not.toHaveBeenCalled();
+  });
 });
 
 describe('mesa do Cama-Leão: a virada', () => {

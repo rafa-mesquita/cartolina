@@ -86,7 +86,7 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
       <>
         {reconnecting}
         <Suspense fallback={null}>
-          {view.game.phase === 'lobby' ? <CamelioLobby view={view} conn={conn} /> : <CamelioTable view={view} conn={conn} />}
+          {view.game.phase === 'lobby' ? <CamelioLobby view={view} conn={conn} /> : <CamelioTable view={view} conn={conn} status={snap.status} />}
         </Suspense>
       </>
     );

@@ -1,6 +1,6 @@
 import type { CamelioFrom, CamelioRoomView } from '@cartolina/shared';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { JOIN_ERRORS, type GameConn } from '../../net/connection';
+import { JOIN_ERRORS, type ConnStatus, type GameConn } from '../../net/connection';
 import { colorer, namer, othersAfter } from '../dixit/status';
 import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
@@ -29,6 +29,8 @@ const END_GAP = 12;
 interface Props {
   view: CamelioRoomView;
   conn: GameConn;
+  /** Estado da conexão: fora de `joined` (o "reconectando…") a jogada se perderia, então o gesto fica travado. */
+  status?: ConnStatus;
 }
 
 /** Jogada cuja frase está presa no letreiro. */
@@ -81,7 +83,7 @@ function placeEnd(stage: HTMLElement, el: HTMLElement) {
  * Tudo é desenhado a partir de `shown` (a fila de animação), nunca direto de `view.game`: durante a virada a mesa
  * fica parada na view de antes da jogada.
  */
-export function CamelioTable({ view, conn }: Props) {
+export function CamelioTable({ view, conn, status = 'joined' }: Props) {
   const { shown, anim, done } = usePlayback(view.game);
   const { scale, width } = useStageFit();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -95,10 +97,11 @@ export function CamelioTable({ view, conn }: Props) {
   const myTurn = playing && shown.phase === 'playing' && shown.turn === me;
   const seatOf = (p: string) => view.seats.find((s) => s.id === p);
 
-  // O gesto: só com a mesa parada e a vez sua tanto no que está desenhado quanto no servidor.
+  // O gesto: só conectado, com a mesa parada e a vez sua tanto no que está desenhado quanto no servidor.
   const live = view.game;
+  const online = status === 'joined';
   const canPlay =
-    anim === null && myTurn && !shown.paused && live.phase === 'playing' && !live.paused && live.turn === me && live.match === shown.match;
+    online && anim === null && myTurn && !shown.paused && live.phase === 'playing' && !live.paused && live.turn === me && live.match === shown.match;
   const canReceive = (p: string) => shown.players.includes(p) && seatOf(p)?.connected === true;
   const gesture = useDragPlay({
     stageRef,
@@ -108,8 +111,8 @@ export function CamelioTable({ view, conn }: Props) {
     canReceive,
     onPlay: (from: CamelioFrom, to: string) => conn.sendAction({ type: 'play', from, to }),
     onDenied: () => {
-      // clique durante a virada (ou de quem só assiste): só ignora
-      if (anim || !playing || shown.phase !== 'playing') return;
+      // clique durante a virada, de quem só assiste ou reconectando (o aviso do Game.tsx já está na tela): só ignora
+      if (!online || anim || !playing || shown.phase !== 'playing') return;
       say(shown.paused ? 'Pausado: esperando a galera voltar.' : 'Não é a sua vez.');
     },
   });
