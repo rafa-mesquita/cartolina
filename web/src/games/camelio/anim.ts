@@ -18,7 +18,7 @@ import type { StackLayout } from './layout';
  * `playTurnAnim(root, prev, next, opts)` mostra a jogada `next.last` em cima do DOM de `prev` (a mesa parada) e
  * resolve `done` quando acabou; não muda estado de jogo. Tudo é buscado DENTRO de `root` (o palco, 1440×900 antes
  * da escala): `[data-pile="deck"|"open"] .lift > .card` (origem), `.seat[data-pid]` (dentro de `.cl-mine` = a sua
- * mesa), `.stacks`, `.stack[data-color] > .pile`, `.sum`, `.head .flags .flag[data-color]`, `.fans .fan[data-color]`.
+ * mesa), `.stacks`, `.stack[data-color] > .pile`, `.sum`, `.flags .flag[data-color]`, `.fans .fan[data-color]`.
  * Cria uma camada `.cl-fly` no `root`; esconde e anima elementos reais da mesa e desfaz tudo antes de resolver.
  * Teto de 4 s: se a animação não terminar (aba em segundo plano não faz quadros), encerra e resolve assim mesmo.
  * `stop()` encerra na hora (e `done` resolve). Uma virada nova no mesmo `root` encerra a anterior.
@@ -80,6 +80,8 @@ class Run {
   readonly layer: HTMLDivElement;
   private readonly timers: ReturnType<typeof setTimeout>[] = [];
   private readonly undo: (() => void)[] = [];
+  /** Animações da camada (`go`): canceladas no fim, pra nada seguir rodando num clone já removido. */
+  private readonly anims: Animation[] = [];
 
   constructor(
     readonly root: HTMLElement,
@@ -101,6 +103,7 @@ class Run {
   go(el: Element, frames: Keyframe[], o: KeyframeAnimationOptions): Promise<void> {
     if (typeof el.animate !== 'function') return Promise.resolve();
     const a = el.animate(frames, { fill: 'forwards', ...o });
+    this.anims.push(a);
     return Promise.resolve(a.finished).then(
       () => {},
       () => {},
@@ -139,6 +142,13 @@ class Run {
     if (!this.alive) return;
     this.alive = false;
     this.timers.forEach(clearTimeout);
+    this.anims.forEach((a) => {
+      try {
+        a.cancel();
+      } catch {
+        /* já acabou */
+      }
+    });
     this.layer.remove();
     this.undo.reverse().forEach((f) => {
       try {
@@ -188,7 +198,6 @@ function sequence(prev: CamelioView, next: CamelioView, opts: AnimOptions, run: 
   const card = camelioCard(last.card);
   const app = run.root;
   const layer = run.layer;
-  const scale = opts.scale > 0 ? opts.scale : 1;
   const sound = (n: CamelioSound) => {
     try {
       opts.sound(n);
@@ -197,10 +206,16 @@ function sequence(prev: CamelioView, next: CamelioView, opts: AnimOptions, run: 
     }
   };
 
-  /** Retângulo de `el` em coordenadas do palco (antes da escala que faz o palco caber na janela). */
+  /**
+   * Retângulo de `el` em coordenadas do palco (antes da escala que faz o palco caber na janela).
+   * A escala é medida a cada uso (um resize no meio da virada não erra o destino); `opts.scale` só vale
+   * quando não dá pra medir (jsdom, palco ainda sem tamanho).
+   */
   const box = (el: Element): Box => {
     const a = app.getBoundingClientRect();
     const r = el.getBoundingClientRect();
+    const measured = a.width / (app.offsetWidth || a.width);
+    const scale = Number.isFinite(measured) && measured > 0 ? measured : opts.scale > 0 ? opts.scale : 1;
     return { x: (r.left - a.left) / scale, y: (r.top - a.top) / scale, w: r.width / scale, h: r.height / scale };
   };
   /** Largura de uma carta desenhada (o --w que o cardArt pôs nela). */
@@ -422,7 +437,7 @@ function sequence(prev: CamelioView, next: CamelioView, opts: AnimOptions, run: 
     sound(last.outcome);
     const falling: HTMLElement[] = [ghost];
     if (last.outcome === 'lost' && seat) {
-      const fl = seat.querySelector<HTMLElement>(`.head .flags .flag[data-color="${card.color}"]`);
+      const fl = seat.querySelector<HTMLElement>(`.flags .flag[data-color="${card.color}"]`);
       if (fl) falling.push(pinFlat(fl, run, box));
       const fan = mine ? seat.querySelector<HTMLElement>(`.fans .fan[data-color="${card.color}"]`) : null;
       if (fan) falling.push(pinFlat(fan, run, box));

@@ -44,6 +44,7 @@ const SCORED_MINE = () => turnWith({ table: [20], open: 22, deck: [5, 6] }, 'ope
 const BUST = () => turnWith({ table: [20], open: 23, deck: [5, 6] }, 'open', false);
 /** Do monte (vira), pra uma mesa que já tinha o vermelho pontuado. */
 const LOST = () => turnWith({ table: [20], scored: [22, 18, 19], open: 0, deck: [5, 23] }, 'deck', false);
+const LOST_MINE = () => turnWith({ table: [20], scored: [22, 18, 19], open: 0, deck: [5, 23] }, 'deck', true);
 
 function stacksHtml(cards: CamelioCard[], w: number): string {
   const colors = CAMELIO_COLORS.filter((c) => cards.some((x) => x.color === c));
@@ -56,18 +57,22 @@ function stacksHtml(cards: CamelioCard[], w: number): string {
   return `<div class="stacks">${colors.map(stack).join('')}</div>`;
 }
 
-/** Palco mínimo com a marcação que a mesa gera (monte, aberta, assentos, a sua mesa com o leque). */
-function mountStage(v: CamelioView, you: string): HTMLElement {
+/**
+ * Palco mínimo com a marcação que a mesa gera (monte, aberta, assentos, a sua mesa com o leque).
+ * `mineHead`: classe do cabeçalho da sua mesa (o protótipo usa `.who`, os assentos `.head`).
+ */
+function mountStage(v: CamelioView, you: string, mineHead = 'head'): HTMLElement {
   const root = document.createElement('div');
   root.className = 'camelio';
   const seat = (p: string) => {
     const mine = p === you;
-    const flags = [...new Set((v.scored[p] ?? []).map((c) => c.color))]
-      .map((c) => `<span class="flag" data-color="${c}"></span>`)
-      .join('');
-    const fans = mine ? '<div class="fans"><span class="none">nenhum ponto</span></div>' : '';
+    const colors = [...new Set((v.scored[p] ?? []).map((c) => c.color))];
+    const flags = colors.map((c) => `<span class="flag" data-color="${c}"></span>`).join('');
+    const fanList = colors.map((c) => `<div class="fan" data-color="${c}"></div>`).join('');
+    const fans = mine ? `<div class="fans">${fanList || '<span class="none">nenhum ponto</span>'}</div>` : '';
     const w = mine ? 64 : stackLayout(false, 1).w;
-    return `<div class="seat" data-pid="${p}"><div class="head"><span class="nm">${p}</span><span class="flags">${flags}</span></div>${stacksHtml(
+    const head = mine ? mineHead : 'head';
+    return `<div class="seat" data-pid="${p}"><div class="${head}"><span class="nm">${p}</span><span class="flags">${flags}</span></div>${stacksHtml(
       v.table[p] ?? [],
       w,
     )}${fans}</div>`;
@@ -105,17 +110,19 @@ function expectClean(root: HTMLElement) {
 }
 
 const proto = Element.prototype as unknown as { animate?: unknown };
-let cancels: ReturnType<typeof vi.fn>[] = [];
-const animateNow = () =>
-  vi.fn(() => {
+/** Toda animação pedida: em qual elemento e o `cancel` dela. */
+let anims: { el: Element; cancel: ReturnType<typeof vi.fn> }[] = [];
+const fakeAnimate = (finished: () => Promise<void>) =>
+  vi.fn(function (this: Element) {
     const cancel = vi.fn();
-    cancels.push(cancel);
-    return { finished: Promise.resolve(), cancel, onfinish: null };
+    anims.push({ el: this, cancel });
+    return { finished: finished(), cancel, onfinish: null };
   });
-const animateNever = () => vi.fn(() => ({ finished: new Promise(() => {}), cancel: vi.fn(), onfinish: null }));
+const animateNow = () => fakeAnimate(() => Promise.resolve());
+const animateNever = () => fakeAnimate(() => new Promise(() => {}));
 
 beforeEach(() => {
-  cancels = [];
+  anims = [];
   vi.spyOn(console, 'error');
   proto.animate = animateNow();
 });
@@ -210,7 +217,67 @@ describe('playTurnAnim', () => {
     const root = mountStage(t.prev, t.you);
     await playTurnAnim(root, t.prev, t.next, options(t.you)).done;
     // o "nenhum ponto" da sua mesa apagou durante a subida; a animação dele foi cancelada no fim
-    expect(cancels.some((c) => c.mock.calls.length > 0)).toBe(true);
+    const none = anims.find((a) => a.el.matches('.fans .none'));
+    expect(none?.cancel).toHaveBeenCalled();
+  });
+
+  it('lost na sua mesa sem .head (.who > .flags): a bandeirinha e o leque caem', async () => {
+    const t = LOST_MINE();
+    expect(t.next.last?.outcome).toBe('lost');
+    const root = mountStage(t.prev, t.you, 'who');
+    expect(root.querySelector('.cl-mine .who > .flags > .flag[data-color="vermelho"]')).not.toBeNull();
+    await playTurnAnim(root, t.prev, t.next, options(t.you)).done;
+    const fell = anims.map((a) => a.el).filter((el) => el.closest('.cl-fly'));
+    expect(fell.some((el) => el.matches('.flag[data-color="vermelho"]'))).toBe(true);
+    expect(fell.some((el) => el.matches('.fan[data-color="vermelho"]'))).toBe(true);
+    expectClean(root);
+  });
+
+  it('stop() cancela também as animações da camada', async () => {
+    proto.animate = animateNever();
+    const t = LOST();
+    const root = mountStage(t.prev, t.you);
+    const anim = playTurnAnim(root, t.prev, t.next, options(t.you));
+    await Promise.resolve();
+    expect(anims.length).toBeGreaterThan(0);
+    anim.stop();
+    await anim.done;
+    for (const a of anims) expect(a.cancel).toHaveBeenCalled();
+    expectClean(root);
+  });
+
+  it('mede a escala do palco na hora (0,5): o clone nasce em px do palco', () => {
+    const t = NONE();
+    const root = mountStage(t.prev, t.you);
+    Object.defineProperty(root, 'offsetWidth', { configurable: true, value: 1440 });
+    const src = root.querySelector('[data-pile="open"] .lift > .card')!;
+    const rect = (left: number, top: number, width: number, height: number) =>
+      ({ left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) }) as DOMRect;
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this === root) return rect(10, 20, 720, 450);
+      if (this === src) return rect(110, 70, 46, 66);
+      return rect(10, 20, 0, 0);
+    });
+    // opts.scale errado de propósito: a medida manda
+    const anim = playTurnAnim(root, t.prev, t.next, options(t.you, { scale: 1 }));
+    expect(root.querySelector<HTMLElement>('.cl-fly .fly-card')!.style.transform).toBe('translate(200px,100px)');
+    anim.stop();
+  });
+
+  it('só mexe dentro do root: um palco-isca igual fora dele fica intocado', async () => {
+    const t = LOST();
+    const decoy = mountStage(t.prev, t.you); // primeiro no documento: um querySelector global acharia este
+    const root = mountStage(t.prev, t.you);
+    const anim = playTurnAnim(root, t.prev, t.next, options(t.you));
+    const hiddenIn = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>('*')].filter((x) => x.style.visibility === 'hidden');
+    expect(hiddenIn(root).length).toBeGreaterThan(0);
+    expect(hiddenIn(decoy)).toEqual([]);
+    expect(decoy.querySelector('.cl-fly')).toBeNull();
+    await anim.done;
+    expect(anims.length).toBeGreaterThan(0);
+    expect(anims.filter((a) => decoy.contains(a.el))).toEqual([]);
+    expect(hiddenIn(decoy)).toEqual([]);
+    expectClean(root);
   });
 
   it('uma virada nova no mesmo palco encerra a anterior', async () => {
