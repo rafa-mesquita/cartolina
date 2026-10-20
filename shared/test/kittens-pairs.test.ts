@@ -16,8 +16,12 @@ const hands = (): Record<string, string[]> => ({
 const DRAW = ['cafune-9', 'embaralhar-9', 'pular-9'];
 
 /** p0 joga `action` e a janela de 5 s passa sem Nem vem!. */
-function resolved(action: KittensAction, opts: { draw?: string[]; hands?: Record<string, string[]>; peek?: string[] } = {}): KittensState {
-  const base = table({ hands: opts.hands ?? hands(), draw: opts.draw ?? DRAW });
+function resolved(
+  action: KittensAction,
+  opts: { draw?: string[]; hands?: Record<string, string[]>; peek?: string[]; owed?: number; alive?: string[] } = {},
+): KittensState {
+  const built = table({ hands: opts.hands ?? hands(), draw: opts.draw ?? DRAW, owed: opts.owed });
+  const base = opts.alive ? { ...built, alive: opts.alive } : built;
   const withPeek = opts.peek ? { ...base, peek: { who: 'p0', cards: opts.peek } } : base;
   return settleKittens(act(withPeek, 'p0', action, ctx), at(5000));
 }
@@ -68,6 +72,11 @@ describe('par de Tamanduá: compra 2, tatu vai pro fundo, a vez continua', () =>
 
   it('a espiada some (o topo mudou)', () => {
     expect(resolved(par(['tamandua-0', 'tamandua-1']), { peek: ['pular-9', 'embaralhar-9', 'cafune-9'] }).peek).toBeNull();
+  });
+
+  it('sob ataque (owed 2) o par não gasta turno: a vez e a dívida ficam', () => {
+    const s = resolved(par(['tamandua-0', 'tamandua-1']), { owed: 2 });
+    expect(s).toMatchObject({ current: 'p0', owed: 2 });
   });
 });
 
@@ -129,6 +138,14 @@ describe('par de Capivara: todos menos você passam uma carta pro próximo', () 
     expect(s.hands.p2).toHaveLength(1);
   });
 
+  it('jogador fora da partida é pulado: nada passa de ou pra ele', () => {
+    const s = resolved(par(['capivara-0', 'capivara-1']), { alive: ['p0', 'p2'], hands: { ...hands(), p1: [] } });
+    expect(s.log.filter((e) => e.ev.t === 'passed').map((e) => e.ev)).toEqual([expect.objectContaining({ from: 'p2', to: 'p0' })]);
+    expect(s.hands.p1).toEqual([]);
+    expect(s.hands.p0).toHaveLength(10); // 11 − 2 do par + 1 que recebeu
+    expect(s.hands.p2).toHaveLength(0);
+  });
+
   it('quem não deu nem recebeu não vê a carta', () => {
     const s = resolved(par(['capivara-0', 'capivara-1']));
     const p1p2 = kittensViewFor(s, 'p0').log.find((e) => e.ev.t === 'passed' && e.ev.from === 'p1');
@@ -151,5 +168,46 @@ describe('trio: rouba um Desarme', () => {
     const s = resolved(trio(), { hands: withTrio({ p1: ['pular-5'], p2: [] }) });
     expect(s.hands.p1).toEqual(['pular-5']);
     expect(s.log.at(-1)!.ev).toEqual({ t: 'grabbed', by: 'p0', from: null, card: null });
+  });
+});
+
+describe('par de Quati: a carta de cima fica ou vai pro fundo', () => {
+  const fuca = () => resolved(par(['quati-0', 'quati-1']));
+
+  it('abre a escolha; só quem jogou vê a carta de cima', () => {
+    const s = fuca();
+    expect(s.choice).toEqual({ kind: 'quati', who: 'p0', deadline: T0 + 5000 + KITTENS_CHOICE_MS });
+    expect(kittensViewFor(s, 'p0').choice).toEqual({ ...s.choice, card: 'pular-9' });
+    expect(kittensViewFor(s, 'p1').choice).toEqual({ ...s.choice, card: null });
+    expect(kittensViewFor(s, null).choice).toEqual({ ...s.choice, card: null });
+    expect(JSON.stringify(kittensViewFor(s, 'p1'))).not.toContain('"pular-9"');
+  });
+
+  it('FUNDO: vai pro fundo; todos sabem que foi, ninguém sabe qual', () => {
+    const s = act(fuca(), 'p0', { type: 'choose', keep: false }, at(5000));
+    expect(s.draw).toEqual(['pular-9', 'cafune-9', 'embaralhar-9']);
+    expect(s).toMatchObject({ choice: null, current: 'p0', owed: 1 });
+    expect(s.log.at(-1)).toMatchObject({ ev: { t: 'delayed', by: 'p0', moved: true }, seenBy: null });
+  });
+
+  it('FICA: nada muda no monte', () => {
+    const s = act(fuca(), 'p0', { type: 'choose', keep: true }, at(5000));
+    expect(s.draw).toEqual(DRAW);
+    expect(s.log.at(-1)!.ev).toEqual({ t: 'delayed', by: 'p0', moved: false });
+  });
+
+  it('sem resposta, a carta fica; só quem jogou escolhe', () => {
+    expect(refuse(fuca(), 'p0', { type: 'choose' }, at(5000))).toBe('bad_choice');
+    expect(refuse(fuca(), 'p1', { type: 'choose', keep: false }, at(5000))).toBe('not_your_choice');
+    const late = settleKittens(fuca(), at(5000 + KITTENS_CHOICE_MS));
+    expect(late.draw).toEqual(DRAW);
+    expect(late.choice).toBeNull();
+    expect(late.log.at(-1)!.ev).toEqual({ t: 'delayed', by: 'p0', moved: false });
+  });
+
+  it('mandar pro fundo apaga a espiada', () => {
+    const s = resolved(par(['quati-0', 'quati-1']), { peek: ['pular-9', 'embaralhar-9', 'cafune-9'] });
+    expect(act(s, 'p0', { type: 'choose', keep: false }, at(5000)).peek).toBeNull();
+    expect(act(s, 'p0', { type: 'choose', keep: true }, at(5000)).peek).not.toBeNull();
   });
 });

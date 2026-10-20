@@ -1,6 +1,6 @@
 import type { ActionResult, GameContext } from '../../game';
 import { kittensKindOf } from './cards';
-import { giveFavor, hideTatu, pickFromDiscard } from './choices';
+import { delayTop, giveFavor, hideTatu, pickFromDiscard } from './choices';
 import { kittensDeal } from './deck';
 import { parsePlay } from './play';
 import { settleKittens } from './settle';
@@ -119,8 +119,9 @@ export function applyKittensAction(
             return fail('bad_choice');
           }
           return ok(pickFromDiscard(s, c, action.card));
-        default:
-          return fail('bad_choice');
+        case 'quati':
+          if (action.keep === undefined) return fail('bad_choice');
+          return ok(delayTop(s, c, action.keep));
       }
     }
     case 'play': {

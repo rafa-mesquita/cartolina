@@ -28,7 +28,13 @@ export function pickFromDiscard(s: KittensState, c: Choice<'cinco'>, card: strin
   return logged({ ...s, discard: s.discard.filter((x) => x !== card), hands, choice: null }, { t: 'picked', by: c.who, card });
 }
 
-/** Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso. */
+/** Par de Quati: a carta de cima fica (`keep`) ou vai pro fundo. Todos sabem se foi, ninguém sabe qual. */
+export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): KittensState {
+  const draw = keep ? s.draw : [s.draw.at(-1)!, ...s.draw.slice(0, -1)];
+  return logged({ ...s, draw, choice: null, peek: keep ? s.peek : null }, { t: 'delayed', by: c.who, moved: !keep });
+}
+
+/** Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica). */
 export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
   const c = s.choice!;
   switch (c.kind) {
@@ -42,7 +48,8 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
       const options = c.options.filter((x) => s.discard.includes(x));
       return options.length === 0 ? { ...s, choice: null } : pickFromDiscard(s, c, options[randomInt(rng, options.length)]!);
     }
-    default:
-      return { ...s, choice: null };
+    case 'quati':
+      // Sem resposta, a carta fica onde está (nada muda pra ninguém).
+      return delayTop(s, c, true);
   }
 }
