@@ -39,7 +39,7 @@ export function refuse(state: KittensState, playerId: string, action: KittensAct
   return res.error;
 }
 
-/** Partida começada com `n` jogadores (p0…), vez de p0. */
+/** Partida começada com `n` jogadores (p0…); quem começa é sorteado pela semente. */
 export function started(n: number, seed = 1): { state: KittensState; ctx: GameContext } {
   const ctx = ctxOf(ids(n), { seed });
   return { state: act(initialKittensState(), 'p0', { type: 'start' }, ctx), ctx };

@@ -6,7 +6,7 @@ import {
   mulberry32,
   roomAction,
   roomView,
-  type KittensRoomView,
+  type KittensRoomView, type KittensState,
   type Room,
 } from '@cartolina/shared';
 import { act, render } from '@testing-library/react';
@@ -59,7 +59,8 @@ function started(n = 3): Room {
   }
   const res = roomAction(room, 'p0', { type: 'start' }, mulberry32(7), 0);
   if (!res.ok) throw new Error(res.error);
-  return res.room;
+  // Quem começa é sorteado; os testes fixam a vez no p0 (host).
+  return { ...res.room, game: { ...(res.room.game as KittensState), current: 'p0' } };
 }
 
 function viewOf(room: Room, me: string): KittensRoomView {
