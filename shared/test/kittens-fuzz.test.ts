@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../src/game';
-import { KITTENS_CARD_KINDS, kittensCardId, kittensKindOf } from '../src/games/kittens/cards';
+import { KITTENS_BICHOS, kittensCardId, kittensKindOf } from '../src/games/kittens/cards';
 import { KITTENS_EXTRA_CAFUNES, kittensBaseDeck } from '../src/games/kittens/deck';
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import { settleKittens } from '../src/games/kittens/settle';
@@ -71,7 +71,7 @@ function cardsToPlay(r: Rng, hand: string[]): string[] {
   for (const c of hand) byKind.set(kittensKindOf(c)!, [...(byKind.get(kittensKindOf(c)!) ?? []), c]);
   const groups = [...byKind.values()];
   const mode = r();
-  const pairs = groups.filter((g) => g.length >= 2);
+  const pairs = groups.filter((g) => g.length >= 2 && (KITTENS_BICHOS as readonly string[]).includes(kittensKindOf(g[0]!)!));
   const trios = groups.filter((g) => g.length >= 3);
   if (mode < 0.3 && pairs.length > 0) return pick(r, pairs)!.slice(0, 2);
   if (mode < 0.45 && trios.length > 0) return pick(r, trios)!.slice(0, 3);
@@ -92,7 +92,7 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const a = r();
   if (s.pending && a < 0.5) return { type: 'nope' };
   if (a < 0.45 && hand.length > 0) {
-    return { type: 'play', cards: cardsToPlay(r, hand), target: pick(r, s.players), ask: pick(r, KITTENS_CARD_KINDS) };
+    return { type: 'play', cards: cardsToPlay(r, hand), target: pick(r, s.players), ask: pick(r, KITTENS_BICHOS) };
   }
   return { type: 'draw' };
 }
