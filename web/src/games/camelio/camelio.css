@@ -244,3 +244,10 @@
 .camelio .cl-toast{position:absolute;left:50%;top:590px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--red-dark);color:var(--cream);
   font:600 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow)}
 .camelio .cl-toast.on{opacity:1}
+
+/* ---------- o gesto: acertos ---------- */
+/* o `.card` global do ITO (table/table.css) põe margin negativa em toda carta: aqui ela fica no lugar
+   (as pilhas seguem com o margin-top próprio, que é mais específico) */
+.camelio .card{margin:0}
+/* carta levantada com o mouse em cima continua levantada (no protótipo o :hover não ganhava do .picked) */
+.camelio [data-pile].picked:hover .lift{transform:translateY(-14px)}

@@ -15,7 +15,7 @@ const ptsTxt = (n: number) => `${n} ${n === 1 ? 'ponto' : 'pontos'}`;
 /** Bandeirinha de uma cor pontuada. */
 export function Flag({ color }: { color: CamelioColor }) {
   const style: Vars = { '--c': HEX[color] };
-  return <span className="flag" data-color={color} style={style} title={`pontuou o ${color}`} aria-label={`pontuou o ${color}`} />;
+  return <span className="flag" data-color={color} style={style} role="img" title={`pontuou o ${color}`} aria-label={`pontuou o ${color}`} />;
 }
 
 /** Área de jogo: uma pilha por cor (na ordem de CAMELIO_COLORS), com a soma embaixo. */
@@ -103,10 +103,14 @@ interface Props {
   off?: boolean;
   /** Posição no arco (só nos assentos dos outros). */
   style?: CSSProperties;
+  /** Pode receber a carta levantada/arrastada (contorno tracejado). */
+  target?: boolean;
+  /** É a mesa sob o ponteiro (contorno cheio). */
+  hover?: boolean;
 }
 
 /** Um assento: cabeçalho (personagem, nome, bandeirinhas) e pilhas; na sua mesa, também a área de pontos. */
-export function Seat({ pid, v, name, color, mine = false, off = false, style }: Props) {
+export function Seat({ pid, v, name, color, mine = false, off = false, style, target = false, hover = false }: Props) {
   const table = v.table[pid] ?? [];
   const scored = v.scored[pid] ?? [];
   const done = scoredColors(scored);
@@ -114,6 +118,7 @@ export function Seat({ pid, v, name, color, mine = false, off = false, style }: 
   if (mine) cls += ' me';
   if (v.phase === 'playing' && v.turn === pid) cls += ' turn';
   if (off) cls += ' off';
+  if (target) cls += hover ? ' target hover' : ' target';
   const flags = off ? <span className="gone">caiu</span> : done.map((c) => <Flag key={c} color={c} />);
   if (mine) {
     return (

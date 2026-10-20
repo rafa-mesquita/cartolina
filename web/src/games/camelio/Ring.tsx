@@ -1,18 +1,30 @@
-import type { CamelioView } from '@cartolina/shared';
+import type { CamelioFrom, CamelioView } from '@cartolina/shared';
 import { CardBack, CardFront } from './Card';
 
 /** Largura das cartas do picadeiro. */
 const RING_W = 92;
 
-/**
- * O picadeiro: monte (só o verso do topo, com até 2 cartas por baixo) à esquerda, a aberta à direita.
- * `can`: é a sua vez de jogar (as cartas ganham o contorno dourado).
- */
-export function Ring({ v, can }: { v: CamelioView; can: boolean }) {
+interface Props {
+  v: CamelioView;
+  /** É a sua vez de jogar (as cartas ganham o contorno dourado). */
+  can: boolean;
+  /** Carta levantada pelo clique. */
+  picked?: CamelioFrom | null;
+  /** Carta apagada enquanto o clone do arrasto viaja, volta ou espera o servidor. */
+  dimmed?: CamelioFrom | null;
+}
+
+const pileClass = (from: CamelioFrom, has: boolean, { can, picked, dimmed }: Omit<Props, 'v'>): string | undefined => {
+  const cls = [can && has ? 'can' : '', picked === from ? 'picked' : '', dimmed === from ? 'dragging' : ''].filter(Boolean).join(' ');
+  return cls || undefined;
+};
+
+/** O picadeiro: monte (só o verso do topo, com até 2 cartas por baixo) à esquerda, a aberta à direita. */
+export function Ring({ v, ...state }: Props) {
   const unders = Math.min(2, Math.max(0, v.deckCount - 1));
   return (
     <div className="cl-ring">
-      <div className={can && v.top ? 'can' : undefined} data-pile="deck" role="group" aria-label="monte">
+      <div className={pileClass('deck', !!v.top, state)} data-pile="deck" role="group" aria-label="monte">
         <div className="slot">
           {Array.from({ length: unders }, (_, i) => {
             const d = (unders - i) * 2;
@@ -30,7 +42,7 @@ export function Ring({ v, can }: { v: CamelioView; can: boolean }) {
           monte · <b>{v.deckCount}</b>
         </span>
       </div>
-      <div className={can && v.open ? 'can' : undefined} data-pile="open" role="group" aria-label="carta aberta">
+      <div className={pileClass('open', !!v.open, state)} data-pile="open" role="group" aria-label="carta aberta">
         <div className="slot">
           {v.open ? (
             <div className="lift">

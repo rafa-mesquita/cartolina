@@ -49,8 +49,11 @@ export function winnersTxt(v: CamelioView, me: string | null, name: (id: string)
 /** Por que acabou: o mesmo texto no letreiro e no cartaz. */
 export const endWhy = (v: CamelioView): string => (v.endReason === 'target' ? `chegou a ${v.target} cores` : 'o monte acabou');
 
-/** O letreiro fora da frase da jogada: fim, pausa, a sua vez (a dica) ou de quem é a vez. */
-export function hintLine(v: CamelioView, me: string | null, name: (id: string) => string): Line {
+/** O gesto em curso na sua vez: carta levantada pelo clique ou arrastada. */
+export type Gesture = 'picked' | 'dragging' | null;
+
+/** O letreiro fora da frase da jogada: fim, pausa, a sua vez (a dica, que acompanha o gesto) ou de quem é a vez. */
+export function hintLine(v: CamelioView, me: string | null, name: (id: string) => string, gesture: Gesture = null): Line {
   if (v.phase === 'over') {
     const w = v.winners.map(name);
     if (v.endReason === 'target') return ['fim: ', { b: `${w[0] ?? ''} ganhou!` }, ` ${endWhy(v)}`];
@@ -61,6 +64,8 @@ export function hintLine(v: CamelioView, me: string | null, name: (id: string) =
   if (v.paused) return ['pausado: esperando a galera voltar'];
   if (!v.turn) return ['preparando a partida…'];
   if (me !== null && v.turn === me) {
+    if (gesture === 'dragging') return ['solte na mesa de alguém (a sua também vale) · ', { b: 'Esc' }, ' desfaz'];
+    if (gesture === 'picked') return ['agora clique na mesa de alguém (a sua também vale) · ', { b: 'Esc' }, ' desfaz'];
     return [{ b: 'sua vez:' }, ' arraste uma carta até a mesa de alguém (ou clique nela e depois na mesa)'];
   }
   return ['vez de ', { b: name(v.turn) }];
