@@ -31,6 +31,15 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.hasHistory).toBe(false);
   });
 
+  it('Tatubum (o Exploding Kittens) aparece na estante e dá pra jogar', () => {
+    const entry = catalogEntry('kittens');
+    expect(entry?.name).toBe('Tatubum');
+    expect(entry?.players).toBe('2 a 8 pessoas');
+    expect(entry?.playable).toBe(true);
+    expect(entry?.hasHistory).toBe(false);
+    expect(entry?.mobile).toBe(false);
+  });
+
   it('DITU funciona no celular; Diquisti e Retratim ainda não', () => {
     expect(catalogEntry('ito')?.mobile).toBe(true);
     expect(catalogEntry('dixit')?.mobile).toBe(false);

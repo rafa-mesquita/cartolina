@@ -84,6 +84,18 @@ export const ERROR_CODES = [
   'already_ready',
   'own_work',
   'no_work',
+  'not_alive',
+  'card_in_air',
+  'waiting_choice',
+  'not_your_turn',
+  'not_in_hand',
+  'bad_combo',
+  'bad_target',
+  'bad_ask',
+  'nothing_to_nope',
+  'no_nope',
+  'not_your_choice',
+  'bad_choice',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -124,6 +136,18 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   already_ready: 'Você já está pronto. Desmarque pra mexer.',
   own_work: 'Não dá pra palpitar na própria obra.',
   no_work: 'Essa pessoa não tem obra nesta rodada.',
+  not_alive: 'Você só está assistindo esta partida.',
+  card_in_air: 'Espera a carta no ar resolver.',
+  waiting_choice: 'Esperando uma escolha.',
+  not_your_turn: 'Não é a sua vez.',
+  not_in_hand: 'Essa carta não está na sua mão.',
+  bad_combo: 'Essas cartas não formam jogada.',
+  bad_target: 'Escolha um adversário vivo com carta na mão.',
+  bad_ask: 'Escolha qual bicho puxar.',
+  nothing_to_nope: 'Não tem carta no ar pra usar o Nem vem!',
+  no_nope: 'Você não tem nenhum Nem vem!',
+  not_your_choice: 'Essa escolha não é sua.',
+  bad_choice: 'Escolha inválida.',
 };
 
 export function errorMessage(code: string): string {

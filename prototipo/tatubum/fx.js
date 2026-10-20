@@ -1,0 +1,223 @@
+'use strict';
+/*
+ * Efeitos do Tatubum (spec §5.5): voo de carta, carimbo, tremor, flash, texto que pula e partículas em pixel.
+ * Tudo em coordenadas do palco (1440×900). Com prefers-reduced-motion: sem tremor, flash nem partículas; voos instantâneos.
+ */
+(function () {
+  const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PX = 4; // tamanho do "pixel" das partículas no palco
+  let stage = null;
+  let layer = null;
+  let canvas = null;
+  let g = null;
+  let scaleOf = () => 1;
+  const parts = [];
+  let raf = 0;
+
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /** Centro e tamanho de um elemento, em coordenadas do palco. */
+  function box(el) {
+    const s = scaleOf();
+    const r = el.getBoundingClientRect();
+    const st = stage.getBoundingClientRect();
+    return { x: (r.left - st.left) / s + r.width / s / 2, y: (r.top - st.top) / s + r.height / s / 2, w: r.width / s, h: r.height / s };
+  }
+  const pointOf = (p) => (p instanceof Element ? box(p) : p);
+
+  function tick() {
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.life -= 1;
+      if (p.life <= 0) { parts.splice(i, 1); continue; }
+      p.vx *= p.drag; p.vy = p.vy * p.drag + p.grav;
+      p.x += p.vx; p.y += p.vy;
+      g.fillStyle = p.color;
+      const sz = p.size * (p.shrink ? Math.max(0.3, p.life / p.max) : 1);
+      g.fillRect(Math.round(p.x / PX), Math.round(p.y / PX), Math.max(1, Math.round(sz)), Math.max(1, Math.round(sz)));
+    }
+    raf = parts.length ? requestAnimationFrame(tick) : 0;
+  }
+
+  function spawn(list) {
+    if (REDUCED) return;
+    parts.push(...list);
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+
+  function burst(at, { colors, count = 24, speed = 6, grav = 0.25, drag = 0.96, life = 40, size = 1, spread = Math.PI * 2, dir = -Math.PI / 2, shrink = true }) {
+    const c = pointOf(at);
+    spawn(Array.from({ length: count }, () => {
+      const a = dir + (Math.random() - 0.5) * spread;
+      const v = speed * (0.4 + Math.random() * 0.8);
+      const l = life * (0.6 + Math.random() * 0.6);
+      return { x: c.x, y: c.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, grav, drag, life: l, max: l, size, shrink, color: colors[Math.floor(Math.random() * colors.length)] };
+    }));
+  }
+
+  /**
+   * Anima e espera terminar. Com a aba escondida o navegador congela as animações (e o `finished` nunca chega),
+   * então ali a animação é instantânea, e sempre há um tempo-limite pra fila de efeitos nunca travar.
+   */
+  function animate(el, frames, opts) {
+    if (REDUCED || document.hidden) opts = { ...opts, duration: 1 };
+    const a = el.animate(frames, { fill: 'forwards', ...opts });
+    return Promise.race([a.finished.catch(() => {}), wait((opts.duration ?? 0) + 150)]);
+  }
+
+  window.Fx = {
+    REDUCED,
+    wait,
+    box,
+    init(stageEl, layerEl, particleCanvas, getScale) {
+      stage = stageEl;
+      layer = layerEl;
+      canvas = particleCanvas;
+      canvas.width = 1440 / PX;
+      canvas.height = 900 / PX;
+      g = canvas.getContext('2d');
+      scaleOf = getScale;
+    },
+
+    /**
+     * Carta voando de `from` pra `to` (elementos ou pontos do palco). `node` é o elemento que voa (carta ou verso);
+     * `flipTo` (opcional) troca o conteúdo no meio do voo, virando a carta.
+     */
+    async fly({ node, from, to, dur = 520, rot = 0, scaleFrom = 1, scaleTo = 1, flipTo = null, trail = null }) {
+      const a = pointOf(from), b = pointOf(to);
+      node.classList.add('flying');
+      layer.appendChild(node);
+      const tf = (p, r, s, sx = 1) => `translate(${p.x}px, ${p.y}px) translate(-50%, -50%) rotate(${r}deg) scale(${s * sx}, ${s})`;
+      const mid = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 40 };
+      const steps = 'steps(16, end)';
+      if (trail) {
+        const iv = setInterval(() => {
+          const c = box(node);
+          spawn([{ x: c.x, y: c.y, vx: 0, vy: 0, grav: 0, drag: 1, life: 14, max: 14, size: 2, shrink: true, color: trail }]);
+        }, 30);
+        setTimeout(() => clearInterval(iv), dur);
+      }
+      if (flipTo) {
+        await animate(node, [{ transform: tf(a, 0, scaleFrom) }, { transform: tf(mid, rot / 2, (scaleFrom + scaleTo) / 2, 0.02) }], { duration: dur / 2, easing: steps });
+        node.replaceChildren(...flipTo.childNodes);
+        node.className = flipTo.className + ' flying';
+        await animate(node, [{ transform: tf(mid, rot / 2, (scaleFrom + scaleTo) / 2, 0.02) }, { transform: tf(b, rot, scaleTo) }], { duration: dur / 2, easing: steps });
+      } else {
+        await animate(node, [{ transform: tf(a, 0, scaleFrom) }, { transform: tf(mid, rot / 2, (scaleFrom + scaleTo) / 2) }, { transform: tf(b, rot, scaleTo) }], { duration: dur, easing: steps });
+      }
+      node.remove();
+    },
+
+    /** Carimbo por cima de `el` (Nem vem!): cai grande, bate e fica. */
+    async stamp(el, text, color = '#e4572e') {
+      const c = box(el);
+      const s = document.createElement('div');
+      s.className = 'stamp';
+      s.textContent = text;
+      s.style.color = color;
+      s.style.left = c.x + 'px';
+      s.style.top = c.y + 'px';
+      layer.appendChild(s);
+      await animate(s, [{ transform: 'translate(-50%,-50%) rotate(-14deg) scale(2.6)', opacity: 0 }, { transform: 'translate(-50%,-50%) rotate(-10deg) scale(1)', opacity: 1 }], { duration: 220, easing: 'steps(5, end)' });
+      this.shake(160, 5);
+      burst(c, { colors: [color, '#fff3e0'], count: 14, speed: 5, grav: 0.1, life: 18 });
+      await wait(650);
+      await animate(s, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'steps(4, end)' });
+      s.remove();
+    },
+
+    /** Texto grande que pula (BUM!, UFA!, VENCEU!). */
+    async pop(text, at, { color = '#f2c14e', size = 120, hold = 900 } = {}) {
+      const c = pointOf(at);
+      const t = document.createElement('div');
+      t.className = 'pop';
+      t.textContent = text;
+      t.style.color = color;
+      t.style.fontSize = size + 'px';
+      t.style.left = c.x + 'px';
+      t.style.top = c.y + 'px';
+      layer.appendChild(t);
+      await animate(t, [{ transform: 'translate(-50%,-50%) scale(0.2) rotate(-8deg)' }, { transform: 'translate(-50%,-50%) scale(1.25) rotate(-6deg)' }, { transform: 'translate(-50%,-50%) scale(1) rotate(-6deg)' }], { duration: 300, easing: 'steps(6, end)' });
+      await wait(hold);
+      await animate(t, [{ opacity: 1 }, { opacity: 0 }], { duration: 250, easing: 'steps(5, end)' });
+      t.remove();
+    },
+
+    /** Um sprite que pula e some (ex.: o olho do Espiar em cima do monte). */
+    async icon(url, at, { size = 96, hold = 700 } = {}) {
+      const c = pointOf(at);
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'pop';
+      img.style.width = size + 'px';
+      img.style.left = c.x + 'px';
+      img.style.top = c.y + 'px';
+      layer.appendChild(img);
+      await animate(img, [{ transform: 'translate(-50%,-50%) scale(0.2)' }, { transform: 'translate(-50%,-50%) scale(1.2)' }, { transform: 'translate(-50%,-50%) scale(1)' }], { duration: 260, easing: 'steps(5, end)' });
+      await animate(img, [{ transform: 'translate(-50%,-50%) scaleY(1)' }, { transform: 'translate(-50%,-50%) scaleY(0.1)' }, { transform: 'translate(-50%,-50%) scaleY(1)' }], { duration: 240, easing: 'steps(4, end)' });
+      await wait(hold);
+      await animate(img, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'steps(4, end)' });
+      img.remove();
+    },
+
+    /** Um X vermelho em cima de `el` (jogada cancelada). */
+    async cross(el) {
+      const c = box(el);
+      const x = document.createElement('div');
+      x.className = 'cross';
+      x.style.left = c.x + 'px';
+      x.style.top = c.y + 'px';
+      layer.appendChild(x);
+      await animate(x, [{ transform: 'translate(-50%,-50%) scale(2)', opacity: 0 }, { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 }], { duration: 180, easing: 'steps(4, end)' });
+      await wait(450);
+      x.remove();
+    },
+
+    shake(ms = 300, px = 8) {
+      if (REDUCED) return;
+      stage.animate(
+        Array.from({ length: 8 }, (_, i) => ({ translate: i === 7 ? '0 0' : `${(Math.random() - 0.5) * 2 * px}px ${(Math.random() - 0.5) * 2 * px}px` })),
+        { duration: ms, easing: 'steps(8, end)' },
+      );
+    },
+
+    flash(color = '#ffffff', ms = 160) {
+      if (REDUCED) return;
+      const f = document.createElement('div');
+      f.className = 'flash';
+      f.style.background = color;
+      layer.appendChild(f);
+      animate(f, [{ opacity: 0.85 }, { opacity: 0 }], { duration: ms, easing: 'steps(4, end)' }).then(() => f.remove());
+    },
+
+    /** Golpe de espada (Ataque): um risco diagonal de pixels. */
+    slash(at) {
+      const c = pointOf(at);
+      if (REDUCED) return;
+      const list = [];
+      for (let i = 0; i < 26; i++) {
+        list.push({ x: c.x - 90 + i * 7, y: c.y - 70 + i * 5.5, vx: 0.4, vy: 0.3, grav: 0, drag: 1, life: 10 + i * 0.6, max: 26, size: 3, shrink: true, color: i % 3 ? '#d9e2ec' : '#ffffff' });
+      }
+      spawn(list);
+    },
+
+    sparks(at) { burst(at, { colors: ['#f2c14e', '#fff3c4', '#e4572e'], count: 10, speed: 4, grav: 0.18, life: 22, dir: -Math.PI / 2, spread: 1.6 }); },
+    hearts(at) { burst(at, { colors: ['#ff8fab', '#e0567a', '#ffe1ea'], count: 26, speed: 4, grav: -0.05, drag: 0.97, life: 55, size: 2, dir: -Math.PI / 2, spread: 2.2 }); },
+    glitter(at, color = '#7fd8d8') { burst(at, { colors: [color, '#ffffff'], count: 18, speed: 3, grav: -0.02, life: 30, size: 1 }); },
+    boom(at) {
+      burst(at, { colors: ['#e4572e', '#f2c14e', '#fff3c4', '#2b1a10', '#a0703f'], count: 90, speed: 12, grav: 0.3, drag: 0.94, life: 60, size: 3 });
+      burst(at, { colors: ['#3b3b4f', '#5a5a70'], count: 30, speed: 4, grav: -0.08, drag: 0.95, life: 80, size: 4 });
+    },
+    fireworks(at) {
+      const c = pointOf(at);
+      const palette = [['#f2c14e', '#fff3c4'], ['#e4572e', '#ffb199'], ['#7fd8d8', '#ffffff'], ['#ff8fab', '#ffe1ea'], ['#9ee37d', '#ffffff']];
+      for (let i = 0; i < 7; i++) {
+        setTimeout(() => {
+          burst({ x: c.x + (Math.random() - 0.5) * 520, y: c.y - 60 - Math.random() * 220 }, { colors: palette[i % palette.length], count: 46, speed: 7, grav: 0.12, drag: 0.95, life: 50, size: 2 });
+          window.Sound?.play('tic');
+        }, i * 260);
+      }
+    },
+  };
+})();

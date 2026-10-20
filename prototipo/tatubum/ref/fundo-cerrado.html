@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tatubum · fundo de noite no cerrado (referência aprovada em 2026-10-19)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+  body { margin: 0; background: #0e0e1c; }
+  #wrap { position: relative; width: 100vw; aspect-ratio: 16 / 9; overflow: hidden; }
+  #bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  .btn { position: relative; display: block; margin: 0 auto 12px; width: 220px; height: 46px; background: #1a0f1f; clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); cursor: pointer; border: none; padding: 0; }
+  .btn span { position: absolute; inset: 4px; background: #e0605a; clip-path: polygon(11px 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 11px 100%, 0 50%); display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', monospace; font-size: 14px; color: #fff3e0; text-shadow: 2px 2px 0 #8c2f2f; box-shadow: inset 0 4px 0 #f08a80, inset 0 -5px 0 #b8423e; }
+  .btn:hover span { background: #ea736c; }
+  #menu { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-38%); }
+  #logo { position: absolute; left: 0; right: 0; top: 9%; text-align: center; font-family: 'Press Start 2P', monospace; font-size: 30px; color: #f2c14e; text-shadow: 3px 0 0 #3b2412, -3px 0 0 #3b2412, 0 3px 0 #3b2412, 0 -3px 0 #3b2412, 5px 5px 0 #0e0e1c; }
+  #re { position: fixed; right: 12px; bottom: 12px; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="bg" width="320" height="180"></canvas>
+  <div id="logo">TATUBUM</div>
+  <div id="menu">
+    <button class="btn"><span>CRIAR SALA</span></button>
+    <button class="btn"><span>ENTRAR</span></button>
+    <button class="btn"><span>COMO JOGAR</span></button>
+  </div>
+</div>
+<button id="re">sortear outro cerrado</button>
+<script>
+// Mockup aprovado: fundo desenhado pixel a pixel num canvas 320×180 (ampliado sem suavizar).
+const cv = document.getElementById('bg'), g = cv.getContext('2d'), W = 320, H = 180;
+const B = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]; // Bayer 4×4
+let seed = 7;
+function R() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+function px(x, y, c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); }
+function band(y0, y1, c1, c2) { for (let y = y0; y < y1; y++) { const f = (y - y0) / (y1 - y0); for (let x = 0; x < W; x++) px(x, y, B[y % 4][x % 4] / 16 < f ? c2 : c1); } }
+function cloud(cx, cy, w) { const cols = ['#7fb2e6', '#5a8fd0', '#3f6fb0']; for (let i = 0; i < w; i++) { const h = Math.round(3 + Math.sin(i / w * Math.PI) * 4 + (R() < .3 ? 1 : 0)); for (let j = 0; j < h; j++) px(cx + i, cy - j, j === 0 ? cols[2] : j < 2 ? cols[1] : cols[0]); } }
+function tree(x, base, h, col, cw) {
+  let tx = x;
+  for (let y = 0; y < h; y++) {
+    if (R() < .35) tx += R() < .5 ? -1 : 1;
+    px(tx, base - y, col);
+    if (y > h * .5 && R() < .25) { const d = R() < .5 ? -1 : 1; for (let k = 1; k < 4; k++) px(tx + d * k, base - y - k, col); }
+  }
+  const top = base - h;
+  for (let r = 0; r < 4; r++) { const half = Math.round(cw / 2 - (r === 0 ? 2 : r === 3 ? 1 : 0) - R() * 2); for (let i = -half; i <= half; i++) if (R() < .92) px(tx + i, top - r + 1, col); }
+}
+function mound(x, base, h, col) { for (let y = 0; y < h; y++) { const half = Math.max(1, Math.round((h - y) / h * 5)); for (let i = -half; i <= half; i++) px(x + i, base - y, col); } }
+function grass(y0, col, n) { for (let i = 0; i < n; i++) { const x = Math.floor(R() * W), h = 1 + Math.floor(R() * 4); for (let j = 0; j < h; j++) px(x + (j > 1 && R() < .5 ? 1 : 0), y0 - j, col); } }
+function draw() {
+  g.clearRect(0, 0, W, H);
+  band(0, 40, '#0f1030', '#17204a'); band(40, 80, '#17204a', '#1f3a6b'); band(80, 112, '#1f3a6b', '#2c5a8c');
+  for (let i = 0; i < 70; i++) { const x = Math.floor(R() * W), y = Math.floor(R() * 95); px(x, y, R() < .2 ? '#ffffff' : '#9fb8e8'); if (R() < .08) { px(x - 1, y, '#9fb8e8'); px(x + 1, y, '#9fb8e8'); px(x, y - 1, '#9fb8e8'); px(x, y + 1, '#9fb8e8'); } }
+  const mx = 250, my = 28;
+  for (let y = -9; y <= 9; y++) for (let x = -9; x <= 9; x++) { const d = x * x + y * y; if (d <= 81) px(mx + x, my + y, d > 64 ? '#e8d9a0' : (x + 3) * (x + 3) + (y - 2) * (y - 2) < 6 ? '#d9c88a' : '#fff1c2'); }
+  cloud(30, 30, 46); cloud(150, 22, 34); cloud(196, 58, 40); cloud(60, 70, 28);
+  band(112, 180, '#1a2f5a', '#1a2f5a');
+  for (let x = 0; x < W; x++) { const hgt = Math.round(4 + Math.sin(x / 37) * 3 + Math.sin(x / 11) * 1.5); for (let y = 0; y < hgt; y++) px(x, 112 - y, '#1a2f5a'); }
+  for (let i = 0; i < 14; i++) tree(Math.floor(R() * W), 112, 10 + Math.floor(R() * 8), '#223a68', 12 + Math.floor(R() * 8));
+  band(128, 180, '#141f42', '#141f42');
+  for (let x = 0; x < W; x++) { const hgt = Math.round(3 + Math.sin(x / 23 + 1) * 2); for (let y = 0; y < hgt; y++) px(x, 128 - y, '#141f42'); }
+  for (let i = 0; i < 9; i++) tree(Math.floor(R() * W), 130, 18 + Math.floor(R() * 12), '#0f1733', 16 + Math.floor(R() * 10));
+  mound(40, 150, 14, '#0f1733'); mound(268, 152, 10, '#0f1733');
+  band(150, 180, '#0b1028', '#090c1e');
+  for (let x = 0; x < W; x++) if (R() < .5) px(x, 149, '#0b1028');
+  grass(152, '#132048', 120); grass(170, '#0f1a3c', 90);
+  for (let i = 0; i < 14; i++) { const x = Math.floor(R() * W), y = 118 + Math.floor(R() * 55); px(x, y, '#f6e27a'); if (R() < .5) px(x + 1, y, '#bfae4a'); }
+}
+draw();
+document.getElementById('re').onclick = () => { seed = Math.floor(Math.random() * 1e9); draw(); };
+</script>
+</body>
+</html>

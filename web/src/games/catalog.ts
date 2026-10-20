@@ -17,7 +17,8 @@ export interface CatalogEntry {
   mobile?: boolean;
 }
 
-// Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti e o Pictures como Retratim; os ids internos não mudam.
+// Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti, o Pictures como Retratim e o Exploding Kittens como
+// Tatubum; os ids internos não mudam.
 const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> = {
   ito: {
     name: 'DITU',
@@ -50,6 +51,18 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Cada rodada você recebe um kit diferente (cubos, cadarços, palitos e pedras, blocos, símbolos ou pontos e linhas) e remonta a foto do jeito que der.',
       'Depois, todo mundo palpita qual foto cada um montou: +1 por acerto, e +1 pro artista por cada um que acertou a dele.',
       '6 rodadas: cada um usa cada kit uma vez.',
+    ],
+    playable: true,
+    mobile: false,
+  },
+  kittens: {
+    name: 'Tatubum',
+    tagline: 'compre do monte e torça pra não vir o tatu',
+    rules: [
+      'Todo mundo compra do mesmo monte, e lá dentro tem tatus-bola com o pavio aceso.',
+      'Comprou o Tatubum sem ter Desarme? Explodiu, tá fora. Com Desarme, você esconde o tatu de volta onde quiser.',
+      'Na sua vez, jogue quantas cartas quiser (Ataque, Pular, Espiar, Favor…) e termine comprando. Nem vem! cancela qualquer jogada.',
+      'Quem sobrar vivo vence.',
     ],
     playable: true,
     mobile: false,
