@@ -10,7 +10,7 @@ const s = {
     draw: ['pular-0', 'tatubum-0', 'espiar-0'],
     discard: ['ataque-0'],
   }),
-  peek: { who: 'p0', cards: ['espiar-0', 'tatubum-0', 'pular-0'] },
+  peeks: { p0: ['espiar-0', 'tatubum-0', 'pular-0'], p2: ['espiar-0'] },
 };
 
 describe('visão do Tatubum', () => {
@@ -23,9 +23,15 @@ describe('visão do Tatubum', () => {
     expect(JSON.stringify(v)).not.toContain('espiar-0');
   });
 
-  it('o Espiar só aparece pra quem espiou', () => {
-    expect(kittensViewFor(s, 'p0')).toMatchObject({ peek: ['espiar-0', 'tatubum-0', 'pular-0'], peekBy: 'p0' });
-    expect(kittensViewFor(s, 'p1')).toMatchObject({ peek: null, peekBy: 'p0' });
+  it('cada espiada só aparece pra quem espiou; quem tem espiada é público', () => {
+    expect(kittensViewFor(s, 'p0')).toMatchObject({ peek: ['espiar-0', 'tatubum-0', 'pular-0'], peekers: ['p0', 'p2'] });
+    expect(kittensViewFor(s, 'p2')).toMatchObject({ peek: ['espiar-0'], peekers: ['p0', 'p2'] });
+    expect(JSON.stringify(kittensViewFor(s, 'p2'))).not.toContain('tatubum-0');
+    for (const viewer of ['p1', 'p9', null]) {
+      const v = kittensViewFor(s, viewer);
+      expect(v).toMatchObject({ peek: null, peekers: ['p0', 'p2'] });
+      expect(JSON.stringify(v)).not.toContain('espiar-0');
+    }
   });
 
   it('espectador não tem mão', () => {

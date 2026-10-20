@@ -35,7 +35,7 @@ export function initialKittensState(): KittensState {
     owed: 0,
     pending: null,
     choice: null,
-    peek: null,
+    peeks: {},
     log: [],
     seq: 0,
     winner: null,

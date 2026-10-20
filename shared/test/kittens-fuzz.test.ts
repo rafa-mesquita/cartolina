@@ -50,6 +50,7 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   }
   if (s.phase !== 'playing') {
     if (s.pending || s.choice) throw broken('fim de jogo com carta no ar ou escolha aberta');
+    if (Object.keys(s.peeks).length > 0) throw broken(`fora de partida com espiadas: ${JSON.stringify(s.peeks)}`);
     if (s.blind.length > 0) throw broken('fim de jogo com gente cega');
     return;
   }
@@ -60,14 +61,24 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   if (tatus !== s.alive.length - 1) throw broken(`${tatus} tatus no monte com ${s.alive.length} vivos`);
   if (s.current === null || !s.alive.includes(s.current)) throw broken(`vez de ${s.current}, que não está vivo`);
   if (s.owed < 1) throw broken(`vez com ${s.owed} turnos devidos`);
-  // Segredo: o monte não aparece na visão de ninguém (só quem espiou vê as 3 de cima, quem decide o par de Quati vê a
+  // Espiadas (pedido do Rafa, 2026-10-20): só de quem está vivo, de 1 a 3 cartas, e sempre o topo do monte, na ordem
+  // (a do topo primeiro). Se alguma regra deixasse a espiada desatualizada, ela teria que apagar ou cortar.
+  for (const [p, xs] of Object.entries(s.peeks)) {
+    if (!s.alive.includes(p)) throw broken(`espiada de ${p}, que não está vivo`);
+    const top = s.draw.slice(-xs.length).reverse();
+    if (xs.length < 1 || xs.length > 3 || xs.join() !== top.join()) {
+      throw broken(`espiada de ${p} [${xs}] não é o topo do monte [${top}]`);
+    }
+  }
+  // Segredo: o monte não aparece na visão de ninguém (cada um vê só a própria espiada, quem decide o par de Quati vê a
   // de cima e quem decide o Feitiço vê a de baixo), nem o id do tatu que está sendo escondido. Quem está cego não vê
   // nenhum id da própria mão (nem no diário).
   const json = JSON.stringify(kittensViewFor(s, viewer));
   const mine = (kind: string) => viewer !== null && s.choice?.kind === kind && 'who' in s.choice && s.choice.who === viewer;
-  const sees = [...(mine('quati') ? s.draw.slice(-1) : []), ...(mine('feitico') ? s.draw.slice(0, 1) : [])];
+  const ownPeek = viewer !== null && Object.hasOwn(s.peeks, viewer) ? s.peeks[viewer]! : [];
+  const sees = [...(mine('quati') ? s.draw.slice(-1) : []), ...(mine('feitico') ? s.draw.slice(0, 1) : []), ...ownPeek];
   const secret = [
-    ...(viewer !== null && viewer === s.peek?.who ? [] : s.draw.filter((c) => !sees.includes(c))),
+    ...s.draw.filter((c) => !sees.includes(c)),
     ...(heldTatu !== null ? [heldTatu] : []),
     ...(viewer !== null && s.blind.includes(viewer) ? s.hands[viewer]! : []),
   ];
@@ -265,6 +276,10 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     // Trio de Favor: o alvo dá até 3 cartas, uma de cada vez (a escolha continua aberta entre uma e outra).
     if (air?.kind === 'trio' && air.as === 'favor') seen.add('trio:favor');
     if (s.choice?.kind === 'favor' && c?.kind === 'favor' && s.choice.left < c.left) seen.add('favor:again');
+    // Espiada que fica à mostra fora da vez de quem espiou, e mais de uma ao mesmo tempo.
+    const peekers = Object.keys(s.peeks);
+    if (peekers.some((p) => p !== s.current)) seen.add('peek:kept');
+    if (peekers.length >= 2) seen.add('peek:many');
     checkInvariants(s, deck, someViewer(s), where);
   }
   return true;
@@ -304,6 +319,8 @@ describe('simulação aleatória do Tatubum', () => {
       'feitico:timeout',
       'trio:favor',
       'favor:again',
+      'peek:kept',
+      'peek:many',
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

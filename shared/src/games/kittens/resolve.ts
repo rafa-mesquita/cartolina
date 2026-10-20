@@ -4,7 +4,7 @@ import { kittensKindOf } from './cards';
 import { latidoOf } from './choices';
 import { applyPair, applyTrio } from './combos';
 import { kittensIsFavorPlay } from './play';
-import { eliminate, logged, nextAlive, passTo, spendTurn } from './turn';
+import { clearPeeks, eliminate, logged, nextAlive, passTo, spendTurn } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 /**
@@ -42,9 +42,12 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
     case 'pular':
       return spendTurn(s);
     case 'embaralhar':
-      return { ...s, draw: shuffle(ctx.rng, s.draw), peek: null };
-    case 'espiar':
-      return { ...s, peek: { who: by, cards: s.draw.slice(-3).reverse() } };
+      return clearPeeks({ ...s, draw: shuffle(ctx.rng, s.draw) });
+    case 'espiar': {
+      // Troca a espiada anterior de quem jogou; as dos outros ficam (pedido do Rafa, 2026-10-20).
+      const cards = s.draw.slice(-3).reverse();
+      return cards.length > 0 ? { ...s, peeks: { ...s.peeks, [by]: cards } } : s;
+    }
     case 'favor':
       return { ...s, choice: { kind: 'favor', who: play.target!, to: by, left: 1, deadline } };
     case 'latido':

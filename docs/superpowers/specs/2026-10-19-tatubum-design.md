@@ -73,7 +73,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Pular** | 4 | Gasta 1 turno sem comprar. | sim |
 | **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): o escolhido te dá **3 cartas** (ver "Combos"; pedido do Rafa, 2026-10-20). | sim |
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
-| **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. | sim |
+| **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
 | **Capivara, Mico-leão, Quati, Tamanduá, Preguiça** | 4 de cada | Sozinhas não fazem nada; só em combo. | (combo sim) |
 | **Tatu Latidor** (id `latido`) | (fora do pacote: **2 na partida**) | Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
@@ -82,6 +82,35 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 
 **Ataque, exemplos:** Ana (normal, `owed = 1`) ataca → Bia joga 2. Bia, no 1º dos 2 turnos, ataca →
 Caio joga 4. Caio, no último turno devido (`owed = 1`), ataca → Duda joga 2.
+
+### Espiada à mostra (pedido do Rafa, 2026-10-20)
+
+Rafa: "Quando a carta Espiar é usada, o topo deve ficar revelado pro jogador até ele mudar de ordem ou a carta ser
+comprada etc."
+
+- Estado `peeks: Record<jogador, id[]>` (a do topo primeiro). O Espiar põe `peeks[quem] = as 3 de cima` (troca a
+  espiada anterior dele). A vez passar **não** apaga nada.
+- Vale sempre `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada, 1 a 3): cada espiada é o topo do monte,
+  na ordem. A simulação aleatória confere isso depois de cada passo. Espiada vazia não fica no estado.
+- O que mexe no monte, um por um (`draw:` em `shared/src/games/kittens`):
+  - **Comprar** (compra normal, inclusive comprar um Tatubum): a carta sai de todas as espiadas; o resto continua o topo.
+  - **Par de Tamanduá**: as 2 compradas saem; o Tatubum comprado vai pro fundo (embaixo de tudo), então o resto continua
+    o topo.
+  - **Par de Quati, carta pro fundo**: tratada como compra, sai das espiadas (o resto vira o topo, na mesma ordem).
+    Ficando, nada muda.
+  - **Par de Preguiça puxando do monte**: a carta sai das espiadas que a tinham (o resto do monte não muda de ordem).
+  - **Tatu tirado do monte quando alguém sai** (`eliminate`): sai das espiadas que o tinham.
+  - **Feitiço ficando com a de baixo**: sai das espiadas que a tinham (só se a espiada era o monte inteiro).
+  - **Embaralhar**: apaga **todas**.
+  - **Desarme escondendo o tatu** (Cafuné, escolhido ou ao acaso): apaga **todas**, em qualquer posição (até no fundo):
+    apagar só às vezes contaria onde o tatu foi.
+  - **Feitiço pondo a de baixo no topo**: apaga **todas** (o topo mudou).
+  - **Distribuir / jogar de novo / lobby / fim de jogo**: sem espiadas.
+- Quem sai da partida (explodiu ou caiu de vez) perde a espiada.
+- Sala salva no meio da partida antes disso tem `peek: { who, cards } | null`: o `compat.ts` converte pra
+  `peeks = { [who]: cards }` (ou `{}`), só com o que ainda é o topo e só se `who` está vivo, e tira `peek` do estado.
+- Visão: `peek` = a sua espiada (ou `null`); `peekers` = quem tem espiada agora (público, na ordem dos assentos). Na
+  mesa, a sua fica ao lado do monte (e encolhe conforme as cartas são compradas); nos assentos dos outros, um olhinho.
 
 ### Combos
 
@@ -132,10 +161,10 @@ Regras de motor:
 - Escolha nova `{ kind: 'quati', who, deadline }`; na visão, só `who` recebe `card` = a carta de cima.
   Ação: `choose` com `keep: boolean`. Evento `{ t: 'delayed', by, moved }` (público).
 - Tamanduá: eventos `{ t: 'draw', by, card }` (só quem comprou vê) pra cada carta que fica na mão e
-  `{ t: 'buried', by, tatus }` (público) quando algum Tatubum vai pro fundo. Comprar muda o topo: a
-  espiada some.
+  `{ t: 'buried', by, tatus }` (público) quando algum Tatubum vai pro fundo. As 2 compradas saem das
+  espiadas (o resto continua à mostra; ver "Espiada à mostra").
 - Preguiça: evento `{ t: 'called', by, ask, from, card }` (público): `from` = quem deu, ou `null` quando
-  veio do monte; `card` = `null` quando ninguém tinha nem estava no monte. Tirar do monte apaga a espiada.
+  veio do monte; `card` = `null` quando ninguém tinha nem estava no monte. A carta tirada do monte sai das espiadas.
 - Capivara: um `{ t: 'passed', from, to, card }` por passe, com `seenBy` [from, to].
 - Trio: evento `{ t: 'grabbed', by, from, card }` (público; `from`/`card` = `null` quando ninguém tinha
   Desarme). O evento antigo `asked` (trio pelo nome) sai.
@@ -237,7 +266,8 @@ bicho.
   baixo** do monte (`draw[0]`); os outros veem `card: null`.
 - `choose { keep: true }`: fica com ela, **como se comprasse** (cura o Mau-olhado; evento `draw` só pra ele). Se for
   **Tatubum**: com Desarme, o fluxo de sempre (escolha `tatu`, Desarme à mão, esconder); sem Desarme, explode.
-- `choose { keep: false }`: ela vai pro **topo** do monte (a espiada some).
+- `choose { keep: false }`: ela vai pro **topo** do monte (as espiadas de todos se apagam). Com `keep: true`, ela só sai
+  das espiadas que a tinham.
 - **Nos dois casos acaba o turno** (gasta 1 turno, como comprar; sob ataque, gasta um dos devidos). O Tatubum guardado
   gasta o turno quando o tatu volta pro monte.
 - Prazo vencido (ou quem escolhe cai de vez): a carta **sempre vai pro topo**, seja qual for (gasta o turno como no
@@ -339,12 +369,12 @@ a 5 o baralho era o do jogo original (46).
   um Cafuné roubado não entregar de quem era.
 - `types.ts`: fases `lobby → playing → gameover`. Estado: `players` (ordem dos assentos), `alive`,
   `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `front` (cartas na frente: Tatu
-  Latidor), `blind` (cegos pelo Mau-olhado), `current`, `owed`, `pending`, `choice`, `peek`, `log`, `winner`.
+  Latidor), `blind` (cegos pelo Mau-olhado), `current`, `owed`, `pending`, `choice`, `peeks`, `log`, `winner`.
   - `pending`: `{ by, play: { kind, cards, target, ask, as }, nopes: { by, card }[], resolvesAt }`.
   - `choice`: `{ kind: 'tatu' | 'cafune' | 'favor' | 'cinco' | 'mico' | 'quati' | 'latido' | 'feitico', who, deadline, ... }`
     (o Mico tem `by` e `waiting` no lugar de `who`; o par de Preguiça não precisa de escolha: o bicho vai junto da jogada).
-  - `peek`: `{ who, cards }`, apagado quando quem espiou compra ou gasta um turno, quando o monte
-    muda (Embaralhar, Cafuné, tatu tirado de quem caiu) ou quando a vez passa.
+  - `peeks`: `{ [jogador]: cards }`, a espiada de cada um, que fica à mostra entre os turnos; carta comprada ou tirada
+    do monte sai dela, e o monte mudar de ordem perto do topo apaga todas (§2 "Espiada à mostra").
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
 - Ações (`schema.ts`, zod): `start`, `play { cards: id[], target?, ask?, as? }`, `nope { card? }`, `draw`,
   `choose { … }` (posição do tatu, carta do Favor/Mico/Desarme, carta do descarte, `keep` do Quati/Feitiço),
@@ -376,7 +406,9 @@ A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o 
 - Monte: só a quantidade e quantos tatus ainda estão nele (informação que todos podem deduzir).
 - Descarte: público, inteiro. Fora do jogo (`out`: tatus que explodiram, mãos de quem saiu): público
   também, como no original (as cartas ficam viradas na frente de quem explodiu).
-- `peek`: as cartas só pra quem espiou; os outros leem "Ana espiou o futuro".
+- Espiadas (pedido do Rafa, 2026-10-20): cada um vê só a **própria** (`peek`); dos outros, só **quem** tem espiada
+  (`peekers`, público) e o diário "Ana espiou o futuro". O monte continua secreto pra cada um, menos a própria espiada
+  (a simulação aleatória confere visão por visão).
 - Favor e par: a carta que trocou de mão aparece só pros dois; os outros leem "Caio roubou uma
   carta da Bia".
 - Cafuné: a posição do tatu só quem escondeu sabe; os outros leem "Ana escondeu o tatu".
@@ -450,7 +482,8 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
   Os outros leem "Ana tá escondendo o tatu…".
 - **Favor:** o alvo vê a própria mão com "escolhe uma carta pra dar pro Caio" e o relógio de 30 s. No trio de
   Favor, "DÊ 3 CARTAS PRA CAIO", depois "MAIS 2", "MAIS 1"; os outros leem "Bia vai dar 3 cartas pro Caio".
-- **Espiar:** painel só seu com as 3 do topo, na ordem.
+- **Espiar:** painel só seu com as 3 do topo, na ordem, ao lado do monte; fica lá depois que a vez passa e perde as
+  cartas que forem compradas (pedido do Rafa, 2026-10-20). Quem tem espiada ganha um olhinho no assento.
 - **5 diferentes:** painel com o descarte pra escolher.
 - **Explodiu:** quadro vermelho com **BUM!** pra todos por ~2 s; a cadeira vira fantasminha.
 - **Fim:** quadro "Ana sobreviveu!".

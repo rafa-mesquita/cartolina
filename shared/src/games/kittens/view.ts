@@ -40,13 +40,13 @@ function choiceView(state: KittensState, viewerId: string | null): KittensChoice
 }
 
 /**
- * Única fronteira de segredo do Tatubum: mãos, monte, Espiar e cartas do diário só pra quem pode ver (spec §4.3).
+ * Única fronteira de segredo do Tatubum: mãos, monte, Espiar e cartas do diário só pra quem pode ver (spec §4.3). Cada
+ * um vê só a própria espiada; dos outros, só quem tem uma (`peekers`).
  * Quem está cego pelo Mau-olhado vê fichas no lugar da mão, e nenhuma carta que esteja na mão dele aparece no diário.
  * A visão compartilha arrays/objetos com o estado (é serializada no socket); quem consome não deve mutar.
  */
 export function kittensViewFor(saved: KittensState, viewerId: string | null): KittensView {
   const state = kittensWithNewFields(saved);
-  const peek = state.peek;
   const hand = own(state.hands, viewerId) ?? [];
   const blind = viewerId !== null && state.blind.includes(viewerId);
   const hidden = blind ? new Set(hand) : null;
@@ -66,8 +66,8 @@ export function kittensViewFor(saved: KittensState, viewerId: string | null): Ki
     blind: state.blind,
     pending: state.pending,
     choice: choiceView(state, viewerId),
-    peek: peek !== null && peek.who === viewerId ? peek.cards : null,
-    peekBy: peek?.who ?? null,
+    peek: own(state.peeks, viewerId) ?? null,
+    peekers: state.players.filter((p) => (own(state.peeks, p)?.length ?? 0) > 0),
     log: state.log.map(({ n, ev, seenBy }) => {
       const sees = seenBy === null || (viewerId !== null && seenBy.includes(viewerId));
       const card = 'card' in ev ? ev.card : null;

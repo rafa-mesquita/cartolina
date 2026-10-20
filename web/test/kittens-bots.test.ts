@@ -199,7 +199,7 @@ describe('decisão do bot do Tatubum', () => {
   });
 
   it('espiou e o tatu é o de cima: foge com Pular, Ataque ou Embaralhar', () => {
-    const v = withGame(viewOf(started(3), 'p0'), { hand: ['pular-1', 'mico-2'], peek: ['tatubum-1', 'mico-3', 'quati-1'], peekBy: 'p0' });
+    const v = withGame(viewOf(started(3), 'p0'), { hand: ['pular-1', 'mico-2'], peek: ['tatubum-1', 'mico-3', 'quati-1'], peekers: ['p0'] });
     expect(decideKittens(v, newKittensMemory(), () => 0.99)!.action).toEqual({ type: 'play', cards: ['pular-1'] });
   });
 

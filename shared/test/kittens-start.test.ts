@@ -24,7 +24,7 @@ describe('começar', () => {
       owed: 1,
       pending: null,
       choice: null,
-      peek: null,
+      peeks: {},
       winner: null,
       discard: [],
       out: [],

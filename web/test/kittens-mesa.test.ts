@@ -829,6 +829,52 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('a espiada continua ao lado do monte depois que a vez passa, e encolhe quando a de cima é comprada', async () => {
+    const v = midGame('p0');
+    v.game = { ...v.game, current: 'p0', peek: ['mico-71', 'pular-72', 'quati-73'], peekers: ['p0'] };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const future = () => [...root.querySelectorAll<HTMLElement>('#future .kt-card')].map((el) => el.dataset.id);
+    expect(future()).toEqual(['mico-71', 'pular-72', 'quati-73']);
+    // A vez passou pro p1 (Pular, por exemplo): a espiada fica.
+    const n = v.game.log.at(-1)?.n ?? 0;
+    const passed = { ...v.game, current: 'p1', log: [...v.game.log, { n: n + 1, ev: { t: 'resolved', by: 'p0', play: 'pular', canceled: false } as KittensEvent }] };
+    mesa.update(toMesa({ ...v, game: passed }));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(future()).toEqual(['mico-71', 'pular-72', 'quati-73']);
+    expect(root.querySelector('#future')?.textContent).toContain('O FUTURO');
+    // O p1 comprou a de cima: some só ela.
+    const drawn = { ...passed, current: 'p2', peek: ['pular-72', 'quati-73'], log: [...passed.log, { n: n + 2, ev: { t: 'draw', by: 'p1', card: null } as KittensEvent }] };
+    mesa.update(toMesa({ ...v, game: drawn }));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(future()).toEqual(['pular-72', 'quati-73']);
+    mesa.destroy();
+  });
+
+  it('quem tem espiada à mostra ganha o olhinho no assento (sem mostrar as cartas)', () => {
+    const v = midGame('p0');
+    v.game = { ...v.game, peek: null, peekers: ['p1'] };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const eye = root.querySelector<HTMLElement>('.kt-seat[data-p="p1"] .kt-peeked');
+    expect(eye).not.toBeNull();
+    expect(eye!.title).toContain('espiou');
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-peeked')).toBeNull();
+    expect(root.querySelectorAll('#future .kt-card')).toHaveLength(0);
+    // Os dois espiaram: os dois assentos têm o olhinho.
+    mesa.update(toMesa({ ...v, game: { ...v.game, peekers: ['p1', 'p2'] } }));
+    expect(root.querySelectorAll('.kt-seat .kt-peeked')).toHaveLength(2);
+    mesa.destroy();
+  });
+
+  it('zoom e galeria do Espiar dizem só o que a carta faz', () => {
+    expect(mesaSrc).toContain(
+      "espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.'",
+    );
+    expect(mesaSrc).toContain('Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Pode levar Nem vem!.');
+    expect(mesaSrc).not.toContain('a vez passar ou o monte mudar');
+  });
+
   it('zoom do Favor e dos bichos explicam o trio de Favor (só o que a carta faz)', () => {
     expect(mesaSrc).toContain('<b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b>');
     expect(mesaSrc).toContain('(3 Favores: o adversário escolhido te dá 3 cartas)');
