@@ -27,6 +27,11 @@ export function CamelioLobby({ view, conn }: { view: CamelioRoomView; conn: Game
   useCamelioSounds(rootRef);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
+  // A mesa é um pedaço à parte (lazy no Game.tsx): já pede ele aqui, pro primeiro "começar" não piscar tela em branco.
+  // Se falhar (sem rede), o lazy do Game.tsx tenta de novo na hora.
+  useEffect(() => {
+    import('./CamelioTable').catch(() => {});
+  }, []);
   const link = roomLink(view.code);
   const missing = tried && connected < CAMELIO_MIN_PLAYERS;
 
