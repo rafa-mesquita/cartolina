@@ -190,7 +190,7 @@ export type PendingHistoryRecord =
   | { game: 'dixit'; key: string; record: DixitRoundRecord }
   | { game: 'coup'; key: string; record: CoupMatchRecord };
 
-/** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação nova. */
+/** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação ou partida nova. */
 export function pendingHistoryRecord(room: Room, now: number, id: string): PendingHistoryRecord | null {
   if (!GAMES[room.gameId].recordsHistory) return null;
   switch (room.gameId) {

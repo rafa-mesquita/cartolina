@@ -52,6 +52,8 @@ export function pendingCoupRecord(room: Room, now: number, id: string): { key: s
   // Defesa: quem jogou sempre tem assento (assentos de quem jogou não são reaproveitados); hoje não acontece.
   if (!winner) return null;
   const players = people(state.players);
+  // Defesa: jogador sem assento sumiria em silêncio do registro (e da checagem de bot); melhor não gravar.
+  if (players.length !== state.players.length) return null;
   // Partida de teste com bot não suja o histórico (aberto a todos).
   if (players.some((p) => isBotName(p.name))) return null;
   return {

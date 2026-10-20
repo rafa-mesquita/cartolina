@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { coupMatchId, pendingCoupRecord } from '../src/games/coup/record';
+import { applyCoupAction } from '../src/games/coup/rules';
 import type { CoupState } from '../src/games/coup/types';
 import { pendingHistoryRecord } from '../src/history';
 import { PLAYER_COLORS } from '../src/players';
 import { createRoom, joinRoom, type Room } from '../src/room';
-import { THREE, table, withLost } from './coup-helpers';
+import { THREE, ctxOf, table, withLost } from './coup-helpers';
 
 /** Sala de Cúpi com Ana, Beto e Caio (p0…p2), já com o jogo no estado dado. */
 function roomWith(game: CoupState, names = ['Ana', 'Beto', 'Caio']): Room {
@@ -68,6 +69,35 @@ describe('Cúpi: registro da partida pro histórico', () => {
     const room = roomWith(over());
     expect(coupMatchId(room, over())).toBe('CUPI-500-3');
     expect(coupMatchId({ ...room, runStartedAt: 700 }, { ...over(), match: 4 })).toBe('CUPI-700-4');
+  });
+
+  it('jogador desconectado há mais de 30 s continua no registro', () => {
+    const room = roomWith(over());
+    const seats = room.seats.map((s) => (s.id === 'p2' ? { ...s, connected: false, disconnectedAt: 1 } : s));
+    const pending = pendingCoupRecord({ ...room, seats }, 9_000_000, 'r1');
+    expect(pending?.record.players.map((p) => p.name)).toEqual(['Ana', 'Beto', 'Caio']);
+    expect(pending?.record.out[0]).toEqual({ name: 'Caio', color: PLAYER_COLORS[2] });
+  });
+
+  it('jogador sem assento invalida o registro (não grava partida pela metade)', () => {
+    const room = roomWith(over());
+    expect(pendingCoupRecord({ ...room, seats: room.seats.filter((s) => s.id !== 'p2') }, 9000, 'r1')).toBeNull();
+  });
+
+  it('restart de verdade muda a chave: a partida 2 grava como outra', () => {
+    const first = { ...over(), match: 1 };
+    const room = roomWith(first);
+    expect(pendingCoupRecord(room, 9000, 'r1')?.key).toBe('CUPI-500-1');
+    const res = applyCoupAction(first, 'p0', { type: 'restart' }, ctxOf(['p0', 'p1', 'p2']));
+    if (!res.ok) throw new Error(res.error);
+    expect(res.state.phase).toBe('turn');
+    expect(res.state.match).toBe(2);
+    // A chave da partida 1 já está gravada; a sala em andamento não tem nada pendente.
+    const running = { ...room, game: res.state, recordedRevealKey: 'CUPI-500-1' };
+    expect(pendingCoupRecord(running, 9100, 'r2')).toBeNull();
+    // Quando a partida 2 acaba, a chave nova passa pelo portão.
+    const second = { ...over(), match: res.state.match };
+    expect(pendingCoupRecord({ ...running, game: second }, 9200, 'r3')?.key).toBe('CUPI-500-2');
   });
 
   it('o registro geral do histórico manda a partida pro Cúpi', () => {
