@@ -164,6 +164,9 @@ const ABOUT: Record<KittensCardKind, string> = {
 };
 
 const TIMER = '<span class="timer" data-timer></span>';
+/** Legendas dos modos de escolha (par de Preguiça pede bicho, Favor pede adversário). */
+const ASK_CAPTION = 'Que bicho você quer puxar?';
+const TARGET_CAPTION = 'Escolha um adversário <span class="timer">↑</span>';
 
 /** O palco do protótipo (o menu e o painel de teste saíram; a galeria abre pelo botão da barra de cima). */
 const TEMPLATE = `
@@ -204,6 +207,9 @@ const TEMPLATE = `
 
 const esc = (s: string): string =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+/** Id pra seletor de atributo (CSS.escape; o jsdom não tem, aí escapa à mão). */
+const cssId = (s: string): string =>
+  typeof CSS !== 'undefined' && typeof CSS.escape === 'function' ? CSS.escape(s) : s.replace(/["\\]/g, '\\$&');
 const kindOf = (id: string): KittensCardKind | null => kittensKindOf(id);
 const cardName = (k: KittensCardKind): string => KITTENS_CARD_NAMES[k].toUpperCase();
 /** Nome (em maiúsculas) da carta de um id; "UMA CARTA" se o id não é de carta. */
@@ -255,7 +261,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     return el;
   };
   const q = (sel: string): HTMLElement | null => wrap.querySelector<HTMLElement>(sel);
-  const handCard = (id: string): HTMLElement | null => q(`#hand .card[data-id="${id}"]`);
+  const handCard = (id: string): HTMLElement | null => q(`#hand .kt-card[data-id="${cssId(id)}"]`);
   const stage = $('#stage');
 
   // ---------------------------------------------------------------- timers (todos limpos no destroy)
@@ -339,25 +345,58 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   Fx.init(stage, $('#fxlayer'), $<HTMLCanvasElement>('#particles'), () => scale);
 
   // ---------------------------------------------------------------- fila de efeitos
-  const queue: (() => Promise<void>)[] = [];
+  /** Um efeito: `run` anima; `skip` é o que fica dele quando a fila é pulada (a linha do diário, o quadro do descarte). */
+  interface QueueItem {
+    run: () => Promise<void>;
+    skip?: () => void;
+  }
+  const queue: QueueItem[] = [];
   let running = false;
-  function enqueue(fn: () => Promise<void>): void {
-    queue.push(fn);
+  function enqueue(item: QueueItem): void {
+    queue.push(item);
     if (!running) void runQueue();
   }
   async function runQueue(): Promise<void> {
     running = true;
     while (queue.length && !destroyed) {
-      try { await queue.shift()!(); } catch (e) { if (!destroyed) console.error(e); }
+      try { await queue.shift()!.run(); } catch (e) { if (!destroyed) console.error(e); }
     }
     running = false;
     if (destroyed) return;
-    if (arriving.size || airHidden) { arriving.clear(); airHidden = false; render(); }
-    // Rede de segurança: o tatu grande só fica na mesa enquanto alguém tem que jogar o Desarme.
-    if (tatuFx && view?.choice?.kind !== 'tatu') clearTatu();
-    // Fim sem festa (ninguém sobrou): os botões aparecem quando a fila esvazia.
-    if (view?.phase === 'gameover' && overStage !== 'full') { overStage = 'full'; renderOver(); }
+    settle();
   }
+  /**
+   * A fila esvaziou (ou foi pulada): nada fica escondido esperando um efeito. Cartas chegando e a carta no ar
+   * aparecem, o tatu grande só fica enquanto alguém tem que jogar o Desarme e, no fim sem festa (ninguém sobrou),
+   * os botões aparecem.
+   */
+  function settle(): void {
+    if (destroyed || !view) return;
+    arriving.clear();
+    airHidden = false;
+    if (view.choice?.kind === 'tatu') showTatu();
+    else if (tatuFx) clearTatu();
+    if (view.phase === 'gameover' && overStage !== 'full') overStage = 'full';
+    render();
+  }
+  /**
+   * Pula os efeitos que estão esperando (aba escondida, fila atrasada, buraco no diário depois de reconectar):
+   * só as linhas do diário entram, sem animação, e a mesa mostra a visão de agora. O efeito que já está rodando
+   * termina sozinho.
+   */
+  function fastForward(items: QueueItem[]): void {
+    for (const it of [...queue.splice(0), ...items]) {
+      try { it.skip?.(); } catch (e) { console.error(e); }
+    }
+    holdPanel = running && holdPanel;
+    settle();
+    sayState();
+  }
+  /** Fila maior que isso quando chega visão nova = atrasada demais: pula. */
+  const MAX_BACKLOG = 4;
+  /** Uma visão só com mais entradas novas que isso (ex.: voltou depois de muito tempo) também é pulada. */
+  const MAX_BATCH = 12;
+  const onVisibility = (): void => { if (document.hidden && queue.length) fastForward([]); };
 
   // ---------------------------------------------------------------- estado da tela
   let lastN = -1;
@@ -380,17 +419,25 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   const logLines: { text: string; cls: string }[] = [];
   /** Fundo de cada tipo de carta (cerrado na cor dela), desenhado uma vez. */
   const sceneCache = new Map<KittensCardKind, string>();
+  /** Bichinho de cada cor já desenhado (URL pronta). */
+  const critterUrls = new Map<string, string>();
+  /** Jogada mandada pro servidor e ainda sem resposta (não manda de novo com clique duplo). */
+  let inFlight = false;
 
   function onState(next: KittensView): void {
     const prev = view;
     const rects = handRects();
     view = next;
     const v = next;
-    // JOGAR DE NOVO: o diário recomeça do zero (senão as jogadas novas ficariam sem animação).
-    if (prev?.phase === 'gameover' && v.phase === 'playing') { lastN = -1; logLines.length = 0; clearTatu(); closePile(true); }
+    // A resposta da jogada chegou (ou a vez andou): o pedido não está mais no ar.
+    inFlight = false;
+    // Partida nova (JOGAR DE NOVO, ou lobby e começar de novo): o diário recomeça do zero (senão as jogadas novas
+    // ficariam sem animação).
+    if (prev && prev.phase !== 'playing' && v.phase === 'playing') { lastN = -1; logLines.length = 0; outBy = null; clearTatu(); closePile(true); }
+    noteOut(v.log);
     // Primeira visão no meio da partida (recarregou a página, voltou pra sala): mostra como está, sem repetir as animações.
     if (!prev && v.phase !== 'lobby' && v.log.length) {
-      for (const e of v.log.slice(-14)) logLines.push({ text: textOf(e.ev, null), cls: e.ev.t === 'boom' ? 'bad' : involves(e.ev, ME) ? 'me' : '' });
+      for (const e of v.log.slice(-14)) logLines.push({ text: textOf(e.ev, null), cls: logClass(e.ev) });
       lastN = v.log[v.log.length - 1]!.n;
       if (v.phase === 'gameover') overStage = 'full';
       render();
@@ -400,6 +447,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       sayChoice();
       return;
     }
+    const seenN = lastN;
     const fresh = v.log.filter((e) => e.n > lastN);
     if (v.log.length) lastN = v.log[v.log.length - 1]!.n;
     for (const id of v.hand) if (!prev || !prev.hand.includes(id)) arriving.add(id);
@@ -408,21 +456,40 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (v.phase !== 'playing' || v.current !== ME || v.pending || v.choice) mode = null;
     if (prev && prev.current !== ME && v.current === ME && v.phase === 'playing') Sound.play('turn');
     render();
-    if (v.phase === 'playing' && (!prev || prev.phase !== 'playing')) enqueue(() => dealAnim());
-    for (const e of fresh) enqueue(() => animate(e.ev, prev, rects));
+
+    const items: QueueItem[] = [];
+    if (v.phase === 'playing' && (!prev || prev.phase !== 'playing')) items.push({ run: () => dealAnim() });
+    for (const e of fresh) {
+      items.push({ run: () => animate(e.ev, prev, rects, v), skip: () => pushLog(textOf(e.ev, prev?.pending), logClass(e.ev)) });
+    }
     // 5 diferentes: o quadro do descarte abre sozinho pra você escolher (depois que a jogada chega no descarte).
     const c = v.choice;
     if (c?.kind === 'cinco' && c.who === ME && !myCinco(prev)) {
       cincoFirst = c.left;
-      enqueue(async () => { if (myCinco(view)) openPile(); });
+      const open = () => { if (myCinco(view)) openPile(); };
+      items.push({ run: async () => open(), skip: open });
     }
+    // Fila atrasada não pode esconder a mesa de agora: aba escondida (o navegador segura os timers), fila longa
+    // demais ou buraco no diário (reconectou e perdeu entradas) → só o diário, sem animação.
+    const gap = seenN >= 0 && fresh.length > 0 && fresh[0]!.n > seenN + 1;
+    if (document.hidden || gap || queue.length > MAX_BACKLOG || items.length > MAX_BATCH) { fastForward(items); return; }
+    for (const it of items) enqueue(it);
     // Carta que apareceu sem efeito nenhum pra trazê-la não pode ficar escondida.
-    if (!running && !queue.length && (arriving.size || airHidden)) { arriving.clear(); airHidden = false; render(); }
+    if (!running && !queue.length && (arriving.size || airHidden)) settle();
+  }
+
+  /** Classe da linha do diário: explosão em vermelho, o que envolve você em amarelo. */
+  const logClass = (ev: KittensEvent): string => (ev.t === 'boom' ? 'bad' : involves(ev, ME) ? 'me' : '');
+
+  /** Como você saiu da partida (pra mão dizer "explodiu" ou "saiu"); fica até a próxima partida. */
+  let outBy: 'boom' | 'left' | null = null;
+  function noteOut(log: KittensView['log']): void {
+    for (const e of log) if ((e.ev.t === 'boom' || e.ev.t === 'left') && e.ev.by === ME) outBy = e.ev.t;
   }
 
   function handRects(): Record<string, Box> {
     const out: Record<string, Box> = {};
-    wrap.querySelectorAll<HTMLElement>('#hand .card').forEach((el) => { if (el.dataset.id) out[el.dataset.id] = Fx.box(el); });
+    wrap.querySelectorAll<HTMLElement>('#hand .kt-card').forEach((el) => { if (el.dataset.id) out[el.dataset.id] = Fx.box(el); });
     return out;
   }
 
@@ -437,12 +504,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const el = document.createElement('div');
     const k = id ? kindOf(id) : null;
     if (back || !id || !k) {
-      el.className = 'card back flow-back';
+      el.className = 'kt-card back flow-back';
       el.innerHTML = `<img class="back-art" src="${VERSO}" alt="">`;
       return el;
     }
     const st = Sprites.style[k];
-    el.className = 'card ' + k;
+    el.className = 'kt-card ' + k;
     el.dataset.id = id;
     el.style.backgroundImage = 'url(' + sceneUrl(k) + ')';
     // A faixa do topo é sempre um tom mais escuro do fundo da carta (pedido do Rafa).
@@ -450,7 +517,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     // Todas as cartas têm arte do Flow com o fundo recortado; os sprites ficam só de reserva.
     const flow = ART[k];
     const art = flow ? `<img class="art flow" src="${flow}" alt="">` : `<img class="art" src="${Sprites.card(k).url}" alt="">`;
-    el.innerHTML = `<div class="band" style="background:${band}"></div>${art}<div class="name">${cardName(k)}</div><div class="kt-hint">${st.hint}</div>`;
+    el.innerHTML = `<div class="band" style="background:${band}"></div>${art}<div class="kt-name">${cardName(k)}</div><div class="kt-hint">${st.hint}</div>`;
     return el;
   }
 
@@ -500,6 +567,15 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const p = choicePrompt();
     if (p) say(p);
   }
+  /** Legenda da situação de agora (depois de pular a fila): a escolha aberta, ou de quem é a vez. */
+  function sayState(): void {
+    const v = view;
+    if (!v) return;
+    const p = choicePrompt();
+    if (p) say(p);
+    else if (v.phase === 'playing' && v.current) say(v.current === ME ? 'Sua vez! Jogue cartas ou compre.' : `Vez de ${nameOf(v.current)}`);
+    else say('');
+  }
 
   function renderTop(): void {
     const v = view;
@@ -528,7 +604,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     list.forEach((p, i) => {
       const { x, y } = seatPos(i, list.length);
       const el = document.createElement('div');
-      el.className = 'seat';
+      el.className = 'kt-seat';
       el.dataset.p = p;
       el.style.left = x + 'px';
       el.style.top = y + 'px';
@@ -559,9 +635,13 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       el.innerHTML = `${order}<img class="tatu kt-critter" alt="">
         <div class="who">${nameOf(p)}</div>
         ${dead ? '<div class="count out">FORA</div>' : `<div class="count"><span class="fan">${fan}</span><b>${n}</b></div>`}${chip}`;
-      // O bichinho em pixel art fica pronto num instante (e depois vem do cache).
+      // O bichinho em pixel art: na primeira vez fica pronto num instante; depois a URL já resolvida entra direto
+      // (sem piscar a cada redesenho dos assentos).
       const img = el.querySelector('img');
-      void Sprites.critter(colorOf(p)).then((url) => { if (img && url) img.src = url; });
+      const color = colorOf(p);
+      const known = critterUrls.get(color);
+      if (known && img) img.src = known;
+      else void Sprites.critter(color).then((url) => { if (url) { critterUrls.set(color, url); if (img) img.src = url; } });
       box.appendChild(el);
     });
     // Setinhas no sentido da vez: você → assentos da esquerda pra direita → você de novo.
@@ -595,7 +675,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   function seatEl(p: string): HTMLElement | null {
-    for (const el of wrap.querySelectorAll<HTMLElement>('.seat')) if (el.dataset.p === p) return el;
+    for (const el of wrap.querySelectorAll<HTMLElement>('.kt-seat')) if (el.dataset.p === p) return el;
     return null;
   }
   function anchorOf(p: string): HTMLElement {
@@ -640,7 +720,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     }
 
     const disc = $('#discard');
-    disc.querySelectorAll('.card').forEach((c) => c.remove());
+    disc.querySelectorAll('.kt-card').forEach((c) => c.remove());
     v.discard.slice(-3).forEach((id, i, arr) => {
       const c = cardEl(id);
       c.style.transform = `rotate(${(i - arr.length + 1) * 7 + 3}deg)`;
@@ -687,7 +767,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       return;
     }
     if (v.phase === 'playing' && !v.alive.includes(ME)) {
-      hand.innerHTML = '<div class="dead">VOCÊ EXPLODIU · AGORA SÓ ASSISTE</div>';
+      // Quem caiu e foi tirado do jogo (`left`) não explodiu.
+      const out = outBy === 'boom' ? 'VOCÊ EXPLODIU' : outBy === 'left' ? 'VOCÊ SAIU DA PARTIDA' : 'VOCÊ ESTÁ FORA';
+      hand.innerHTML = `<div class="dead">${out} · AGORA SÓ ASSISTE</div>`;
       return;
     }
     const order = orderedHand();
@@ -733,7 +815,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
       if (!wrap.contains(el)) continue;
       if (el.classList.contains('bigcard') && el.classList.contains('live')) return { type: 'tatu', el };
-      const seat = el.closest<HTMLElement>('.seat');
+      const seat = el.closest<HTMLElement>('.kt-seat');
       if (seat) return { type: 'seat', p: seat.dataset.p ?? '', el: seat };
       if (el.closest('#table')) return { type: 'table', el: $('#table') };
       if (el.closest('#hand')) return { type: 'hand', el: $('#hand') };
@@ -746,7 +828,29 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     e.preventDefault();
     drag = { id, x0: e.clientX, y0: e.clientY, moved: false, ghost: null, ids: [id], hover: null };
     window.addEventListener('pointermove', onDragMove);
-    window.addEventListener('pointerup', onDragEnd, { once: true });
+    window.addEventListener('pointerup', onDragEnd);
+    window.addEventListener('pointercancel', onDragCancel);
+  }
+  function stopDragListeners(): void {
+    window.removeEventListener('pointermove', onDragMove);
+    window.removeEventListener('pointerup', onDragEnd);
+    window.removeEventListener('pointercancel', onDragCancel);
+  }
+  /** Tira o fantasma e devolve a mão como estava. */
+  function dropGhost(d: Drag): void {
+    d.ghost?.remove();
+    d.hover?.classList.remove('drop');
+    stage.classList.remove('dragging');
+    wrap.querySelectorAll('#hand .kt-card.dragging').forEach((c) => c.classList.remove('dragging'));
+  }
+  /** O navegador tomou o ponteiro (rolagem, gesto, alerta): o arrasto acaba sem jogar nada. */
+  function onDragCancel(): void {
+    stopDragListeners();
+    const d = drag;
+    drag = null;
+    if (!d) return;
+    dropGhost(d);
+    render();
   }
 
   function onDragMove(e: PointerEvent): void {
@@ -779,15 +883,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   function onDragEnd(e: PointerEvent): void {
-    window.removeEventListener('pointermove', onDragMove);
+    stopDragListeners();
     const d = drag;
     drag = null;
     if (!d) return;
     if (!d.moved) { clickCard(d.id); return; }
-    d.ghost?.remove();
-    d.hover?.classList.remove('drop');
-    stage.classList.remove('dragging');
-    wrap.querySelectorAll('#hand .card.dragging').forEach((c) => c.classList.remove('dragging'));
+    dropGhost(d);
     const t = dropTarget(e);
     if (!t) { render(); return; }
     if (t.type === 'hand') { reorder(d.ids, e); return; }
@@ -838,14 +939,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!kind) { toast('Essas cartas não formam jogada.'); Sound.play('error'); render(); return; }
     if (needsAsk(kind, ids)) {
       mode = { type: 'ask', play: { cards: ids } };
-      captionText = 'Que bicho você quer puxar?';
+      captionText = ASK_CAPTION;
       render();
       return;
     }
     if (needsTarget(kind)) {
       mode = { type: 'target', play: { cards: ids }, kind };
       if (t.type === 'seat' && validTarget(t.p)) { chooseTarget(t.p); return; }
-      captionText = 'Escolha um adversário <span class="timer">↑</span>';
+      captionText = TARGET_CAPTION;
       render();
       return;
     }
@@ -902,13 +1003,13 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const play: PlayReq = { cards: [...selected] };
     if (needsAsk(kind, play.cards)) {
       mode = { type: 'ask', play };
-      captionText = 'Que bicho você quer puxar?';
+      captionText = ASK_CAPTION;
       render();
       return;
     }
     if (needsTarget(kind)) {
       mode = { type: 'target', play, kind };
-      captionText = 'Escolha um adversário <span class="timer">↑</span>';
+      captionText = TARGET_CAPTION;
       render();
       return;
     }
@@ -920,10 +1021,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     send({ ...mode.play, target: p });
   }
 
-  /** A jogada vai pro servidor; a seleção sai na hora (a visão nova do servidor corrige se ele recusar). */
+  /**
+   * A jogada vai pro servidor. A seleção e o modo ficam até a resposta: a visão nova tira da seleção as cartas que
+   * saíram da mão (e o modo, com a carta no ar); se ele recusar, `error()` desfaz o modo e a seleção continua lá.
+   */
   function send(play: PlayReq): void {
-    mode = null;
-    selected.clear();
+    if (inFlight) return;
+    inFlight = true;
+    captionText = '';
     act({ type: 'play', ...play });
     render();
   }
@@ -1003,50 +1108,64 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   let cafunePos = 0;
   /** Enquanto o tatu soldado desarma a bomba, o painel de esconder o tatu espera. */
   let holdPanel = false;
+  /** O que está desenhado no painel: só redesenha quando muda (senão o render arrancaria o slider da mão). */
+  let panelKey = '';
+  function panelKeyOf(v: KittensView): string {
+    if (holdPanel) return '';
+    const m = mode;
+    if (m?.type === 'ask') return `ask:${m.play.cards.join(',')}`;
+    const c = v.choice;
+    // Desarme e descarte do Mico usam a legenda (a mesa fica livre pra soltar a carta); 5 diferentes usa o quadro do descarte.
+    if (!c || !choiceIsMine(c)) return '';
+    if (c.kind === 'cafune') return `cafune:${c.who}:${c.deadline}:${v.drawCount}`;
+    if (c.kind === 'favor') return `favor:${c.to}:${c.deadline}`;
+    if (c.kind === 'quati') return `quati:${c.card ?? ''}:${c.deadline}`;
+    return '';
+  }
   function renderPanel(): void {
     const v = view;
     if (!v) return;
     const panel = $('#panel');
-    if (holdPanel) { panel.innerHTML = ''; return; }
+    const key = panelKeyOf(v);
+    if (key === panelKey) { tickTimers(); return; }
+    panelKey = key;
+    panel.innerHTML = '';
+    if (!key) return;
     const c = v.choice;
     const m = mode;
     if (m?.type === 'ask') {
-      panel.innerHTML = '<h2>QUE BICHO VOCÊ PUXA?</h2><p>Vem de um adversário que tenha; se ninguém tiver, do monte.</p><div class="row"></div>';
-      const row = $('#panel .row');
+      panel.innerHTML = '<h2>QUE BICHO VOCÊ PUXA?</h2><p>Vem de um adversário que tenha; se ninguém tiver, do monte.</p><div class="kt-row"></div>';
+      const row = $('#panel .kt-row');
       KITTENS_BICHOS.forEach((k) => {
         row.appendChild(button(cardName(k), () => send({ ...m.play, ask: k }), 'small'));
       });
-      row.appendChild(button('CANCELAR', () => { mode = null; render(); }, 'small ghost'));
+      row.appendChild(button('CANCELAR', () => { mode = null; captionText = ''; render(); }, 'small ghost'));
       return;
     }
-    // Desarme e descarte do Mico usam a legenda (a mesa fica livre pra soltar a carta); 5 diferentes usa o quadro do descarte.
-    if (!c || !choiceIsMine(c)) { panel.innerHTML = ''; return; }
+    if (!c) return;
     if (c.kind === 'cafune') {
       const max = v.drawCount;
       cafunePos = Math.min(cafunePos, max);
       panel.innerHTML = `<h2>UFA! ONDE ESCONDER O TATU? ${TIMER}</h2><p>Só você vai saber. O monte tem ${max} carta${max === 1 ? '' : 's'}.</p>
-        <div class="pos"></div><input type="range" min="0" max="${max}" step="1" value="${cafunePos}"><div class="row"></div>`;
+        <div class="pos"></div><input type="range" min="0" max="${max}" step="1" value="${cafunePos}"><div class="kt-row"></div>`;
       const pos = $('#panel .pos');
       const label = (n: number) => (n === 0 ? 'no topo (o próximo compra!)' : n === max ? 'no fundo' : `${n + 1}ª carta de cima`);
       pos.textContent = label(cafunePos);
       const range = $<HTMLInputElement>('#panel input');
       range.oninput = () => { cafunePos = Number(range.value); pos.textContent = label(cafunePos); };
-      const row = $('#panel .row');
+      const row = $('#panel .kt-row');
       row.appendChild(button('ESCONDER AQUI', () => act({ type: 'choose', position: cafunePos }), 'yellow'));
       row.appendChild(button('NO TOPO', () => act({ type: 'choose', position: 0 }), 'small'));
       row.appendChild(button('NO FUNDO', () => act({ type: 'choose', position: max }), 'small'));
       row.appendChild(button('ALEATÓRIO', () => act({ type: 'choose', position: 'random' }), 'small ghost'));
     } else if (c.kind === 'favor') {
       panel.innerHTML = `<h2>FAVOR PRA ${upName(c.to)} ${TIMER}</h2><p>Clique numa carta da sua mão pra dar.</p>`;
-      panel.style.top = '300px';
     } else if (c.kind === 'quati') {
-      panel.innerHTML = `<h2>A CARTA DE CIMA ${TIMER}</h2><p>Só você vê. Fica em cima ou vai pro fundo?</p><div class="cards"></div><div class="row"></div>`;
+      panel.innerHTML = `<h2>A CARTA DE CIMA ${TIMER}</h2><p>Só você vê. Fica em cima ou vai pro fundo?</p><div class="cards"></div><div class="kt-row"></div>`;
       if (c.card) $('#panel .cards').appendChild(cardEl(c.card));
-      const row = $('#panel .row');
+      const row = $('#panel .kt-row');
       row.appendChild(button('FICA EM CIMA', () => act({ type: 'choose', keep: true }), 'small'));
       row.appendChild(button('PRO FUNDO', () => act({ type: 'choose', keep: false }), 'yellow'));
-    } else {
-      panel.innerHTML = '';
     }
     tickTimers();
   }
@@ -1199,29 +1318,35 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         await wait(45);
       }
     }
+    // Depois de cada espera a mão pode ter sido redesenhada: o elemento é buscado de novo (o antigo já saiu do DOM).
     const flights = [...view.hand].map((id, i) => wait(i * 110).then(async () => {
       const el = handCard(id);
-      if (!el) return;
+      if (!el) { arriving.delete(id); return; }
       Sound.play('draw');
       await Fx.fly({ node: cardEl(null, { back: true }), from: deck, to: el, dur: 320, flipTo: cardEl(id) });
       arriving.delete(id);
-      el.classList.remove('arriving');
+      handCard(id)?.classList.remove('arriving');
     }));
     await Promise.all(flights);
     const cur = view.current;
     if (cur) say(cur === ME ? 'Sua vez! Jogue cartas ou compre.' : `Vez de ${nameOf(cur)}`);
   }
 
-  async function animate(ev: KittensEvent, prev: KittensView | null, rects: Record<string, Box>): Promise<void> {
+  /**
+   * Efeito de uma entrada do diário. `prev` é a visão de antes da leva que trouxe a entrada e `evView` a visão que
+   * veio com ela (a `view` de agora pode já estar outras jogadas à frente).
+   */
+  async function animate(ev: KittensEvent, prev: KittensView | null, rects: Record<string, Box>, evView: KittensView): Promise<void> {
     if (!view) return;
     const text = textOf(ev, prev?.pending);
-    pushLog(text, ev.t === 'boom' ? 'bad' : involves(ev, ME) ? 'me' : '');
+    pushLog(text, logClass(ev));
     const air = $('#air');
     switch (ev.t) {
       case 'play': {
         say(text);
         Sound.play('card');
-        const cards = view.pending?.play.cards ?? prev?.pending?.play.cards ?? [];
+        // As cartas da jogada: a carta no ar da visão que trouxe o evento (se for desta jogada).
+        const cards = evView.pending?.by === ev.by ? evView.pending.play.cards : [];
         const from = (id: string): At => (ev.by === ME && rects[id] ? rects[id]! : anchorOf(ev.by));
         await Promise.all(cards.map((id, i) => wait(i * 70).then(() => Fx.fly({ node: cardEl(id), from: from(id), to: air, dur: 420, rot: (i % 2 ? 6 : -5), trail: '#f2c14e' }))));
         airHidden = false;
@@ -1284,7 +1409,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           const el = handCard(ev.card);
           await Fx.fly({ node: cardEl(null, { back: true }), from: $('#deck .stack'), to: el ?? $('#hand'), dur: 420, flipTo: cardEl(ev.card) });
           arriving.delete(ev.card);
-          el?.classList.remove('arriving');
+          handCard(ev.card)?.classList.remove('arriving');
         } else {
           await Fx.fly({ node: cardEl(null, { back: true }), from: $('#deck .stack'), to: anchorOf(ev.by), dur: 380, scaleTo: 0.45 });
         }
@@ -1500,6 +1625,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       overStage = 'hidden';
       over.hidden = true;
       over.innerHTML = '';
+      delete over.dataset.for;
       over.classList.remove('dim');
       return;
     }
@@ -1507,12 +1633,18 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!over.querySelector('.biglogo')) {
       const title = v.winner === ME ? 'VOCÊ SOBREVIVEU!' : v.winner ? upName(v.winner) + ' SOBREVIVEU!' : 'FIM';
       over.innerHTML = `<div class="biglogo popin" style="font-size:44px">${title}</div>`;
+      delete over.dataset.for;
     }
     over.hidden = false;
     over.classList.toggle('dim', overStage === 'full');
-    if (overStage === 'full' && !over.querySelector('.kt-btn, .sub')) {
-      // Só o host recomeça ou volta pro lobby; os outros esperam.
-      if (hostId !== null && hostId === ME) {
+    // Só o host recomeça ou volta pro lobby; os outros esperam. Se o host muda com o quadro aberto (o host saiu),
+    // a parte de baixo é refeita pra quem é o host agora.
+    const isHost = hostId !== null && hostId === ME;
+    const forWhom = isHost ? 'host' : 'guest';
+    if (overStage === 'full' && over.dataset.for !== forWhom) {
+      over.querySelectorAll('.kt-btn, .sub').forEach((el) => el.remove());
+      over.dataset.for = forWhom;
+      if (isHost) {
         over.appendChild(button('JOGAR DE NOVO', () => act({ type: 'again' }), 'yellow'));
         over.appendChild(button('VOLTAR PRO LOBBY', () => act({ type: 'lobby' })));
       } else {
@@ -1535,6 +1667,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const gallery = $('#gallery');
     if (e.key === 'Escape' && !gallery.hidden) { gallery.hidden = true; return; }
     if (e.key === 'Escape' && pileOpen) { closePile(); return; }
+    // Com a galeria ou o quadro do descarte aberto, os atalhos da mesa (espaço, N, Enter) ficam parados.
+    if (!gallery.hidden || pileOpen) return;
     if (!view || view.phase !== 'playing' || spectating()) return;
     if (e.key === 'n' || e.key === 'N') nope();
     if (e.key === ' ' && canDraw()) { e.preventDefault(); draw(); }
@@ -1572,7 +1706,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!(t instanceof Element)) return;
     // No quadro do descarte a rodinha rola a lista (o zoom lá é passar o mouse).
     if (t.closest('#pile')) return;
-    const card = t.closest<HTMLElement>('.card[data-id]');
+    const card = t.closest<HTMLElement>('.kt-card[data-id]');
     if (!card) { zoom(null); return; }
     e.preventDefault();
     zoom(e.deltaY < 0 ? card.dataset.id ?? null : null);
@@ -1600,6 +1734,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   // ---------------------------------------------------------------- liga tudo
   window.addEventListener('resize', fit);
   window.addEventListener('keydown', onKey);
+  document.addEventListener('visibilitychange', onVisibility);
   stage.addEventListener('wheel', onWheel, { passive: false });
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fit()) : null;
   ro?.observe(root);
@@ -1610,7 +1745,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   return {
     update(s: MesaState): void {
       if (destroyed) return;
-      ME = s.you ?? SPECTATOR;
+      const me = s.you ?? SPECTATOR;
+      if (me !== ME) outBy = null;
+      ME = me;
       hostId = s.hostId;
       seats = s.seats;
       players = s.view.players;
@@ -1618,6 +1755,13 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     },
     error(message: string): void {
       if (destroyed) return;
+      // Jogada recusada: o modo (alvo, bicho) e a legenda dele não valem mais; a seleção fica pra tentar de novo.
+      inFlight = false;
+      if (mode || captionText === ASK_CAPTION || captionText === TARGET_CAPTION) {
+        mode = null;
+        if (captionText === ASK_CAPTION || captionText === TARGET_CAPTION) captionText = '';
+        render();
+      }
       toast(message);
       Sound.play('error');
     },
@@ -1631,8 +1775,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       intervals.clear();
       window.removeEventListener('resize', fit);
       window.removeEventListener('keydown', onKey);
-      window.removeEventListener('pointermove', onDragMove);
-      window.removeEventListener('pointerup', onDragEnd);
+      document.removeEventListener('visibilitychange', onVisibility);
+      stopDragListeners();
       stage.removeEventListener('wheel', onWheel);
       ro?.disconnect();
       drag = null;

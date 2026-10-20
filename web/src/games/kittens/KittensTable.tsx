@@ -1,29 +1,54 @@
 import type { KittensRoomView } from '@cartolina/shared';
-import type { GameConn } from '../../net/connection';
-import { Background } from './Background';
-import { PixelButton, seedOf } from './KittensLobby';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { JOIN_ERRORS, type GameConn } from '../../net/connection';
+import { seedOf } from './KittensLobby';
+import { createMesa, type Mesa } from './mesa';
 import './kittens.css';
 
 /**
- * PROVISÓRIO (Plano T2 em andamento): a partida já começa de verdade no servidor, mas a mesa ainda não foi
- * portada do protótipo. Mostra só o essencial e deixa o host voltar pro lobby.
+ * A mesa do Tatubum na sala: o React só monta o <div> (tela toda, `.kittens`) e liga a "ilha" imperativa da mesa
+ * (`mesa.ts`, porta do protótipo). Cada visão nova vai por `mesa.update()`; as jogadas saem por `conn.sendAction()`;
+ * recusa do servidor vira o toast da mesa. O fundo do cerrado é da própria mesa (sem <Background> aqui).
  */
-export function KittensTable({ view, conn }: { view: KittensRoomView; conn: GameConn }) {
-  const host = view.hostId !== null && view.hostId === view.you;
-  return (
-    <div className="kittens">
-      <Background seed={seedOf(view.code)} />
-      <main className="kt-lobby">
-        <h1 className="kt-logo">TATUBUM</h1>
-        <section className="kt-panel">
-          <h2>A MESA ESTÁ CHEGANDO</h2>
-          <p>
-            A partida começou no servidor: você tem {view.game.hand.length} cartas e o monte tem {view.game.drawCount}. A mesa de jogo (a do
-            protótipo, com arrastar e animações) é o próximo passo.
-          </p>
-          {host && <PixelButton label="VOLTAR PRO LOBBY" tone="ghost" small onClick={() => conn.sendAction({ type: 'lobby' })} />}
-        </section>
-      </main>
-    </div>
+export function KittensTable({ view, conn, serverOffset }: { view: KittensRoomView; conn: GameConn; serverOffset: number }) {
+  const root = useRef<HTMLDivElement>(null);
+  const mesa = useRef<Mesa | null>(null);
+  // A mesa vive enquanto a sala for a mesma: conexão e relógio entram por ref (sem recriar a mesa a cada render).
+  const connRef = useRef(conn);
+  const offsetRef = useRef(serverOffset);
+  useLayoutEffect(() => {
+    connRef.current = conn;
+    offsetRef.current = serverOffset;
+  });
+
+  const code = view.code;
+  useEffect(() => {
+    const m = createMesa(root.current!, {
+      send: (a) => connRef.current.sendAction(a),
+      now: () => Date.now() + offsetRef.current,
+      seed: seedOf(code),
+    });
+    mesa.current = m;
+    return () => {
+      m.destroy();
+      if (mesa.current === m) mesa.current = null;
+    };
+  }, [code]);
+
+  // Roda depois do efeito de cima (mesma ordem da declaração): a mesa já existe na primeira visão.
+  useEffect(() => {
+    mesa.current?.update({ view: view.game, you: view.you, hostId: view.hostId, seats: view.seats });
+  }, [view]);
+
+  // Recusas do servidor (que não são de entrada na sala) viram o toast da mesa, com o som de erro.
+  useEffect(
+    () =>
+      conn.onError((errCode, message) => {
+        if (JOIN_ERRORS.has(errCode)) return;
+        mesa.current?.error(message);
+      }),
+    [conn],
   );
+
+  return <div className="kittens" ref={root} />;
 }

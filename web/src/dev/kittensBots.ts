@@ -1,6 +1,7 @@
 /**
- * Bots do Tatubum SÓ PARA DESENVOLVIMENTO (importados via `import()` atrás de `import.meta.env.DEV`).
- * Cada bot abre o próprio WebSocket e joga como uma pessoa, olhando só a visão dele (sem trapaça).
+ * Bots do Tatubum (modo teste): existem também no site no ar, pra completar a mesa quando tem pouca gente (o lobby
+ * carrega o `BotControls` sob demanda, só pro host). Rodam no navegador de quem os pôs e entram pelo mesmo servidor
+ * do site (`wsUrl`/`getRoomInfo` de `net/`, nada fixo de localhost). Cada bot abre o próprio WebSocket e joga como uma pessoa, olhando só a visão dele (sem trapaça).
  * Não são espertos de propósito: jogam umas cartas, às vezes dão Nem vem! e sempre terminam comprando.
  * Nunca faz ações de host (começar, jogar de novo, lobby): isso fica com a pessoa que está testando.
  */
