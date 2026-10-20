@@ -85,6 +85,10 @@ Com **10 moedas ou mais**, a única ação permitida é o **golpe**.
    - Se **todos que podem reagir** clicaram "deixa", ou o prazo acabou, a ação
      acontece.
    - Quem já deixou aparece pra todos ("Beto deixou").
+   - Cada janela tem um número (`id`); o site manda junto da reação o número da
+     janela que o jogador viu, e reação de uma janela que já fechou (ou depois
+     do prazo) recebe `window_closed`. Assim um "duvidar" atrasado não vira
+     dúvida do bloqueio que abriu logo depois (decidido na execução do C1).
 2. **Janela do bloqueio.** Quando alguém bloqueia, abre outra janela de 10 s
    pra **qualquer jogador vivo, menos quem bloqueou** (inclusive quem fez a
    ação), com **duvidar do bloqueio** e **deixa**. Ninguém duvidou: a ação é
@@ -105,7 +109,7 @@ Com **10 moedas ou mais**, a única ação permitida é o **golpe**.
 ### Perder uma carta
 
 - Quem perde **escolhe** qual carta revela, **sem prazo** (o anfitrião não
-  precisa destravar; amigos na call).
+  precisa destravar; amigos na call). Com uma carta só, ela vira sozinha.
 - A carta revelada fica **virada pra cima** na frente do jogador, à vista de
   todos, e não volta pro baralho.
 - Sem cartas viradas pra baixo, o jogador **está fora**: as moedas dele voltam
@@ -188,12 +192,16 @@ O diário recomeça a cada partida.
   aberta e o que **você** pode fazer nela, o diário e o placar. Esconde as
   cartas viradas pra baixo dos outros, a ordem do baralho e as 2 cartas da troca
   (só quem troca vê).
-- `log.ts`: entradas do diário (dados, não texto; o site escreve as frases).
-- `record.ts`: resumo da partida pro histórico (§6).
+- `table.ts`: consultas puras (cartas viradas pra baixo, vivos, tesouro, quem
+  bloqueia, por que uma ação não vale) usadas pelas regras e pela visão.
+- O diário são dados (`CoupLogEntry`, em `types.ts`), não texto; o site escreve
+  as frases.
+- `record.ts` (Plano C4): resumo da partida pro histórico (§6).
 
 Registro em `shared/src/games/registry.ts`: `coup`, `minPlayers: 2`,
 `maxPlayers: 6`, `liveCursors: false` (cursor em cima de um assento entregaria
-o alvo), `recordsHistory: true`.
+o alvo), `recordsHistory: true` a partir do Plano C4 (até lá `false`, e
+`/history/coup` responde 404).
 
 ### 4.2 Servidor (`server/`)
 
