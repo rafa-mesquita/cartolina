@@ -14,7 +14,12 @@ export const kittensActionSchema = z.discriminatedUnion('type', [
     ask: z.enum(KITTENS_CARD_KINDS).optional(),
     as: z.enum(KITTENS_CARD_KINDS).optional(),
   }),
-  z.object({ type: z.literal('nope'), card: cardId.optional() }),
+  z.object({
+    type: z.literal('nope'),
+    card: cardId.optional(),
+    at: z.number().int().min(0).max(100).optional(),
+    on: cardId.optional(),
+  }),
   z.object({ type: z.literal('draw') }),
   z.object({
     type: z.literal('choose'),

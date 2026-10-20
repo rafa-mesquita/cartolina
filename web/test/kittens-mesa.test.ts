@@ -486,8 +486,37 @@ describe('mesa do Tatubum', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
     expect(m2.sent).toEqual([]);
     dragCard(m2.root, '?1', m2.root.querySelector('#table')!);
-    expect(m2.sent).toEqual([{ type: 'nope', card: '?1' }]);
+    expect(m2.sent).toEqual([{ type: 'nope', card: '?1', at: 0, on: 'ataque-1' }]);
     m2.mesa.destroy();
+  });
+
+  it('Nem vem! manda o que você viu (at/on); atrasado, a carta continua na mão e aparece o aviso', () => {
+    const v = midGame('p1');
+    v.game.current = 'p0';
+    v.game.hand = ['nemvem-7', 'mico-7'];
+    // Já tem um Nem vem! (do p2) na carta no ar.
+    v.game.pending = {
+      by: 'p0',
+      play: { kind: 'ataque', cards: ['ataque-1'], target: null, ask: null, as: null },
+      nopes: [{ by: 'p2', card: 'nemvem-8' }],
+      resolvesAt: Date.now() + 5000,
+    };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    const want = { type: 'nope', at: 1, on: 'ataque-1' };
+    // Botão, tecla N e o Nem vem! arrastado pra mesa: todos mandam `at` e `on`.
+    root.querySelector<HTMLButtonElement>('#nope')!.click();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    dragCard(root, 'nemvem-7', root.querySelector('#table')!);
+    expect(sent).toEqual([want, want, want]);
+    // O servidor recusa (alguém deu Nem vem! antes): o aviso aparece e o Nem vem! continua na mão, visível.
+    mesa.error('Alguém deu Nem vem! antes de você: sua carta voltou pra mão.');
+    expect(root.querySelector('#toast')?.textContent).toBe('Alguém deu Nem vem! antes de você: sua carta voltou pra mão.');
+    const card = root.querySelector<HTMLElement>('#hand .kt-card[data-id="nemvem-7"]');
+    expect(card).not.toBeNull();
+    expect(card!.classList.contains('dragging')).toBe(false);
+    expect(root.querySelector('#nope')).not.toBeNull();
+    mesa.destroy();
   });
 
   it('descarte: passar o mouse na de cima dá zoom; no quadro do olho, o painel diz o que a carta faz', () => {

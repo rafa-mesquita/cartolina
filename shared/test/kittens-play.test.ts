@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { kittensKindOf } from '../src/games/kittens/cards';
 import { KITTENS_NOPE_MS, type KittensAction } from '../src/games/kittens/types';
-import { T0, act, ctxOf, ids, refuse, table } from './kittens-helpers';
+import { applyKittensAction } from '../src/games/kittens/rules';
+import { errorMessage } from '../src/protocol';
+import { T0, act, ctxOf, deepFreeze, ids, refuse, table, tokenOf } from './kittens-helpers';
 
 const ctx = ctxOf(ids(3));
 const hands = () => ({
@@ -139,5 +141,60 @@ describe('Nem vem!', () => {
     expect(refuse(air(), 'p2', { type: 'nope' }, ctx)).toBe('no_nope');
     expect(refuse(table({ hands: hands() }), 'p1', { type: 'nope' }, ctx)).toBe('nothing_to_nope');
     expect(refuse({ ...air(), alive: ['p0', 'p2'] }, 'p1', { type: 'nope' }, ctx)).toBe('not_alive');
+  });
+
+  describe('Nem vem! atrasado (pedido do Rafa, 2026-10-20)', () => {
+    // p1 e p2 têm Nem vem! e veem a mesma carta no ar, sem nenhum Nem vem! ainda.
+    const air2 = () => act(table({ hands: { ...hands(), p2: ['nemvem-2', 'mico-2'] } }), 'p0', play({ cards: ['ataque-0'] }), ctx);
+    const later = ctxOf(ids(3), { now: T0 + 1000 });
+
+    it('dois quase juntos: vale o primeiro; o segundo é recusado e a carta fica na mão', () => {
+      const first = act(air2(), 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, later);
+      expect(first.pending!.nopes).toEqual([{ by: 'p1', card: 'nemvem-1' }]);
+      const res = applyKittensAction(deepFreeze(first), 'p2', { type: 'nope', at: 0, on: 'ataque-0' }, ctxOf(ids(3), { now: T0 + 1100 }));
+      expect(res).toEqual({ ok: false, error: 'nope_late' });
+      // Nada muda: o Nem vem! de p2 continua na mão e a janela é a que o primeiro abriu (5 s pra decidir de novo).
+      expect(first.hands.p2).toEqual(['nemvem-2', 'mico-2']);
+      expect(first.pending!.resolvesAt).toBe(T0 + 1000 + KITTENS_NOPE_MS);
+      expect(errorMessage('nope_late')).toBe('Alguém deu Nem vem! antes de você: sua carta voltou pra mão.');
+    });
+
+    it('depois de ver o primeiro, o segundo pode dar Nem vem! em cima (at: 1)', () => {
+      const first = act(air2(), 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, later);
+      const back = act(first, 'p2', { type: 'nope', at: 1, on: 'ataque-0' }, ctxOf(ids(3), { now: T0 + 3000 }));
+      expect(back.pending!.nopes).toEqual([
+        { by: 'p1', card: 'nemvem-1' },
+        { by: 'p2', card: 'nemvem-2' },
+      ]);
+      expect(back.hands.p2).toEqual(['mico-2']);
+      expect(back.pending!.resolvesAt).toBe(T0 + 3000 + KITTENS_NOPE_MS);
+    });
+
+    it('`at` à frente do que há na mesa também não vale', () => {
+      expect(refuse(air2(), 'p1', { type: 'nope', at: 1 }, later)).toBe('nope_late');
+    });
+
+    it('sem `at` (cliente antigo) vale como antes: vira Nem vem! em cima de Nem vem!', () => {
+      const first = act(air2(), 'p1', { type: 'nope', at: 0 }, later);
+      expect(act(first, 'p2', { type: 'nope' }, later).pending!.nopes.map((n) => n.by)).toEqual(['p1', 'p2']);
+    });
+
+    it('outra carta no ar com o mesmo número de Nem vem!: recusado (`on`)', () => {
+      // p2 clicou no Ataque; ele resolveu e agora o Pular está no ar, também sem Nem vem!.
+      const other = act(table({ hands: { ...hands(), p2: ['nemvem-2'] } }), 'p0', play({ cards: ['pular-0'] }), ctx);
+      expect(refuse(other, 'p2', { type: 'nope', at: 0, on: 'ataque-0' }, later)).toBe('nope_stale');
+      expect(act(other, 'p2', { type: 'nope', at: 0, on: 'pular-0' }, later).pending!.nopes).toHaveLength(1);
+    });
+
+    it('quem está cego manda a ficha com `at` também', () => {
+      const s = { ...air2(), blind: ['p2'] };
+      const token = tokenOf(s, 'p2', 'nemvem-2');
+      const first = act(s, 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, later);
+      expect(refuse(first, 'p2', { type: 'nope', card: token, at: 0, on: 'ataque-0' }, later)).toBe('nope_late');
+      expect(act(first, 'p2', { type: 'nope', card: token, at: 1, on: 'ataque-0' }, later).pending!.nopes.at(-1)).toEqual({
+        by: 'p2',
+        card: 'nemvem-2',
+      });
+    });
   });
 });

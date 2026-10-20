@@ -162,20 +162,23 @@ describe('decisão do bot do Tatubum', () => {
     const v = p1View(['nemvem-5', 'mico-1'], { pending: inAir('p0', 'p1') });
     const mem = newKittensMemory();
     const d = decideKittens(v, mem, () => 0)!;
-    expect(d.action).toEqual({ type: 'nope' });
+    // Vai junto o que ele viu (at/on): se outro deu Nem vem! antes, o servidor recusa em vez de anular o outro.
+    expect(d.action).toEqual({ type: 'nope', at: 0, on: 'favor-1' });
     expect(d.key).toBe('nope:p0:favor-1:0');
     expect(d.delay).toBeGreaterThanOrEqual(800);
     expect(d.delay).toBeLessThanOrEqual(3400);
     expect(decideKittens(v, mem, () => 0)).toBeNull();
     // um Nem vem! novo no ar é outra etapa: decide de novo
     const v2 = p1View(['nemvem-5'], { pending: inAir('p0', 'p1', 'favor', 1) });
-    expect(decideKittens(v2, mem, () => 0)!.key).toBe('nope:p0:favor-1:1');
+    const d2 = decideKittens(v2, mem, () => 0)!;
+    expect(d2.key).toBe('nope:p0:favor-1:1');
+    expect(d2.action).toEqual({ type: 'nope', at: 1, on: 'favor-1' });
   });
 
   it('Ataque cujo próximo da vez é ele conta como "contra ele"; sem Nem vem! na mão, nunca dá', () => {
     // p0 ataca: o próximo vivo é o p1; chance 0.7 passa com rng 0.6
     const v = p1View(['nemvem-5'], { pending: inAir('p0', null, 'ataque') });
-    expect(decideKittens(v, newKittensMemory(), () => 0.6)!.action).toEqual({ type: 'nope' });
+    expect(decideKittens(v, newKittensMemory(), () => 0.6)!.action).toEqual({ type: 'nope', at: 0, on: 'ataque-1' });
     const sem = p1View(['mico-1'], { pending: inAir('p0', 'p1') });
     expect(decideKittens(sem, newKittensMemory(), () => 0)).toBeNull();
   });
@@ -184,7 +187,7 @@ describe('decisão do bot do Tatubum', () => {
     const own = p1View(['nemvem-5'], { current: 'p1', pending: inAir('p1', 'p0') });
     expect(decideKittens(own, newKittensMemory(), () => 0)).toBeNull();
     const noped = p1View(['nemvem-5'], { current: 'p1', pending: inAir('p1', 'p0', 'favor', 1) });
-    expect(decideKittens(noped, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'nope' });
+    expect(decideKittens(noped, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'nope', at: 1, on: 'favor-1' });
   });
 
   it('fora da vez e sem nada no ar, não faz nada', () => {

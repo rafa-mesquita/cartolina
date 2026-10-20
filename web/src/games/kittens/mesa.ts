@@ -1272,9 +1272,17 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (card) act({ type: 'choose', card });
   }
 
-  /** Nem vem! (`card` = qual: a ficha, quando você está cego; sem ela o servidor usa um da mão). */
+  /**
+   * Nem vem! (`card` = qual: a ficha, quando você está cego; sem ela o servidor usa um da mão). Vai junto o que você
+   * viu (pedido do Rafa, 2026-10-20): `at` = quantos Nem vem! já tinha na carta no ar e `on` = a primeira carta dela.
+   * Se alguém deu Nem vem! antes (ou a carta no ar mudou), o servidor recusa: a carta continua na mão (nada sai dela
+   * antes da resposta) e o `error()` mostra o aviso; dá pra tentar de novo na janela nova.
+   */
   function nope(card?: string): void {
-    act(card ? { type: 'nope', card } : { type: 'nope' });
+    const p = view?.pending;
+    if (!p) return;
+    const on = p.play.cards[0];
+    act({ type: 'nope', ...(card ? { card } : {}), at: p.nopes.length, ...(on ? { on } : {}) });
   }
 
   function renderActions(): void {

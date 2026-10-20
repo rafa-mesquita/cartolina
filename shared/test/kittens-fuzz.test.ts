@@ -5,7 +5,7 @@ import { KITTENS_EXTRA_CAFUNES, KITTENS_LATIDOS, kittensBaseDeck } from '../src/
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import { settleKittens } from '../src/games/kittens/settle';
 import { tatusIn } from '../src/games/kittens/turn';
-import type { KittensAction, KittensState } from '../src/games/kittens/types';
+import type { KittensAction, KittensPending, KittensState } from '../src/games/kittens/types';
 import { kittensViewFor } from '../src/games/kittens/view';
 import { mulberry32, type Rng } from '../src/rng';
 import { T0, deepFreeze, everyCard, ids, must } from './kittens-helpers';
@@ -136,6 +136,20 @@ function tokensToPlay(r: Rng, size: number): string[] {
   return tokens;
 }
 
+/**
+ * O que quem dá Nem vem! viu na carta no ar (`at`/`on`): quase sempre o que está lá; às vezes um número de Nem vem!
+ * velho (clicou junto com outro) ou outra carta (a de antes); às vezes nada (cliente antigo).
+ */
+function seenAir(r: Rng, pending: KittensPending): { at?: number; on?: string } {
+  const at = pending.nopes.length;
+  const on = pending.play.cards[0]!;
+  const roll = r();
+  if (roll < 0.7) return { at, on };
+  if (roll < 0.82) return { at: at > 0 && r() < 0.6 ? at - 1 : at + 1, on };
+  if (roll < 0.88) return { at, on: 'ataque-0' === on ? 'pular-0' : 'ataque-0' };
+  return {};
+}
+
 /** Uma ação ao acaso de `p` (pode ser inválida: aí é recusada e nada muda). */
 function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const hand = s.hands[p] ?? [];
@@ -165,7 +179,10 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
     return { type: 'choose', card: pick(r, c.options.filter((x) => s.discard.includes(x))) ?? 'ataque-0' };
   }
   const a = r();
-  if (s.pending && a < 0.5) return blind || r() < 0.2 ? { type: 'nope', card: own() } : { type: 'nope' };
+  if (s.pending && a < 0.5) {
+    const base: KittensAction = blind || r() < 0.2 ? { type: 'nope', card: own() } : { type: 'nope' };
+    return { ...base, ...seenAir(r, s.pending) };
+  }
   const extra = { target: pick(r, s.players), ask: pick(r, KITTENS_BICHOS), as: pick(r, KITTENS_BICHOS) };
   // Quem está cego joga às cegas de vez em quando; na maioria das vezes compra (e volta a ver).
   if (blind) return a < 0.3 && hand.length > 0 ? { type: 'play', cards: tokensToPlay(r, hand.length), ...extra } : { type: 'draw' };
@@ -263,7 +280,17 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
       const alias = cardsOf(action).some(isAlias);
       if (alias) seen.add('alias');
       if (res.ok && alias) throw new Error(`ficha com outro nome aceita: ${p} ${JSON.stringify(action)}\n  ${where()}`);
-      if (!res.ok) continue;
+      if (!res.ok) {
+        if (res.error === 'nope_late' || res.error === 'nope_stale') seen.add(`nope:${res.error}`);
+        continue;
+      }
+      // Nem vem! aceito com o que o jogador viu: tem que ser o que estava na mesa (senão contaria em cima do outro).
+      if (action.type === 'nope' && action.at !== undefined && action.at !== s.pending?.nopes.length) {
+        throw new Error(`Nem vem! atrasado aceito: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+      }
+      if (action.type === 'nope' && action.on !== undefined && action.on !== s.pending?.play.cards[0]) {
+        throw new Error(`Nem vem! em outra carta aceito: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+      }
       if (c?.kind === 'latido' && c.who === p && s.blind.includes(p) && res.state.choice === null) seen.add('latido:blind-defended');
       trace.push(`${p} ${JSON.stringify(action)}`);
       s = res.state;
@@ -321,6 +348,8 @@ describe('simulação aleatória do Tatubum', () => {
       'favor:again',
       'peek:kept',
       'peek:many',
+      'nope:nope_late',
+      'nope:nope_stale',
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

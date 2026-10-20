@@ -43,4 +43,17 @@ describe('Tatubum no servidor', () => {
     const err = await waiting.client.next('error');
     expect(err).toMatchObject({ code: 'not_your_turn', message: 'Não é a sua vez.' });
   });
+
+  it('Nem vem! com o que o jogador viu (at/on) chega nas regras; at inválido é recusado antes', async () => {
+    const code = await newGameRoom('kittens');
+    const players = await joined(code, 2);
+    players[0]!.client.send({ t: 'action', action: { type: 'start' } });
+    await players[1]!.client.state<KittensRoomView>(isPlaying);
+    const p = players[1]!;
+    // Sem carta no ar: quem responde são as regras (o schema aceitou `at` e `on`).
+    p.client.send({ t: 'action', action: { type: 'nope', at: 0, on: 'ataque-0' } });
+    expect(await p.client.next('error')).toMatchObject({ code: 'nothing_to_nope' });
+    p.client.send({ t: 'action', action: { type: 'nope', at: -1 } });
+    expect(await p.client.next('error')).toMatchObject({ code: 'bad_action' });
+  });
 });

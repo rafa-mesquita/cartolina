@@ -393,6 +393,17 @@ a 5 o baralho era o do jogo original (46).
 1. Uma jogada que aceita Nem vem! entra em `pending` com `resolvesAt = ctx.now + 5000`.
 2. `nope` de qualquer vivo com Nem vem! na mão → a carta sai da mão, entra em `pending.nopes`, e
    `resolvesAt = ctx.now + 5000` de novo.
+   - **Nem vem! atrasado (pedido do Rafa, 2026-10-20).** Antes, dois Nem vem! quase juntos viravam Nem vem! em
+     cima de Nem vem! (o segundo anulava o primeiro sem querer). Agora o `nope` leva o que o jogador viu ao clicar:
+     `at` = quantos Nem vem! já havia na carta no ar (`pending.nopes.length`) e `on` = a primeira carta da jogada no
+     ar (`pending.play.cards[0]`; os ids de carta são únicos, então isso identifica a jogada sem mudar o estado). Vale
+     o que chegou primeiro; se `at` não bate, o servidor recusa com `nope_late` ("Alguém deu Nem vem! antes de você:
+     sua carta voltou pra mão.") e nada muda: a carta fica na mão e a janela é a que o primeiro já reiniciou, então
+     ele tem 5 s pra decidir de novo (agora vendo o Nem vem! do outro, com `at` novo). Se `on` não bate (resolveu e
+     outra carta subiu com o mesmo número de Nem vem!), recusa com `nope_stale`. **(decisão)** `on` em vez de um
+     número de sequência no `pending`: não precisa de compatibilidade com sala salva. `at`/`on` são opcionais: sem
+     eles (site antigo em cache) vale como antes. Mesa (botão, tecla N, arrastar o Nem vem! ou a ficha do cego pra
+     mesa) e bots mandam os dois.
 3. O alarme da sala chama `onPresenceChange` com `ctx.now ≥ resolvesAt` → `resolve.ts` aplica.
 4. Se o efeito pede escolha (Favor, 5 diferentes), abre `choice` com `deadline = now + 30000`.
 5. Comprar, Cafuné e explodir **não** passam pela pilha: acontecem na hora.

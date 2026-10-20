@@ -180,6 +180,11 @@ export function applyKittensAction(
       if (s.phase !== 'playing') return fail('bad_phase');
       if (!s.alive.includes(playerId)) return fail('not_alive');
       if (!s.pending) return fail('nothing_to_nope');
+      // Nem vem! atrasado (pedido do Rafa, 2026-10-20): dois quase juntos não viram Nem vem! em cima de Nem vem!. Vale
+      // o que chegou primeiro; o outro é recusado, a carta fica na mão e ele tem a janela nova (5 s) pra decidir de novo.
+      // `on` pega outra carta no ar com o mesmo número de Nem vem! (a jogada de antes já resolveu).
+      if (action.on !== undefined && action.on !== s.pending.play.cards[0]) return fail('nope_stale');
+      if (action.at !== undefined && action.at !== s.pending.nopes.length) return fail('nope_late');
       const isNope = (c: string) => kittensKindOf(c) === 'nemvem';
       let card: string | undefined;
       if (action.card === undefined && !s.blind.includes(playerId)) {
