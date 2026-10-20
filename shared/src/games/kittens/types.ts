@@ -28,7 +28,7 @@ export type KittensPlayKind =
 export interface KittensPlay {
   kind: KittensPlayKind;
   cards: string[];
-  /** Favor e Mau-olhado (o par de Mico não tem alvo). */
+  /** Favor, trio de Favor e Mau-olhado (o par de Mico não tem alvo). */
   target: string | null;
   /** Par de Preguiça: o bicho pedido. */
   ask: KittensCardKind | null;
@@ -52,8 +52,11 @@ export type KittensChoice =
   | { kind: 'tatu'; who: string; tatu: string; deadline: number }
   /** Quem desarmou escolhe onde o `tatu` volta no monte. */
   | { kind: 'cafune'; who: string; tatu: string; deadline: number }
-  /** `who` (o alvo do Favor) escolhe uma carta da mão pra dar pra `to`. */
-  | { kind: 'favor'; who: string; to: string; deadline: number }
+  /**
+   * `who` (o alvo do Favor) escolhe, uma de cada vez, `left` cartas da mão pra dar pra `to`: 1 no Favor sozinho; 3 no
+   * trio de Favor (ou a mão toda, se tiver menos). Fecha quando dá todas ou a mão de `who` acaba.
+   */
+  | { kind: 'favor'; who: string; to: string; left: number; deadline: number }
   /** `who` pega, uma de cada vez, `left` cartas de `options` (o descarte de antes da jogada de 5 diferentes). */
   | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number }
   /** Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par. */

@@ -46,6 +46,14 @@ function playKindOf(kinds: KittensCardKind[], as: KittensCardKind | undefined): 
   return 'bad_combo';
 }
 
+/**
+ * Favor sozinho ou trio de 3 Favores (pedido do Rafa, 2026-10-20): os dois pedem um alvo com carta na mão, e o alvo
+ * escolhe o que dar (1 carta; no trio, 3).
+ */
+export function kittensIsFavorPlay(play: { kind: KittensPlayKind; as: KittensCardKind | null }): boolean {
+  return play.kind === 'favor' || (play.kind === 'trio' && play.as === 'favor');
+}
+
 type PlayAction = { cards: string[]; target?: string; ask?: KittensCardKind; as?: KittensCardKind };
 
 /**
@@ -78,11 +86,12 @@ function readPlay(s: KittensState, p: string, cards: string[], action: PlayActio
   if (typeof parsed === 'string') return parsed;
   const { kind } = parsed;
   let target: string | null = null;
-  if (kind === 'favor' || kind === 'olhado') {
-    // Favor: o alvo precisa ter carta pra dar. Mau-olhado: qualquer adversário vivo (até sem carta).
+  const favor = kittensIsFavorPlay(parsed);
+  if (favor || kind === 'olhado') {
+    // Favor (e trio de Favor): o alvo precisa ter carta pra dar. Mau-olhado: qualquer adversário vivo (até sem carta).
     const t = action.target;
     if (t === undefined || t === p || !s.alive.includes(t)) return 'bad_target';
-    if (kind === 'favor' && (s.hands[t]?.length ?? 0) === 0) return 'bad_target';
+    if (favor && (s.hands[t]?.length ?? 0) === 0) return 'bad_target';
     target = t;
   }
   let ask: KittensCardKind | null = null;

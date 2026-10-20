@@ -40,14 +40,16 @@ export function useCafune(s: KittensState, c: Choice<'tatu'>, card: string, dead
   return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'cafune', by: c.who });
 }
 
-/** Favor: `who` dá `card` pra `to`. Só os dois veem qual carta foi. */
+/**
+ * Favor: `who` dá `card` pra `to`. Só os dois veem qual carta foi. No trio de Favor a escolha continua aberta (mesmo
+ * prazo, `left` menor) até dar todas ou a mão de `who` acabar.
+ */
 export function giveFavor(s: KittensState, c: Choice<'favor'>, card: string): KittensState {
-  const hands = {
-    ...s.hands,
-    [c.who]: s.hands[c.who]!.filter((x) => x !== card),
-    [c.to]: [...s.hands[c.to]!, card],
-  };
-  return logged({ ...s, hands, choice: null }, { t: 'gave', from: c.who, to: c.to, card }, [c.who, c.to]);
+  const mine = s.hands[c.who]!.filter((x) => x !== card);
+  const hands = { ...s.hands, [c.who]: mine, [c.to]: [...s.hands[c.to]!, card] };
+  const left = c.left - 1;
+  const choice = left > 0 && mine.length > 0 ? { ...c, left } : null;
+  return logged({ ...s, hands, choice }, { t: 'gave', from: c.who, to: c.to, card }, [c.who, c.to]);
 }
 
 /**
@@ -109,7 +111,7 @@ export function conjure(s: KittensState, c: Choice<'feitico'>, keep: boolean, de
 
 /**
  * Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica; no Mico, cada um
- * que falta descarta uma; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta
+ * que falta descarta uma; no Favor, dá o que faltar; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta
  * de baixo vai pro topo, seja qual for).
  */
 export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
@@ -125,8 +127,14 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
     case 'cafune':
       return hideTatu(s, c, 'random', rng);
     case 'favor': {
-      const hand = s.hands[c.who]!;
-      return hand.length === 0 ? { ...s, choice: null } : giveFavor(s, c, hand[randomInt(rng, hand.length)]!);
+      // Dá as que faltam, ao acaso (cada uma atualiza `left` ou fecha a escolha).
+      let next = s;
+      while (next.choice?.kind === 'favor') {
+        const cur: Choice<'favor'> = next.choice;
+        const hand = next.hands[cur.who]!;
+        next = hand.length === 0 ? { ...next, choice: null } : giveFavor(next, cur, hand[randomInt(rng, hand.length)]!);
+      }
+      return next;
     }
     case 'cinco': {
       // Pega as que faltam, ao acaso (cada pegada atualiza `options`/`left` ou fecha a escolha).

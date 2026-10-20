@@ -262,6 +262,9 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     if (air && air.cards.some((c) => kittensKindOf(c) === 'boto')) seen.add(`boto:${air.kind}`);
     if (s.blind.length > 0) seen.add('blind');
     if (s.choice) seen.add(`choice:${s.choice.kind}`);
+    // Trio de Favor: o alvo dá até 3 cartas, uma de cada vez (a escolha continua aberta entre uma e outra).
+    if (air?.kind === 'trio' && air.as === 'favor') seen.add('trio:favor');
+    if (s.choice?.kind === 'favor' && c?.kind === 'favor' && s.choice.left < c.left) seen.add('favor:again');
     checkInvariants(s, deck, someViewer(s), where);
   }
   return true;
@@ -299,6 +302,8 @@ describe('simulação aleatória do Tatubum', () => {
       'latido:blind',
       'latido:blind-defended',
       'feitico:timeout',
+      'trio:favor',
+      'favor:again',
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

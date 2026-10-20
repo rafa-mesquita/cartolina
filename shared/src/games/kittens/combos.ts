@@ -77,8 +77,16 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
   }
 }
 
-/** Trio: rouba um Desarme de um adversário sorteado entre os que têm (todos veem). */
-export function applyTrio(s: KittensState, by: string, ctx: GameContext): KittensState {
+/**
+ * Trio: rouba um Desarme de um adversário sorteado entre os que têm (todos veem). Exceção (pedido do Rafa, 2026-10-20):
+ * 3 Favores abrem a escolha do Favor pro alvo, que dá 3 cartas (a mão toda, se tiver menos), uma de cada vez.
+ */
+export function applyTrio(s: KittensState, by: string, play: KittensPlay, ctx: GameContext): KittensState {
+  if (play.as === 'favor') {
+    const who = play.target!;
+    const left = Math.min(3, s.hands[who]!.length);
+    return { ...s, choice: { kind: 'favor', who, to: by, left, deadline: ctx.now + KITTENS_CHOICE_MS } };
+  }
   const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind('cafune')));
   if (holders.length === 0) return logged(s, { t: 'grabbed', by, from: null, card: null });
   const from = holders[randomInt(ctx.rng, holders.length)]!;

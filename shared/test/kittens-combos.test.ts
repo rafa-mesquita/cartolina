@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { settleKittens } from '../src/games/kittens/settle';
-import { KITTENS_CHOICE_MS, type KittensAction } from '../src/games/kittens/types';
+import { KITTENS_CHOICE_MS, type KittensAction, type KittensState } from '../src/games/kittens/types';
+import { kittensViewFor } from '../src/games/kittens/view';
 import { T0, act, ctxOf, ids, refuse, table } from './kittens-helpers';
 
 const ctx = ctxOf(ids(3));
@@ -22,7 +23,7 @@ describe('Favor', () => {
 
   it('o alvo escolhe o que dar; só os dois veem qual carta', () => {
     const s = resolved(favor);
-    expect(s.choice).toEqual({ kind: 'favor', who: 'p1', to: 'p0', deadline: T0 + 5000 + KITTENS_CHOICE_MS });
+    expect(s.choice).toEqual({ kind: 'favor', who: 'p1', to: 'p0', left: 1, deadline: T0 + 5000 + KITTENS_CHOICE_MS });
     expect(refuse(s, 'p0', { type: 'draw' }, at(5000))).toBe('waiting_choice');
     expect(refuse(s, 'p0', { type: 'choose', card: 'ataque-5' }, at(5000))).toBe('not_your_choice');
     expect(refuse(s, 'p1', { type: 'choose', card: 'mico-0' }, at(5000))).toBe('bad_choice');
@@ -39,6 +40,126 @@ describe('Favor', () => {
     expect(late.choice).toBeNull();
     expect(late.hands.p1).toHaveLength(1);
     expect(late.hands.p0).toHaveLength(8);
+  });
+});
+
+describe('trio de Favor: o escolhido te dá 3 cartas (pedido do Rafa, 2026-10-20)', () => {
+  const FAVORES = ['favor-0', 'favor-1', 'favor-2'];
+  const trioHands = () => ({
+    p0: [...FAVORES, 'mico-0'],
+    p1: ['ataque-5', 'pular-5', 'espiar-5', 'cafune-5'],
+    p2: ['quati-5'],
+  });
+  const play = (target?: string): KittensAction => ({ type: 'play', cards: FAVORES, ...(target ? { target } : {}) });
+  const air = (target: string) => act(table({ hands: trioHands(), draw: ['pular-9', 'mico-9'] }), 'p0', play(target), ctx);
+  const gaves = (s: KittensState) => s.log.filter((e) => e.ev.t === 'gave');
+
+  it('pede alvo: adversário vivo com carta na mão', () => {
+    const s = table({ hands: { ...trioHands(), p2: [] }, draw: ['pular-9'] });
+    expect(refuse(s, 'p0', play(), ctx)).toBe('bad_target');
+    expect(refuse(s, 'p0', play('p0'), ctx)).toBe('bad_target');
+    expect(refuse(s, 'p0', play('p2'), ctx)).toBe('bad_target'); // sem carta
+    expect(refuse(s, 'p0', play('p9'), ctx)).toBe('bad_target');
+    const ok = act(s, 'p0', play('p1'), ctx);
+    expect(ok.pending!.play).toEqual({ kind: 'trio', cards: FAVORES, target: 'p1', ask: null, as: 'favor' });
+    expect(ok.log.at(-1)!.ev).toEqual({ t: 'play', by: 'p0', play: 'trio', target: 'p1', ask: null, as: 'favor' });
+  });
+
+  it('o alvo escolhe 3 cartas, uma de cada vez; só os dois veem quais; não rouba Desarme', () => {
+    const s = settleKittens(air('p1'), at(5000));
+    expect(s.choice).toEqual({ kind: 'favor', who: 'p1', to: 'p0', left: 3, deadline: T0 + 5000 + KITTENS_CHOICE_MS });
+    expect(s.log.some((e) => e.ev.t === 'grabbed')).toBe(false);
+    expect(refuse(s, 'p0', { type: 'choose', card: 'ataque-5' }, at(5000))).toBe('not_your_choice');
+    const one = act(s, 'p1', { type: 'choose', card: 'ataque-5' }, at(6000));
+    expect(one.choice).toEqual({ ...s.choice, left: 2 });
+    const two = act(one, 'p1', { type: 'choose', card: 'cafune-5' }, at(7000));
+    expect(two.choice).toMatchObject({ kind: 'favor', left: 1 });
+    expect(refuse(two, 'p1', { type: 'choose', card: 'cafune-5' }, at(7000))).toBe('bad_choice'); // já deu essa
+    const three = act(two, 'p1', { type: 'choose', card: 'pular-5' }, at(8000));
+    expect(three.choice).toBeNull();
+    expect(three.hands.p1).toEqual(['espiar-5']);
+    expect(three.hands.p0).toEqual(['mico-0', 'ataque-5', 'cafune-5', 'pular-5']);
+    expect(three).toMatchObject({ current: 'p0', owed: 1 });
+    expect(gaves(three).map((e) => [e.ev, e.seenBy])).toEqual([
+      [{ t: 'gave', from: 'p1', to: 'p0', card: 'ataque-5' }, ['p1', 'p0']],
+      [{ t: 'gave', from: 'p1', to: 'p0', card: 'cafune-5' }, ['p1', 'p0']],
+      [{ t: 'gave', from: 'p1', to: 'p0', card: 'pular-5' }, ['p1', 'p0']],
+    ]);
+    expect(kittensViewFor(one, 'p2').log.at(-1)!.ev).toEqual({ t: 'gave', from: 'p1', to: 'p0', card: null });
+    expect(kittensViewFor(one, 'p2').choice).toMatchObject({ kind: 'favor', who: 'p1', left: 2 });
+  });
+
+  it('sem resposta, no fim do prazo as que faltam vão ao acaso', () => {
+    const s = settleKittens(air('p1'), at(5000));
+    const late = settleKittens(s, at(5000 + KITTENS_CHOICE_MS));
+    expect(late.choice).toBeNull();
+    expect(late.hands.p1).toHaveLength(1);
+    expect(late.hands.p0).toHaveLength(4);
+    expect(gaves(late)).toHaveLength(3);
+    const half = act(s, 'p1', { type: 'choose', card: 'espiar-5' }, at(6000));
+    const rest = settleKittens(half, at(5000 + KITTENS_CHOICE_MS));
+    expect(rest.choice).toBeNull();
+    expect(rest.hands.p0).toContain('espiar-5');
+    expect(rest.hands.p1).toHaveLength(1);
+    expect(gaves(rest)).toHaveLength(3);
+  });
+
+  it('alvo com menos de 3 cartas dá a mão toda', () => {
+    const s = settleKittens(air('p2'), at(5000));
+    expect(s.choice).toMatchObject({ kind: 'favor', who: 'p2', to: 'p0', left: 1 });
+    const gave = act(s, 'p2', { type: 'choose', card: 'quati-5' }, at(6000));
+    expect(gave.choice).toBeNull();
+    expect(gave.hands.p2).toEqual([]);
+    expect(gave.hands.p0).toContain('quati-5');
+  });
+
+  it('Nem vem! cancela: ninguém dá nada', () => {
+    const s = table({ hands: { ...trioHands(), p2: ['nemvem-2'] }, draw: ['pular-9'] });
+    const noped = act(act(s, 'p0', play('p1'), ctx), 'p2', { type: 'nope' }, at(1000));
+    const done = settleKittens(noped, at(6000));
+    expect(done.choice).toBeNull();
+    expect(done.hands.p1).toHaveLength(4);
+    expect(done.log.at(-1)!.ev).toEqual({ t: 'resolved', by: 'p0', play: 'trio', canceled: true });
+  });
+
+  it('se o alvo sai, as que faltam vão ao acaso; se quem ia receber sai, a escolha some', () => {
+    const s = settleKittens(air('p1'), at(5000));
+    const one = act(s, 'p1', { type: 'choose', card: 'ataque-5' }, at(6000));
+    const gone = settleKittens(one, ctxOf(['p0', 'p2'], { now: T0 + 7000 }));
+    expect(gone.choice).toBeNull();
+    expect(gone.alive).toEqual(['p0', 'p2']);
+    expect(gone.hands.p0).toHaveLength(4);
+    const toGone = settleKittens(one, ctxOf(['p1', 'p2'], { now: T0 + 7000 }));
+    expect(toGone.choice).toBeNull();
+    expect(toGone.hands.p1).toHaveLength(3);
+  });
+
+  it('trio de outra carta continua roubando Desarme', () => {
+    const s = table({ hands: { p0: ['pular-0', 'pular-1', 'pular-2'], p1: ['cafune-5'], p2: [] }, draw: ['mico-9'] });
+    const done = settleKittens(act(s, 'p0', { type: 'play', cards: ['pular-0', 'pular-1', 'pular-2'], target: 'p1' }, ctx), at(5000));
+    expect(done.pending).toBeNull();
+    expect(done.choice).toBeNull();
+    expect(done.hands.p0).toEqual(['cafune-5']);
+    expect(done.log.at(-1)!.ev).toEqual({ t: 'grabbed', by: 'p0', from: 'p1', card: 'cafune-5' });
+  });
+
+  it('cego: fichas que viram 3 Favores sem alvo são bad_combo; com alvo, vale', () => {
+    const s = table({ hands: trioHands(), draw: ['pular-9'], blind: ['p0'] });
+    expect(refuse(s, 'p0', { type: 'play', cards: ['?0', '?1', '?2'] }, ctx)).toBe('bad_combo');
+    expect(refuse(s, 'p0', { type: 'play', cards: ['?0', '?1', '?2'], target: 'p0' }, ctx)).toBe('bad_combo');
+    const ok = act(s, 'p0', { type: 'play', cards: ['?0', '?1', '?2'], target: 'p1' }, ctx);
+    expect(ok.pending!.play).toMatchObject({ kind: 'trio', as: 'favor', target: 'p1', cards: FAVORES });
+  });
+});
+
+describe('escolha do Favor salva antes do trio de Favor (sem `left`)', () => {
+  it('vale como 1 carta', () => {
+    const s = { ...table({ hands: hands(), draw: ['pular-9'] }), choice: { kind: 'favor', who: 'p1', to: 'p0', deadline: T0 + 30_000 } };
+    const old = s as unknown as KittensState;
+    expect(kittensViewFor(old, 'p1').choice).toEqual({ kind: 'favor', who: 'p1', to: 'p0', left: 1, deadline: T0 + 30_000 });
+    const gave = act(old, 'p1', { type: 'choose', card: 'pular-5' }, at(1000));
+    expect(gave.choice).toBeNull();
+    expect(gave.hands.p0).toContain('pular-5');
   });
 });
 

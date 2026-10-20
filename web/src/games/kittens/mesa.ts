@@ -118,7 +118,7 @@ const CURSE_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(CURSE_SVG);
  * Explicação completa de cada carta, que aparece no zoom (pedido do Rafa: na mão fica só o básico).
  * Cada bicho explica o próprio par; o trio e os 5 diferentes valem pra qualquer carta.
  */
-const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha.<br><b>5 DIFERENTES</b>: você pega <b>duas cartas</b> que quiser do descarte (do jeito que ele estava antes da jogada), uma de cada vez, no quadro do descarte.<br>Combos podem levar Nem vem!.';
+const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha (3 Favores: o adversário escolhido te dá 3 cartas).<br><b>5 DIFERENTES</b>: você pega <b>duas cartas</b> que quiser do descarte (do jeito que ele estava antes da jogada), uma de cada vez, no quadro do descarte.<br>Combos podem levar Nem vem!.';
 const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   mico: '<b>PAR DE MICO</b>: <b>todo mundo, menos você, descarta uma carta</b> à escolha, todos ao mesmo tempo (30 segundos; depois vai uma ao acaso). O efeito da carta descartada não vale, e todos veem o que foi pro descarte.',
   quati: '<b>PAR DE QUATI</b>: só você vê a carta de cima do monte e decide se ela fica em cima ou vai pro fundo. Todo mundo sabe se foi pro fundo, ninguém sabe qual era.',
@@ -133,7 +133,7 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   nemvem: 'Cancela a carta que está no ar, <b>mesmo fora da sua vez</b>.<br>Toda carta jogada fica 5 segundos no ar esperando um Nem vem!, e cada Nem vem! recomeça os 5 segundos.<br>Dá pra dar Nem vem! no Nem vem!: conta quantos foram, número ímpar cancela e par deixa valer.<br>Não cancela o Tatubum nem o Desarme.',
   ataque: 'Termina a sua vez <b>sem comprar</b>, e o próximo joga <b>2 turnos</b> seguidos.<br>Se você estava sob ataque, passa os turnos que você ainda devia + 2 (2 → 4 → 6…).<br>Pode levar Nem vem!.',
   pular: 'Termina um turno seu <b>sem comprar</b> carta.<br>Se você estava sob ataque (devendo 2 turnos), gasta só um deles e continua na vez.<br>Pode levar Nem vem!.',
-  favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br>Pode levar Nem vem!.',
+  favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br><b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b> (a mão toda, se tiver menos), escolhidas por ele, uma de cada vez.<br>Pode levar Nem vem!.',
   embaralhar: 'Embaralha o monte inteiro.<br>Pode levar Nem vem!.',
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, na ordem, só você.<br>Elas ficam à mostra ao lado do monte até você comprar, a vez passar ou o monte mudar.<br>Pode levar Nem vem!.',
   latido: 'Só existem <b>2</b> na partida. Quando você joga um, quem tiver <b>o outro Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b> (30 segundos, senão vai sozinho) e os dois Latidores vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém tiver o outro, o seu fica <b>na sua frente</b>, à vista de todos: quando o outro for jogado, quem se defende é você.<br>Não gasta a sua vez. Pode levar Nem vem!.',
@@ -149,7 +149,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   nemvem: 'Cancela a carta no ar, mesmo fora da sua vez. Dá pra dar Nem vem! no Nem vem!.',
   ataque: 'Termina sua vez sem comprar. O próximo joga 2 turnos (ou os seus + 2, se você estava sob ataque).',
   pular: 'Termina um turno seu sem comprar.',
-  favor: 'Um adversário escolhe uma carta da mão dele pra te dar.',
+  favor: 'Um adversário escolhe uma carta da mão dele pra te dar. Três Favores juntos: ele te dá 3.',
   embaralhar: 'Embaralha o monte inteiro.',
   espiar: 'Você vê as 3 cartas de cima do monte. Só você.',
   capivara: 'Par: todo mundo, menos você, passa uma carta pro próximo.',
@@ -204,8 +204,12 @@ function guessPlay(ids: readonly string[]): PlayGuess | null {
   if (ks.length === 5 && new Set(ks).size === 5) return { kind: 'cinco', as: null };
   return null;
 }
-/** Favor e Mau-olhado pedem um adversário. */
-const needsTarget = (kind: KittensPlayKind): boolean => kind === 'favor' || kind === 'olhado';
+/** Favor, trio de Favor (o escolhido dá 3 cartas) e Mau-olhado pedem um adversário. */
+const needsTarget = (g: PlayGuess): boolean => g.kind === 'favor' || g.kind === 'olhado' || isFavorTrio(g);
+/** 3 Favores: pede alvo com carta na mão, como o Favor sozinho (espelho de `kittensIsFavorPlay`). */
+const isFavorTrio = (g: { kind: KittensPlayKind; as: KittensCardKind | null }): boolean => g.kind === 'trio' && g.as === 'favor';
+/** "UMA CARTA", "3 CARTAS". */
+const cardsCount = (n: number): string => (n === 1 ? 'UMA CARTA' : `${n} CARTAS`);
 /** Ficha do cego (`?0`, `?1`…): uma carta da mão que ele não sabe qual é. */
 const isToken = (id: string | null): boolean => id !== null && kittensTokenIndex(id) !== null;
 /** "PAR DE QUATI", e "(com Boto)" quando o Boto fez as vezes do bicho. */
@@ -277,7 +281,7 @@ type Mode =
   | { type: 'ask'; play: PlayReq }
   /** Par de 2 Botos: falta dizer que bicho ele vira. */
   | { type: 'as'; play: PlayReq }
-  /** Cego com 1 ficha: se a carta pedir alvo (Favor, Mau-olhado), em quem (ou sem alvo). */
+  /** Cego com 1 ficha (ou 3): se as cartas pedirem alvo (Favor, Mau-olhado, 3 Favores), em quem (ou sem alvo). */
   | { type: 'blindTarget'; play: PlayReq }
   /** Cego com 2 fichas: se forem par de Preguiça ou 2 Botos, o bicho (vai em `ask` e `as`; ou pula). */
   | { type: 'blindBicho'; play: PlayReq };
@@ -501,6 +505,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   let pileKey = '';
   /** Quantas o 5 diferentes mandou pegar no começo (pra dizer "mais uma" só na segunda). */
   let cincoFirst = 2;
+  /** Quantas o Favor aberto mandou dar no começo (1; 3 no trio de Favor), pra dizer "MAIS 2" depois da primeira. */
+  let favorFirst = 1;
   const logLines: { text: string; cls: string }[] = [];
   /** Fundo de cada tipo de carta (cerrado na cor dela), desenhado uma vez. */
   const sceneCache = new Map<KittensCardKind, string>();
@@ -516,6 +522,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const v = next;
     // A resposta da jogada chegou (ou a vez andou): o pedido não está mais no ar.
     inFlight = false;
+    // Favor que acabou de abrir (o trio de Favor abre com 3): guarda quantas eram, pra dizer "MAIS 2" depois.
+    const fc = v.choice?.kind === 'favor' ? v.choice : null;
+    const pc = prev?.choice?.kind === 'favor' ? prev.choice : null;
+    if (fc && (!pc || pc.deadline !== fc.deadline || pc.who !== fc.who)) favorFirst = fc.left;
     // Partida nova (JOGAR DE NOVO, ou lobby e começar de novo): o diário recomeça do zero (senão as jogadas novas
     // ficariam sem animação).
     if (prev && prev.phase !== 'playing' && v.phase === 'playing') {
@@ -675,8 +685,20 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         return blindMe() ? `AU AU! Solte uma carta virada no Latidor (vai o seu Desarme) ${TIMER}` : `AU AU! JOGUE O DESARME! ${TIMER}`;
       case 'feitico':
         return c.who === ME ? null : `${nameOf(c.who)} está vendo a carta de baixo do monte…`;
+      case 'favor': {
+        // Favor sozinho: o painel de quem dá basta (e a legenda da jogada fica). Trio de Favor: diz quantas faltam.
+        if (favorFirst <= 1) return null;
+        if (c.who === ME) return `${favorGiveTitle(c.to, c.left)} ${TIMER}`;
+        const more = c.left < favorFirst ? 'mais ' : '';
+        return `${nameOf(c.who)} vai dar ${more}${cardsCount(c.left).toLowerCase()} pra ${c.to === ME ? 'você' : nameOf(c.to)}…`;
+      }
     }
     return null;
+  }
+  /** Quem dá o Favor: "FAVOR PRA CAIO"; no trio, "DÊ 3 CARTAS PRA CAIO" e depois "MAIS 2 CARTAS PRA CAIO". */
+  function favorGiveTitle(to: string, left: number): string {
+    if (favorFirst <= 1) return `FAVOR PRA ${upName(to)}`;
+    return `${left < favorFirst ? 'MAIS' : 'DÊ'} ${cardsCount(left)} PRA ${upName(to)}`;
   }
   function sayChoice(): void {
     const p = choicePrompt();
@@ -1145,7 +1167,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   /**
-   * Alvo que vale pra jogada que pede um: o Favor precisa de alguém com carta; o Mau-olhado vale em qualquer adversário
+   * Alvo que vale pra jogada que pede um: o Favor (e o trio de Favor) precisa de alguém com carta; o Mau-olhado vale em qualquer adversário
    * vivo. Às cegas não dá pra saber qual das duas é: qualquer adversário vivo.
    */
   function validTarget(p: string): boolean {
@@ -1169,14 +1191,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
 
   /**
    * Leva a jogada adiante pedindo o que falta, na ordem: o bicho do par de 2 Botos (`as`), o bicho pedido no par de
-   * Preguiça (`ask`, também quando os Botos viram Preguiça) e o adversário (Favor, Mau-olhado). `seat` = onde a carta foi
+   * Preguiça (`ask`, também quando os Botos viram Preguiça) e o adversário (Favor, trio de Favor, Mau-olhado). `seat` = onde a carta foi
    * solta (vale como alvo). Com tudo na mão, manda.
    */
   function proceed(play: PlayReq, guess: PlayGuess, seat?: string): void {
     if (guess.kind === 'par' && guess.as === null && !play.as) { setMode({ type: 'as', play }, AS_CAPTION); return; }
     const as = play.as ?? guess.as;
     if (guess.kind === 'par' && as === 'preguica' && !play.ask) { setMode({ type: 'ask', play }, ASK_CAPTION); return; }
-    if (needsTarget(guess.kind) && !play.target) {
+    if (needsTarget(guess) && !play.target) {
       mode = { type: 'target', play, kind: guess.kind };
       if (seat && validTarget(seat)) { chooseTarget(seat); return; }
       setMode(mode, TARGET_CAPTION);
@@ -1200,11 +1222,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   /**
-   * Jogada às cegas: com 1 ficha, pergunta em quem (se a carta pedir alvo); com 2, que bicho (se forem par de Preguiça
-   * ou 2 Botos, vai como `ask` e `as`). Dá pra pular as duas; o servidor ignora o que a jogada não usa.
+   * Jogada às cegas: com 1 ficha (ou 3, que podem ser 3 Favores), pergunta em quem (se as cartas pedirem alvo); com 2,
+   * que bicho (se forem par de Preguiça ou 2 Botos, vai como `ask` e `as`). Dá pra pular as duas; o servidor ignora o
+   * que a jogada não usa.
    */
   function blindStep(play: PlayReq): void {
-    if (play.cards.length === 1 && !play.target) { setMode({ type: 'blindTarget', play }, BLIND_TARGET_CAPTION); return; }
+    if ((play.cards.length === 1 || play.cards.length === 3) && !play.target) { setMode({ type: 'blindTarget', play }, BLIND_TARGET_CAPTION); return; }
     if (play.cards.length === 2 && !play.ask) { setMode({ type: 'blindBicho', play }, BLIND_BICHO_CAPTION); return; }
     send(play);
   }
@@ -1326,7 +1349,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     // usa o quadro do descarte.
     if (!c || !choiceIsMine(c)) return '';
     if (c.kind === 'cafune') return `cafune:${c.who}:${c.deadline}:${v.drawCount}`;
-    if (c.kind === 'favor') return `favor:${c.to}:${c.deadline}`;
+    if (c.kind === 'favor') return `favor:${c.to}:${c.deadline}:${c.left}`;
     if (c.kind === 'quati') return `quati:${c.card ?? ''}:${c.deadline}`;
     if (c.kind === 'feitico') return `feitico:${c.card ?? ''}:${c.deadline}`;
     return '';
@@ -1380,7 +1403,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       row.appendChild(button('NO FUNDO', () => act({ type: 'choose', position: max }), 'small'));
       row.appendChild(button('ALEATÓRIO', () => act({ type: 'choose', position: 'random' }), 'small ghost'));
     } else if (c.kind === 'favor') {
-      panel.innerHTML = `<h2>FAVOR PRA ${upName(c.to)} ${TIMER}</h2><p>Clique numa carta da sua mão pra dar.</p>`;
+      const more = favorFirst > 1 ? ' Uma de cada vez.' : '';
+      panel.innerHTML = `<h2>${favorGiveTitle(c.to, c.left)} ${TIMER}</h2><p>Clique numa carta da sua mão pra dar.${more}</p>`;
     } else if (c.kind === 'quati') {
       panel.innerHTML = `<h2>A CARTA DE CIMA ${TIMER}</h2><p>Só você vê. Fica em cima ou vai pro fundo?</p><div class="cards"></div><div class="kt-row"></div>`;
       if (c.card) $('#panel .cards').appendChild(cardEl(c.card));
@@ -1486,7 +1510,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     switch (ev.t) {
       case 'play': {
         // Par: "PAR DE QUATI", e "(com Boto)" quando o Boto fez as vezes do bicho.
-        const label = ev.play === 'par' && ev.as ? pairName(ev.as, playCards) : PLAY_LABEL[ev.play];
+        const label = ev.play === 'par' && ev.as ? pairName(ev.as, playCards) : isFavorTrio({ kind: ev.play, as: ev.as }) ? 'TRIO DE FAVOR' : PLAY_LABEL[ev.play];
         return `${n(ev.by)} jogou ${label}${ev.target ? ' em ' + n(ev.target) : ''}${ev.ask ? ', pedindo ' + cardName(ev.ask) : ''}`;
       }
       case 'nope': return `${n(ev.by)}: NEM VEM!`;
@@ -1506,7 +1530,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           olhado: `${whose(PLAY_LABEL.olhado)} pegou!`,
           feitico: `${n(ev.by)} fez um FEITIÇO na carta de baixo do monte`,
           par: `${whose((pairKind && PAIR_LABEL[pairKind]) ?? 'PAR')} valeu!`,
-          trio: `${whose('TRIO')} valeu!`,
+          trio:
+            prevPending && isFavorTrio(prevPending.play)
+              ? `${prevPending.play.target ? n(prevPending.play.target) : 'alguém'} vai dar 3 cartas pra ${n(ev.by)}`
+              : `${whose('TRIO')} valeu!`,
           cinco: `${n(ev.by)} vai pegar duas do descarte`,
         };
         return texts[ev.play];
@@ -1870,7 +1897,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         const target = toP === ME && card ? handCard(card) ?? $('#hand') : anchorOf(toP);
         await Fx.fly({ node: cardEl(card, { back: !card }), from, to: target, dur: ev.t === 'passed' ? 360 : 520, trail: '#ff8fab' });
         if (card) { arriving.delete(card); handCard(card)?.classList.remove('arriving'); }
-        if (ev.t === 'picked') sayChoice();
+        // 5 diferentes e trio de Favor: a escolha continua aberta ("MAIS UMA", "MAIS 2 CARTAS").
+        if (ev.t === 'picked' || ev.t === 'gave') sayChoice();
         break;
       }
       case 'delayed':
@@ -2105,7 +2133,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   // ---------------------------------------------------------------- galeria das cartas
   $('#cards').onclick = () => {
     const g = $('#gallery');
-    g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa; o BOTO vale por qualquer bicho) · TRIO de qualquer carta rouba um Desarme · 5 DIFERENTES pega DUAS do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!. Quem pega MAU-OLHADO joga às cegas até comprar. O olho ao lado do descarte mostra todas as cartas da pilha.</p></div>';
+    g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa; o BOTO vale por qualquer bicho) · TRIO de qualquer carta rouba um Desarme (3 FAVORES: o escolhido te dá 3 cartas) · 5 DIFERENTES pega DUAS do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!. Quem pega MAU-OLHADO joga às cegas até comprar. O olho ao lado do descarte mostra todas as cartas da pilha.</p></div>';
     const grid = $('#gallery .grid');
     KITTENS_CARD_KINDS.forEach((k, i) => {
       const item = document.createElement('div');

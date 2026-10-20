@@ -50,7 +50,7 @@ describe('presença', () => {
   it('a escolha de quem saiu é feita ao acaso antes', () => {
     const s = {
       ...table({ hands: { p0: ['mico-0'], p1: ['quati-0', 'pular-0'], p2: [] }, draw: ['tatubum-0', 'tatubum-1'] }),
-      choice: { kind: 'favor' as const, who: 'p1', to: 'p0', deadline: T0 + 30_000 },
+      choice: { kind: 'favor' as const, who: 'p1', to: 'p0', left: 1, deadline: T0 + 30_000 },
     };
     const after = settleKittens(s, without('p1'));
     expect(after.hands.p0).toHaveLength(2);
@@ -61,7 +61,7 @@ describe('presença', () => {
   it('se quem ia receber o Favor sai, a escolha some', () => {
     const s = {
       ...table({ hands: { p0: [], p1: ['quati-0'], p2: [] }, draw: ['tatubum-0', 'tatubum-1'] }),
-      choice: { kind: 'favor' as const, who: 'p1', to: 'p0', deadline: T0 + 30_000 },
+      choice: { kind: 'favor' as const, who: 'p1', to: 'p0', left: 1, deadline: T0 + 30_000 },
     };
     expect(settleKittens(s, without('p0'))).toMatchObject({ choice: null, current: 'p1' });
   });

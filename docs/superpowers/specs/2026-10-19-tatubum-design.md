@@ -71,7 +71,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Nem vem!** | 5 | Cancela a carta no ar. Pode ser jogado fora da vez, por qualquer vivo (até por quem jogou a carta). Nem vem! em cima de Nem vem! vale. | sim |
 | **Ataque** | 4 | Termina seu turno sem comprar. O próximo vivo joga **2 turnos**, ou, se você estava sob ataque (`owed ≥ 2`), **os seus turnos devidos + 2**. | sim |
 | **Pular** | 4 | Gasta 1 turno sem comprar. | sim |
-| **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). | sim |
+| **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): o escolhido te dá **3 cartas** (ver "Combos"; pedido do Rafa, 2026-10-20). | sim |
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. | sim |
 | **Capivara, Mico-leão, Quati, Tamanduá, Preguiça** | 4 de cada | Sozinhas não fazem nada; só em combo. | (combo sim) |
@@ -93,6 +93,10 @@ Aceitam Nem vem! (que cancela o combo todo). Regras dos combos redesenhadas pelo
 - **Trio** (3 cartas iguais, **de qualquer tipo**), sem alvo nem pedido: você rouba **um Desarme** de um
   adversário sorteado **entre os que têm Desarme**. Ninguém tem: não acontece nada. Todos veem quem
   perdeu o Desarme.
+  - **Exceção: trio de 3 Favores** (pedido do Rafa, 2026-10-20). Pede **alvo** como o Favor sozinho (adversário
+    vivo com carta na mão; `bad_target` sem isso) e não rouba Desarme: o alvo **escolhe 3 cartas** da mão pra te
+    dar (a mão toda, se tiver menos), uma de cada vez, no mesmo prazo de 30 s; vencido, as que faltam vão ao acaso.
+    Só vocês dois veem quais cartas foram. O Boto não completa (Favor não é bicho).
 - **5 diferentes** (5 nomes diferentes, quaisquer cartas): você escolhe (30 s) **duas cartas** do **descarte
   como estava antes desta jogada** (pedido do Rafa, 2026-10-20; uma de cada vez, no quadro do descarte). Descarte
   com 1 carta = só ela; vazio = nada. Prazo vencido: o que faltar sai ao acaso.
@@ -113,9 +117,13 @@ Sozinho o bicho continua não fazendo nada.
 
 Regras de motor:
 - `playKindOf`: 2 iguais só vira `par` se for bicho; 3 iguais de qualquer tipo é `trio`.
-- `parsePlay`: alvo exigido só no Favor e no Mau-olhado (`bad_target`); pedido (`ask`) exigido só no par
-  de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Trio ignora alvo e pedido. (Quem está cego ouve
-  `bad_combo` no lugar desses: ver "Jogar às cegas".)
+- `parsePlay`: alvo exigido só no Favor, no trio de Favor e no Mau-olhado (`bad_target`); pedido (`ask`) exigido
+  só no par de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Os outros trios ignoram alvo e pedido. (Quem está
+  cego ouve `bad_combo` no lugar desses: ver "Jogar às cegas".)
+- Favor e trio de Favor: a escolha `favor` tem `left` (quantas cartas ainda dar: 1 no Favor sozinho, `min(3, mão do
+  alvo)` no trio). Cada `choose { card }` do alvo passa uma carta (evento `gave`, só os dois veem) e o `left` cai; em
+  0, ou com a mão do alvo vazia, a escolha fecha. Prazo vencido: as que faltam vão ao acaso. O evento `play` do trio
+  de Favor sai com `play: 'trio'`, `as: 'favor'` e o `target`. Escolha salva sem `left` (antes da mudança) vale 1.
 - Par de Mico: escolha `{ kind: 'mico', by, waiting, deadline }` (`waiting` = quem ainda tem que descartar; pública).
   Cada um em `waiting` manda `choose { card }` com uma carta da própria mão; evento público `{ t: 'discarded', by, card }`.
   Prazo vencido: cada um que falta descarta uma ao acaso. Quem sai do jogo sai do `waiting`. `waiting` vazio fecha a escolha.
@@ -440,7 +448,8 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
 
 - **Cafuné:** painel só seu, "Ufa! Onde esconder o tatu?", com topo / 2ª / … / fundo / aleatório.
   Os outros leem "Ana tá escondendo o tatu…".
-- **Favor:** o alvo vê a própria mão com "escolhe uma carta pra dar pro Caio" e o relógio de 30 s.
+- **Favor:** o alvo vê a própria mão com "escolhe uma carta pra dar pro Caio" e o relógio de 30 s. No trio de
+  Favor, "DÊ 3 CARTAS PRA CAIO", depois "MAIS 2", "MAIS 1"; os outros leem "Bia vai dar 3 cartas pro Caio".
 - **Espiar:** painel só seu com as 3 do topo, na ordem.
 - **5 diferentes:** painel com o descarte pra escolher.
 - **Explodiu:** quadro vermelho com **BUM!** pra todos por ~2 s; a cadeira vira fantasminha.

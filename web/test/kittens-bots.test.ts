@@ -96,12 +96,12 @@ describe('decisão do bot do Tatubum', () => {
 
   it('escolha do Favor: dá uma carta da própria mão, de preferência um bicho', () => {
     const hand = ['ataque-1', 'capivara-2', 'nemvem-3'];
-    const v = p1View(hand, { choice: { kind: 'favor', who: 'p1', to: 'p0', deadline: 9000 } });
+    const v = p1View(hand, { choice: { kind: 'favor', who: 'p1', to: 'p0', left: 1, deadline: 9000 } });
     const a = decideKittens(v, newKittensMemory(), () => 0.5)!.action as { type: string; card: string };
     expect(a.type).toBe('choose');
     expect(a.card).toBe('capivara-2');
     // sem bicho, qualquer carta da mão
-    const v2 = p1View(['ataque-1', 'pular-4'], { choice: { kind: 'favor', who: 'p1', to: 'p0', deadline: 9000 } });
+    const v2 = p1View(['ataque-1', 'pular-4'], { choice: { kind: 'favor', who: 'p1', to: 'p0', left: 1, deadline: 9000 } });
     const b = decideKittens(v2, newKittensMemory(), () => 0.5)!.action as { card: string };
     expect(['ataque-1', 'pular-4']).toContain(b.card);
   });
@@ -235,6 +235,36 @@ describe('decisão do bot do Tatubum', () => {
     expect(play(['nemvem-0', 'nemvem-1', 'nemvem-2'])).toEqual({ type: 'play', cards: ['nemvem-0', 'nemvem-1', 'nemvem-2'] });
   });
 
+  it('trio de Favor vai com alvo (adversário com carta na mão); ninguém com carta, não joga', () => {
+    const base = viewOf(started(3), 'p0');
+    const favores = ['favor-0', 'favor-1', 'favor-2'];
+    const trios = (handCounts: Record<string, number>) => {
+      const out: { cards: string[]; target?: string }[] = [];
+      for (let seed = 1; seed <= 200; seed++) {
+        const v = withGame(base, { hand: favores, peek: null, owed: 1, handCounts });
+        const a = decideKittens(v, newKittensMemory(), mulberry32(seed))!.action as { type: string; cards?: string[]; target?: string };
+        if (a.type === 'play' && a.cards!.length === 3) out.push({ cards: a.cards!, ...(a.target ? { target: a.target } : {}) });
+      }
+      return out;
+    };
+    const played = trios({ p0: 3, p1: 2, p2: 0 });
+    expect(played.length).toBeGreaterThan(0);
+    for (const p of played) expect(p).toEqual({ cards: favores, target: 'p1' });
+    expect(trios({ p0: 3, p1: 0, p2: 0 })).toEqual([]);
+  });
+
+  it('trio de Favor contra ele: dá uma carta por vez, respondendo de novo a cada `left`', () => {
+    const choice = (left: number) => ({ kind: 'favor' as const, who: 'p1', to: 'p0', left, deadline: 9000 });
+    const mem = newKittensMemory();
+    const three = decideKittens(p1View(['ataque-1', 'capivara-2', 'pular-3'], { choice: choice(3) }), mem, () => 0.5)!;
+    const two = decideKittens(p1View(['ataque-1', 'pular-3'], { choice: choice(2) }), mem, () => 0.5)!;
+    const one = decideKittens(p1View(['ataque-1'], { choice: choice(1) }), mem, () => 0.5)!;
+    expect(three.action).toEqual({ type: 'choose', card: 'capivara-2' });
+    expect(['ataque-1', 'pular-3']).toContain((two.action as { card: string }).card);
+    expect(one.action).toEqual({ type: 'choose', card: 'ataque-1' });
+    expect(new Set([three.key, two.key, one.key]).size).toBe(3);
+  });
+
   describe('cartas novas', () => {
     const myTurn = (hand: string[], game: Partial<KittensView> = {}) =>
       withGame(viewOf(started(3), 'p0'), { hand, peek: null, owed: 1, pending: null, choice: null, ...game });
@@ -286,7 +316,7 @@ describe('decisão do bot do Tatubum', () => {
       expect(risky.type).toBe('play');
       for (const c of risky.cards) expect(['?0', '?1', '?2']).toContain(c);
       // no Favor contra ele, dá uma ficha
-      const favor = decideKittens(p1View(['?0', '?1'], { choice: { kind: 'favor', who: 'p1', to: 'p0', deadline: 9000 }, blind: ['p1'] }), newKittensMemory(), () => 0.5)!;
+      const favor = decideKittens(p1View(['?0', '?1'], { choice: { kind: 'favor', who: 'p1', to: 'p0', left: 1, deadline: 9000 }, blind: ['p1'] }), newKittensMemory(), () => 0.5)!;
       expect(['?0', '?1']).toContain((favor.action as { card: string }).card);
       // e não dá Nem vem! (não sabe se tem)
       expect(decideKittens(p1View(['?0'], { pending: inAir('p0', 'p1'), blind: ['p1'] }), newKittensMemory(), () => 0)).toBeNull();
