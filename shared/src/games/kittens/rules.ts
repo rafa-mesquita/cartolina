@@ -1,4 +1,5 @@
 import type { ActionResult, GameContext } from '../../game';
+import { randomInt } from '../../rng';
 import { kittensKindOf } from './cards';
 import {
   conjure,
@@ -47,7 +48,10 @@ function startMatch(ctx: GameContext): ActionResult<KittensState> {
   if (ctx.active.length < KITTENS_MIN_PLAYERS) return fail('not_enough_players');
   const players = [...ctx.active];
   const { hands, draw } = kittensDeal(ctx.rng, players);
-  return ok({ ...initialKittensState(), phase: 'playing', players, alive: [...players], hands, draw, current: players[0]!, owed: 1 });
+  // Quem começa é sorteado (pedido do Rafa, 2026-10-20: o host começava sempre); a vez segue a ordem dos assentos.
+  // O sorteio vem depois da distribuição, pra mesma semente dar as mesmas mãos.
+  const first = players[randomInt(ctx.rng, players.length)]!;
+  return ok({ ...initialKittensState(), phase: 'playing', players, alive: [...players], hands, draw, current: first, owed: 1 });
 }
 
 /** Por que `p` não pode jogar nem comprar agora (ou null se pode). */
