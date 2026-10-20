@@ -1,4 +1,4 @@
-import { CAMELIO_MAX_PLAYERS, MAX_PLAYERS } from '@cartolina/shared';
+import { CAMELIO_MAX_PLAYERS, COUP_MAX_PLAYERS, MAX_PLAYERS } from '@cartolina/shared';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -80,7 +80,25 @@ vi.mock('../src/dev/camelioBots', () => ({
   }),
 }));
 
+vi.mock('../src/dev/coupBots', () => ({
+  subscribeCoupBots: (fn: () => void) => {
+    fake.listeners.add(fn);
+    return () => fake.listeners.delete(fn);
+  },
+  coupBotsVersion: () => fake.state.version,
+  coupBotsIn: (code: string) => fake.state.bots.filter((b) => b.code === code).length,
+  addCoupBot: vi.fn((code: string) => {
+    fake.state.bots.push({ code });
+    fake.emit();
+  }),
+  removeAllCoupBots: vi.fn(() => {
+    fake.state.bots = [];
+    fake.emit();
+  }),
+}));
+
 import BotControls from '../src/dev/BotControls';
+import { addCoupBot, removeAllCoupBots } from '../src/dev/coupBots';
 import { addBot, removeAllBots } from '../src/dev/bots';
 import { addCamelioBot, removeAllCamelioBots } from '../src/dev/camelioBots';
 import { addDixitBot, removeAllDixitBots } from '../src/dev/dixitBots';
@@ -154,6 +172,33 @@ describe('BotControls (dev)', () => {
     expect(removeAllBots).not.toHaveBeenCalled();
     expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(false);
     rerender(<BotControls code="ABCD" seats={CAMELIO_MAX_PLAYERS} game="camelio" />);
+    expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('no Cúpi usa os bots do Cúpi, e o teto é o de 6 pessoas do jogo', () => {
+    const { unmount } = render(<BotControls code="ABCD" seats={5} game="coup" />);
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /adicionar bot/ }));
+    });
+    expect(addCoupBot).toHaveBeenCalledWith('ABCD');
+    expect(addBot).not.toHaveBeenCalled();
+    expect(addPicturesBot).not.toHaveBeenCalled();
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /tirar bots \(1\)/ }));
+    });
+    expect(removeAllCoupBots).toHaveBeenCalled();
+    expect(removeAllBots).not.toHaveBeenCalled();
+    unmount();
+    // com 6 pessoas o Cúpi está cheio, embora o teto geral seja maior
+    render(<BotControls code="ABCD" seats={COUP_MAX_PLAYERS} game="coup" />);
+    expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('cada jogo tem o seu teto: 6 pessoas enchem o Retratim mas não o DITU', () => {
+    const { unmount } = render(<BotControls code="ABCD" seats={6} game="ito" />);
+    expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(false);
+    unmount();
+    render(<BotControls code="ABCD" seats={6} game="pictures" />);
     expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 

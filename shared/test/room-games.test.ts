@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CamelioState } from '../src/games/camelio/types';
 import type { DixitState } from '../src/games/dixit/types';
+import { COUP_WINDOW_MS, type CoupState } from '../src/games/coup/types';
 import { KITTENS_NOPE_MS, type KittensState } from '../src/games/kittens/types';
 import { GAME_IDS, GAMES, isGameId } from '../src/games/registry';
 import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
@@ -12,6 +13,7 @@ import {
   isCamelioRoomView,
   isDixitRoomView,
   isItoRoomView,
+  isCoupRoomView,
   isKittensRoomView,
   isPicturesRoomView,
   itoStateOf,
@@ -39,15 +41,17 @@ function dixitRoom(n: number): Room {
 }
 
 describe('registro de jogos', () => {
-  it('conhece ITO, Dixit, Retratim, Tatubum e Cama-Leão', () => {
+  it('conhece ITO, Dixit, Retratim, Tatubum, Cúpi e Cama-Leão', () => {
     expect(Object.keys(GAMES)).toEqual([...GAME_IDS]);
-    expect(GAME_IDS).toEqual(expect.arrayContaining(['ito', 'dixit', 'pictures', 'kittens', 'camelio']));
+    expect(GAME_IDS).toEqual(expect.arrayContaining(['ito', 'dixit', 'pictures', 'kittens', 'coup', 'camelio']));
     expect(GAMES.dixit.minPlayers).toBe(3);
     expect(GAMES.ito.liveCursors).toBe(true);
     expect(GAMES.dixit.liveCursors).toBe(false);
     expect(GAMES.pictures).toMatchObject({ minPlayers: 3, maxPlayers: 6, liveCursors: false, recordsHistory: false });
     expect(GAMES.kittens).toMatchObject({ minPlayers: 2, maxPlayers: 8, liveCursors: false, recordsHistory: false });
     expect(isGameId('kittens')).toBe(true);
+    expect(GAMES.coup).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: false, recordsHistory: true });
+    expect(isGameId('coup')).toBe(true);
     expect(GAMES.camelio).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: true, recordsHistory: false });
     expect(isGameId('dixit')).toBe(true);
     expect(isGameId('pictures')).toBe(true);
@@ -280,6 +284,67 @@ describe('sala de Tatubum', () => {
       'no_nope',
       'not_your_choice',
       'bad_choice',
+    ]) {
+      expect(ERROR_CODES).toContain(code);
+      expect(errorMessage(code)).not.toBe('Algo deu errado.');
+    }
+  });
+});
+
+function coupRoom(n: number): Room {
+  let room = createRoom('ABCD', 0, 'coup');
+  for (let i = 0; i < n; i++) {
+    const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+    if (!res.ok) throw new Error(res.error);
+    room = res.room;
+  }
+  return room;
+}
+
+describe('sala de Cúpi', () => {
+  it('é de Cúpi, cabe 6 e recusa o 7º', () => {
+    const room = coupRoom(6);
+    expect(isCoupRoomView(roomView(room, null))).toBe(true);
+    expect(roomSummary(room)).toMatchObject({ game: 'coup', phase: 'lobby' });
+    expect(joinRoom(room, { token: 't6', name: 'P6', color: PLAYER_COLORS[6]! }, 'p6', 0)).toEqual({ ok: false, error: 'room_full' });
+  });
+
+  it('o alarme acorda no fim da janela e o tick deixa a ação passar', () => {
+    let room = coupRoom(2);
+    room = step(room, 'p0', { type: 'start' }, 10);
+    const game = () => room.game as CoupState;
+    const first = game().turn!;
+    room = step(room, first, { type: 'act', kind: 'tax' }, 10);
+    expect(nextAlarmAt(room, 10)).toBe(10 + COUP_WINDOW_MS);
+    expect(tick(room, 10 + COUP_WINDOW_MS - 1, rng).game).toBe(room.game);
+    expect(tick(room, 10 + COUP_WINDOW_MS - 1, rng).game.phase).toBe('reaction');
+    room = tick(room, 10 + COUP_WINDOW_MS, rng);
+    expect(game().phase).toBe('turn');
+    // No jogo de 2 quem começa tem 1 moeda.
+    expect(game().hands[first]!.coins).toBe(4);
+  });
+
+  it('a visão da sala esconde as cartas dos outros', () => {
+    let room = coupRoom(2);
+    room = step(room, 'p0', { type: 'start' }, 10);
+    const view = roomView(room, 'p1');
+    if (!isCoupRoomView(view)) throw new Error('sala de Cúpi');
+    expect(view.game.myCards).toHaveLength(2);
+    expect(view.game.seats.map((s) => s.hidden)).toEqual([2, 2]);
+  });
+
+  it('erros do Cúpi têm mensagem em português', () => {
+    for (const code of [
+      'not_your_turn',
+      'not_enough_coins',
+      'must_coup',
+      'bad_target',
+      'cannot_react',
+      'already_passed',
+      'window_closed',
+      'not_losing',
+      'bad_exchange',
+      'bad_block',
     ]) {
       expect(ERROR_CODES).toContain(code);
       expect(errorMessage(code)).not.toBe('Algo deu errado.');

@@ -40,8 +40,18 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.mobile).toBe(false);
   });
 
-  it('DITU funciona no celular; Diquisti e Retratim ainda não', () => {
+  it('Cúpi (o Coup) aparece na estante e já dá pra jogar, no computador e no celular', () => {
+    const entry = catalogEntry('coup');
+    expect(entry?.name).toBe('Cúpi');
+    expect(entry?.players).toBe('2 a 6 pessoas');
+    expect(entry?.playable).toBe(true);
+    expect(entry?.mobile).toBe(true);
+    expect(entry?.hasHistory).toBe(true);
+  });
+
+  it('DITU e Cúpi funcionam no celular; Diquisti e Retratim ainda não', () => {
     expect(catalogEntry('ito')?.mobile).toBe(true);
+    expect(catalogEntry('coup')?.mobile).toBe(true);
     expect(catalogEntry('dixit')?.mobile).toBe(false);
     expect(catalogEntry('pictures')?.mobile).toBe(false);
   });

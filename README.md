@@ -1,6 +1,6 @@
 # cartolina~
 
-Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável), **Retratim**, a nossa versão do Pictures (id `pictures`), e **Cama-Leão**, a nossa versão do Camelio (id `camelio`; jogável no computador).
+Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável), **Retratim**, a nossa versão do Pictures (id `pictures`), **Cúpi**, a nossa versão do Coup (id `coup`; jogável no computador e no celular), e **Cama-Leão**, a nossa versão do Camelio (id `camelio`; jogável no computador).
 
 ## Estrutura
 
@@ -32,15 +32,17 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 
 - A tela inicial é a **estante**: uma capa por jogo, mais "tem um código?" pra entrar numa sala que já existe.
 - Cada jogo tem a própria página, `#/<jogo>` (`#/ito`, `#/dixit`), com duas abas: **jogar** (criar sala, entrar com código, como jogar) e **histórico** (`#/<jogo>/historico`).
-- O histórico é **aberto a todos**, sem login, e é **um por jogo**: toda rodada revelada de uma sala de ITO (tema, quem jogou, a fila com números e dicas, resultado) é gravada no banco **Cloudflare D1** `cartolina`. O DITU (`ito`) e o Diquisti (`dixit`) gravam (`recordsHistory` em `shared/src/games/registry.ts`). O Diquisti grava cada rodada revelada na tabela própria `dixit_rounds` (migração `0003`), e a aba dele mostra a galera, as cartas famosas e as partidas.
+- O histórico é **aberto a todos**, sem login, e é **um por jogo**: toda rodada revelada de uma sala de ITO (tema, quem jogou, a fila com números e dicas, resultado) é gravada no banco **Cloudflare D1** `cartolina`. O DITU (`ito`), o Diquisti (`dixit`) e o Cúpi (`coup`) gravam (`recordsHistory` em `shared/src/games/registry.ts`). O Diquisti grava cada rodada revelada na tabela própria `dixit_rounds` (migração `0003`), e a aba dele mostra a galera, as cartas famosas e as partidas.
+- O Cúpi (`coup`) grava cada partida terminada (sem bot) na tabela própria `coup_matches` (migração `0004`), e a aba dele mostra as partidas, da mais nova pra mais velha.
 - A aba do DITU mostra números (rodadas, % de vitórias no livre, campanhas zeradas, maior sequência sem erro), quem mais acerta a posição, os temas mais jogados e as partidas (clique pra ver a fila revelada).
 - Não existem mais grupos: `#/g/<slug>` e as rotas `/groups*` saíram. Os links antigos caem no histórico do ITO, com um aviso.
 - Em desenvolvimento, `npm run dev:server` aplica as migrações no D1 local antes de subir (`npm run db:migrate -w server`).
-- API: `GET /history/:game[?before=<ms>]` → 20 rodadas (no Diquisti, 20 partidas), estatísticas (`stats`, só na primeira página) e cursor (`nextBefore`). Jogo desconhecido: 404 `not_found`; jogo sem histórico: 404 `no_history`. Limite de 60 pedidos por minuto por IP e `Cache-Control: no-cache` (a rodada recém-jogada aparece na hora).
+- API: `GET /history/:game[?before=<ms>]` → 20 rodadas (no Diquisti e no Cúpi, 20 partidas), estatísticas (`stats`, só na primeira página) e cursor (`nextBefore`). Jogo desconhecido: 404 `not_found`; jogo sem histórico: 404 `no_history`. Limite de 60 pedidos por minuto por IP e `Cache-Control: no-cache` (a rodada recém-jogada aparece na hora).
 
 ## Celular
 
 - O **DITU** joga no celular **em pé**. A fila fica na vertical (1 em cima, 100 embaixo). A carta vai pra fila tocando nela e depois no "colocar aqui", ou arrastando (segura um instante e arrasta). A dica se escreve numa folha que sobe de baixo.
+- O **Cúpi** joga no celular em pé desde o começo.
 - Celular deitado mostra "vira o celular em pé".
 - Mesa mista funciona: quem está no computador vê o arrasto de quem está no celular no lugar certo.
 - O **Diquisti** vem na etapa 2 do Plano 5; até lá, no celular, ele mostra o aviso de jogar no computador. O **Retratim** (`pictures`) e o **Cama-Leão** (`camelio`) ficam só no computador por enquanto.

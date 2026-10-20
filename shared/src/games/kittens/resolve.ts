@@ -3,7 +3,8 @@ import { shuffle } from '../../rng';
 import { kittensKindOf } from './cards';
 import { latidoOf } from './choices';
 import { applyPair, applyTrio } from './combos';
-import { eliminate, logged, nextAlive, passTo, spendTurn } from './turn';
+import { kittensIsFavorPlay } from './play';
+import { clearPeeks, eliminate, logged, nextAlive, passTo, spendTurn } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 /**
@@ -41,11 +42,14 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
     case 'pular':
       return spendTurn(s);
     case 'embaralhar':
-      return { ...s, draw: shuffle(ctx.rng, s.draw), peek: null };
-    case 'espiar':
-      return { ...s, peek: { who: by, cards: s.draw.slice(-3).reverse() } };
+      return clearPeeks({ ...s, draw: shuffle(ctx.rng, s.draw) });
+    case 'espiar': {
+      // Troca a espiada anterior de quem jogou; as dos outros ficam (pedido do Rafa, 2026-10-20).
+      const cards = s.draw.slice(-3).reverse();
+      return cards.length > 0 ? { ...s, peeks: { ...s.peeks, [by]: cards } } : s;
+    }
     case 'favor':
-      return { ...s, choice: { kind: 'favor', who: play.target!, to: by, deadline } };
+      return { ...s, choice: { kind: 'favor', who: play.target!, to: by, left: 1, deadline } };
     case 'latido':
       return bark(s, by, play.cards[0]!, deadline);
     case 'olhado':
@@ -55,7 +59,7 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
     case 'par':
       return applyPair(s, by, play, ctx);
     case 'trio':
-      return applyTrio(s, by, ctx);
+      return applyTrio(s, by, play, ctx);
     case 'cinco':
       return before.length === 0
         ? s
@@ -65,7 +69,7 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
 
 /**
  * A carta no ar resolve (prazo vencido): Nem vem! em número ímpar cancela (spec §4.2). Também não vale se quem jogou
- * ou o alvo já saiu (e, no Favor, se o alvo ficou sem carta). A jogada e os Nem vem! vão pro descarte em qualquer caso
+ * ou o alvo já saiu (e, no Favor e no trio de Favor, se o alvo ficou sem carta). A jogada e os Nem vem! vão pro descarte em qualquer caso
  * (o Latidor que ninguém responde sai de lá e vai pra frente de quem jogou).
  */
 export function resolvePending(s: KittensState, ctx: GameContext): KittensState {
@@ -73,7 +77,7 @@ export function resolvePending(s: KittensState, ctx: GameContext): KittensState 
   const { by, play } = p;
   const base: KittensState = { ...s, pending: null, discard: [...s.discard, ...play.cards, ...p.nopes.map((n) => n.card)] };
   const t = play.target;
-  const targetOk = t === null || (base.alive.includes(t) && (play.kind !== 'favor' || (base.hands[t]?.length ?? 0) > 0));
+  const targetOk = t === null || (base.alive.includes(t) && (!kittensIsFavorPlay(play) || (base.hands[t]?.length ?? 0) > 0));
   const canceled = p.nopes.length % 2 === 1 || !base.alive.includes(by) || !targetOk;
   const done = logged(base, { t: 'resolved', by, play: play.kind, canceled });
   return canceled ? done : applyEffect(done, by, play, s.discard, ctx);

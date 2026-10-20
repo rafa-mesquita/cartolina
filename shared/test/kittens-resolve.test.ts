@@ -54,20 +54,22 @@ describe('carta no ar', () => {
     expect(settleKittens(played(['pular-0'], { owed: 2 }), at(5000))).toMatchObject({ current: 'p0', owed: 1 });
   });
 
-  it('Embaralhar mexe no monte e apaga o Espiar', () => {
-    const s = { ...played(['embaralhar-0']), peek: { who: 'p0', cards: ['preguica-0'] } };
+  it('Embaralhar mexe no monte e apaga o Espiar de todos', () => {
+    const s = { ...played(['embaralhar-0']), peeks: { p0: ['preguica-0'], p1: ['preguica-0', 'tamandua-0'] } };
     const after = settleKittens(s, at(5000));
     expect([...after.draw].sort()).toEqual([...DRAW].sort());
-    expect(after.peek).toBeNull();
+    expect(after.peeks).toEqual({});
     expect(after.current).toBe('p0');
   });
 
-  it('Espiar mostra as 3 de cima (a do topo primeiro) e some quando ele compra', () => {
+  it('Espiar mostra as 3 de cima (a do topo primeiro); comprando, a comprada sai e o resto fica à mostra', () => {
     const after = settleKittens(played(['espiar-0']), at(5000));
-    expect(after.peek).toEqual({ who: 'p0', cards: ['preguica-0', 'tamandua-0', 'quati-0'] });
+    expect(after.peeks).toEqual({ p0: ['preguica-0', 'tamandua-0', 'quati-0'] });
     expect(after.draw).toEqual(DRAW);
     expect(after).toMatchObject({ current: 'p0', owed: 1 });
-    expect(act(after, 'p0', { type: 'draw' }, at(5000)).peek).toBeNull();
+    const drawn = act(after, 'p0', { type: 'draw' }, at(5000));
+    expect(drawn.current).toBe('p1');
+    expect(drawn.peeks).toEqual({ p0: ['tamandua-0', 'quati-0'] });
   });
 
   it('fora de partida nada muda', () => {

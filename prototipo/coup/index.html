@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cúpi · protótipo da mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --cream:#efe6d2; --felt:#e4d7bb; --paper:#f7f0e0; --ink:#1d1a17; --ink-soft:#6b6152; --red:#c8312b;
+  --disp:'Bebas Neue',Impact,sans-serif; --ui:'Oswald',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--cream)}
+body{font-family:var(--ui);font-weight:400;color:var(--ink);-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+b{font-weight:inherit;color:var(--red)}
+
+/* ---------- palco 1440×900 (no celular: sem palco fixo, layout fluido) ---------- */
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;display:flex;flex-direction:column;
+  background:linear-gradient(var(--red) 0 8px,var(--cream) 8px)}
+
+/* topo: faixa vermelha fina (no fundo do #app), CÚPI, placar, som e ⚙ */
+header{flex:none;height:72px;margin-top:8px;display:flex;align-items:center;gap:14px;padding:0 28px;border-bottom:2px solid var(--ink)}
+header h1{margin:0;font:400 44px/1 var(--disp);letter-spacing:.04em}
+#score{margin-left:auto;font-size:15px;letter-spacing:.03em;color:var(--ink-soft);white-space:nowrap}
+#score em{font-style:normal;color:var(--ink);font-weight:500}
+.icon-btn{width:40px;height:40px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font-size:20px;line-height:1;display:grid;place-items:center;padding:0}
+
+main{flex:1;min-height:0;display:flex}
+#table{flex:1;min-width:0;padding:18px 24px 20px;display:flex;flex-direction:column;gap:16px}
+
+/* ---------- cartas ---------- */
+.card{position:relative;flex:none;border:2px solid var(--ink);border-radius:4px;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden}
+.card i{color:var(--red);line-height:1}
+.card em{font:400 13px/1 var(--disp);font-style:normal;letter-spacing:.04em}
+.card.back{background:var(--red)}
+.card.back svg{width:62%;height:auto;display:block}
+/* perdida: papel riscado (nome cortado + traço na diagonal) */
+.card.dead{background:var(--paper);color:var(--ink-soft)}
+.card.dead i{color:var(--ink-soft)}
+.card.dead em{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--ink)}
+.card.dead::after{content:'';position:absolute;inset:0;background:linear-gradient(to top right,transparent calc(50% - 1px),var(--ink) calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px));opacity:.55}
+.card.peek{outline:2px dashed var(--ink-soft);outline-offset:2px}
+.card.s{width:52px;height:72px}
+.card.s i{font-size:22px}
+.card.s em{font-size:10.5px}
+/* perdida pequena (oponentes): só o ícone, maior e na tinta; o nome vai no title */
+.card.s.dead i{font-size:30px;color:var(--ink)}
+.card.l{width:120px;height:168px;gap:10px}
+.card.l i{font-size:34px}
+.card.l em{font-size:22px}
+.card.m{width:84px;height:118px;gap:6px}
+.card.m i{font-size:26px}
+.card.m em{font-size:18px}
+
+/* ---------- oponentes ---------- */
+#opps{flex:none;display:flex;justify-content:center;gap:14px}
+.opp{width:196px;padding:10px 14px 10px;border:2px solid var(--ink);border-radius:5px;background:var(--paper);display:flex;flex-direction:column;align-items:center;gap:8px;position:relative}
+.opp .nm{font:400 22px/1 var(--disp);letter-spacing:.05em;display:flex;align-items:baseline;gap:6px}
+.opp .tag{font:400 11px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+.opp .hand{display:flex;gap:6px}
+.opp .coins{font:500 18px/1 var(--ui);display:flex;align-items:center;gap:4px}
+.opp .coins i{font-size:19px}
+.opp .coins.gone{font:400 14px/1 var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+.opp.turn{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
+.opp.out{opacity:.45}
+.opp.aim{cursor:pointer;animation:aim 1s ease-in-out infinite}
+@keyframes aim{0%,100%{box-shadow:0 0 0 2px var(--red)}50%{box-shadow:0 0 0 6px rgba(200,49,43,.35)}}
+
+/* ---------- palco ---------- */
+#stage{flex:1;min-height:0;position:relative;border:2px solid var(--ink);border-radius:5px;background:var(--felt);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px 48px 26px;text-align:center}
+#stage .corner{position:absolute;top:12px;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
+#stage .corner em{font:400 24px/1 var(--disp);font-style:normal;letter-spacing:.04em;color:var(--ink)}
+#stage .corner i{font-size:18px}
+#stageMain{display:contents} /* só um invólucro: os filhos se alinham como itens do palco */
+#treasury{left:16px}
+#deck{right:16px}
+.big{font:400 56px/1 var(--disp);letter-spacing:.04em}
+.big.me{color:var(--red)}
+.big.mid{font-size:40px;max-width:900px}
+.sub{font-size:17px;letter-spacing:.03em;color:var(--ink-soft)}
+.sub button{border:0;background:none;padding:0;color:var(--red);font-weight:500;text-decoration:underline;text-underline-offset:3px}
+#decl{max-width:900px;font:400 34px/1.1 var(--disp);letter-spacing:.04em}
+#decl small{display:block;margin-top:8px;font:400 17px/1.2 var(--ui);letter-spacing:.02em;color:var(--ink-soft)}
+.clock{display:flex;align-items:center;gap:12px;width:560px}
+#bar{flex:1;height:12px;border:2px solid var(--ink);border-radius:3px;background:var(--paper);overflow:hidden}
+#bar i{display:block;height:100%;background:var(--red);width:100%}
+#secs{font:400 26px/1 var(--disp);min-width:28px;text-align:right}
+#reacts{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+.react{min-width:190px;min-height:64px;padding:0 30px;border:2px solid var(--ink);border-radius:5px;background:var(--paper);font:500 22px/1 var(--ui);letter-spacing:.06em;text-transform:uppercase}
+.react.red{background:var(--red);color:#fff}
+.wait{font-size:19px;letter-spacing:.04em;color:var(--ink-soft);min-height:64px;display:flex;align-items:center}
+.passed{font-size:15px;letter-spacing:.03em;color:var(--ink-soft)}
+
+/* momentos narrados: por cima do palco, um de cada vez */
+#moment{position:absolute;inset:0;z-index:4;border-radius:3px;background:var(--felt);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;animation:momIn .22s ease-out}
+#moment.bye{animation:momOut .25s ease-in forwards}
+@keyframes momIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+@keyframes momOut{to{opacity:0}}
+#moment .mt{font:400 64px/1 var(--disp);letter-spacing:.04em}
+#moment .mt2{font:400 46px/1 var(--disp);letter-spacing:.04em;color:var(--red)}
+#moment .ms{font:400 26px/1.1 var(--disp);letter-spacing:.04em;color:var(--red)}
+#moment .ms.ink{color:var(--ink-soft);font:400 18px/1.2 var(--ui)}
+#moment .row{display:flex;align-items:center;gap:26px}
+#moment .card.l{animation:flip .5s ease-out both;animation-delay:.15s}
+@keyframes flip{from{transform:perspective(600px) rotateY(90deg)}to{transform:perspective(600px) rotateY(0)}}
+.stamp{padding:8px 22px 4px;border:4px solid var(--red);border-radius:6px;color:var(--red);font:400 64px/1 var(--disp);letter-spacing:.1em;transform:rotate(-12deg);animation:stamp .3s cubic-bezier(.2,1.6,.4,1) both;animation-delay:.25s}
+@keyframes stamp{from{opacity:0;transform:rotate(-12deg) scale(1.8)}to{opacity:1;transform:rotate(-12deg) scale(1)}}
+/* com janela aberta pra você: faixa compacta no alto (a declaração, a barra e os botões seguem visíveis e clicáveis) */
+#moment.band{inset:0 0 auto 0;flex-direction:row;flex-wrap:wrap;gap:6px 16px;padding:8px 16px;border-bottom:2px solid var(--ink);border-radius:3px 3px 0 0;background:var(--paper);pointer-events:none;animation-name:bandIn}
+@keyframes bandIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+#moment.band.bye{animation:momOut .25s ease-in forwards}
+#moment.band .mt{font-size:28px}
+#moment.band .mt2,#moment.band .ms{font-size:22px}
+#moment.band .ms.ink{font-size:14px}
+#moment.band .row{gap:12px}
+#moment.band .card.l{width:30px;height:42px;gap:0}
+#moment.band .card.l i{font-size:17px}
+#moment.band .card.l em{display:none}
+#moment.band .stamp{font-size:22px;padding:3px 8px 1px;border-width:3px}
+
+/* ---------- sua área ---------- */
+#me{flex:none;height:212px;position:relative;border:2px solid var(--ink);border-radius:5px;background:var(--paper);padding:20px 22px;display:flex;gap:28px}
+#me.turn{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
+#myHand{flex:none;display:flex;align-items:flex-end;gap:12px}
+#myRight{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
+#myLine{font:400 30px/1 var(--disp);letter-spacing:.05em;display:flex;align-items:baseline;gap:12px}
+#myLine .tag{font:400 13px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+#acts{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.act{position:relative;border:2px solid var(--ink);border-radius:4px;background:var(--cream);text-align:left;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.act .an{font:500 18px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase}
+.act small{font-size:12.5px;line-height:1.15;color:var(--ink-soft)}
+.act.sel{background:var(--ink);color:var(--paper)}
+.act.sel small{color:var(--cream)}
+.act:disabled{opacity:.35;cursor:default;background:var(--cream)}
+.act .has{position:absolute;right:8px;top:8px;display:flex;align-items:center;gap:4px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--red)}
+.act .has::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--red)}
+
+/* painéis sobre a sua área (perder carta, troca, fim) */
+#panel{position:absolute;inset:-2px;z-index:5;border:2px solid var(--ink);border-radius:5px;background:var(--paper);padding:18px 24px;display:flex;align-items:center;gap:30px;box-shadow:0 0 0 2px var(--red)}
+#panel .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+#panel h3{margin:0;font:400 38px/1 var(--disp);letter-spacing:.04em}
+#panel h3.win{font-size:44px;color:var(--red)}
+#panel p{margin:0;font-size:17px;color:var(--ink-soft)}
+#panel p em{font-style:normal;color:var(--ink)}
+#panel .score{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 18px;margin-top:4px;padding-top:8px;border-top:2px solid var(--ink)}
+#panel .score span{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+#panel .score em{font:400 30px/1 var(--disp);font-style:normal;letter-spacing:.04em;color:var(--ink)}
+#panel .score em.lead{color:var(--red)}
+#panel .pick{flex:none;display:flex;gap:12px;align-items:center}
+.pickc{width:104px;height:146px;padding:0;gap:8px}
+.pickc i{font-size:30px}
+.pickc em{font-size:19px}
+.pickc.on{box-shadow:0 0 0 3px var(--red);border-color:var(--red)}
+.pickc .new{position:absolute;top:6px;left:50%;transform:translateX(-50%);padding:2px 6px;border-radius:3px;background:var(--red);color:#fff;font:500 10px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase}
+.btn{padding:12px 22px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font:500 18px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase}
+.btn.red{background:var(--red);color:#fff}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.huge{padding:20px 36px;font-size:24px}
+
+/* ---------- diário ---------- */
+#logbox{flex:none;width:260px;border-left:2px solid var(--ink);background:var(--paper);display:flex;flex-direction:column;min-height:0}
+#logbox h2{margin:0;padding:14px 18px 10px;font:400 30px/1 var(--disp);letter-spacing:.06em;border-bottom:2px solid var(--ink)}
+#log{flex:1;min-height:0;overflow:auto;margin:0;padding:8px 0 14px;list-style:none;font-size:14.5px;line-height:1.3}
+#log li{padding:6px 18px;border-bottom:1px dashed rgba(29,26,23,.22);color:var(--ink-soft)}
+#log li b{color:var(--red)}
+#log li::first-letter{text-transform:uppercase}
+#log li.last{color:var(--ink);background:var(--cream);font-weight:500;box-shadow:inset 4px 0 0 var(--red)}
+
+/* ---------- painel de dev ---------- */
+#dev{position:absolute;right:24px;top:90px;width:360px;padding:14px 16px 16px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);box-shadow:6px 6px 0 var(--ink);z-index:30;display:none;font-size:14px}
+#dev.on{display:block}
+#dev h4{margin:0 0 8px;font:400 28px/1 var(--disp);letter-spacing:.05em}
+#dev .r{display:flex;align-items:center;justify-content:space-between;margin:9px 0;gap:8px}
+#dev .opts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#dev .opts button{padding:3px 9px;border:2px solid var(--ink);border-radius:3px;background:none;font-size:13px}
+#dev .opts button.on{background:var(--ink);color:var(--paper)}
+#dev .wide{width:100%;margin-top:8px;padding:7px;border:2px solid var(--ink);border-radius:3px;background:none;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+#dev .wide:hover{background:#fff}
+#dev p{color:var(--ink-soft);font-size:12.5px;line-height:1.4;margin:10px 0 0}
+
+#toast{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);padding:10px 20px;border:2px solid var(--ink);border-radius:4px;background:var(--ink);color:var(--paper);font:500 16px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+
+/* a faixa do momento não cobre a declaração: o palco desce o conteúdo enquanto ela aparece */
+#stage:has(#moment.band:not([hidden])){padding-top:78px}
+
+/* só no celular */
+#lastLine,#logClose,#scrim,#rotate{display:none}
+@media (hover:hover){.opp.aim:hover,.act:not(:disabled):not(.sel):hover,.react:hover,.pickc:hover,.icon-btn:hover{background:#fff}.react.red:hover,.btn.red:not(:disabled):hover{background:#d93d37}}
+
+/* ---------- celular em pé: sem palco fixo, layout fluido da altura da tela ---------- */
+body.mobile #app{position:fixed;inset:0;width:auto;height:100vh;height:100dvh;transform:none;background:linear-gradient(var(--red) 0 5px,var(--cream) 5px)}
+body.mobile header{height:50px;margin-top:5px;padding:0 8px 0 12px;gap:6px}
+body.mobile header h1{font-size:28px}
+body.mobile #score{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;min-width:0}
+body.mobile .icon-btn{width:44px;height:44px;font-size:19px}
+body.mobile main{flex-direction:column}
+body.mobile #table{padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:8px}
+/* oponentes: grade de até 5 colunas */
+body.mobile #opps{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(0,1fr));gap:6px}
+body.mobile .opp{width:auto;min-height:72px;padding:6px 2px 5px;gap:4px;border-radius:4px}
+body.mobile .opp .nm{font-size:13px;flex-direction:column;align-items:center;gap:1px}
+body.mobile .opp .tag{font-size:8.5px;letter-spacing:.06em}
+body.mobile .opp .hand{gap:3px}
+body.mobile .card.s{width:16px;height:22px;border-width:1.5px;border-radius:2px}
+body.mobile .card.s em{display:none}
+body.mobile .card.s i,body.mobile .card.s.dead i{font-size:11px}
+body.mobile .card.s.dead::after{opacity:.7}
+body.mobile .opp .coins{font-size:13px;gap:2px}
+body.mobile .opp .coins i{font-size:13px}
+body.mobile .opp .coins.gone{font-size:10px;letter-spacing:.08em}
+body.mobile .opp.turn{box-shadow:0 0 0 1px var(--red)}
+/* última linha do diário: toque abre a folha */
+body.mobile #lastLine{display:flex;align-items:center;gap:8px;flex:none;min-height:44px;padding:6px 10px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);text-align:left;font-size:14px;line-height:1.2}
+#lastLine .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lastLine .txt::first-letter{text-transform:uppercase}
+#lastLine .more{flex:none;font:400 16px/1 var(--disp);letter-spacing:.06em;color:var(--ink-soft)}
+/* palco: ocupa o que sobra */
+body.mobile #stage{padding:30px 10px 12px;gap:12px}
+body.mobile #stage:has(#moment.band:not([hidden])){padding-top:64px}
+body.mobile #stage .corner{top:7px;font-size:10.5px;gap:4px}
+body.mobile #stage .corner em{font-size:18px}
+body.mobile #stage .corner i{font-size:14px}
+body.mobile #treasury{left:9px}
+body.mobile #deck{right:9px}
+body.mobile .big{font-size:36px}
+body.mobile .big.mid{font-size:26px}
+body.mobile .sub{font-size:14px}
+body.mobile .sub button{display:inline-block;min-height:44px;padding:0 6px}
+body.mobile #decl{font-size:24px}
+body.mobile #decl small{font-size:14px}
+body.mobile .clock{width:100%;gap:8px}
+body.mobile #secs{font-size:22px}
+body.mobile #reacts{width:100%;gap:8px}
+body.mobile .react{flex:1 1 130px;min-width:0;min-height:52px;padding:0 12px;font-size:18px}
+body.mobile .wait{font-size:16px;min-height:52px}
+body.mobile .passed{font-size:12.5px}
+body.mobile #moment{gap:10px;padding:10px}
+body.mobile #moment .mt{font-size:40px}
+body.mobile #moment .mt2{font-size:30px}
+body.mobile #moment .ms{font-size:20px}
+body.mobile #moment .ms.ink{font-size:14px}
+body.mobile #moment .card.l{width:64px;height:90px;gap:6px}
+body.mobile #moment .card.l i{font-size:22px}
+body.mobile #moment .card.l em{font-size:14px}
+body.mobile .stamp{font-size:36px;padding:5px 12px 2px;border-width:3px}
+body.mobile #moment.band{padding:6px 10px;gap:4px 10px}
+body.mobile #moment.band .mt{font-size:22px}
+body.mobile #moment.band .mt2,body.mobile #moment.band .ms{font-size:17px}
+body.mobile #moment.band .ms.ink{font-size:12px}
+body.mobile #moment.band .card.l{width:22px;height:30px}
+body.mobile #moment.band .card.l i{font-size:13px}
+body.mobile #moment.band .card.l em{display:none}
+body.mobile #moment.band .stamp{font-size:17px;padding:2px 6px 0;border-width:2px}
+/* sua mão + ações 4×2 */
+body.mobile #me{height:auto;flex:none;padding:8px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:8px 10px;align-items:end}
+body.mobile #myRight{display:contents}
+body.mobile #myHand{grid-column:1;grid-row:1;gap:6px;align-items:flex-end}
+body.mobile #myLine{grid-column:2;grid-row:1;align-self:end;font-size:22px;flex-direction:column;align-items:flex-start;gap:4px}
+body.mobile #myLine .tag{font-size:10.5px;letter-spacing:.08em}
+body.mobile #myHand .card.l{width:64px;height:90px;gap:6px}
+body.mobile #myHand .card.l i{font-size:24px}
+body.mobile #myHand .card.l em{font-size:12.5px}
+body.mobile #myHand .card.m{width:44px;height:62px;gap:3px}
+body.mobile #myHand .card.m i{font-size:16px}
+body.mobile #myHand .card.m em{font-size:10px}
+body.mobile #acts{grid-column:1 / -1;grid-row:2;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+body.mobile .act{min-height:46px;padding:4px 5px;align-items:center;text-align:center;gap:0}
+body.mobile .act .an{font-size:12.5px;line-height:1.1;letter-spacing:.03em}
+body.mobile .act small{display:none}
+body.mobile .act .has{right:3px;top:3px;font-size:0;gap:0}
+body.mobile .act .has::before{width:7px;height:7px}
+/* painéis (perder carta, troca, fim) e diário: folhas que sobem de baixo */
+body.mobile #panel,body.mobile #logbox{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;z-index:20;border:2px solid var(--ink);border-bottom:0;border-radius:12px 12px 0 0;box-shadow:0 -6px 0 rgba(29,26,23,.12);animation:sheetUp .25s ease-out}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+body.mobile #panel{inset:auto 0 0 0;max-height:85dvh;overflow:auto;flex-direction:column;align-items:stretch;gap:14px;padding:16px 14px calc(16px + env(safe-area-inset-bottom))}
+body.mobile #panel h3{font-size:30px}
+body.mobile #panel h3.win{font-size:34px}
+body.mobile #panel p{font-size:15px}
+body.mobile #panel .pick{order:2;justify-content:center;gap:8px}
+body.mobile #panel .info .btn{order:3}
+body.mobile #panel .score em{font-size:22px}
+body.mobile .pickc{width:76px;height:106px;gap:6px}
+body.mobile .pickc i{font-size:22px}
+body.mobile .pickc em{font-size:14px}
+body.mobile #panel .info{display:contents}
+body.mobile #panel .info > *{order:1}
+body.mobile #panel .btn{min-height:50px;width:100%}
+body.mobile #panel .btn.huge{font-size:22px}
+body.mobile #panel > .btn{order:4}
+body.mobile #logbox{height:72dvh;border-left:2px solid var(--ink);display:none}
+body.mobile.logopen #logbox{display:flex}
+body.mobile #logbox h2{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 8px 16px}
+body.mobile #logClose{display:block;min-height:44px;padding:0 14px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font:500 15px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase}
+body.mobile #log{font-size:15px}
+body.mobile.logopen #scrim{display:block;position:fixed;inset:0;z-index:19;background:rgba(29,26,23,.35)}
+body.mobile #dev{position:fixed;left:8px;right:8px;top:62px;width:auto;max-height:80dvh;overflow:auto}
+body.mobile #dev .opts button{min-height:40px;min-width:40px}
+body.mobile #dev .wide{min-height:44px}
+body.mobile #toast{position:fixed;bottom:auto;top:64px;white-space:normal;max-width:90vw;text-align:center}
+/* celular deitado */
+body.rotate #app{display:none}
+body.rotate #rotate{display:flex;position:fixed;inset:0;z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--cream);text-align:center;font:400 34px/1 var(--disp);letter-spacing:.05em}
+body.rotate #rotate i{font-size:48px;color:var(--red)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>CÚPI</h1>
+    <div id="score"></div>
+    <button class="icon-btn" id="soundBtn" title="som"><i class="ti ti-volume"></i></button>
+    <button class="icon-btn" id="devBtn" title="protótipo">⚙</button>
+  </header>
+  <div id="dev">
+    <h4>protótipo</h4>
+    <div class="r">jogadores<div class="opts" id="optN"></div></div>
+    <div class="r">velocidade dos bots<div class="opts" id="optS"></div></div>
+    <div class="r">bots blefam<div class="opts" id="optB"></div></div>
+    <div class="r">bots duvidam<div class="opts" id="optD"></div></div>
+    <div class="r">ver as cartas dos bots<div class="opts" id="optP"></div></div>
+    <button class="wide" id="awayMe">eu saio da mesa</button>
+    <button class="wide" id="awayBot">um bot sai</button>
+    <button class="wide" id="newBtn">nova partida</button>
+    <p>Protótipo descartável: as regras são as reais (as mesmas do servidor); os bots decidem só pelo que veem. "Sair da mesa" deixa o automático das regras jogar por você.</p>
+  </div>
+  <main>
+    <section id="table">
+      <div id="opps"></div>
+      <button id="lastLine" data-do="logopen" aria-label="abrir o diário"><span class="txt"></span><span class="more">diário ›</span></button>
+      <div id="stage">
+        <div class="corner" id="treasury"></div>
+        <div class="corner" id="deck"></div>
+        <div id="stageMain"></div>
+        <div id="moment" hidden></div>
+      </div>
+      <div id="me">
+        <div id="myHand"></div>
+        <div id="myRight">
+          <div id="myLine"></div>
+          <div id="acts"></div>
+        </div>
+        <div id="panel" hidden></div>
+      </div>
+    </section>
+    <aside id="logbox"><h2>diário<button id="logClose" data-do="logclose">fechar</button></h2><ol id="log"></ol></aside>
+  </main>
+  <div id="toast"></div>
+  <div id="scrim" data-do="logclose"></div>
+</div>
+<div id="rotate"><i class="ti ti-device-mobile-rotated"></i>vira o celular em pé</div>
+<script src="rules.js"></script>
+<script src="texts.js"></script>
+<script src="bots.js"></script>
+<script src="sounds.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+
+/* ---------- estado e laço ---------- */
+const ME = 'p0';
+let N = 4, SPEED = 1, peek = false, state = null, away = new Set(), prevMatch = 0;
+const ids = () => Array.from({ length: N }, (_, i) => `p${i}`);
+const ctx = () => ({ hostId: ME, active: ids().filter((p) => !away.has(p)), rng: Math.random, now: Date.now() });
+const view = (p = ME) => Cupi.coupViewFor(state, p);
+
+const ERR = {
+  not_host: 'Só o host pode fazer isso.', bad_phase: 'Agora não dá pra fazer isso.', not_owner: 'Essa carta não é sua.',
+  not_enough_players: 'Precisa de pelo menos 2 jogadores.', not_player: 'Você está assistindo esta rodada.',
+  bad_action: 'Ação inválida.', room_full: 'A sala está cheia.',
+  not_your_turn: 'Não é a sua vez.', not_enough_coins: 'Faltam moedas pra essa ação.',
+  must_coup: 'Com 10 moedas ou mais, só dá pra dar o golpe.', bad_target: 'Escolha outro alvo.',
+  cannot_react: 'Você não pode fazer isso nesta jogada.', already_passed: 'Você já deixou passar.',
+  window_closed: 'Essa janela já fechou.', not_losing: 'Não é você que perde carta agora.',
+  bad_exchange: 'Fique com o mesmo número de cartas que você tinha.', bad_block: 'Esse personagem não bloqueia essa ação.',
+};
+
+/* ---------- utilidades ---------- */
+const timers = new Set();
+const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+const between = (a, b) => a + Math.random() * (b - a);
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2400); }
+/** "a", "a e b", "a, b e c" */
+const joinE = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
+
+/* ---------- escala do palco 1440×900 ---------- */
+const mobileQ = matchMedia('(max-width: 640px)');
+/** Celular deitado: só um aviso (o jogo é pensado em pé). */
+const rotateQ = matchMedia('(orientation: landscape) and (max-height: 500px) and (hover: none)');
+let wasMobile = null;
+function fit() {
+  const mobile = mobileQ.matches;
+  document.body.classList.toggle('mobile', mobile);
+  document.body.classList.toggle('rotate', rotateQ.matches);
+  if (mobile !== wasMobile) {
+    wasMobile = mobile;
+    if (!mobile) document.body.classList.remove('logopen');
+    if (typeof state !== 'undefined' && state) render(view()); // placar curto/longo
+  }
+  if (mobile) { app.style.width = ''; app.style.transform = ''; return; }
+  let sc = innerHeight / 900, w = innerWidth / sc;
+  if (w < 1440) { sc = innerWidth / 1440; w = 1440; }
+  app.style.width = Math.round(w) + 'px';
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+}
+addEventListener('resize', fit);
+mobileQ.addEventListener('change', fit);
+rotateQ.addEventListener('change', fit);
+fit();
+
+/** Igual ao servidor: o schema das ações valida antes das regras. */
+function act(pid, action) {
+  const parsed = Cupi.coupActionSchema.safeParse(action);
+  if (!parsed.success) { console.error('ação inválida (bug do protótipo)', action, parsed.error); toast('Ação inválida (bug do protótipo — veja o console)'); return false; }
+  const res = Cupi.applyCoupAction(state, pid, parsed.data, ctx());
+  if (!res.ok) { if (pid === ME) { toast(ERR[res.error] || res.error); play('error'); } return false; }
+  state = res.state; changed(); return true;
+}
+/** O "alarme" do servidor: fecha a janela no prazo e joga pelos ausentes. */
+function tick() {
+  if (!state) return;
+  const next = Cupi.settleCoup(state, ctx());
+  if (next !== state) { state = next; changed(); }
+}
+setInterval(tick, 200);
+
+function newGame() {
+  for (const t of timers) clearTimeout(t);
+  timers.clear(); plans.clear(); exSel.clear(); loseSel = -1; aiming = null;
+  clearMoments(); seen = { match: 0, log: 0, myTurn: false, coins: null }; prevMatch = 0;
+  away.clear(); syncAway();
+  state = Cupi.initialCoupState();
+  act(ME, { type: 'start' });
+}
+function restart() { exSel.clear(); loseSel = -1; aiming = null; act(ME, { type: 'restart' }); }
+
+/* ---------- bots ---------- */
+/** Um plano por bot: a chave diz "a que situação ele está reagindo"; mudou a situação, o plano antigo cai. */
+const plans = new Map();
+function planKey(p) { return `${state.match}:${state.log.length}:${state.window ? state.window.id : '-'}:${p}`; }
+function scheduleBots() {
+  if (!state) return;
+  for (const p of state.players) {
+    if (p === ME || away.has(p)) continue; // ausentes: quem joga é o automático das regras
+    const v = view(p);
+    const cur = plans.get(p);
+    if (Bot.decide(v, p, Math.random) === null) { if (cur) { clearTimeout(cur.timer); timers.delete(cur.timer); plans.delete(p); } continue; }
+    const key = planKey(p);
+    if (cur && cur.key === key) continue;
+    if (cur) { clearTimeout(cur.timer); timers.delete(cur.timer); }
+    const plan = { key, timer: 0 };
+    if (v.can.pass) { // janela: demora mais, e às vezes nem responde (deixa o tempo correr)
+      if (Math.random() >= 0.15) plan.timer = later(between(1500, 7000) * SPEED, () => fire(p));
+    } else if (v.can.lose || v.can.keep > 0) plan.timer = later(between(900, 2000) * SPEED, () => fire(p));
+    else plan.timer = later(between(1200, 3000) * SPEED, () => fire(p));
+    plans.set(p, plan);
+  }
+}
+/** Na hora de jogar, decide de novo com a visão atual (a janela pode ter mudado). */
+function fire(p) {
+  if (!state || away.has(p) || !state.players.includes(p)) return;
+  const d = Bot.decide(view(p), p, Math.random);
+  if (d) act(p, d);
+}
+
+/* ---------- tela ---------- */
+const exSel = new Set();   // troca: índices escolhidos em [...myCards, ...myDrawn]
+let loseSel = -1;          // perder carta: índice escolhido em myCards
+let aiming = null;         // ação com alvo esperando o clique num oponente
+let selKey = '';
+
+const nm = (id) => Txt.name(id);
+const CH = (c) => Txt.CHAR[c];
+/** Verso: vermelho com um emblema (círculo e estrela). */
+const EMBLEM = '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="none" stroke="#efe6d2" stroke-width="2.5"/>'
+  + '<path d="M20 8.5l3.2 7.6 8.2.6-6.3 5.3 2 8-7.1-4.4-7.1 4.4 2-8-6.3-5.3 8.2-.6z" fill="#efe6d2"/></svg>';
+const cardBack = (size) => `<span class="card back ${size}">${EMBLEM}</span>`;
+const cardFace = (c, size, cls = '') => `<span class="card ${size} ${cls}"><i class="ti ${CH(c).icon}"></i><em>${CH(c).nome}</em></span>`;
+const cardDead = (c, size) => (size === 's'
+  ? `<span class="card s dead" title="${CH(c).nome} (perdida)"><i class="ti ${CH(c).icon}"></i></span>`
+  : cardFace(c, size, 'dead'));
+
+/** Oponentes na ordem dos assentos, começando por quem vem depois de você. */
+function opponents(v) {
+  const i = v.players.indexOf(ME);
+  const order = i < 0 ? v.players : [...v.players.slice(i + 1), ...v.players.slice(0, i)];
+  return order.map((id) => v.seats.find((s) => s.id === id));
+}
+
+function renderOpps(v) {
+  const aimable = aiming ? v.can.targets : [];
+  $('#opps').style.setProperty('--cols', Math.min(5, Math.max(1, v.players.length - 1)));
+  $('#opps').innerHTML = opponents(v).map((s) => {
+    const cls = ['opp', v.turn === s.id && v.phase !== 'over' ? 'turn' : '', s.out ? 'out' : '', aimable.includes(s.id) ? 'aim' : ''].join(' ');
+    let hidden;
+    if (peek && state.hands[s.id]) hidden = state.hands[s.id].cards.filter((c) => !c.revealed).map((c) => cardFace(c.character, 's', 'peek')).join('');
+    else hidden = cardBack('s').repeat(s.hidden);
+    const tag = away.has(s.id) && !s.out ? '<span class="tag">ausente</span>' : '';
+    const coins = s.out ? '<div class="coins gone">fora</div>' : `<div class="coins"><i class="ti ti-coin"></i>${s.coins}</div>`;
+    const data = aimable.includes(s.id) ? ` data-do="target" data-id="${s.id}"` : '';
+    return `<div class="${cls}"${data}><div class="nm">${nm(s.id)}${tag}</div>`
+      + `<div class="hand">${hidden}${s.revealed.map((c) => cardDead(c, 's')).join('')}</div>${coins}</div>`;
+  }).join('');
+}
+
+/** "Léo deixou · Nina deixou · faltam você e Caio" */
+function passedLine(w) {
+  const rest = w.eligible.filter((p) => !w.passed.includes(p)).sort((a, b) => (a === ME ? -1 : b === ME ? 1 : 0));
+  const parts = w.passed.map((p) => `${nm(p)} deixou`);
+  if (rest.length) parts.push(`${rest.length > 1 ? 'faltam' : 'falta'} ${joinE(rest.map(nm))}`);
+  return parts.join(' · ');
+}
+
+function stageHTML(v) {
+  const c = v.can;
+  switch (v.phase) {
+    case 'turn':
+      if (v.turn === ME) {
+        if (aiming) return `<div class="big me">${Txt.ACTION[aiming].nome}</div><div class="sub">escolha o alvo lá em cima · <button data-do="unaim">cancelar</button></div>`;
+        return '<div class="big me">sua vez</div><div class="sub">escolha uma ação embaixo</div>';
+      }
+      return `<div class="big">vez de ${nm(v.turn)}</div><div class="sub">${nm(v.turn)} está escolhendo a ação…</div>`;
+    case 'reaction': {
+      const w = v.window;
+      const left = Math.max(0, w.endsAt - Date.now());
+      const pct = (100 * left / Cupi.COUP_WINDOW_MS).toFixed(2);
+      const btns = c.pass
+        ? `<div id="reacts"${left <= 0 ? ' hidden' : ''}>`
+          + (c.challenge ? '<button class="react red" data-do="challenge">duvidar</button>' : '')
+          + c.block.map((ch) => `<button class="react red" data-do="block" data-as="${ch}">bloquear como ${CH(ch).nome}</button>`).join('')
+          + '<button class="react" data-do="pass">deixa</button></div>'
+          + `<div class="wait" id="timeup"${left <= 0 ? '' : ' hidden'}>tempo esgotado…</div>`
+        : '<div class="wait">esperando os outros…</div>';
+      return `<div id="decl">${Txt.declaration(v)}</div>`
+        + `<div class="clock"><div id="bar"><i style="width:${pct}%"></i></div><div id="secs">${Math.ceil(left / 1000)}</div></div>`
+        + btns + `<div class="passed">${passedLine(w)}</div>`;
+    }
+    case 'losing':
+      if (v.loss.player === ME) return '<div class="big me">você perde uma carta</div><div class="sub">escolha embaixo qual vai revelar</div>';
+      return `<div class="big mid">${nm(v.loss.player)} está escolhendo a carta que perde…</div>`;
+    case 'exchange':
+      if (v.turn === ME) return '<div class="big me">troca de cartas</div><div class="sub">escolha embaixo com quais cartas você fica</div>';
+      return `<div class="big mid">${nm(v.turn)} está trocando cartas…</div>`;
+    case 'over':
+      return `<div class="big">fim da partida</div><div class="sub">${nm(v.winner)} tomou o poder</div>`;
+  }
+  return '';
+}
+
+function renderStage(v) {
+  $('#treasury').innerHTML = `<i class="ti ti-coin"></i>tesouro <em>${v.treasury}</em>`;
+  $('#deck').innerHTML = `baralho <em>${v.deckSize}</em><i class="ti ti-cards"></i>`;
+  $('#stageMain').innerHTML = stageHTML(v);
+}
+
+function renderMe(v) {
+  const seat = v.seats.find((s) => s.id === ME);
+  const myTurn = v.turn === ME && v.phase === 'turn';
+  $('#me').classList.toggle('turn', myTurn);
+  $('#myHand').innerHTML = v.myCards.map((c) => cardFace(c, 'l')).join('') + (seat ? seat.revealed.map((c) => cardDead(c, 'm')).join('') : '');
+  const coins = seat ? seat.coins : 0;
+  const tag = seat && seat.out ? '<span class="tag">você está fora</span>' : (away.has(ME) ? '<span class="tag">ausente · o automático joga por você</span>' : '');
+  $('#myLine').innerHTML = `você · ${coins} moeda${coins === 1 ? '' : 's'}${tag}`;
+  $('#acts').innerHTML = Cupi.COUP_ACTION_KINDS.map((k) => {
+    const on = v.can.act.includes(k);
+    const claim = Cupi.COUP_CLAIM[k];
+    const has = claim && v.myCards.includes(claim) ? '<span class="has">você tem</span>' : '';
+    return `<button class="act ${aiming === k ? 'sel' : ''}" data-do="act" data-kind="${k}" ${on ? '' : 'disabled'}>`
+      + `<span class="an">${Txt.ACTION[k].nome}</span><small>${Txt.ACTION[k].dica}</small>${has}</button>`;
+  }).join('');
+}
+
+function renderPanel(v) {
+  const c = v.can, el = $('#panel');
+  const pickCard = (ch, i, on, extra = '') => `<button class="card pickc ${on ? 'on' : ''}" data-i="${i}" ${extra}><i class="ti ${CH(ch).icon}"></i><em>${CH(ch).nome}</em></button>`;
+  if (v.phase === 'over') {
+    const outs = v.out.filter((p) => p !== v.winner).map(nm);
+    el.innerHTML = '<div class="info">'
+      + `<h3 class="win">${nm(v.winner)} tomou o poder</h3>`
+      + `<p>ficou com <em>${joinE(v.winnerCards.map((x) => CH(x).nome))}</em></p>`
+      + (outs.length ? `<p>saíram: <em>${outs.join(' → ')}</em></p>` : '')
+      + `<div class="score">${scoreChips(v)}</div></div>`
+      + '<button class="btn red huge" data-do="restart">jogar de novo</button>';
+  } else if (c.lose) {
+    const chosen = loseSel >= 0 ? v.myCards[loseSel] : null;
+    el.innerHTML = `<div class="info"><h3>${Txt.lossTitle(v.loss.reason)}</h3><p>${Txt.LOSS_SUB}</p>`
+      + `<button class="btn red" data-do="loseok" ${chosen ? '' : 'disabled'}>${chosen ? `revelar ${CH(chosen).nome}` : 'revelar'}</button></div>`
+      + `<div class="pick">${v.myCards.map((ch, i) => pickCard(ch, i, i === loseSel, 'data-do="losesel"')).join('')}</div>`;
+  } else if (c.keep > 0) {
+    const pool = [...v.myCards, ...v.myDrawn];
+    el.innerHTML = `<div class="info"><h3>Fique com ${c.keep} das ${pool.length} cartas</h3>`
+      + `<p>escolhidas ${exSel.size} de ${c.keep}</p>`
+      + `<button class="btn red" data-do="xok" ${exSel.size === c.keep ? '' : 'disabled'}>ficar com essas</button></div>`
+      + `<div class="pick">${pool.map((ch, i) => pickCard(ch, i, exSel.has(i), 'data-do="xsel"').replace('</button>', i >= v.myCards.length ? '<span class="new">nova</span></button>' : '</button>')).join('')}</div>`;
+  } else { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+}
+
+function renderLog(v) {
+  const box = $('#log');
+  const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const lines = v.log.map((e) => Txt.logLine(e)).filter((s) => s !== null);
+  box.innerHTML = lines.map((s, i) => `<li${i === lines.length - 1 ? ' class="last"' : ''}>${s}</li>`).join('');
+  if (atEnd || box.dataset.match !== String(v.match)) box.scrollTop = box.scrollHeight;
+  box.dataset.match = String(v.match);
+  $('#lastLine .txt').innerHTML = lines.length ? lines[lines.length - 1] : '';
+}
+
+/** "placar da noite: Bia 2 · você 1" (só quem já ganhou alguma). */
+function scoreText(v) {
+  const who = Object.keys(v.wins).filter((p) => v.wins[p] > 0).sort((a, b) => v.wins[b] - v.wins[a]);
+  return 'placar da noite: ' + (who.length ? who.map((p) => `<em>${nm(p)} ${v.wins[p]}</em>`).join(' · ') : 'ninguém ganhou ainda');
+}
+
+/** Placar grande da tela de fim: todos os jogadores, quem lidera em vermelho. */
+function scoreChips(v) {
+  const best = Math.max(0, ...v.players.map((p) => v.wins[p] || 0));
+  const order = [...v.players].sort((a, b) => (v.wins[b] || 0) - (v.wins[a] || 0));
+  return '<span>placar da noite</span>' + order.map((p) => `<em class="${best > 0 && (v.wins[p] || 0) === best ? 'lead' : ''}">${nm(p)} ${v.wins[p] || 0}</em>`).join('');
+}
+
+/** Celular: só o seu placar e o do líder. */
+function scoreShort(v) {
+  const w = (p) => v.wins[p] || 0;
+  const lead = [...v.players].sort((a, b) => w(b) - w(a))[0];
+  const parts = [`<em>você ${w(ME)}</em>`];
+  if (lead && lead !== ME && w(lead) > w(ME)) parts.push(`<em>${nm(lead)} ${w(lead)}</em>`);
+  return 'placar ' + parts.join(' · ');
+}
+
+function render(v) {
+  renderOpps(v);
+  renderStage(v);
+  renderMe(v);
+  renderPanel(v);
+  renderLog(v);
+  $('#score').innerHTML = mobileQ.matches ? scoreShort(v) : scoreText(v);
+  syncMomentMode();
+}
+
+/** Barra dos 10 s, a cada quadro. A visão não tem relógio: passou o prazo, a mesa esconde os botões (o servidor responderia window_closed). */
+let lastTick = '';
+function renderClock() {
+  const w = state && state.phase === 'reaction' ? state.window : null;
+  if (w) {
+    const left = Math.max(0, w.endsAt - Date.now());
+    const sec = Math.ceil(left / 1000);
+    const bar = $('#bar i'); if (bar) bar.style.width = (100 * left / Cupi.COUP_WINDOW_MS).toFixed(2) + '%';
+    const secs = $('#secs'); if (secs) secs.textContent = sec;
+    const reacts = $('#reacts');
+    if (reacts && left <= 0 && !reacts.hidden) { reacts.hidden = true; const tu = $('#timeup'); if (tu) tu.hidden = false; }
+    // tique só nos 3 últimos segundos e só pra quem ainda pode reagir (os botões estão na tela)
+    if (reacts && !reacts.hidden && sec >= 1 && sec <= 3 && lastTick !== `${w.id}:${sec}`) { lastTick = `${w.id}:${sec}`; play('tick'); }
+  }
+  requestAnimationFrame(renderClock);
+}
+requestAnimationFrame(renderClock);
+
+/* ---------- momentos narrados (fila sobre o palco, 2,2 s cada) ---------- */
+const MOMENT_MS = 2200;
+const moments = [];
+let momentTimer = 0;
+function momentHTML(e) {
+  switch (e.t) {
+    case 'challenge': {
+      const head = `<div class="mt">${nm(e.by)} duvidou!</div>`;
+      if (e.had) return head + `<div class="row">${cardFace(e.claim, 'l')}</div><div class="ms">${nm(e.of)} tinha ${Txt.the(e.claim)}</div>`;
+      return head + `<div class="row"><div class="mt2">${nm(e.of)} blefou!</div><div class="stamp">blefe</div></div>`;
+    }
+    case 'blocked':
+      return `<div class="mt">bloqueado!</div><div class="row">${cardFace(e.as, 'l')}</div><div class="ms ink">${nm(e.by)} bloqueou como ${Txt.the(e.as)}</div>`;
+    case 'out':
+      return `<div class="mt">${nm(e.player)} está fora</div>`;
+  }
+  return '';
+}
+function showMoment() {
+  const el = $('#moment');
+  if (momentTimer || !moments.length) return;
+  el.className = ''; el.innerHTML = momentHTML(moments.shift()); el.hidden = false; syncMomentMode();
+  momentTimer = setTimeout(() => {
+    el.classList.add('bye');
+    momentTimer = setTimeout(() => { momentTimer = 0; el.hidden = true; el.innerHTML = ''; showMoment(); }, 250);
+  }, MOMENT_MS - 250);
+}
+/** Com uma janela em que você pode reagir, o momento vira uma faixa no alto do palco (não tira tempo da janela). */
+function syncMomentMode() {
+  const v = state ? view() : null;
+  $('#moment').classList.toggle('band', !!v && v.phase === 'reaction' && v.can.pass);
+}
+function clearMoments() { moments.length = 0; clearTimeout(momentTimer); momentTimer = 0; const el = $('#moment'); el.hidden = true; el.innerHTML = ''; }
+
+/* ---------- sons pelo que mudou (entradas novas do diário, sua vez, suas moedas) ---------- */
+let seen = { match: 0, log: 0, myTurn: false, coins: null };
+function sfx(names) { names.forEach((n, i) => (i ? setTimeout(() => play(n), i * 260) : play(n))); }
+function narrate(v) {
+  if (v.match !== seen.match) seen = { match: v.match, log: 0, myTurn: false, coins: null };
+  const fresh = v.log.slice(seen.log);
+  seen.log = v.log.length;
+  const snd = [];
+  for (const e of fresh) {
+    switch (e.t) {
+      case 'act': case 'block': snd.push('declare'); break;
+      case 'challenge': snd.push('challenge', e.had ? 'reveal' : 'bluff'); moments.push(e); break;
+      case 'blocked': moments.push(e); break;
+      case 'lose': snd.push('lose'); break;
+      case 'out': moments.push(e); break;
+      case 'win': snd.push(e.player === ME ? 'win' : 'end'); break;
+    }
+  }
+  // acabou: o painel do fim já conta tudo, os momentos na fila (o "fora" do último) não aparecem por cima
+  if (v.phase === 'over') clearMoments();
+  const myTurn = v.phase === 'turn' && v.turn === ME;
+  if (myTurn && !seen.myTurn) snd.push('turn');
+  seen.myTurn = myTurn;
+  const seat = v.seats.find((s) => s.id === ME), coins = seat ? seat.coins : 0;
+  if (seen.coins !== null && coins > seen.coins) snd.push('coin');
+  seen.coins = coins;
+  sfx([...new Set(snd)]);
+  showMoment();
+}
+
+function changed() {
+  const v = view();
+  const key = `${v.match}:${v.log.length}:${v.phase}`;
+  if (key !== selKey) { exSel.clear(); loseSel = -1; selKey = key; }
+  if (aiming && !(v.can.act.includes(aiming) && Cupi.COUP_TARGETED[aiming])) aiming = null;
+  if (v.match !== prevMatch) { prevMatch = v.match; plans.clear(); clearMoments(); }
+  render(v); narrate(v); scheduleBots();
+}
+
+/* ---------- cliques (tudo vem de view().can) ---------- */
+app.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-do]');
+  if (!btn || !state || btn.disabled || !app.contains(btn)) return;
+  const v = view(), d = btn.dataset;
+  switch (d.do) {
+    case 'act':
+      if (!v.can.act.includes(d.kind)) return;
+      if (Cupi.COUP_TARGETED[d.kind]) { aiming = aiming === d.kind ? null : d.kind; render(v); }
+      else { aiming = null; act(ME, { type: 'act', kind: d.kind }); }
+      break;
+    case 'target': {
+      const k = aiming;
+      if (!k || !v.can.targets.includes(d.id)) return;
+      aiming = null;
+      if (!act(ME, { type: 'act', kind: k, target: d.id })) render(view());
+      break;
+    }
+    case 'unaim': aiming = null; render(v); break;
+    case 'pass': act(ME, { type: 'pass', windowId: v.window && v.window.id }); break;
+    case 'challenge': act(ME, { type: 'challenge', windowId: v.window && v.window.id }); break;
+    case 'block': act(ME, { type: 'block', as: d.as, windowId: v.window && v.window.id }); break;
+    case 'losesel': loseSel = Number(d.i); render(v); break;
+    case 'loseok': if (loseSel >= 0 && v.myCards[loseSel]) act(ME, { type: 'lose', card: v.myCards[loseSel] }); break;
+    case 'xsel': {
+      const i = Number(d.i);
+      if (exSel.has(i)) exSel.delete(i); else if (exSel.size < v.can.keep) exSel.add(i);
+      render(v); break;
+    }
+    case 'xok': {
+      const pool = [...v.myCards, ...v.myDrawn];
+      if (exSel.size === v.can.keep) { const keep = [...exSel].map((i) => pool[i]); exSel.clear(); act(ME, { type: 'exchange', keep }); }
+      break;
+    }
+    case 'restart': restart(); break;
+    case 'logopen': document.body.classList.add('logopen'); $('#log').scrollTop = $('#log').scrollHeight; break;
+    case 'logclose': document.body.classList.remove('logopen'); break;
+  }
+});
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && aiming) { aiming = null; render(view()); } });
+
+/* ---------- som ---------- */
+const SOUND_KEY = 'cupi.sound';
+let soundOn = true;
+try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (err) { /* sem localStorage: som ligado */ }
+function paintSound() { setSound(soundOn); $('#soundBtn').innerHTML = `<i class="ti ${soundOn ? 'ti-volume' : 'ti-volume-off'}"></i>`; $('#soundBtn').title = soundOn ? 'som ligado' : 'som desligado'; }
+paintSound();
+$('#soundBtn').onclick = () => { soundOn = !soundOn; paintSound(); try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (err) { /* ignora */ } };
+
+/* ---------- painel de dev ---------- */
+function opts(el, values, cur, label, pick) {
+  el.innerHTML = '';
+  for (const x of values) {
+    const b = document.createElement('button');
+    b.textContent = label(x); if (x === cur) b.className = 'on';
+    b.onclick = () => pick(x);
+    el.appendChild(b);
+  }
+}
+function renderDev() {
+  opts($('#optN'), [2, 3, 4, 5, 6], N, String, (n) => { N = n; renderDev(); newGame(); });
+  opts($('#optS'), [0.4, 1, 2], SPEED, (x) => ({ 0.4: 'rápido', 1: 'normal', 2: 'lento' }[x]), (x) => { SPEED = x; renderDev(); });
+  opts($('#optB'), [0.2, 0.6, 1.2], Bot.BLUFF, (x) => ({ 0.2: 'pouco', 0.6: 'normal', 1.2: 'muito' }[x]), (x) => { Bot.BLUFF = x; renderDev(); });
+  opts($('#optD'), [0.05, 0.15, 0.35], Bot.DOUBT, (x) => ({ 0.05: 'pouco', 0.15: 'normal', 0.35: 'muito' }[x]), (x) => { Bot.DOUBT = x; renderDev(); });
+  opts($('#optP'), [false, true], peek, (x) => (x ? 'sim' : 'não'), (x) => { peek = x; renderDev(); if (state) render(view()); });
+}
+function syncAway() {
+  $('#awayMe').textContent = away.has(ME) ? 'eu volto pra mesa' : 'eu saio da mesa';
+  const bot = [...away].find((p) => p !== ME);
+  $('#awayBot').textContent = bot ? `${Txt.name(bot)} volta pra mesa` : 'um bot sai';
+}
+function toggleAway(p) {
+  if (away.has(p)) away.delete(p); else away.add(p);
+  syncAway(); tick();
+  if (state) { render(view()); scheduleBots(); }
+}
+$('#awayMe').onclick = () => toggleAway(ME);
+$('#awayBot').onclick = () => {
+  if (!state) return;
+  const back = [...away].find((p) => p !== ME);
+  if (back) { toggleAway(back); return; }
+  const v = view(), first = v.players.find((p) => p !== ME && !v.out.includes(p));
+  if (first) toggleAway(first); else toast('Não tem bot vivo pra tirar.');
+};
+$('#devBtn').onclick = () => $('#dev').classList.toggle('on');
+$('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
+
+renderDev(); syncAway();
+newGame();
+</script>
+</body>
+</html>

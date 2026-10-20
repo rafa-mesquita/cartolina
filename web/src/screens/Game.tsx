@@ -1,4 +1,4 @@
-import { isCamelioRoomView, isDixitRoomView, isItoRoomView, isKittensRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
+import { isCamelioRoomView, isCoupRoomView, isDixitRoomView, isItoRoomView, isKittensRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
@@ -18,6 +18,10 @@ const KittensTable = lazy(() => import('../games/kittens/KittensTable').then((m)
 // Cama-Leão (circo, cartas desenhadas em CSS, sons) também vem num chunk à parte.
 const CamelioLobby = lazy(() => import('../games/camelio/CamelioLobby').then((m) => ({ default: m.CamelioLobby })));
 const CamelioTable = lazy(() => import('../games/camelio/CamelioTable').then((m) => ({ default: m.CamelioTable })));
+
+// O Cúpi também fica num chunk à parte (CSS, sons e a mesa só baixam pra quem entra numa sala dele).
+const CoupLobby = lazy(() => import('../games/coup/CoupLobby').then((m) => ({ default: m.CoupLobby })));
+const CoupTable = lazy(() => import('../games/coup/CoupTable').then((m) => ({ default: m.CoupTable })));
 
 export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot; view: RoomView }) {
   // Fase do Diquisti no último render: a mesa monta já na 1ª rodada (o lobby é outra tela) e precisa saber
@@ -61,6 +65,17 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
         {reconnecting}
         <Suspense fallback={null}>
           {view.game.phase === 'lobby' ? <KittensLobby view={view} conn={conn} /> : <KittensTable view={view} conn={conn} serverOffset={snap.serverOffset} />}
+        </Suspense>
+      </>
+    );
+  }
+  if (isCoupRoomView(view)) {
+    // Sala de Cúpi (id interno `coup`): mesa com os próprios avisos; serve computador e celular.
+    return (
+      <>
+        {reconnecting}
+        <Suspense fallback={null}>
+          {view.game.phase === 'lobby' ? <CoupLobby view={view} conn={conn} /> : <CoupTable view={view} conn={conn} serverOffset={snap.serverOffset} status={snap.status} />}
         </Suspense>
       </>
     );

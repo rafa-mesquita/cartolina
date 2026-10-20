@@ -68,9 +68,14 @@ describe('Tatubum com Cafuné', () => {
     expect(refuse(after, 'p1', { type: 'nope' }, ctx)).toBe('nothing_to_nope');
   });
 
-  it('a espiada de quem comprou some', () => {
-    const peeked = { ...START, peek: { who: 'p0', cards: ['tatubum-0', 'quati-0', 'pular-0'] } };
-    expect(act(peeked, 'p0', { type: 'draw' }, ctx).peek).toBeNull();
+  it('o tatu comprado sai das espiadas; o resto continua à mostra até o Desarme esconder o tatu', () => {
+    const peeked = { ...START, peeks: { p0: ['tatubum-0', 'quati-0', 'pular-0'], p1: ['tatubum-0', 'quati-0'] } };
+    const after = act(peeked, 'p0', { type: 'draw' }, ctx);
+    expect(after.peeks).toEqual({ p0: ['quati-0', 'pular-0'], p1: ['quati-0'] });
+    const used = act(after, 'p0', { type: 'choose', card: 'cafune-0' }, ctx);
+    expect(used.peeks).toEqual(after.peeks);
+    // Esconder o tatu (em qualquer lugar, até no fundo) apaga a espiada de todos.
+    expect(act(used, 'p0', { type: 'choose', position: 2 }, ctx).peeks).toEqual({});
   });
 
   it('jogar o Desarme: ele vai pro descarte e abre a escolha de onde esconder, com prazo novo', () => {

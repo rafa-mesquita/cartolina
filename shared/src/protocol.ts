@@ -98,6 +98,16 @@ export const ERROR_CODES = [
   'no_nope',
   'not_your_choice',
   'bad_choice',
+  // Cúpi (`not_your_turn` e `bad_target` já vêm do Tatubum)
+  'not_enough_coins',
+  'must_coup',
+  'cannot_react',
+  'already_passed',
+  'window_closed',
+  'not_losing',
+  'bad_exchange',
+  'bad_block',
+  // Cama-Leão (`not_your_turn` já vem do Tatubum)
   'not_playing',
   'cant_receive',
 ] as const;
@@ -154,6 +164,14 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   no_nope: 'Você não tem nenhum Nem vem!',
   not_your_choice: 'Essa escolha não é sua.',
   bad_choice: 'Escolha inválida.',
+  not_enough_coins: 'Faltam moedas pra essa ação.',
+  must_coup: 'Com 10 moedas ou mais, só dá pra dar o golpe.',
+  cannot_react: 'Você não pode fazer isso nesta jogada.',
+  already_passed: 'Você já deixou passar.',
+  window_closed: 'Essa janela já fechou.',
+  not_losing: 'Não é você que perde carta agora.',
+  bad_exchange: 'Fique com o mesmo número de cartas que você tinha.',
+  bad_block: 'Esse personagem não bloqueia essa ação.',
   not_playing: 'A partida não está rolando agora.',
   cant_receive: 'Essa pessoa não pode receber carta agora.',
 };

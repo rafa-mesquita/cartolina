@@ -20,6 +20,7 @@ describe('estante de jogos', () => {
     expect(screen.getByRole('link', { name: /Diquisti/ }).getAttribute('href')).toBe('#/dixit');
     expect(screen.getByRole('link', { name: /Retratim/ }).getAttribute('href')).toBe('#/pictures');
     expect(screen.getByRole('link', { name: /Tatubum/ }).getAttribute('href')).toBe('#/kittens');
+    expect(screen.getByRole('link', { name: /Cúpi/ }).getAttribute('href')).toBe('#/coup');
     const camelioLink = screen.getByRole('link', { name: /Cama-Leão/ });
     expect(camelioLink.getAttribute('href')).toBe('#/camelio');
     expect(within(camelioLink).queryByText('em breve')).toBeNull(); // a mesa do Cama-Leão já existe

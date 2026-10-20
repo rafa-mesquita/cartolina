@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CatalogEntry } from '../src/games/catalog';
 
-// Jogo que ainda não dá pra jogar (hoje não existe nenhum): o catálogo é trocado só aqui.
+// Jogo que ainda não dá pra jogar (hoje é o Cúpi): o catálogo é trocado só aqui, pra o teste não depender de qual jogo está "em breve".
 const soon: CatalogEntry = {
   id: 'dixit',
   name: 'Diquisti',

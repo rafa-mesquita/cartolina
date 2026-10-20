@@ -471,6 +471,25 @@ describe('mesa do Tatubum', () => {
     m2.mesa.destroy();
   });
 
+  it('descarte: passar o mouse na de cima dá zoom; no quadro do olho, o painel diz o que a carta faz', () => {
+    const v = midGame('p1');
+    v.game.discard = ['ataque-7', 'favor-7'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const top = root.querySelector<HTMLElement>('#discard .kt-card[data-id="favor-7"]')!;
+    top.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(root.querySelector('#viewer')?.textContent).toContain('FAVOR');
+    top.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(root.querySelector('#viewer')?.textContent).toBe('');
+    root.querySelector<HTMLElement>('#eye')!.click();
+    const info = () => root.querySelector('#pile .pinfo')?.textContent ?? '';
+    expect(info()).toContain('Passe o mouse');
+    root.querySelector<HTMLElement>('#pile .kt-card[data-id="ataque-7"]')!.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(info()).toContain('ATAQUE');
+    expect(info()).toContain('sem comprar');
+    mesa.destroy();
+  });
+
   it('o Tatu Latidor na frente de cada um aparece no assento e ao lado da sua mão', () => {
     const v = midGame('p1');
     v.game.front = { p0: [], p1: ['latido-1'], p2: ['latido-0'] };
@@ -699,6 +718,167 @@ describe('mesa do Tatubum', () => {
     expect(text).not.toContain('Ninguém tinha');
     expect(text).toContain('Você roubou o DESARME de P0');
     mesa.destroy();
+  });
+
+  it('trio de Favor pede um adversário com carta (clicando ou soltando a seleção num assento) e manda o alvo', () => {
+    const v = midGame('p1');
+    v.game.hand = ['favor-90', 'favor-91', 'favor-92', ...v.game.hand];
+    v.game.handCounts = { ...v.game.handCounts, p2: 0 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    for (const id of ['favor-90', 'favor-91', 'favor-92']) clickCard(root, id);
+    buttonByText(root, 'JOGAR TRIO')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('Escolha um adversário');
+    // Como o Favor sozinho: quem está sem carta não pode ser o alvo.
+    expect(root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.classList.contains('targetable')).toBe(false);
+    const p0 = root.querySelector<HTMLElement>('.kt-seat[data-p="p0"]')!;
+    expect(p0.classList.contains('targetable')).toBe(true);
+    p0.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['favor-90', 'favor-91', 'favor-92'], target: 'p0' }]);
+    // Recusou: a seleção continua; arrastada pra um assento, vai com ele de alvo.
+    mesa.error('Não deu.');
+    dragCard(root, 'favor-91', root.querySelector('.kt-seat[data-p="p0"]')!);
+    expect(sent[1]).toEqual({ type: 'play', cards: ['favor-90', 'favor-91', 'favor-92'], target: 'p0' });
+    mesa.destroy();
+  });
+
+  it('cego com 3 fichas: pergunta o alvo (podem ser 3 Favores)', () => {
+    const v = midGame('p1');
+    v.game.blind = ['p1'];
+    v.game.hand = ['?0', '?1', '?2', '?3'];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    for (const id of ['?0', '?1', '?2']) clickCard(root, id);
+    buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('SE PRECISAR DE ALVO, EM QUEM?');
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['?0', '?1', '?2'], target: 'p2' }]);
+    mesa.destroy();
+  });
+
+  it('trio de Favor contra você: o painel diz quantas faltam e cada clique dá uma carta', () => {
+    const v = midGame('p1');
+    const hand = ['ataque-90', 'pular-91', 'espiar-92', 'mico-93'];
+    v.game.hand = hand;
+    v.game.choice = { kind: 'favor', who: 'p1', to: 'p0', left: 3, deadline: Date.now() + 30_000 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#panel h2')?.textContent).toContain('DÊ 3 CARTAS PRA P0');
+    expect(root.querySelector('#caption')?.textContent).toContain('DÊ 3 CARTAS PRA P0');
+    expect(root.querySelector('#hand')!.classList.contains('giving')).toBe(true);
+    clickCard(root, 'pular-91');
+    expect(sent).toEqual([{ type: 'choose', card: 'pular-91' }]);
+    // Deu uma: a escolha continua aberta com 2.
+    const after = { ...v, game: { ...v.game, hand: hand.filter((c) => c !== 'pular-91'), choice: { ...v.game.choice, left: 2 } } };
+    mesa.update(toMesa(after));
+    expect(root.querySelector('#panel h2')?.textContent).toContain('MAIS 2 CARTAS PRA P0');
+    expect(root.querySelector('#hand')!.classList.contains('giving')).toBe(true);
+    clickCard(root, 'mico-93');
+    expect(sent[1]).toEqual({ type: 'choose', card: 'mico-93' });
+    const last = { ...after, game: { ...after.game, hand: ['ataque-90', 'espiar-92'], choice: { ...v.game.choice, left: 1 } } };
+    mesa.update(toMesa(last));
+    expect(root.querySelector('#panel h2')?.textContent).toContain('MAIS UMA CARTA PRA P0');
+    dragCard(root, 'espiar-92', root.querySelector('#table')!);
+    expect(sent[2]).toEqual({ type: 'choose', card: 'espiar-92' });
+    mesa.destroy();
+  });
+
+  it('trio de Favor: os outros leem quantas cartas vão; o Favor sozinho continua "FAVOR PRA"', () => {
+    const choice = { kind: 'favor' as const, who: 'p1', to: 'p0', left: 3, deadline: Date.now() + 30_000 };
+    const other = midGame('p2');
+    other.game.choice = choice;
+    const a = mount();
+    a.mesa.update(toMesa(other));
+    expect(a.root.querySelector('#caption')?.textContent).toContain('P1 vai dar 3 cartas pra P0');
+    a.mesa.destroy();
+    const receiver = midGame('p0');
+    receiver.game.choice = choice;
+    const b = mount();
+    b.mesa.update(toMesa(receiver));
+    expect(b.root.querySelector('#caption')?.textContent).toContain('P1 vai dar 3 cartas pra você');
+    b.mesa.destroy();
+    const single = midGame('p1');
+    single.game.choice = { ...choice, left: 1 };
+    const c = mount();
+    c.mesa.update(toMesa(single));
+    expect(c.root.querySelector('#panel h2')?.textContent).toContain('FAVOR PRA P0');
+    c.mesa.destroy();
+  });
+
+  it('trio de Favor que valeu: o diário diz quantas cartas vão de verdade (a mão toda, se tiver menos de 3)', async () => {
+    const v = midGame('p2');
+    const play = { kind: 'trio' as const, cards: ['favor-1', 'favor-2', 'favor-3'], target: 'p1', ask: null, as: 'favor' as const };
+    v.game = {
+      ...v.game,
+      current: 'p0',
+      handCounts: { ...v.game.handCounts, p1: 2 },
+      pending: { by: 'p0', play, nopes: [], resolvesAt: Date.now() + 5000 },
+    };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const n = v.game.log.at(-1)?.n ?? 0;
+    const choice = { kind: 'favor' as const, who: 'p1', to: 'p0', left: 2, deadline: Date.now() + 30_000 };
+    const ev: KittensEvent = { t: 'resolved', by: 'p0', play: 'trio', canceled: false };
+    mesa.update(toMesa({ ...v, game: { ...v.game, pending: null, choice, log: [...v.game.log, { n: n + 1, ev }] } }));
+    await vi.advanceTimersByTimeAsync(3000);
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('P1 vai dar 2 cartas pra P0');
+    expect(log).not.toContain('vai dar 3 cartas');
+    mesa.destroy();
+  });
+
+  it('a espiada continua ao lado do monte depois que a vez passa, e encolhe quando a de cima é comprada', async () => {
+    const v = midGame('p0');
+    v.game = { ...v.game, current: 'p0', peek: ['mico-71', 'pular-72', 'quati-73'], peekers: ['p0'] };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const future = () => [...root.querySelectorAll<HTMLElement>('#future .kt-card')].map((el) => el.dataset.id);
+    expect(future()).toEqual(['mico-71', 'pular-72', 'quati-73']);
+    // A vez passou pro p1 (Pular, por exemplo): a espiada fica.
+    const n = v.game.log.at(-1)?.n ?? 0;
+    const passed = { ...v.game, current: 'p1', log: [...v.game.log, { n: n + 1, ev: { t: 'resolved', by: 'p0', play: 'pular', canceled: false } as KittensEvent }] };
+    mesa.update(toMesa({ ...v, game: passed }));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(future()).toEqual(['mico-71', 'pular-72', 'quati-73']);
+    expect(root.querySelector('#future')?.textContent).toContain('O FUTURO');
+    // O p1 comprou a de cima: some só ela.
+    const drawn = { ...passed, current: 'p2', peek: ['pular-72', 'quati-73'], log: [...passed.log, { n: n + 2, ev: { t: 'draw', by: 'p1', card: null } as KittensEvent }] };
+    mesa.update(toMesa({ ...v, game: drawn }));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(future()).toEqual(['pular-72', 'quati-73']);
+    mesa.destroy();
+  });
+
+  it('quem tem espiada à mostra ganha o olhinho no assento (sem mostrar as cartas)', () => {
+    const v = midGame('p0');
+    v.game = { ...v.game, peek: null, peekers: ['p1'] };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const eye = root.querySelector<HTMLElement>('.kt-seat[data-p="p1"] .kt-peeked');
+    expect(eye).not.toBeNull();
+    expect(eye!.title).toContain('espiou');
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-peeked')).toBeNull();
+    expect(root.querySelectorAll('#future .kt-card')).toHaveLength(0);
+    // Os dois espiaram: os dois assentos têm o olhinho.
+    mesa.update(toMesa({ ...v, game: { ...v.game, peekers: ['p1', 'p2'] } }));
+    expect(root.querySelectorAll('.kt-seat .kt-peeked')).toHaveLength(2);
+    mesa.destroy();
+  });
+
+  it('zoom e galeria do Espiar dizem só o que a carta faz', () => {
+    expect(mesaSrc).toContain(
+      "espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.'",
+    );
+    expect(mesaSrc).toContain('Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Pode levar Nem vem!.');
+    expect(mesaSrc).not.toContain('a vez passar ou o monte mudar');
+  });
+
+  it('zoom do Favor e dos bichos explicam o trio de Favor (só o que a carta faz)', () => {
+    expect(mesaSrc).toContain('<b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b>');
+    expect(mesaSrc).toContain('(3 Favores: o adversário escolhido te dá 3 cartas)');
+    expect(mesaSrc).toContain('TRIO de qualquer carta rouba um Desarme (3 FAVORES: o escolhido te dá 3 cartas)');
   });
 
   it('a dica do Latidor na frente de alguém usa o nome sem escapar', () => {

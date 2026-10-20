@@ -1,6 +1,7 @@
 import type { GameId } from '@cartolina/shared';
 import { useState } from 'react';
 import { catalogEntry } from '../games/catalog';
+import { CoupHistory } from '../games/coup/history/CoupHistory';
 import { DixitHistory } from '../games/dixit/history/DixitHistory';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goToRoom, type GameTab } from '../lib/router';
@@ -84,6 +85,8 @@ function HistoryTab({ game }: { game: GameId }) {
           <p>O histórico do Tatubum vem em breve.</p>
         </section>
       );
+    case 'coup':
+      return <CoupHistory />;
     case 'camelio':
       // histórico do Cama-Leão vem no C4
       return (

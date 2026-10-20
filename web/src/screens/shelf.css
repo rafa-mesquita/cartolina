@@ -45,6 +45,10 @@
 .cover-kittens span { font: 20px/1 'VT323', monospace; color: #f4e9d0; }
 .cover-kittens.mini { font: 400 9px/1.2 'Press Start 2P', monospace; color: #f2c14e; }
 .cover-kittens.mini::before { display: none; }
+/* Cúpi: cartaz de propaganda, papel creme com faixa vermelha no alto */
+.cover-coup { background: linear-gradient(#c8312b 0 16px, #efe6d2 16px); color: #1d1a17; }
+.cover-coup b { font: 400 48px/0.95 'Bebas Neue', Impact, sans-serif; letter-spacing: 0.03em; }
+.cover-coup span:not(.cover-badge) { font: 400 14px/1.25 'Oswald', system-ui, sans-serif; color: #6b6152; }
 /* Cama-Leão: lona de circo listrada, letreiro vermelho */
 .cover-camelio { background: repeating-linear-gradient(90deg, #f7efe0 0 18px, #f3dcd2 18px 36px); color: #1f2a4a; }
 .cover-camelio b { font: 400 32px/1.05 'Rye', Georgia, serif; color: #c8372d; }
@@ -67,6 +71,7 @@
 .cover-dixit.mini { font: 400 15px/1 'DM Serif Display', Georgia, serif; }
 .cover-pictures.mini { font: 700 19px/1 'Caveat', cursive; }
 .cover-pictures.mini::before, .cover-pictures.mini::after { display: none; }
+.cover-coup.mini { font: 400 22px/1 'Bebas Neue', Impact, sans-serif; }
 .cover-camelio.mini { font: 400 12px/1.1 'Rye', Georgia, serif; color: #c8372d; }
 /* Cor de cada jogo na página dele (a mesma da capa): o "criar sala" segue. Jogo sem cor aqui fica no rosa. */
 .game-ito { --game: var(--pink); --game-ink: var(--ink); }
@@ -106,6 +111,7 @@
   .cover { width: 150px; height: 200px; padding: 12px; }
   .cover b { font-size: 26px; }
   .cover-dixit b { font-size: 24px; }
+  .cover-coup b { font-size: 34px; }
   .cover span { font-size: 15px; }
   .shelf .cover-ito::after { font-size: 15px; min-width: 26px; right: 8px; top: 8px; }
   .game-page .panel, .game-head, .tabs { width: 100%; }
