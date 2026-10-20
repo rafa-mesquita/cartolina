@@ -34,7 +34,7 @@
 }
 /* Tatubum: pixel art, noite no cerrado, o tatu-bola com o pavio aceso e o título em letra de videogame */
 .cover-kittens {
-  background-color: #17204a; color: #f4e9d0; border-radius: 0; image-rendering: pixelated;
+  background-color: #17204a; color: #f4e9d0; image-rendering: pixelated;
   background-image:
     radial-gradient(#fff3c4 1.2px, transparent 1.4px),
     linear-gradient(#0f1030, #1f3a6b 62%, #141f42 62%, #0b1028);
