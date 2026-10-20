@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cúpi · protótipo da mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --cream:#efe6d2; --felt:#e4d7bb; --paper:#f7f0e0; --ink:#1d1a17; --ink-soft:#6b6152; --red:#c8312b;
+  --disp:'Bebas Neue',Impact,sans-serif; --ui:'Oswald',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--felt)}
+body{font-family:var(--ui);font-weight:400;color:var(--ink);-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit;cursor:pointer}
+b{font-weight:500;color:var(--red)}
+
+/* ---------- palco 1440×900 (no celular: sem palco fixo, layout fluido) ---------- */
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;background:var(--cream);display:flex;flex-direction:column}
+header{flex:none;height:72px;display:flex;align-items:center;gap:20px;padding:0 32px;border-bottom:2px solid var(--ink);background:var(--paper)}
+header h1{margin:0;font:400 54px/1 var(--disp);letter-spacing:.04em}
+header .tag{font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+#score{margin-left:auto;font-size:16px;letter-spacing:.04em;color:var(--ink-soft)}
+#score span{margin-left:14px;white-space:nowrap}
+#score span.lead{color:var(--ink)}
+.icon-btn{width:40px;height:40px;border:2px solid var(--ink);border-radius:4px;background:var(--cream);font-size:20px;line-height:1}
+.icon-btn:hover{background:var(--paper)}
+
+main{flex:1;min-height:0;display:flex}
+#left{flex:1;min-width:0;padding:22px 32px;overflow:auto;display:flex;flex-direction:column;gap:18px}
+#logbox{flex:none;width:400px;border-left:2px solid var(--ink);background:var(--paper);display:flex;flex-direction:column;min-height:0}
+#logbox h2{margin:0;padding:14px 22px 10px;font:400 30px/1 var(--disp);letter-spacing:.06em;border-bottom:2px solid var(--ink)}
+#log{flex:1;min-height:0;overflow:auto;margin:0;padding:10px 22px 16px;list-style:none;font-size:16px;line-height:1.35}
+#log li{padding:5px 0;border-bottom:1px dashed rgba(29,26,23,.25)}
+#log li.sep{border-bottom:0;padding-top:10px;color:var(--ink-soft);font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+
+/* mesa */
+#seats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.seat{border:2px solid var(--ink);border-radius:4px;background:var(--paper);padding:10px 12px 12px;position:relative}
+.seat.turn{background:#fff;box-shadow:5px 5px 0 var(--ink)}
+.seat.hot{border-color:var(--red);box-shadow:5px 5px 0 var(--red)}
+.seat.out{opacity:.5}
+.seat .top{display:flex;align-items:baseline;justify-content:space-between}
+.seat .nm{font:400 30px/1 var(--disp);letter-spacing:.05em}
+.seat .coins{font-size:20px;font-weight:500;display:flex;align-items:center;gap:4px}
+.seat .coins i{font-size:20px}
+.seat .flag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-left:8px}
+.cards{display:flex;gap:6px;margin-top:8px;min-height:58px}
+.mc{width:68px;height:58px;border:2px solid var(--ink);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;line-height:1.1;background:var(--paper)}
+.mc i{font-size:22px}
+.mc em{font-style:normal;letter-spacing:.04em}
+.mc.back{background:repeating-linear-gradient(45deg,var(--red) 0 6px,#a8241f 6px 12px);border-color:var(--ink)}
+.mc.dead{background:transparent;border-style:dashed;color:var(--ink-soft)}
+.mc.dead em{text-decoration:line-through}
+.mc.peek{outline:2px dashed var(--ink-soft);outline-offset:2px}
+
+/* palco da jogada */
+#stage{border:2px solid var(--ink);border-radius:4px;background:var(--felt);padding:14px 20px 16px;min-height:150px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+#phase{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft)}
+#decl{font:400 44px/1.05 var(--disp);letter-spacing:.03em;min-height:46px}
+#decl::first-letter{text-transform:uppercase}
+#decl small{display:block;margin-top:6px;font:400 17px/1.2 var(--ui);letter-spacing:.02em;color:var(--ink-soft)}
+#clockrow{display:flex;align-items:center;gap:12px;height:18px}
+#bar{flex:1;height:8px;border:2px solid var(--ink);border-radius:2px;background:var(--paper)}
+#bar i{display:block;height:100%;background:var(--red);width:0}
+#clock{font:400 24px/1 var(--disp);min-width:34px;text-align:right}
+
+/* botões */
+.btn{padding:10px 16px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font:500 17px/1.1 var(--ui);letter-spacing:.04em;text-transform:uppercase}
+.btn:hover{background:#fff}
+.btn small{display:block;margin-top:3px;font:400 12px/1 var(--ui);letter-spacing:.04em;text-transform:none;color:var(--ink-soft)}
+.btn.red{background:var(--red);color:#fff}
+.btn.red:hover{background:#d93d37}
+.btn.ink{background:var(--ink);color:var(--paper)}
+.btn.big{padding:16px 28px;font-size:22px}
+.btn.on{background:var(--ink);color:var(--paper)}
+.btn:disabled{opacity:.4;cursor:default}
+#controls h3{margin:0 0 10px;font:400 28px/1 var(--disp);letter-spacing:.05em}
+#controls .sub{margin:-4px 0 12px;font-size:15px;color:var(--ink-soft)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.act-row{display:flex;align-items:center;gap:10px;margin-top:10px}
+.act-row .lab{width:170px;font-size:15px;letter-spacing:.06em;text-transform:uppercase}
+.act-row .lab small{display:block;font-size:12px;letter-spacing:.03em;text-transform:none;color:var(--ink-soft)}
+.pick{display:flex;gap:12px;flex-wrap:wrap}
+.pick .mc{width:120px;height:104px;font-size:17px;cursor:pointer;background:var(--paper)}
+.pick .mc i{font-size:36px}
+.pick .mc:hover{background:#fff}
+.pick .mc.on{background:var(--ink);color:var(--paper)}
+
+/* painel de dev */
+#dev{position:absolute;right:24px;top:82px;width:360px;padding:14px 16px 16px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);box-shadow:6px 6px 0 var(--ink);z-index:30;display:none;font-size:14px}
+#dev.on{display:block}
+#dev h4{margin:0 0 8px;font:400 28px/1 var(--disp);letter-spacing:.05em}
+#dev .r{display:flex;align-items:center;justify-content:space-between;margin:9px 0;gap:8px}
+#dev .opts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+#dev .opts button{padding:3px 9px;border:2px solid var(--ink);border-radius:3px;background:none;font-size:13px}
+#dev .opts button.on{background:var(--ink);color:var(--paper)}
+#dev .wide{width:100%;margin-top:8px;padding:7px;border:2px solid var(--ink);border-radius:3px;background:none;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+#dev .wide:hover{background:#fff}
+#dev p{color:var(--ink-soft);font-size:12.5px;line-height:1.4;margin:10px 0 0}
+
+#toast{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);padding:10px 20px;border:2px solid var(--ink);border-radius:4px;background:var(--ink);color:var(--paper);font:500 16px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#toast.on{opacity:1}
+
+/* celular: sem palco fixo (a mesa de verdade vem na Task 4) */
+body.mobile{overflow:auto;height:auto}
+body.mobile #app{position:relative;left:auto;top:auto;width:auto;height:auto;transform:none;min-height:100vh}
+body.mobile header{padding:0 14px;height:60px}
+body.mobile header h1{font-size:40px}
+body.mobile header .tag{display:none}
+body.mobile main{flex-direction:column}
+body.mobile #left{padding:14px;overflow:visible}
+body.mobile #seats{grid-template-columns:1fr 1fr}
+body.mobile #logbox{width:auto;border-left:0;border-top:2px solid var(--ink);max-height:320px}
+body.mobile #decl{font-size:32px}
+body.mobile .act-row{flex-wrap:wrap}
+body.mobile #dev{right:8px;left:8px;width:auto;top:66px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>CÚPI</h1><span class="tag">protótipo · regras reais</span>
+    <div id="score"></div>
+    <button class="icon-btn" id="devBtn" title="protótipo">⚙</button>
+  </header>
+  <div id="dev">
+    <h4>protótipo</h4>
+    <div class="r">jogadores<div class="opts" id="optN"></div></div>
+    <div class="r">velocidade dos bots<div class="opts" id="optS"></div></div>
+    <div class="r">bots blefam<div class="opts" id="optB"></div></div>
+    <div class="r">bots duvidam<div class="opts" id="optD"></div></div>
+    <div class="r">ver as cartas dos bots<div class="opts" id="optP"></div></div>
+    <button class="wide" id="awayMe">eu saio da mesa</button>
+    <button class="wide" id="awayBot">um bot sai</button>
+    <button class="wide" id="newBtn">nova partida</button>
+    <p>Protótipo descartável: as regras são as reais (as mesmas do servidor); os bots decidem só pelo que veem. Tela provisória, a mesa de verdade vem depois. "Sair da mesa" deixa o automático das regras jogar por você.</p>
+  </div>
+  <main>
+    <section id="left">
+      <div id="seats"></div>
+      <div id="stage">
+        <div id="phase"></div>
+        <div id="decl"></div>
+        <div id="clockrow" hidden><div id="bar"><i></i></div><div id="clock"></div></div>
+      </div>
+      <div id="controls"></div>
+    </section>
+    <aside id="logbox"><h2>Diário</h2><ol id="log"></ol></aside>
+  </main>
+  <div id="toast"></div>
+</div>
+<script src="rules.js"></script>
+<script src="texts.js"></script>
+<script src="bots.js"></script>
+<script src="sounds.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+
+/* ---------- estado e laço ---------- */
+const ME = 'p0';
+let N = 4, SPEED = 1, peek = false, state = null, away = new Set(), prevMatch = 0;
+const ids = () => Array.from({ length: N }, (_, i) => `p${i}`);
+const ctx = () => ({ hostId: ME, active: ids().filter((p) => !away.has(p)), rng: Math.random, now: Date.now() });
+const view = (p = ME) => Cupi.coupViewFor(state, p);
+
+const ERR = {
+  not_host: 'Só o host pode fazer isso.', bad_phase: 'Agora não dá pra fazer isso.', not_owner: 'Essa carta não é sua.',
+  not_enough_players: 'Precisa de pelo menos 2 jogadores.', not_player: 'Você está assistindo esta rodada.',
+  bad_action: 'Ação inválida.', room_full: 'A sala está cheia.',
+  not_your_turn: 'Não é a sua vez.', not_enough_coins: 'Faltam moedas pra essa ação.',
+  must_coup: 'Com 10 moedas ou mais, só dá pra dar o golpe.', bad_target: 'Escolha outro alvo.',
+  cannot_react: 'Você não pode fazer isso nesta jogada.', already_passed: 'Você já deixou passar.',
+  window_closed: 'Essa janela já fechou.', not_losing: 'Não é você que perde carta agora.',
+  bad_exchange: 'Fique com o mesmo número de cartas que você tinha.', bad_block: 'Esse personagem não bloqueia essa ação.',
+};
+
+/* ---------- utilidades ---------- */
+const timers = new Set();
+const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+const between = (a, b) => a + Math.random() * (b - a);
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2400); }
+
+/* ---------- escala do palco 1440×900 ---------- */
+const mobileQ = matchMedia('(max-width: 640px)');
+function fit() {
+  const mobile = mobileQ.matches;
+  document.body.classList.toggle('mobile', mobile);
+  if (mobile) { app.style.width = ''; app.style.transform = ''; return; }
+  let sc = innerHeight / 900, w = innerWidth / sc;
+  if (w < 1440) { sc = innerWidth / 1440; w = 1440; }
+  app.style.width = Math.round(w) + 'px';
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+}
+addEventListener('resize', fit);
+fit();
+
+/** Igual ao servidor: o schema das ações valida antes das regras. */
+function act(pid, action) {
+  const parsed = Cupi.coupActionSchema.safeParse(action);
+  if (!parsed.success) { console.error('ação inválida (bug do protótipo)', action, parsed.error); toast('Ação inválida (bug do protótipo — veja o console)'); return false; }
+  const res = Cupi.applyCoupAction(state, pid, parsed.data, ctx());
+  if (!res.ok) { if (pid === ME) { toast(ERR[res.error] || res.error); play('error'); } return false; }
+  state = res.state; changed(); return true;
+}
+/** O "alarme" do servidor: fecha a janela no prazo e joga pelos ausentes. */
+function tick() {
+  if (!state) return;
+  const next = Cupi.settleCoup(state, ctx());
+  if (next !== state) { state = next; changed(); } else renderClock();
+}
+setInterval(tick, 200);
+
+function newGame() {
+  for (const t of timers) clearTimeout(t);
+  timers.clear(); plans.clear(); exSel.clear();
+  away.clear(); syncAway();
+  state = Cupi.initialCoupState();
+  act(ME, { type: 'start' });
+}
+function restart() { exSel.clear(); act(ME, { type: 'restart' }); }
+
+/* ---------- bots ---------- */
+/** Um plano por bot: a chave diz "a que situação ele está reagindo"; mudou a situação, o plano antigo cai. */
+const plans = new Map();
+function planKey(p) { return `${state.match}:${state.log.length}:${state.window ? state.window.id : '-'}:${p}`; }
+function scheduleBots() {
+  if (!state) return;
+  for (const p of state.players) {
+    if (p === ME || away.has(p)) continue; // ausentes: quem joga é o automático das regras
+    const v = view(p);
+    const cur = plans.get(p);
+    if (Bot.decide(v, p, Math.random) === null) { if (cur) { clearTimeout(cur.timer); timers.delete(cur.timer); plans.delete(p); } continue; }
+    const key = planKey(p);
+    if (cur && cur.key === key) continue;
+    if (cur) { clearTimeout(cur.timer); timers.delete(cur.timer); }
+    const plan = { key, timer: 0 };
+    if (v.can.pass) { // janela: demora mais, e às vezes nem responde (deixa o tempo correr)
+      if (Math.random() >= 0.15) plan.timer = later(between(1500, 7000) * SPEED, () => fire(p));
+    } else if (v.can.lose || v.can.keep > 0) plan.timer = later(between(900, 2000) * SPEED, () => fire(p));
+    else plan.timer = later(between(1200, 3000) * SPEED, () => fire(p));
+    plans.set(p, plan);
+  }
+}
+/** Na hora de jogar, decide de novo com a visão atual (a janela pode ter mudado). */
+function fire(p) {
+  if (!state || away.has(p) || !state.players.includes(p)) return;
+  const d = Bot.decide(view(p), p, Math.random);
+  if (d) act(p, d);
+}
+
+/* ---------- tela ---------- */
+const exSel = new Set();
+let exKey = '';
+
+function cardFace(c, cls = '') { return `<span class="mc face ${cls}"><i class="ti ${Txt.CHAR[c].icon}"></i><em>${Txt.CHAR[c].nome}</em></span>`; }
+const cardBack = '<span class="mc back"></span>';
+const cardDead = (c) => `<span class="mc dead"><i class="ti ${Txt.CHAR[c].icon}"></i><em>${Txt.CHAR[c].nome}</em></span>`;
+const nm = (id) => (id === ME ? 'Você' : Txt.name(id));
+
+function renderSeats(v) {
+  $('#seats').innerHTML = v.seats.map((s) => {
+    const cls = ['seat', s.id === ME ? 'me' : '', v.turn === s.id ? 'turn' : '', v.loss && v.loss.player === s.id ? 'hot' : '', s.out ? 'out' : ''].join(' ');
+    let hidden;
+    if (s.id === ME) hidden = v.myCards.map((c) => cardFace(c)).join('');
+    else if (peek) hidden = state.hands[s.id].cards.filter((c) => !c.revealed).map((c) => cardFace(c.character, 'peek')).join('');
+    else hidden = cardBack.repeat(s.hidden);
+    const flag = s.out ? 'fora' : (v.turn === s.id ? 'na vez' : '');
+    return `<div class="${cls}"><div class="top"><span class="nm">${nm(s.id)}${flag ? `<span class="flag">${flag}</span>` : ''}</span>`
+      + `<span class="coins"><i class="ti ti-coin"></i>${s.coins}</span></div>`
+      + `<div class="cards">${hidden}${s.revealed.map(cardDead).join('')}</div></div>`;
+  }).join('');
+}
+
+function phaseText(v) {
+  switch (v.phase) {
+    case 'turn': return v.turn === ME ? 'Sua vez' : `Vez de ${Txt.name(v.turn)}`;
+    case 'reaction': return `Janela de reação · tesouro ${v.treasury}`;
+    case 'losing': return v.loss.player === ME ? Txt.lossTitle(v.loss.reason) : `${Txt.name(v.loss.player)} escolhe a carta que vai revelar`;
+    case 'exchange': return v.turn === ME ? 'Troca de cartas' : `${Txt.name(v.turn)} está trocando cartas`;
+    case 'over': return 'Fim da partida';
+  }
+  return '';
+}
+
+function renderControls(v) {
+  const c = v.can, el = $('#controls');
+  if (v.phase === 'over') {
+    el.innerHTML = `<h3>${nm(v.winner)} tomou o poder</h3>`
+      + `<div class="sub">Cartas do vencedor: ${v.winnerCards.map((x) => Txt.CHAR[x].nome).join(' e ')}</div>`
+      + `<button class="btn big red" data-do="restart">jogar de novo</button>`;
+    return;
+  }
+  if (c.act.length) {
+    const plain = c.act.filter((k) => !Cupi.COUP_TARGETED[k]);
+    const targeted = c.act.filter((k) => Cupi.COUP_TARGETED[k]);
+    el.innerHTML = `<h3>Sua vez: escolha uma ação</h3>`
+      + (plain.length ? `<div class="row">${plain.map((k) => `<button class="btn" data-do="act" data-kind="${k}">${Txt.ACTION[k].nome}<small>${Txt.ACTION[k].dica}</small></button>`).join('')}</div>` : '')
+      + targeted.map((k) => `<div class="act-row"><div class="lab">${Txt.ACTION[k].nome}<small>${Txt.ACTION[k].dica}</small></div>`
+        + c.targets.map((t) => `<button class="btn" data-do="act" data-kind="${k}" data-target="${t}">${Txt.name(t)}</button>`).join('') + '</div>').join('');
+    return;
+  }
+  if (c.pass) {
+    el.innerHTML = `<div id="reacts"><h3>Você reage?</h3><div class="row">`
+      + (c.challenge ? `<button class="btn big red" data-do="challenge">duvidar</button>` : '')
+      + c.block.map((ch) => `<button class="btn big red" data-do="block" data-as="${ch}">bloquear como ${Txt.CHAR[ch].nome}</button>`).join('')
+      + `<button class="btn big" data-do="pass">deixa</button></div></div>`;
+    return;
+  }
+  if (c.lose) {
+    el.innerHTML = `<h3>${Txt.lossTitle(v.loss.reason)}</h3><div class="sub">${Txt.LOSS_SUB}</div>`
+      + `<div class="pick">${v.myCards.map((ch) => `<button class="mc" data-do="lose" data-card="${ch}"><i class="ti ${Txt.CHAR[ch].icon}"></i><em>${Txt.CHAR[ch].nome}</em></button>`).join('')}</div>`;
+    return;
+  }
+  if (c.keep > 0) {
+    const pool = [...v.myCards, ...v.myDrawn];
+    el.innerHTML = `<h3>Troca: fique com ${c.keep} carta${c.keep > 1 ? 's' : ''}</h3><div class="sub">Selecionadas ${exSel.size} de ${c.keep}</div>`
+      + `<div class="pick">${pool.map((ch, i) => `<button class="mc ${exSel.has(i) ? 'on' : ''}" data-do="xsel" data-i="${i}"><i class="ti ${Txt.CHAR[ch].icon}"></i><em>${Txt.CHAR[ch].nome}${i >= v.myCards.length ? ' (nova)' : ''}</em></button>`).join('')}</div>`
+      + `<div class="row" style="margin-top:14px"><button class="btn big red" data-do="xok" ${exSel.size === c.keep ? '' : 'disabled'}>confirmar</button></div>`;
+    return;
+  }
+  el.innerHTML = '';
+}
+
+function renderLog(v) {
+  const box = $('#log');
+  const atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  box.innerHTML = v.log.map((e) => Txt.logLine(e)).filter((s) => s !== null).map((s) => `<li>${s}</li>`).join('');
+  if (atEnd || box.dataset.match !== String(v.match)) box.scrollTop = box.scrollHeight;
+  box.dataset.match = String(v.match);
+}
+
+function renderScore(v) {
+  const best = Math.max(0, ...v.players.map((p) => v.wins[p] || 0));
+  $('#score').innerHTML = 'Placar da noite' + v.players.map((p) => `<span class="${best > 0 && (v.wins[p] || 0) === best ? 'lead' : ''}">${nm(p).toLowerCase()} ${v.wins[p] || 0}</span>`).join('');
+}
+
+function render(v) {
+  renderSeats(v);
+  $('#phase').textContent = phaseText(v);
+  $('#decl').innerHTML = v.window ? Txt.declaration(v) : (v.phase === 'over' ? `${nm(v.winner)} tomou o poder` : '');
+  renderControls(v);
+  renderLog(v);
+  renderScore(v);
+  renderClock();
+}
+
+/** Segundos que faltam na janela; passou o prazo, a mesa esconde os botões de reação (o servidor responderia window_closed). */
+function renderClock() {
+  if (!state) return;
+  const w = state.window, row = $('#clockrow');
+  row.hidden = !w;
+  if (!w) return;
+  const left = Math.max(0, w.endsAt - Date.now());
+  $('#clock').textContent = Math.ceil(left / 1000);
+  $('#bar i').style.width = (100 * left / Cupi.COUP_WINDOW_MS).toFixed(1) + '%';
+  const reacts = $('#reacts'); if (reacts) reacts.hidden = left <= 0;
+}
+
+function changed() {
+  const v = view();
+  const key = `${v.match}:${v.log.length}`;
+  if (v.can.keep === 0 || key !== exKey) { exSel.clear(); exKey = key; }
+  if (v.match !== prevMatch) { prevMatch = v.match; plans.clear(); }
+  render(v); scheduleBots();
+}
+
+/* ---------- cliques nos botões (tudo vem de view().can) ---------- */
+$('#controls').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-do]');
+  if (!btn || !state || btn.disabled) return;
+  const v = view(), d = btn.dataset;
+  switch (d.do) {
+    case 'act': act(ME, d.target ? { type: 'act', kind: d.kind, target: d.target } : { type: 'act', kind: d.kind }); break;
+    case 'pass': act(ME, { type: 'pass', windowId: v.window && v.window.id }); break;
+    case 'challenge': act(ME, { type: 'challenge', windowId: v.window && v.window.id }); break;
+    case 'block': act(ME, { type: 'block', as: d.as, windowId: v.window && v.window.id }); break;
+    case 'lose': act(ME, { type: 'lose', card: d.card }); break;
+    case 'xsel': {
+      const i = Number(d.i);
+      if (exSel.has(i)) exSel.delete(i); else if (exSel.size < v.can.keep) exSel.add(i);
+      render(v); break;
+    }
+    case 'xok': {
+      const pool = [...v.myCards, ...v.myDrawn];
+      if (exSel.size === v.can.keep) { const keep = [...exSel].map((i) => pool[i]); exSel.clear(); act(ME, { type: 'exchange', keep }); }
+      break;
+    }
+    case 'restart': restart(); break;
+  }
+});
+
+/* ---------- painel de dev ---------- */
+function opts(el, values, cur, label, pick) {
+  el.innerHTML = '';
+  for (const x of values) {
+    const b = document.createElement('button');
+    b.textContent = label(x); if (x === cur) b.className = 'on';
+    b.onclick = () => pick(x);
+    el.appendChild(b);
+  }
+}
+function renderDev() {
+  opts($('#optN'), [2, 3, 4, 5, 6], N, String, (n) => { N = n; renderDev(); newGame(); });
+  opts($('#optS'), [0.4, 1, 2], SPEED, (x) => ({ 0.4: 'rápido', 1: 'normal', 2: 'lento' }[x]), (x) => { SPEED = x; renderDev(); });
+  opts($('#optB'), [0.2, 0.6, 1.2], Bot.BLUFF, (x) => ({ 0.2: 'pouco', 0.6: 'normal', 1.2: 'muito' }[x]), (x) => { Bot.BLUFF = x; renderDev(); });
+  opts($('#optD'), [0.05, 0.15, 0.35], Bot.DOUBT, (x) => ({ 0.05: 'pouco', 0.15: 'normal', 0.35: 'muito' }[x]), (x) => { Bot.DOUBT = x; renderDev(); });
+  opts($('#optP'), [false, true], peek, (x) => (x ? 'sim' : 'não'), (x) => { peek = x; renderDev(); if (state) render(view()); });
+}
+function syncAway() {
+  $('#awayMe').textContent = away.has(ME) ? 'eu volto pra mesa' : 'eu saio da mesa';
+  const bot = [...away].find((p) => p !== ME);
+  $('#awayBot').textContent = bot ? `${Txt.name(bot)} volta pra mesa` : 'um bot sai';
+}
+function toggleAway(p) {
+  if (away.has(p)) away.delete(p); else away.add(p);
+  syncAway(); tick();
+  if (state) scheduleBots();
+}
+$('#awayMe').onclick = () => toggleAway(ME);
+$('#awayBot').onclick = () => {
+  if (!state) return;
+  const back = [...away].find((p) => p !== ME);
+  if (back) { toggleAway(back); return; }
+  const v = view(), first = v.players.find((p) => p !== ME && !v.out.includes(p));
+  if (first) toggleAway(first); else toast('Não tem bot vivo pra tirar.');
+};
+$('#devBtn').onclick = () => $('#dev').classList.toggle('on');
+$('#newBtn').onclick = () => { $('#dev').classList.remove('on'); newGame(); };
+
+renderDev(); syncAway();
+newGame();
+</script>
+</body>
+</html>
