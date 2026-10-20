@@ -1,5 +1,5 @@
 /**
- * Bots do Cúpi SÓ PARA DESENVOLVIMENTO (importados via `import()` atrás de `import.meta.env.DEV`).
+ * Bots do Cúpi SÓ PARA DESENVOLVIMENTO (o teste `import.meta.env.DEV` no `BotControls` tira este módulo do build de produção).
  * Cada bot abre o próprio WebSocket e joga como uma pessoa: age só pelo que a visão dele mostra (nunca espia o estado).
  * Nunca faz ações de anfitrião (começar, jogar de novo): isso fica com a pessoa que está testando.
  * Porta de `prototipo/coup/bots.js`. Os nomes começam com "Bot ", então a partida não vai pro histórico.
@@ -22,6 +22,10 @@ import { BOT_NAMES } from './bots';
 
 /** Quanto esperar, depois de agir, antes de achar que a ação se perdeu e tentar de novo. */
 const RETRY_MS = 4000;
+/** Depois de tantas tentativas na mesma etapa o bot troca a semente do sorteio (a ação pode ter sido recusada). */
+const TRIES_PER_SEED = 2;
+/** Tentativas no total numa mesma etapa; passou disso, o bot desiste dela. */
+export const MAX_TRIES = 6;
 
 /** Fica com as melhores, nesta ordem de preferência. */
 const PREF: readonly CoupCharacter[] = ['duke', 'captain', 'assassin', 'contessa', 'ambassador'];
@@ -129,16 +133,22 @@ function chooseReaction(view: CoupRoomView, rng: Rng): GameAction | null {
   return { type: 'pass', windowId };
 }
 
+/** A chave da etapa (partida, tamanho do diário, janela) pra quem joga; null pra quem assiste. Sem sorteio. */
+export function coupStepKey(view: CoupRoomView): string | null {
+  const g = view.game;
+  if (!view.you || !g.players.includes(view.you)) return null;
+  return `${g.match}:${g.log.length}:${g.window?.id ?? '-'}`;
+}
+
 /**
  * O que o bot faz agora (ou null). `key` identifica a etapa, pra não agir duas vezes nela.
  * Uma decisão com `actions` vazias é "ficar quieto nesta janela": o bot não manda nada e o tempo corre.
  * Ordem dos sorteios: a escolha primeiro (alvo, bloquear, duvidar, "não responde"), o atraso por último.
  */
 export function decideCoup(view: CoupRoomView, rng: Rng): CoupDecision | null {
-  const me = view.you;
+  const key = coupStepKey(view);
+  if (key === null) return null;
   const g = view.game;
-  if (!me || !g.players.includes(me)) return null;
-  const key = `${g.match}:${g.log.length}:${g.window?.id ?? '-'}`;
   const can = g.can;
   if (can.lose) return { key, actions: [chooseLoss(view, rng)], delay: between(rng, 900, 2000) };
   if (can.keep > 0) return { key, actions: [chooseExchange(view)], delay: between(rng, 900, 2000) };
@@ -154,9 +164,9 @@ export function decideCoup(view: CoupRoomView, rng: Rng): CoupDecision | null {
 }
 
 /** Sorteio estável pra (etapa, bot): a mesma etapa dá sempre a mesma decisão, em qualquer visão dela. */
-export function coupKeyRng(key: string, me: string): Rng {
+export function coupKeyRng(key: string, me: string, salt = 0): Rng {
   let h = 2166136261;
-  for (const ch of `${key}|${me}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  for (const ch of `${key}|${me}${salt ? `#${salt}` : ''}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
   return mulberry32(h >>> 0);
 }
 
@@ -164,11 +174,14 @@ export function coupKeyRng(key: string, me: string): Rng {
  * `decideCoup` com o sorteio preso à etapa: o bot decide ao agendar e de novo ao disparar,
  * e não "muda de ideia" (ex.: ficar quieto, depois responder) só porque o sorteio girou.
  */
-export function decideCoupStable(view: CoupRoomView): CoupDecision | null {
-  const first = decideCoup(view, Math.random);
-  if (!first || !view.you) return first;
-  return decideCoup(view, coupKeyRng(first.key, view.you));
+export function decideCoupStable(view: CoupRoomView, tries = 0): CoupDecision | null {
+  const key = coupStepKey(view);
+  if (key === null) return null;
+  return decideCoup(view, coupKeyRng(key, view.you!, saltFor(tries)));
 }
+
+/** Semente da tentativa: igual nas primeiras `TRIES_PER_SEED` tentativas da etapa; depois, outra. */
+export const saltFor = (tries: number): number => Math.floor(tries / TRIES_PER_SEED);
 
 class CoupBot {
   name: string | null = null;
@@ -180,6 +193,9 @@ class CoupBot {
   private retrying = false;
   /** Etapa que o bot já agendou (limpa quando ele não tem mais nada a fazer, pra a mesma etapa poder voltar em outra partida). */
   private planned: string | null = null;
+  /** Quantas vezes o bot mandou ação na etapa `triesKey` (zera quando a etapa muda). */
+  private tries = 0;
+  private triesKey: string | null = null;
   private tried = new Set<string>();
   constructor(
     readonly code: string,
@@ -247,7 +263,12 @@ class CoupBot {
     const snap = this.conn.getSnapshot();
     if (snap.status === 'join_failed') return this.onJoinFailed(snap.joinError);
     if (snap.status !== 'joined' || !snap.view || !isCoupRoomView(snap.view)) return;
-    const d = decideCoupStable(snap.view);
+    const step = coupStepKey(snap.view);
+    if (step !== this.triesKey) {
+      this.triesKey = step;
+      this.tries = 0;
+    }
+    const d = decideCoupStable(snap.view, this.tries);
     if (!d) {
       this.planned = null;
       return;
@@ -260,12 +281,14 @@ class CoupBot {
       const now = this.conn?.getSnapshot().view;
       if (!now || !isCoupRoomView(now)) return;
       // decide de novo com a visão atual (a janela pode ter mudado enquanto esperava): só manda se a etapa é a mesma
-      const again = decideCoupStable(now);
+      const again = decideCoupStable(now, this.tries);
       if (again?.key !== d.key) return;
       again.actions.forEach((a) => this.conn?.sendAction(a));
-      // se a ação se perdeu e a etapa não andou, tenta de novo
+      this.tries++;
+      // se a ação se perdeu (ou foi recusada) e a etapa não andou, tenta de novo, com outra semente depois de 2 tentativas;
+      // passou de `MAX_TRIES`, desiste da etapa (`planned` fica, então não repete pra sempre)
       this.later(RETRY_MS, () => {
-        if (this.planned !== d.key) return;
+        if (this.planned !== d.key || this.tries >= MAX_TRIES) return;
         this.planned = null;
         this.react();
       });

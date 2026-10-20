@@ -9,7 +9,7 @@ import {
   type Room,
 } from '@cartolina/shared';
 import { describe, expect, it } from 'vitest';
-import { coupKeyRng, decideCoup, decideCoupStable } from '../src/dev/coupBots';
+import { MAX_TRIES, coupKeyRng, coupStepKey, decideCoup, decideCoupStable, saltFor } from '../src/dev/coupBots';
 import { T0, coupLobbyRoom, coupRoom, step, viewOf } from './coup-fixtures';
 
 const HOST_ACTIONS = ['start', 'restart'];
@@ -360,6 +360,34 @@ describe('decisão do bot do Cúpi', () => {
       const a = decideCoupStable(v)!;
       for (let i = 0; i < 20; i++) expect(decideCoupStable(v)).toEqual(a);
       expect(decideCoupStable(view(turnRoom(3), 'p1'))).toBeNull();
+    });
+  });
+
+  describe('chave da etapa sem sorteio e nova tentativa', () => {
+    it('coupStepKey é a mesma chave do decideCoup, e null pra quem assiste', () => {
+      const tax = declare(turnRoom(3, { p1: ['contessa', 'assassin'] }), 'tax');
+      const v = view(tax, 'p1');
+      expect(coupStepKey(v)).toBe(decideCoup(v, always(0.9))!.key);
+      expect(coupStepKey(v)).toBe(`${v.game.match}:${v.game.log.length}:${v.game.window!.id}`);
+      expect(coupStepKey(view(tax, null))).toBeNull();
+      expect(coupStepKey(view(tax, 'ninguem'))).toBeNull();
+      // vale mesmo quando o bot não tem nada a fazer na etapa
+      expect(coupStepKey(view(turnRoom(3), 'p1'))).not.toBeNull();
+    });
+
+    it('a semente só muda a cada 2 tentativas, e a decisão muda com ela (a ação recusada não se repete pra sempre)', () => {
+      expect([0, 1, 2, 3, 4, 5].map(saltFor)).toEqual([0, 0, 1, 1, 2, 2]);
+      expect(MAX_TRIES).toBe(6);
+      const v = view(declare(turnRoom(3, { p1: ['contessa', 'assassin'] }), 'tax'), 'p1');
+      expect(decideCoupStable(v, 1)).toEqual(decideCoupStable(v, 0));
+      // com outras sementes, a decisão da mesma etapa varia (a chave continua a mesma)
+      const outcomes = new Set<string>();
+      for (let tries = 0; tries < 400; tries += 2) {
+        const d = decideCoupStable(v, tries)!;
+        expect(d.key).toBe(coupStepKey(v));
+        outcomes.add(JSON.stringify(d.actions));
+      }
+      expect(outcomes.size).toBeGreaterThan(1);
     });
   });
 

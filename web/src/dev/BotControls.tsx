@@ -1,4 +1,7 @@
-/** Controles de bots (modo teste). No DITU aparecem também no site no ar; no Diquisti, só em dev. */
+/**
+ * Controles de bots (modo teste). No DITU aparecem também no site no ar; nos outros jogos (Diquisti, Retratim, Cúpi), só em dev
+ * (o lobby deles só renderiza isto em dev). Os bots do Cúpi ainda saem do build de produção pelo teste `import.meta.env.DEV` no `API`.
+ */
 import { GAMES, type GameId } from '@cartolina/shared';
 import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
