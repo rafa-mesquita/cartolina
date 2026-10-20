@@ -1,5 +1,6 @@
 import type { CoupCharacter } from '@cartolina/shared';
-import { CHARACTER_ICONS, CHARACTER_NAMES } from './names';
+import { characterArtUrl } from './art';
+import { CHARACTER_NAMES } from './names';
 
 /** Tamanhos das cartas: s = cartinha dos oponentes (52×72), m = perdida na sua mão (84×118), l = sua mão (120×168). */
 export type CardSize = 's' | 'm' | 'l';
@@ -24,22 +25,28 @@ export function CardBack({ size }: { size: CardSize }) {
 }
 
 /**
- * Frente de uma carta: ícone vermelho + nome. `dead` = perdida (papel riscado); a pequena perdida mostra só o ícone,
- * com o nome no `title`.
+ * Miolo da frente: a arte do Flow preenchendo a carta e, se `band`, o nome numa faixa preta embaixo (o leitor de tela
+ * lê o `alt`, a faixa é só pros olhos). Também usado nas cartas clicáveis dos painéis.
+ */
+export function CardArt({ card, alt, band = true }: { card: CoupCharacter; alt: string; band?: boolean }) {
+  return (
+    <>
+      <img className="cp-art" src={characterArtUrl(card)} alt={alt} draggable={false} loading="eager" decoding="async" />
+      {band && <em aria-hidden="true">{CHARACTER_NAMES[card]}</em>}
+    </>
+  );
+}
+
+/**
+ * Frente de uma carta: a arte do personagem com o nome na faixa de baixo. `dead` = perdida (arte apagada em cinza e um
+ * risco vermelho na diagonal; o nome vai também no `title`). A pequena (`s`, dos oponentes) mostra só a arte.
  */
 export function CardFace({ card, size, dead = false }: { card: CoupCharacter; size: CardSize; dead?: boolean }) {
   const name = CHARACTER_NAMES[card];
-  if (dead && size === 's') {
-    return (
-      <span className="cp-card s dead" title={`${name} (perdida)`}>
-        <i className={`ti ${CHARACTER_ICONS[card]}`} aria-hidden="true" />
-      </span>
-    );
-  }
+  const label = dead ? `${name} (perdida)` : name;
   return (
-    <span className={`cp-card ${size}${dead ? ' dead' : ''}`} title={dead ? `${name} (perdida)` : undefined}>
-      <i className={`ti ${CHARACTER_ICONS[card]}`} aria-hidden="true" />
-      <em>{name}</em>
+    <span className={`cp-card face ${size}${dead ? ' dead' : ''}`} title={dead || size === 's' ? label : undefined}>
+      <CardArt card={card} alt={label} band={size !== 's'} />
     </span>
   );
 }

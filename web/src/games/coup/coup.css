@@ -84,29 +84,32 @@
   position: relative; flex: none; border: 2px solid var(--ink); border-radius: 4px; background: var(--paper);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; overflow: hidden;
 }
-.coup .cp-card i { color: var(--red); line-height: 1; }
-.coup .cp-card em { font: 400 13px/1 var(--title); font-style: normal; letter-spacing: .04em; }
+/* frente: a arte do Flow preenche a carta (rosto no terço de cima) e o nome vai numa faixa preta embaixo */
+.coup .cp-card.face { justify-content: flex-end; gap: 0; background: var(--ink); }
+.coup .cp-card .cp-art {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; object-position: 50% 20%;
+  pointer-events: none; -webkit-user-drag: none;
+}
+.coup .cp-card em {
+  position: relative; z-index: 1; align-self: stretch; padding: 4px 2px 2px; background: var(--ink); color: var(--paper);
+  font: 400 13px/1 var(--title); font-style: normal; letter-spacing: .05em; text-align: center; white-space: nowrap; overflow: hidden;
+}
 .coup .cp-card.back { background: var(--red); }
 .coup .cp-card.back svg { width: 62%; height: auto; display: block; }
-/* perdida: papel riscado (nome cortado + traço na diagonal) */
-.coup .cp-card.dead { background: var(--paper); color: var(--ink-soft); }
-.coup .cp-card.dead i { color: var(--ink-soft); }
-.coup .cp-card.dead em { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--ink); }
+/* perdida: arte apagada (cinza, desbotada no papel), nome riscado e um risco vermelho na diagonal */
+.coup .cp-card.dead { background: var(--paper); }
+.coup .cp-card.dead .cp-art { filter: grayscale(1) contrast(.8) brightness(1.1); opacity: .5; }
+.coup .cp-card.dead em { background: var(--ink-soft); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--red); }
 .coup .cp-card.dead::after {
-  content: ''; position: absolute; inset: 0; opacity: .55;
-  background: linear-gradient(to top right, transparent calc(50% - 1px), var(--ink) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px));
+  content: ''; position: absolute; inset: 0; z-index: 2;
+  background: linear-gradient(to top right, transparent calc(50% - 1.5px), var(--red) calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px));
 }
+/* pequena (oponentes): só a arte; o nome vai no title e no alt */
 .coup .cp-card.s { width: 52px; height: 72px; }
-.coup .cp-card.s i { font-size: 22px; }
-.coup .cp-card.s em { font-size: 10.5px; }
-/* perdida pequena (oponentes): só o ícone, maior e na tinta; o nome vai no title */
-.coup .cp-card.s.dead i { font-size: 30px; color: var(--ink); }
-.coup .cp-card.l { width: 120px; height: 168px; gap: 10px; }
-.coup .cp-card.l i { font-size: 34px; }
-.coup .cp-card.l em { font-size: 22px; }
-.coup .cp-card.m { width: 84px; height: 118px; gap: 6px; }
-.coup .cp-card.m i { font-size: 26px; }
-.coup .cp-card.m em { font-size: 18px; }
+.coup .cp-card.l { width: 120px; height: 168px; }
+.coup .cp-card.l em { font-size: 20px; padding: 5px 2px 3px; }
+.coup .cp-card.m { width: 84px; height: 118px; }
+.coup .cp-card.m em { font-size: 15px; }
 
 /* oponentes */
 .coup .cp-opps { flex: none; display: flex; justify-content: center; gap: 14px; }
@@ -194,8 +197,7 @@
 .coup .cp-moment.band .cp-mt2, .coup .cp-moment.band .cp-ms { font-size: 22px; }
 .coup .cp-moment.band .cp-ms.ink { font-size: 14px; }
 .coup .cp-moment.band .cp-row { gap: 12px; }
-.coup .cp-moment.band .cp-card.l { width: 30px; height: 42px; gap: 0; }
-.coup .cp-moment.band .cp-card.l i { font-size: 17px; }
+.coup .cp-moment.band .cp-card.l { width: 30px; height: 42px; }
 .coup .cp-moment.band .cp-card.l em { display: none; }
 .coup .cp-moment.band .cp-stamp { font-size: 22px; padding: 3px 8px 1px; border-width: 3px; }
 
@@ -243,12 +245,11 @@
 .coup .cp-pscore em { font: 400 30px/1 var(--title); font-style: normal; letter-spacing: .04em; color: var(--ink); }
 .coup .cp-pscore em.lead { color: var(--red); }
 .coup .cp-pick { flex: none; display: flex; gap: 12px; align-items: center; }
-.coup .cp-pickc { width: 104px; height: 146px; padding: 0; gap: 8px; }
-.coup .cp-pickc i { font-size: 30px; }
-.coup .cp-pickc em { font-size: 19px; }
+.coup .cp-pickc { width: 104px; height: 146px; padding: 0; }
+.coup .cp-pickc em { font-size: 18px; padding: 5px 2px 3px; }
 .coup .cp-pickc.on { box-shadow: 0 0 0 3px var(--red); border-color: var(--red); }
 .coup .cp-new {
-  position: absolute; top: 6px; left: 50%; transform: translateX(-50%); padding: 2px 6px; border-radius: 3px; background: var(--red); color: #fff;
+  position: absolute; z-index: 2; top: 5px; left: 5px; padding: 2px 6px; border-radius: 3px; background: var(--red); color: #fff;
   font: 500 10px/1 var(--ui); letter-spacing: .12em; text-transform: uppercase;
 }
 .coup .cp-pbtn {
@@ -300,9 +301,6 @@
 .coup--phone .cp-tag { font-size: 8.5px; letter-spacing: .06em; }
 .coup--phone .cp-hand { gap: 3px; }
 .coup--phone .cp-card.s { width: 16px; height: 22px; border-width: 1.5px; border-radius: 2px; }
-.coup--phone .cp-card.s em { display: none; }
-.coup--phone .cp-card.s i, .coup--phone .cp-card.s.dead i { font-size: 11px; }
-.coup--phone .cp-card.s.dead::after { opacity: .7; }
 .coup--phone .cp-coins { font-size: 13px; gap: 2px; }
 .coup--phone .cp-coins i { font-size: 13px; }
 .coup--phone .cp-coins.gone { font-size: 10px; letter-spacing: .08em; }
@@ -342,16 +340,14 @@
 .coup--phone .cp-mt2 { font-size: 30px; }
 .coup--phone .cp-ms { font-size: 20px; }
 .coup--phone .cp-ms.ink { font-size: 14px; }
-.coup--phone .cp-moment .cp-card.l { width: 64px; height: 90px; gap: 6px; }
-.coup--phone .cp-moment .cp-card.l i { font-size: 22px; }
-.coup--phone .cp-moment .cp-card.l em { font-size: 14px; }
+.coup--phone .cp-moment .cp-card.l { width: 64px; height: 90px; }
+.coup--phone .cp-moment .cp-card.l em { font-size: 12px; padding: 3px 1px 1px; }
 .coup--phone .cp-stamp { font-size: 36px; padding: 5px 12px 2px; border-width: 3px; }
 .coup--phone .cp-moment.band { padding: 6px 10px; gap: 4px 10px; }
 .coup--phone .cp-moment.band .cp-mt { font-size: 22px; }
 .coup--phone .cp-moment.band .cp-mt2, .coup--phone .cp-moment.band .cp-ms { font-size: 17px; }
 .coup--phone .cp-moment.band .cp-ms.ink { font-size: 12px; }
-.coup--phone .cp-moment.band .cp-card.l { width: 22px; height: 30px; }
-.coup--phone .cp-moment.band .cp-card.l i { font-size: 13px; }
+.coup--phone .cp-moment.band .cp-card.l { width: 22px; height: 30px; border-width: 1.5px; }
 .coup--phone .cp-moment.band .cp-card.l em { display: none; }
 .coup--phone .cp-moment.band .cp-stamp { font-size: 17px; padding: 2px 6px 0; border-width: 2px; }
 /* sua mão + ações 4×2 */
@@ -365,12 +361,10 @@
 .coup--phone .cp-myhand { grid-column: 1; grid-row: 1; gap: 6px; align-items: flex-end; }
 .coup--phone .cp-myline { grid-column: 2; grid-row: 1; align-self: end; font-size: 22px; flex-direction: column; align-items: flex-start; gap: 4px; }
 .coup--phone .cp-myline .cp-tag { font-size: 10.5px; letter-spacing: .08em; }
-.coup--phone .cp-myhand .cp-card.l { width: 64px; height: 90px; gap: 6px; }
-.coup--phone .cp-myhand .cp-card.l i { font-size: 24px; }
-.coup--phone .cp-myhand .cp-card.l em { font-size: 12.5px; }
-.coup--phone .cp-myhand .cp-card.m { width: 44px; height: 62px; gap: 3px; }
-.coup--phone .cp-myhand .cp-card.m i { font-size: 16px; }
-.coup--phone .cp-myhand .cp-card.m em { font-size: 10px; }
+.coup--phone .cp-myhand .cp-card.l { width: 64px; height: 90px; }
+.coup--phone .cp-myhand .cp-card.l em { font-size: 12px; padding: 3px 1px 1px; }
+.coup--phone .cp-myhand .cp-card.m { width: 44px; height: 62px; }
+.coup--phone .cp-myhand .cp-card.m em { font-size: 9px; letter-spacing: 0; padding: 2px 0 1px; }
 .coup--phone .cp-acts { grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .coup--phone .cp-act { min-height: 46px; padding: 4px 5px; align-items: center; text-align: center; gap: 0; }
 .coup--phone .cp-an { font-size: 12.5px; line-height: 1.1; letter-spacing: .03em; }
@@ -397,9 +391,11 @@
 .coup--phone .cp-panel > .cp-pbtn, .coup--phone .cp-panel > .cp-hostwait { order: 4; }
 .coup--phone .cp-hostwait { text-align: center; }
 .coup--phone .cp-pscore em { font-size: 22px; }
-.coup--phone .cp-pickc { width: 76px; height: 106px; gap: 6px; }
-.coup--phone .cp-pickc i { font-size: 22px; }
-.coup--phone .cp-pickc em { font-size: 14px; }
+.coup--phone .cp-pickc { width: 76px; height: 106px; }
+.coup--phone .cp-pickc em { font-size: 13px; padding: 3px 1px 2px; }
+/* cartas do vencedor na folha do fim: menores, pra caber com o placar e o botão */
+.coup--phone .cp-wincards .cp-card.m { width: 56px; height: 78px; }
+.coup--phone .cp-wincards .cp-card.m em { font-size: 11px; padding: 3px 1px 1px; }
 .coup--phone .cp-pbtn { min-height: 50px; width: 100%; }
 .coup--phone .cp-pbtn.huge { font-size: 22px; }
 /* o diário fica acima das folhas de painel (e o fundo escurecido entre os dois) */
@@ -442,15 +438,15 @@
   .coup--phone .cp-mt2 { font-size: 24px; }
   .coup--phone .cp-ms { font-size: 16px; }
   .coup--phone .cp-moment .cp-card.l { width: 48px; height: 68px; }
+  .coup--phone .cp-moment .cp-card.l em { font-size: 9.5px; padding: 2px 1px 1px; }
   .coup--phone .cp-stamp { font-size: 28px; }
   .coup--phone .cp-moment.band { padding: 4px 8px; gap: 2px 8px; }
   .coup--phone .cp-moment.band .cp-mt { font-size: 18px; }
   .coup--phone .cp-moment.band .cp-mt2, .coup--phone .cp-moment.band .cp-ms { font-size: 15px; }
   .coup--phone .cp-me { padding: 6px; gap: 6px 8px; }
   .coup--phone .cp-myline { font-size: 20px; }
-  .coup--phone .cp-myhand .cp-card.l { width: 48px; height: 68px; gap: 4px; }
-  .coup--phone .cp-myhand .cp-card.l i { font-size: 18px; }
-  .coup--phone .cp-myhand .cp-card.l em { font-size: 10px; }
+  .coup--phone .cp-myhand .cp-card.l { width: 48px; height: 68px; }
+  .coup--phone .cp-myhand .cp-card.l em { font-size: 9.5px; padding: 2px 1px 1px; }
   .coup--phone .cp-myhand .cp-card.m { width: 34px; height: 48px; }
   .coup--phone .cp-myhand .cp-card.m em { display: none; }
   .coup--phone .cp-act { min-height: 44px; }

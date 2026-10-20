@@ -5,6 +5,7 @@ import { useLayout } from '../../lib/device';
 import { JOIN_ERRORS, type ConnStatus, type GameConn } from '../../net/connection';
 import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
+import { preloadCharacterArt } from './art';
 import { useWindowClock, windowLeft } from './clock';
 import { Diary, LastLine } from './Diary';
 import { useMoments } from './moments';
@@ -73,6 +74,8 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   const moment = useMoments(g.log, g.match, g.phase === 'over', status);
   useCoupSounds(view, clock, status);
   useCoupButtonSounds(rootRef);
+  // as 5 artes já no cache quando a primeira carta virar (momento de dúvida, bloqueio, perder carta)
+  useEffect(preloadCharacterArt, []);
 
   // estado da interface, preso à situação da visão
   const key = `${g.match}:${g.log.length}:${g.phase}:${g.window?.id ?? '-'}`;

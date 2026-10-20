@@ -170,8 +170,11 @@ O diário recomeça a cada partida.
   (`npm run coup:cartas -- <pasta>`).
 - **Verso da carta:** feito em código (vermelho com um emblema simples), não
   vem do Flow.
-- Até as artes ficarem prontas (§9), as cartas usam um **ícone + nome** no
-  lugar da ilustração.
+- **Artes prontas (C3 feito, §9):** as 5 artes do Flow estão na mesa no lugar
+  dos ícones provisórios: a arte preenche a carta e o nome vai numa faixa preta
+  embaixo; a perdida fica em cinza com um risco vermelho; a cartinha dos
+  oponentes mostra só a arte (nome no `title`/`alt`). A mesa pré-carrega as 5
+  ao montar.
 
 ## 4. Arquitetura
 
@@ -343,9 +346,11 @@ saíram. Sem estatísticas por enquanto.
    testes, registro, catálogo com o Cúpi **"em breve"** na estante.
 2. **Protótipo** (`prototipo/coup/`): o usuário testa o ritmo com bots e aprova.
 3. **Plano C2 — mesa (feito):** computador e celular, bots de desenvolvimento,
-   sons, E2E. Aqui o Cúpi fica jogável (com ícones no lugar das artes).
-4. **Plano C3 — artes:** lote de teste (Duque e Condessa) no Flow, depois os
-   outros três; script de conversão.
+   sons, E2E. Aqui o Cúpi fica jogável (com ícones provisórios no lugar das
+   artes).
+4. **Plano C3 — artes (feito):** as 5 artes geradas no Flow (lote de teste
+   Duque e Condessa, depois os outros três), convertidas por
+   `scripts/coup-cartas.mjs` e ligadas nas cartas da mesa no lugar dos ícones.
 5. **Plano C4 — histórico:** migração, gravação, rota e aba.
 
 Merge no `main` = publicar: só quando o Rafa pedir.

@@ -1,6 +1,7 @@
 import { memo, useEffect, useId, useRef } from 'react';
 import type { CoupCharacter, CoupView } from '@cartolina/shared';
-import { CHARACTER_ICONS, CHARACTER_NAMES } from './names';
+import { CardArt, CardFace } from './CardFace';
+import { CHARACTER_NAMES } from './names';
 import { LOSS_SUB, joinNames, lossTitle, type NameOf } from './texts';
 
 interface Props {
@@ -21,12 +22,11 @@ interface Props {
   sheet: boolean;
 }
 
-/** Carta clicável dos painéis (ícone + nome; "nova" nas compradas da troca). */
+/** Carta clicável dos painéis (arte + nome na faixa; "nova" nas compradas da troca). */
 function PickCard({ card, on, fresh = false, onClick }: { card: CoupCharacter; on: boolean; fresh?: boolean; onClick: () => void }) {
   return (
-    <button type="button" className={`cp-card cp-pickc${on ? ' on' : ''}`} aria-pressed={on} onClick={onClick}>
-      <i className={`ti ${CHARACTER_ICONS[card]}`} aria-hidden="true" />
-      <em>{CHARACTER_NAMES[card]}</em>
+    <button type="button" className={`cp-card face cp-pickc${on ? ' on' : ''}`} aria-pressed={on} onClick={onClick}>
+      <CardArt card={card} alt={CHARACTER_NAMES[card]} />
       {fresh && <span className="cp-new">nova</span>}
     </button>
   );
@@ -78,6 +78,14 @@ export const Panels = memo(function Panels(p: Props) {
           )}
           <ScoreChips game={game} nameOf={nameOf} />
         </div>
+        {/* as cartas do vencedor, viradas (o texto acima já diz quais são) */}
+        {game.winnerCards.length > 0 && (
+          <div className="cp-pick cp-wincards" aria-hidden="true">
+            {game.winnerCards.map((ch, i) => (
+              <CardFace key={i} card={ch} size="m" />
+            ))}
+          </div>
+        )}
         {p.host ? (
           <button type="button" className="cp-pbtn red huge" onClick={p.onRestart}>
             jogar de novo

@@ -130,6 +130,11 @@ describe('mesa do Cúpi: assentos, topo e diário', () => {
     const ana = container.querySelectorAll('.cp-opp')[1]!;
     expect(ana.querySelector('.cp-coins')!.textContent).toBe('3');
     expect(ana.querySelectorAll('.cp-card.back')).toHaveLength(2);
+    // sua mão: a arte do Flow de cada carta, com o nome no alt (nada de ícone)
+    const mine = viewOf(betoDaVez(), 'p1').game.myCards;
+    const art = [...container.querySelectorAll<HTMLImageElement>('.cp-myhand .cp-card.face img')];
+    expect(art.map((i) => i.getAttribute('src')!.replace(/^.*\/coup\/cartas\//, ''))).toEqual(mine.map((c) => `${c}.webp`));
+    expect(container.querySelector('.cp-card i')).toBeNull();
     // a vez é do Beto (você): nenhum oponente marcado; a sua área sim
     expect(container.querySelector('.cp-opp.turn')).toBeNull();
     expect(container.querySelector('.cp-me.turn')).toBeTruthy();
@@ -272,6 +277,9 @@ describe('mesa do Cúpi: painéis', () => {
     const picks = container.querySelectorAll<HTMLButtonElement>('.cp-pickc');
     expect(picks).toHaveLength(4);
     expect(container.querySelectorAll('.cp-pickc .cp-new')).toHaveLength(2);
+    // cada carta da troca mostra a arte do personagem
+    const pool = [...view.game.myCards, ...view.game.myDrawn];
+    picks.forEach((b, i) => expect(b.querySelector('img')!.getAttribute('src')).toMatch(new RegExp(`/coup/cartas/${pool[i]}\\.webp$`)));
     fireEvent.click(picks[1]!);
     expect(ok().disabled).toBe(true);
     fireEvent.click(picks[3]!);
@@ -284,7 +292,6 @@ describe('mesa do Cúpi: painéis', () => {
     expect(ok().disabled).toBe(true);
     fireEvent.click(picks[2]!);
     fireEvent.click(ok());
-    const pool = [...view.game.myCards, ...view.game.myDrawn];
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'exchange', keep: [pool[1], pool[2]] });
   });
 
@@ -306,6 +313,10 @@ describe('mesa do Cúpi: painéis', () => {
     const { container } = mesa(over(viewOf(betoDaVez(), 'p0')), c);
     expect(screen.getByRole('heading', { name: 'Beto tomou o poder' })).toBeTruthy();
     expect(screen.getByText('Duque e Condessa')).toBeTruthy();
+    // as cartas do vencedor aparecem viradas (decorativas: o texto já diz quais são)
+    const win = container.querySelector('.cp-wincards')!;
+    expect(win.getAttribute('aria-hidden')).toBe('true');
+    expect([...win.querySelectorAll('img')].map((i) => i.getAttribute('alt'))).toEqual(['Duque', 'Condessa']);
     expect(screen.getByText('Caio → você')).toBeTruthy();
     expect(container.querySelector('.cp-panel .cp-pscore em.lead')!.textContent).toBe('Beto 1');
     fireEvent.click(screen.getByRole('button', { name: 'jogar de novo' }));
