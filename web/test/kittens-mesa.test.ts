@@ -471,6 +471,25 @@ describe('mesa do Tatubum', () => {
     m2.mesa.destroy();
   });
 
+  it('descarte: passar o mouse na de cima dá zoom; no quadro do olho, o painel diz o que a carta faz', () => {
+    const v = midGame('p1');
+    v.game.discard = ['ataque-7', 'favor-7'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const top = root.querySelector<HTMLElement>('#discard .kt-card[data-id="favor-7"]')!;
+    top.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(root.querySelector('#viewer')?.textContent).toContain('FAVOR');
+    top.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(root.querySelector('#viewer')?.textContent).toBe('');
+    root.querySelector<HTMLElement>('#eye')!.click();
+    const info = () => root.querySelector('#pile .pinfo')?.textContent ?? '';
+    expect(info()).toContain('Passe o mouse');
+    root.querySelector<HTMLElement>('#pile .kt-card[data-id="ataque-7"]')!.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(info()).toContain('ATAQUE');
+    expect(info()).toContain('sem comprar');
+    mesa.destroy();
+  });
+
   it('o Tatu Latidor na frente de cada um aparece no assento e ao lado da sua mão', () => {
     const v = midGame('p1');
     v.game.front = { p0: [], p1: ['latido-1'], p2: ['latido-0'] };

@@ -134,7 +134,7 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   ataque: 'Termina a sua vez <b>sem comprar</b>, e o próximo joga <b>2 turnos</b> seguidos.<br>Se você estava sob ataque, passa os turnos que você ainda devia + 2 (2 → 4 → 6…).<br>Pode levar Nem vem!.',
   pular: 'Termina um turno seu <b>sem comprar</b> carta.<br>Se você estava sob ataque (devendo 2 turnos), gasta só um deles e continua na vez.<br>Pode levar Nem vem!.',
   favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br>Pode levar Nem vem!.',
-  embaralhar: 'Embaralha o monte inteiro.<br>Bom quando você (ou alguém) espiou e sabe que tem Tatubum em cima, ou quando alguém acabou de esconder um tatu num lugar que você não sabe.<br>Pode levar Nem vem!.',
+  embaralhar: 'Embaralha o monte inteiro.<br>Pode levar Nem vem!.',
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, na ordem, só você.<br>Elas ficam à mostra ao lado do monte até você comprar, a vez passar ou o monte mudar.<br>Pode levar Nem vem!.',
   latido: 'Só existem <b>2</b> na partida. Quando você joga um, quem tiver <b>o outro Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b> (30 segundos, senão vai sozinho) e os dois Latidores vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém tiver o outro, o seu fica <b>na sua frente</b>, à vista de todos: quando o outro for jogado, quem se defende é você.<br>Não gasta a sua vez. Pode levar Nem vem!.',
   olhado: 'Escolha um adversário (mesmo sem carta na mão): a mão dele é <b>embaralhada</b> e ele <b>fica cego</b>, vendo só o verso das próprias cartas, até <b>comprar</b> uma carta.<br>Cego, ele joga às cegas: escolhe cartas viradas sem saber quais são (se não formarem jogada, voltam pra mão).<br>Pode levar Nem vem!.',
@@ -150,7 +150,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   ataque: 'Termina sua vez sem comprar. O próximo joga 2 turnos (ou os seus + 2, se você estava sob ataque).',
   pular: 'Termina um turno seu sem comprar.',
   favor: 'Um adversário escolhe uma carta da mão dele pra te dar.',
-  embaralhar: 'Embaralha o monte. Bom quando você sabe que tem tatu em cima.',
+  embaralhar: 'Embaralha o monte inteiro.',
   espiar: 'Você vê as 3 cartas de cima do monte. Só você.',
   capivara: 'Par: todo mundo, menos você, passa uma carta pro próximo.',
   mico: 'Par: todo mundo, menos você, descarta uma carta (o efeito não vale).',
@@ -881,6 +881,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     v.discard.slice(-3).forEach((id, i, arr) => {
       const c = cardEl(id);
       c.style.transform = `rotate(${(i - arr.length + 1) * 7 + 3}deg)`;
+      // A de cima do descarte: passar o mouse abre o zoom com a explicação (pedido do Rafa).
+      if (i === arr.length - 1) {
+        c.onmouseenter = () => zoom(id);
+        c.onmouseleave = () => zoom(null);
+      }
       disc.appendChild(c);
     });
     disc.onclick = () => openPile();
@@ -1436,10 +1441,18 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const sub = pick
       ? 'Clique numa carta acesa. As apagadas foram pro descarte depois da sua jogada.'
       : `${cards.length} carta${cards.length === 1 ? '' : 's'}, da mais nova pra mais velha.`;
-    pile.innerHTML = `<div class="box"><h2>${title}${pick ? ' ' + TIMER : ''}</h2><p class="psub">${sub}</p><div class="grid"></div><div class="foot"><div class="note">ESC ou clique fora pra fechar</div></div></div>`;
+    pile.innerHTML = `<div class="box"><h2>${title}${pick ? ' ' + TIMER : ''}</h2><p class="psub">${sub}</p><div class="pbody"><div class="grid"></div><div class="pinfo"></div></div><div class="foot"><div class="note">ESC ou clique fora pra fechar</div></div></div>`;
     const grid = $('#pile .grid');
+    // Ao lado da grade: o que faz a carta que está debaixo do mouse.
+    const info = $('#pile .pinfo');
+    const explain = (id: string | null): void => {
+      const k = id ? kindOf(id) : null;
+      info.innerHTML = k ? `<h3>${cardName(k)}</h3><p>${detailOf(k)}</p>` : '<p class="phint">Passe o mouse numa carta pra ver o que ela faz.</p>';
+    };
+    explain(null);
     cards.forEach((id) => {
       const el = cardEl(id);
+      el.onmouseenter = () => explain(id);
       if (pick) {
         if (pick.options.includes(id)) {
           el.classList.add('pickable');
