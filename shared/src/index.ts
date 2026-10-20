@@ -43,6 +43,7 @@ export { applyPicturesAction, initialPicturesState, settlePictures } from './gam
 export { pictures, picturesNextDeadline, picturesViewFor } from './games/pictures/view';
 export { picturesActionSchema } from './games/pictures/schema';
 export * from './games/coup/types';
+export * from './games/coup/record';
 export { fullDeck as coupFullDeck } from './games/coup/deck';
 export { applyCoupAction, initialCoupState, settleCoup } from './games/coup/rules';
 export { coup, coupNextDeadline, coupViewFor } from './games/coup/view';

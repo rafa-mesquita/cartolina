@@ -43,7 +43,7 @@ describe('registro de jogos', () => {
     expect(GAMES.ito.liveCursors).toBe(true);
     expect(GAMES.dixit.liveCursors).toBe(false);
     expect(GAMES.pictures).toMatchObject({ minPlayers: 3, maxPlayers: 6, liveCursors: false, recordsHistory: false });
-    expect(GAMES.coup).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: false, recordsHistory: false });
+    expect(GAMES.coup).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: false, recordsHistory: true });
     expect(isGameId('dixit')).toBe(true);
     expect(isGameId('pictures')).toBe(true);
     expect(isGameId('coup')).toBe(true);

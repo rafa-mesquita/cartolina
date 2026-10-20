@@ -84,8 +84,8 @@ export const GAMES: Record<GameId, GameEntry> = {
     maxPlayers: COUP_MAX_PLAYERS,
     // Cursor em cima de um assento entregaria o alvo antes da hora.
     liveCursors: false,
-    // O histórico do Cúpi (as partidas) vem no Plano C4.
-    recordsHistory: false,
+    // Cada partida terminada vai pro histórico (sem bots).
+    recordsHistory: true,
   }),
 };
 

@@ -1,3 +1,4 @@
+import { pendingCoupRecord, type CoupMatchRecord } from './games/coup/record';
 import { pendingDixitRecord, type DixitRoundRecord } from './games/dixit/record';
 import type { DixitHistoryStats, DixitMatch } from './games/dixit/summary';
 import { GAMES, type GameId } from './games/registry';
@@ -76,14 +77,22 @@ export interface DixitHistoryResponse {
   nextBefore: number | null;
 }
 
+/** Resposta de `GET /history/coup`: 20 partidas por página, da mais nova pra mais velha (sem estatísticas por enquanto). */
+export interface CoupHistoryResponse {
+  game: 'coup';
+  matches: CoupMatchRecord[];
+  stats: null;
+  /** Fim da última partida da página (exclusivo na próxima), ou null se acabou. */
+  nextBefore: number | null;
+}
+
 /** Resposta de `GET /history/:game`, por jogo (todo jogo do registro precisa estar aqui). */
 export interface HistoryResponses {
   ito: HistoryResponse;
   dixit: DixitHistoryResponse;
   /** O Retratim ainda não grava histórico (vem no R4, com o museu): a rota responde 404 antes de chegar aqui. */
   pictures: never;
-  /** O Cúpi ainda não grava histórico (vem no Plano C4): a rota responde 404 antes de chegar aqui. */
-  coup: never;
+  coup: CoupHistoryResponse;
 }
 export type HistoryResponseOf<G extends GameId> = HistoryResponses[G];
 
@@ -178,7 +187,8 @@ export function summarizeHistory(rounds: readonly RoundRecord[]): HistoryStats {
 /** Rodada a gravar, já com o jogo: o servidor escolhe a tabela por ele. */
 export type PendingHistoryRecord =
   | { game: 'ito'; key: string; record: RoundRecord }
-  | { game: 'dixit'; key: string; record: DixitRoundRecord };
+  | { game: 'dixit'; key: string; record: DixitRoundRecord }
+  | { game: 'coup'; key: string; record: CoupMatchRecord };
 
 /** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação nova. */
 export function pendingHistoryRecord(room: Room, now: number, id: string): PendingHistoryRecord | null {
@@ -194,8 +204,10 @@ export function pendingHistoryRecord(room: Room, now: number, id: string): Pendi
     }
     case 'pictures':
       return null; // histórico e museu do Retratim vêm no R4
-    case 'coup':
-      return null; // o histórico do Cúpi vem no Plano C4
+    case 'coup': {
+      const pending = pendingCoupRecord(room, now, id);
+      return pending ? { game: 'coup', ...pending } : null;
+    }
     default: {
       const _never: never = room.gameId;
       return _never;
