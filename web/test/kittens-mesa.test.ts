@@ -509,6 +509,71 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('par de Mico: depois do último descarte, o quadro abre pra quem jogou pegar uma das descartadas', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const deadline = Date.now() + 30_000;
+    v.game.discard = ['ataque-7', 'mico-80', 'mico-81', 'pular-5'];
+    v.game.choice = { kind: 'mico', by: 'p1', waiting: ['p2'], discarded: ['pular-5'], deadline };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#caption')?.textContent).toContain('Todo mundo descartando');
+    expect(root.querySelector<HTMLElement>('#pile')!.hidden).toBe(true);
+    // O P2 descarta o último: abre a pegada (a escolha dos 5 diferentes, com `from: 'mico'`).
+    const n = v.game.log.at(-1)!.n;
+    const pick = { kind: 'cinco' as const, who: 'p1', options: ['pular-5', 'espiar-5'], left: 1, deadline: Date.now() + 30_000, from: 'mico' as const };
+    const after = {
+      ...v,
+      game: { ...v.game, discard: [...v.game.discard, 'espiar-5'], choice: pick, log: [...v.game.log, { n: n + 1, ev: { t: 'discarded', by: 'p2', card: 'espiar-5' } as KittensEvent }] },
+    };
+    mesa.update(toMesa(after));
+    await vi.advanceTimersByTimeAsync(3000);
+    const pile = root.querySelector<HTMLElement>('#pile')!;
+    expect(pile.hidden).toBe(false);
+    expect(pile.querySelector('h2')?.textContent).toContain('PEGUE UMA DAS DESCARTADAS');
+    expect(pile.querySelector('.psub')?.textContent).toContain('descartadas no seu par de Mico');
+    // Só as descartadas no par acendem; o que já estava no descarte fica apagado.
+    const lit = [...pile.querySelectorAll<HTMLElement>('.kt-card.pickable')].map((el) => el.dataset.id).sort();
+    expect(lit).toEqual(['espiar-5', 'pular-5']);
+    expect(pile.querySelector('.kt-card[data-id="ataque-7"]')!.classList.contains('off')).toBe(true);
+    expect(pile.querySelector('.kt-card[data-id="mico-80"]')!.classList.contains('off')).toBe(true);
+    expect(root.querySelector('#caption')?.textContent).toContain('Pegue UMA das descartadas');
+    pile.querySelector<HTMLElement>('.kt-card[data-id="espiar-5"]')!.click();
+    expect(sent).toEqual([{ type: 'choose', card: 'espiar-5' }]);
+    // Pegou: o quadro fecha sozinho.
+    const done = { ...after, game: { ...after.game, discard: after.game.discard.filter((c) => c !== 'espiar-5'), hand: [...after.game.hand, 'espiar-5'], choice: null, log: [...after.game.log, { n: n + 2, ev: { t: 'picked', by: 'p1', card: 'espiar-5' } as KittensEvent }] } };
+    mesa.update(toMesa(done));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(pile.hidden).toBe(true);
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+
+    // Os outros leem quem vai pegar, e o quadro não abre pra eles.
+    const w = midGame('p2');
+    w.game.choice = { ...pick };
+    const other = mount();
+    other.mesa.update(toMesa(w));
+    expect(other.root.querySelector('#caption')?.textContent).toContain('P1 vai pegar uma das descartadas');
+    expect(other.root.querySelector<HTMLElement>('#pile')!.hidden).toBe(true);
+    other.mesa.destroy();
+    errors.mockRestore();
+  });
+
+  it('par de Mico: a galeria e o zoom dizem que depois você pega uma das descartadas', () => {
+    const v = midGame('p1');
+    v.game.discard = ['mico-7'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    root.querySelector<HTMLElement>('#cards')!.click();
+    const item = [...root.querySelectorAll('#gallery .item')].find((el) => el.querySelector('.kt-card')?.getAttribute('data-id')?.startsWith('mico-'));
+    expect(item?.textContent).toContain('todo mundo, menos você, descarta uma carta');
+    expect(item?.textContent).toContain('depois você pega uma delas');
+    root.querySelector<HTMLElement>('#eye')!.click();
+    root.querySelector<HTMLElement>('#pile .kt-card[data-id="mico-7"]')!.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(root.querySelector('#pile .pinfo')?.textContent).toContain('você pega uma das cartas descartadas');
+    mesa.destroy();
+  });
+
   it('o Tatu Latidor na frente de cada um aparece no assento e ao lado da sua mão', () => {
     const v = midGame('p1');
     v.game.front = { p0: [], p1: ['latido-1'], p2: ['latido-0'] };

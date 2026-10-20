@@ -114,7 +114,7 @@ export function applyKittensAction(
         if (!c.waiting.includes(playerId)) return fail('not_your_choice');
         const card = ownCard(s, playerId, action.card);
         if (card === null) return fail(badOwnCard(s, playerId, action.card));
-        return ok(discardForMico(s, c, playerId, card));
+        return ok(discardForMico(s, c, playerId, card, ctx.now + KITTENS_CHOICE_MS));
       }
       if (c.who !== playerId) return fail('not_your_choice');
       switch (c.kind) {

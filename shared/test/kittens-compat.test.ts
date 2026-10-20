@@ -74,6 +74,21 @@ describe('estado salvo antes das cartas novas (sem front/blind)', () => {
     expect(settleKittens(deepFreeze({ ...rest, alive: ['p0', 'p2'], peek: { who: 'p1', cards: ['pular-9'] } } as unknown as KittensState), ctx).peeks).toEqual({});
   });
 
+  it('par de Mico salvo antes da pegada no fim (sem `discarded`): segue, e quem jogou pega uma das descartadas depois', () => {
+    const s = table({ hands: { p0: ['quati-0'], p1: ['pular-1', 'ataque-1'], p2: ['espiar-2'] }, draw: DRAW, discard: ['mico-0', 'mico-1', 'favor-2'] });
+    // p2 já tinha descartado o Favor antes do deploy: esse não conta.
+    const saved = deepFreeze({ ...s, choice: { kind: 'mico', by: 'p0', waiting: ['p1'], deadline: T0 + 30_000 } } as unknown as KittensState);
+    expect(settleKittens(saved, ctx).choice).toEqual({ kind: 'mico', by: 'p0', waiting: ['p1'], discarded: [], deadline: T0 + 30_000 });
+    expect(kittensViewFor(saved, 'p2').choice).toMatchObject({ kind: 'mico', discarded: [] });
+    expect(kittensNextDeadline(saved)).toBe(T0 + 30_000);
+    const done = act(saved, 'p1', { type: 'choose', card: 'pular-1' }, at(1000));
+    expect(done.choice).toEqual({ kind: 'cinco', who: 'p0', options: ['pular-1'], left: 1, deadline: T0 + 1000 + 30_000, from: 'mico' });
+    // Prazo vencido no formato antigo: o descarte ao acaso também abre a pegada.
+    const late = settleKittens(saved, at(30_000));
+    expect(late.choice).toMatchObject({ kind: 'cinco', who: 'p0', left: 1, from: 'mico' });
+    expect(late.hands.p1).toHaveLength(1);
+  });
+
   it('estado completo não muda: settle sem nada a fazer devolve o mesmo objeto', () => {
     const s = deepFreeze(table({ hands: { p0: ['mico-0'], p1: [], p2: [] }, draw: DRAW }));
     expect(settleKittens(s, ctx)).toBe(s);
