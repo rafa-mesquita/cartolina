@@ -76,7 +76,7 @@ describe('KittensTable (mesa ligada na sala)', () => {
     const c = conn();
     const { container, unmount } = render(<KittensTable view={viewOf(started(3), 'p0')} conn={c} serverOffset={0} />);
     expect(container.querySelector('.kittens .kt-mesa')).not.toBeNull();
-    expect(container.querySelectorAll('#hand .card')).toHaveLength(8);
+    expect(container.querySelectorAll('#hand [data-id]')).toHaveLength(8);
     expect(container.querySelector('#turn')?.textContent).toContain('SUA VEZ');
     buttonByText(container, 'COMPRAR')!.click();
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'draw' });
