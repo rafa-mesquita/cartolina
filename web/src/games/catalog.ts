@@ -18,7 +18,7 @@ export interface CatalogEntry {
 }
 
 // Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti, o Pictures como Retratim, o Exploding Kittens como
-// Tatubum e o Coup como Cúpi; os ids internos não mudam.
+// Tatubum, o Coup como Cúpi e o Camelio como Cama-Leão; os ids internos não mudam.
 const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> = {
   ito: {
     name: 'DITU',
@@ -78,6 +78,18 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
     ],
     playable: true,
     mobile: true,
+  },
+  camelio: {
+    name: 'Cama-Leão',
+    tagline: 'junte 5 esferas certinhas e empurre o resto pros amigos',
+    rules: [
+      'Na sua vez, pegue a carta aberta ou a do monte, que só mostra metade: a cor ou as esferas.',
+      'Antes de virar, decida: fica com ela ou dá pra alguém, que é obrigado a pegar.',
+      'Exatamente 5 esferas de uma cor valem 1 ponto. Passou de 5, perde as cartas da cor. Numa cor que já pontuou, chegar a 5 de novo também tira o ponto.',
+      'Ganha quem pontuar 3 cores (4 com 2 jogadores).',
+    ],
+    playable: true,
+    mobile: false,
   },
 };
 

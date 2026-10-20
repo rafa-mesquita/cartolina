@@ -3,6 +3,7 @@ import { withDixitCounters } from './games/dixit/rules';
 import type { DixitState, DixitView } from './games/dixit/types';
 import type { CoupState, CoupView } from './games/coup/types';
 import type { KittensView } from './games/kittens/types';
+import type { CamelioView } from './games/camelio/types';
 import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
@@ -78,6 +79,12 @@ export type CoupRoomView = RoomView<CoupView> & { gameId: 'coup' };
 
 export function isCoupRoomView(view: RoomView): view is CoupRoomView {
   return view.gameId === 'coup';
+}
+
+export type CamelioRoomView = RoomView<CamelioView> & { gameId: 'camelio' };
+
+export function isCamelioRoomView(view: RoomView): view is CamelioRoomView {
+  return view.gameId === 'camelio';
 }
 
 export interface RoomSummary {

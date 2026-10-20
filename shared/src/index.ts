@@ -64,4 +64,20 @@ export { applyKittensAction, initialKittensState } from './games/kittens/rules';
 export { settleKittens } from './games/kittens/settle';
 export { kittens, kittensNextDeadline, kittensViewFor } from './games/kittens/view';
 export { kittensActionSchema } from './games/kittens/schema';
+export * from './games/camelio/types';
+export { CAMELIO_DECK, CAMELIO_DECK_SIZE, camelioBack, camelioCard, camelioCardIds } from './games/camelio/deck';
+export {
+  camelioDeckEndWinners,
+  camelioPoints,
+  camelioScoredColors,
+  camelioSphereSum,
+  camelioStandings,
+  camelioSpheresInPlay,
+  resolveCamelioPlay,
+  type CamelioPlayResolution,
+  type CamelioStanding,
+} from './games/camelio/scoring';
+export { applyCamelioAction, camelioOnPresenceChange, camelioTarget, initialCamelioState } from './games/camelio/rules';
+export { camelio, camelioViewFor } from './games/camelio/view';
+export { camelioActionSchema } from './games/camelio/schema';
 export * from './games/registry';

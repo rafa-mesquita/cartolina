@@ -20,6 +20,12 @@
       "port": 5178
     },
     {
+      "name": "prototipo-cama-leao",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "http-server", ".", "-p", "5179", "-c-1", "--silent"],
+      "port": 5179
+    },
+    {
       "name": "prototipo-cupi",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "http-server", ".", "-p", "5185", "-c-1", "--silent"],

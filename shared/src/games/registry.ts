@@ -1,6 +1,9 @@
 import type { z } from 'zod';
 import type { GameModule } from '../game';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../players';
+import { camelioActionSchema } from './camelio/schema';
+import { CAMELIO_MAX_PLAYERS, CAMELIO_MIN_PLAYERS, type CamelioAction, type CamelioState, type CamelioView } from './camelio/types';
+import { camelio } from './camelio/view';
 import { coupActionSchema } from './coup/schema';
 import { COUP_MAX_PLAYERS, COUP_MIN_PLAYERS, type CoupAction, type CoupState, type CoupView } from './coup/types';
 import { coup } from './coup/view';
@@ -17,11 +20,11 @@ import { picturesActionSchema } from './pictures/schema';
 import { PICTURES_MAX_PLAYERS, PICTURES_MIN_PLAYERS, type PicturesAction, type PicturesState, type PicturesView } from './pictures/types';
 import { pictures } from './pictures/view';
 
-export const GAME_IDS = ['ito', 'dixit', 'pictures', 'kittens', 'coup'] as const;
+export const GAME_IDS = ['ito', 'dixit', 'pictures', 'kittens', 'coup', 'camelio'] as const;
 export type GameId = (typeof GAME_IDS)[number];
-export type GameState = ItoState | DixitState | PicturesState | KittensState | CoupState;
-export type GameView = ItoView | DixitView | PicturesView | KittensView | CoupView;
-export type GameAction = ItoAction | DixitAction | PicturesAction | KittensAction | CoupAction;
+export type GameState = ItoState | DixitState | PicturesState | KittensState | CoupState | CamelioState;
+export type GameView = ItoView | DixitView | PicturesView | KittensView | CoupView | CamelioView;
+export type GameAction = ItoAction | DixitAction | PicturesAction | KittensAction | CoupAction | CamelioAction;
 
 export interface GameEntry {
   id: GameId;
@@ -100,6 +103,17 @@ export const GAMES: Record<GameId, GameEntry> = {
     liveCursors: false,
     // Cada partida terminada vai pro histórico (sem bots).
     recordsHistory: true,
+  }),
+  camelio: defineGame({
+    id: 'camelio',
+    module: camelio,
+    actionSchema: camelioActionSchema,
+    minPlayers: CAMELIO_MIN_PLAYERS,
+    maxPlayers: CAMELIO_MAX_PLAYERS,
+    // Tudo é aberto na mesa (só o topo do monte é segredo, e o cursor não entrega nada).
+    liveCursors: true,
+    // O histórico do Cama-Leão vem no Plano C4.
+    recordsHistory: false,
   }),
 };
 

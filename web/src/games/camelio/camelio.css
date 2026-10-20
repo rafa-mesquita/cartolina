@@ -1,0 +1,257 @@
+/* Cama-Leão no site. Tudo escopado em .camelio (as outras tasks acrescentam abaixo). */
+
+/* ---- Cartas (frente e verso). Tamanho por --w; altura = 1,44 × largura. ---- */
+.camelio .card{--w:64px;position:relative;flex:none;width:var(--w);height:calc(var(--w) * 1.44);border-radius:calc(var(--w) * .14);
+  border:2px solid #f7efe0;box-shadow:0 1px 3px rgba(31,42,74,.35);box-sizing:border-box;overflow:hidden}
+.camelio .card.front{background:var(--c);display:grid;place-items:center}
+.camelio .card .sphs{display:grid;grid-template-columns:repeat(2,auto);gap:calc(var(--w) * .07)}
+.camelio .card.n1 .sphs{grid-template-columns:auto}
+.camelio .card.n3 .sph:last-child{grid-column:1 / span 2;justify-self:center}
+.camelio .card .sph{width:calc(var(--w) * .25);height:calc(var(--w) * .25);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff 0 30%,#f3f0ea 60%,#d9d3c8 100%);box-shadow:0 0 0 1.5px rgba(31,42,74,.4)}
+/* marquinha do tipo na frente (depois de revelada dá pra saber que era bicolor/multicolor) */
+.camelio .card .kind{position:absolute;right:7%;top:5%;width:20%;height:14%;border-radius:50%;border:1.5px solid #f7efe0}
+.camelio .card .kind-bicolor{background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%)}
+.camelio .card .kind-multi{background:conic-gradient(#4caf50,#f2c230,#f08a24,#e04848,#8e5cc7,#3a8fd8,#4caf50)}
+/* versos */
+.camelio .card.back.normal{background:
+  radial-gradient(circle at 50% 100%,rgba(255,255,255,.2) 0 45%,transparent 47%) 0 0 / calc(var(--w) * .24) calc(var(--w) * .18),
+  var(--c)}
+.camelio .card.back.bicolor{background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%)}
+.camelio .card.back.multi{background:linear-gradient(180deg,#4caf50 0 16.66%,#f2c230 0 33.33%,#f08a24 0 50%,#e04848 0 66.66%,#8e5cc7 0 83.33%,#3a8fd8 0)}
+.camelio .card .num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:1;border-radius:50%;
+  background:#f7efe0;color:#1f2a4a;display:grid;place-items:center;font:500 calc(var(--w) * .3)/1 'Fredoka',system-ui,sans-serif;
+  box-shadow:0 0 0 2px #1f2a4a}
+
+/* ---- A virada (anim.ts): camada por cima da mesa enquanto a jogada aparece ---- */
+.camelio .cl-fly{position:absolute;inset:0;z-index:55;pointer-events:none}
+.camelio .cl-fly>*{position:absolute;left:0;top:0;margin:0}
+.camelio .fly-card{transform-origin:0 0;will-change:transform}
+.camelio .fly-flip{position:relative;transform-style:preserve-3d}
+.camelio .fly-face{position:absolute;left:0;top:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.camelio .fly-face.front{transform:rotateY(180deg)}
+
+/* ======================================================================================================
+ * A mesa (porta do CSS de prototipo/cama-leao/index.html). Os `#id` do protótipo viraram classes:
+ * #app → .cl-stage, #top → .cl-top, #info → .cl-info, #seats → .cl-seats, #ring → .cl-ring,
+ * #deck/#open → [data-pile="deck"|"open"], #banner → .cl-banner, #mine → .cl-mine, #end → .cl-end, #toast → .cl-toast.
+ * ====================================================================================================== */
+.camelio{
+  --cream:#f7efe0; --canvas:#f3dcd2; --red:#c8372d; --red-dark:#9e2a22; --navy:#1f2a4a; --navy-soft:#5a6382;
+  --gold:#e8b23a; --line:#e2c9b8; --shadow:0 2px 6px rgba(31,42,74,.18);
+  --logo:'Rye',Georgia,serif; /* só no logo e no título do cartaz do fim */ --ui:'Fredoka',system-ui,sans-serif;
+  position:fixed;inset:0;overflow:hidden;background:#e9d6c6;
+  font-family:var(--ui);font-weight:500;color:var(--navy);-webkit-user-select:none;user-select:none}
+.camelio *,.camelio *::before,.camelio *::after{box-sizing:border-box}
+.camelio [hidden]{display:none !important}
+.camelio button{font:inherit;color:inherit;cursor:pointer}
+
+/* ---------- palco 1440×900 (lona listrada, vinheta nas bordas); a largura vem do useStageFit ---------- */
+.camelio .cl-stage{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;
+  background:
+    radial-gradient(ellipse 78% 72% at 50% 54%,transparent 58%,rgba(158,42,34,.16) 100%),
+    repeating-linear-gradient(90deg,var(--cream) 0 44px,var(--canvas) 44px 88px)}
+
+/* ---------- topo ---------- */
+.camelio .cl-top{position:absolute;left:0;right:0;top:0;height:72px;display:flex;align-items:center;gap:16px;padding:0 26px;z-index:8;
+  background:var(--cream);border-bottom:2px dashed var(--line)}
+/* bandeirinhas de circo penduradas embaixo da faixa (só enfeite) */
+.camelio .cl-top::after{content:'';position:absolute;left:0;right:0;top:calc(100% + 2px);height:13px;pointer-events:none;opacity:.8;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='78' height='13'%3E%3Cpath d='M1 0h24L13 13z' fill='%23c8372d'/%3E%3Cpath d='M27 0h24L39 13z' fill='%23e8b23a'/%3E%3Cpath d='M53 0h24L65 13z' fill='%231f2a4a'/%3E%3C/svg%3E") 10px 0 repeat-x}
+.camelio .logo,.camelio .cl-top .btns{flex:1 1 0}
+.camelio .logo{font:38px/1 var(--logo);color:var(--red);white-space:nowrap;letter-spacing:.5px;text-shadow:0 2px 0 rgba(158,42,34,.16)}
+.camelio .logo small{display:block;font:500 11px/1.2 var(--ui);color:var(--navy-soft);letter-spacing:1px;margin-top:3px;text-shadow:none}
+.camelio .cl-info{flex:none;text-align:center;font:500 14px/1.2 var(--ui);color:var(--navy-soft);white-space:nowrap}
+.camelio .cl-info b{font-weight:600;color:var(--navy)}
+.camelio .cl-info .last{color:var(--red)}
+.camelio .cl-top .btns{display:flex;justify-content:flex-end;gap:10px}
+.camelio .icon-btn{width:38px;height:38px;flex:none;border-radius:50%;border:1.5px solid var(--line);background:var(--cream);box-shadow:var(--shadow);
+  display:grid;place-items:center;font-size:20px;color:var(--navy-soft);padding:0}
+.camelio .icon-btn:hover,.camelio .icon-btn.on{color:var(--red);border-color:var(--red)}
+
+/* ---------- personagens e bandeirinhas ---------- */
+.camelio .cr{width:44px;height:44px;flex:none}
+.camelio .cr svg{width:100%;height:100%;display:block;overflow:visible}
+.camelio .flags{display:flex;gap:3px;align-items:center}
+/* o mastro é a sombra interna da borda esquerda (o clip-path corta sombra de fora) */
+.camelio .flag{width:14px;height:16px;flex:none;background:var(--c);clip-path:polygon(0 0,100% 50%,0 100%);box-shadow:inset 2px 0 0 var(--navy)}
+.camelio .gone{font:600 12px/1 var(--ui);color:var(--red-dark);padding:4px 9px;border:1.5px dashed var(--red-dark);border-radius:999px}
+
+/* ---------- assentos (os outros, num arco) ---------- */
+.camelio .cl-seats{position:absolute;left:0;right:0;top:86px;height:300px;z-index:2}
+.camelio .seat{position:absolute;width:230px;min-height:150px;padding:10px 10px 12px;border-radius:16px;background:rgba(247,239,224,.84);
+  border:1.5px solid var(--line);box-shadow:var(--shadow);transition:transform .15s ease,opacity .25s,filter .25s,border-color .25s}
+.camelio .seat .head{display:flex;align-items:center;gap:8px;height:44px}
+.camelio .seat .nm{font:600 15px/1.1 var(--ui);white-space:nowrap;text-decoration:underline 3px transparent;text-underline-offset:4px;transition:text-decoration-color .25s}
+.camelio .seat .head .flags{margin-left:auto}
+/* holofote na vez de alguém */
+.camelio .seat.turn{border-color:var(--gold)}
+.camelio .seat.turn::before{content:'';position:absolute;inset:-56px -46px -34px;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 42%,rgba(232,178,58,.55),rgba(232,178,58,.2) 46%,transparent 70%)}
+.camelio .seat.turn .nm{text-decoration-color:var(--gold)}
+.camelio .seat.off{opacity:.45;filter:grayscale(1)}
+.camelio .seat.target{outline:2px dashed var(--red);outline-offset:4px;cursor:pointer}
+.camelio .seat.hover{outline-style:solid;transform:scale(1.03)}
+
+/* pilhas por cor: as cartas cobertas mostram só a faixa de cima (com as esferas em fila), a de baixo aparece inteira */
+.camelio .stacks{display:flex;justify-content:center;align-items:flex-start;gap:var(--gap,6px);margin-top:10px;min-height:86px}
+.camelio .stacks.empty{align-items:center;font-size:12px;color:var(--navy-soft);border:1.5px dashed var(--line);border-radius:10px;opacity:.75}
+.camelio .stack{display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px;border-radius:9px}
+/* nos assentos dos outros a largura da pilha vem do seatFit() (carta + padding), pra caber nos 230px */
+.camelio .stacks[style] .stack{width:var(--sw);padding:4px var(--spad)}
+.camelio .stack.scored{outline:2px dashed var(--gold);background:rgba(232,178,58,.1)}
+.camelio .pile{display:flex;flex-direction:column;align-items:center}
+/* a carta de cima cobre a de baixo deixando a faixa das esferas: 50px com cartas de 46, 70px com 64 */
+.camelio .pile .card+.card{margin-top:calc(var(--w) * -1.087)}
+.camelio .pile .card:not(:last-child){place-items:start start;padding:calc(var(--w) * .07) 0 0 calc(var(--w) * .08)}
+.camelio .pile .card:not(:last-child) .sphs{grid-template-columns:none;grid-auto-flow:column;gap:calc(var(--w) * .045)}
+.camelio .pile .card:not(:last-child) .sph{width:calc(var(--w) * .16);height:calc(var(--w) * .16)}
+.camelio .pile .card:not(:last-child) .sph:last-child{grid-column:auto}
+.camelio .sum{font:600 13px/1 var(--ui);color:var(--navy-soft);padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.6);white-space:nowrap}
+.camelio .stacks.small .sum{font-size:11px;padding:2px;letter-spacing:-.2px}
+.camelio .stack.scored .sum{color:#9a6d10}
+.camelio .sum.hot{color:var(--red);font-weight:700;background:rgba(200,55,45,.13);animation:cl-hot 1.8s ease-in-out infinite}
+@keyframes cl-hot{50%{transform:scale(1.16)}}
+
+/* ---------- picadeiro ---------- */
+.camelio .cl-ring{position:absolute;left:50%;top:355px;width:620px;height:230px;margin-left:-310px;border-radius:50%;z-index:1;
+  border:7px double var(--red);
+  background:
+    radial-gradient(ellipse at 50% 56%,rgba(247,239,224,.92) 0 36%,rgba(247,239,224,.4) 60%,transparent 76%),
+    repeating-conic-gradient(from 0deg at 50% 50%,#e8ad9a 0 9deg,#f7e5d7 9deg 18deg);
+  box-shadow:0 0 0 4px var(--cream),0 0 0 6px var(--gold),0 14px 32px rgba(31,42,74,.22),inset 0 0 36px rgba(158,42,34,.3)}
+.camelio [data-pile]{position:absolute;top:42px;width:130px;display:flex;flex-direction:column;align-items:center;gap:9px}
+.camelio [data-pile="deck"]{left:calc(50% - 168px)}
+.camelio [data-pile="open"]{left:calc(50% + 38px)}
+.camelio .slot{position:relative;width:92px;height:132.48px}
+.camelio .slot .under{position:absolute;left:0;top:0;width:92px;height:132.48px;border-radius:12.88px;border:2px solid var(--cream);
+  background:repeating-linear-gradient(135deg,var(--navy) 0 6px,#2a375e 6px 12px);box-shadow:0 1px 3px rgba(31,42,74,.35)}
+.camelio .slot .none{width:92px;height:132.48px;border-radius:12.88px;border:2px dashed var(--line)}
+.camelio .lift{position:relative;transition:transform .16s ease}
+.camelio .lift .card{transition:box-shadow .16s}
+.camelio [data-pile].can{cursor:pointer}
+.camelio [data-pile].can .lift .card{box-shadow:0 0 0 2.5px rgba(232,178,58,.85),0 3px 8px rgba(31,42,74,.3)}
+.camelio [data-pile].can:hover .lift{transform:translateY(-5px)}
+.camelio [data-pile].picked .lift{transform:translateY(-14px)}
+.camelio [data-pile].picked .lift .card{box-shadow:0 0 0 3px var(--gold),0 16px 24px rgba(31,42,74,.38)}
+.camelio .cap{font:500 13px/1 var(--ui);color:var(--navy-soft);white-space:nowrap}
+.camelio .cap b{color:var(--navy);font-weight:600}
+
+/* ---------- o arrasto ---------- */
+.camelio [data-pile]{touch-action:none}
+.camelio [data-pile].can .lift{cursor:grab}
+/* a carta de origem fica apagadinha enquanto o clone viaja (e enquanto ele volta) */
+.camelio [data-pile].dragging .lift{opacity:.35;transform:none !important}
+.camelio .cl-stage.drag-on,.camelio .cl-stage.drag-on *{cursor:grabbing !important}
+/* o clone: fora segue o ponteiro (translate), dentro levanta e gira */
+.camelio .drag-clone{position:absolute;left:0;top:0;z-index:60;pointer-events:none;will-change:transform}
+.camelio .drag-clone.snap{transition:transform .11s ease-out}
+.camelio .drag-clone .tilt{transform:rotate(-4deg) scale(1.06);animation:cl-pickup .14s ease-out}
+.camelio .drag-clone .card{box-shadow:0 0 0 3px var(--gold),0 22px 38px rgba(31,42,74,.42),0 6px 12px rgba(31,42,74,.25)}
+@keyframes cl-pickup{from{transform:none}}
+
+/* ---------- letreiro (caixa parada; o texto troca com fade) ---------- */
+.camelio .cl-banner{position:absolute;left:50%;top:332px;width:720px;height:46px;margin-left:-360px;z-index:5;border-radius:12px;padding:0 24px;
+  display:grid;place-items:center;font:500 17px/1 var(--ui);color:var(--cream);white-space:nowrap;overflow:hidden;
+  background:
+    radial-gradient(circle at 9px 5px,rgba(232,178,58,.85) 0 1.6px,transparent 2.3px) 0 0 / 18px 46px repeat-x,
+    radial-gradient(circle at 9px 41px,rgba(232,178,58,.85) 0 1.6px,transparent 2.3px) 0 0 / 18px 46px repeat-x,
+    var(--navy);
+  box-shadow:inset 0 0 0 2px var(--gold),0 6px 16px rgba(31,42,74,.3)}
+.camelio .cl-banner .txt{transition:opacity .16s ease}
+.camelio .cl-banner .txt.fade{opacity:0;transition-duration:.12s}
+.camelio .cl-banner b{color:var(--gold);font-weight:600}
+
+/* ---------- a sua mesa ---------- */
+.camelio .cl-mine{position:absolute;left:60px;right:60px;bottom:18px;height:260px;z-index:2;border-radius:22px;transition:box-shadow .3s}
+.camelio .cl-mine.myturn{box-shadow:0 0 0 3px var(--gold),0 0 28px 6px rgba(232,178,58,.55)}
+.camelio .cl-mine .seat{inset:0;width:auto;min-height:0;display:flex;gap:24px;padding:16px 24px;border-radius:22px;background:rgba(247,239,224,.92)}
+.camelio .cl-mine .seat.turn::before{display:none}
+.camelio .cl-mine .seat.hover{transform:scale(1.01)}
+.camelio .cl-mine .who{width:118px;flex:none;display:flex;flex-direction:column;align-items:center;gap:7px;padding-top:12px}
+.camelio .cl-mine .cr{width:56px;height:56px}
+.camelio .cl-mine .nm{font-size:17px}
+.camelio .cl-mine .stacks{flex:1;justify-content:flex-start;gap:14px;margin:0;min-height:0}
+.camelio .cl-mine .stacks.empty{justify-content:center;font-size:14px}
+.camelio .cl-mine .sum{font-size:15px}
+.camelio .cl-mine .pts{width:400px;flex:none;border-left:2px dashed var(--line);padding:4px 0 0 22px;display:flex;flex-direction:column;gap:12px}
+.camelio .pts-h{font:500 14px/1 var(--ui);color:var(--navy-soft)}
+.camelio .pts-h b{color:var(--navy);font-weight:600}
+.camelio .fans{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:flex-end}
+.camelio .fan{display:flex;flex-direction:column;align-items:center;gap:6px}
+.camelio .leaf{position:relative;height:62px}
+.camelio .leaf>span{position:absolute;bottom:0;transform-origin:50% 100%}
+.camelio .fans .none{font-size:13px;line-height:1.4;color:var(--navy-soft);opacity:.8;max-width:240px}
+/* espectador: no lugar da sua mesa, uma faixa avisando (o protótipo não tem; mesma moldura da sua mesa, mais baixa) */
+.camelio .cl-watch{position:absolute;left:60px;right:60px;bottom:18px;height:64px;z-index:2;border-radius:22px;display:grid;place-items:center;
+  background:rgba(247,239,224,.92);border:1.5px dashed var(--line);box-shadow:var(--shadow);font:500 16px/1 var(--ui);color:var(--navy-soft)}
+
+/* ---------- fim da partida (o cartaz vem na Task 9) ----------
+ * Cartaz de circo na faixa livre entre os assentos e a sua mesa (quem desenha calcula o top): não cobre os personagens,
+ * as pilhas dos assentos nem a sua mesa. A partir de 4 jogadores as linhas ficam compactas (.compact).
+ * "ver a mesa" recolhe numa faixa estreita (.mini) por cima do letreiro; clicar na faixa abre de novo. */
+.camelio .cl-end{position:absolute;left:50%;top:400px;width:520px;transform:translateX(-50%) scale(var(--s,1));transform-origin:50% 0;z-index:20;
+  padding:16px 24px;text-align:center;background:var(--cream);border:6px double var(--red);border-radius:18px;
+  box-shadow:0 0 0 3px var(--cream),0 0 0 5px var(--gold),0 18px 40px rgba(31,42,74,.34);animation:cl-end-in .38s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes cl-end-in{from{opacity:0;translate:0 12px}}
+.camelio .cl-end .hd{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:12px}
+.camelio .cl-end h2{margin:0;font:34px/1.05 var(--logo);color:var(--red);text-shadow:0 2px 0 rgba(158,42,34,.16)}
+.camelio .cl-end .why{font:500 15px/1.2 var(--ui);color:var(--navy-soft)}
+.camelio .cl-end ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;text-align:left}
+.camelio .cl-end li{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:10px;border:1.5px solid transparent}
+.camelio .cl-end li.win{background:rgba(232,178,58,.18);border-color:var(--gold)}
+.camelio .cl-end .rk{width:22px;flex:none;font:600 14px/1 var(--ui);color:var(--navy-soft)}
+.camelio .cl-end li.win .rk{color:#9a6d10}
+.camelio .cl-end .cr{width:32px;height:32px}
+.camelio .cl-end .nm{font:600 15px/1 var(--ui);min-width:64px}
+.camelio .cl-end .flags{flex:1}
+.camelio .cl-end .flags .none{font-size:12px;color:var(--navy-soft);opacity:.8}
+.camelio .cl-end .sph{font:500 13px/1 var(--ui);color:var(--navy-soft);white-space:nowrap}
+.camelio .cl-end .acts{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:14px}
+.camelio .cl-end .acts button{padding:8px 18px;border-radius:999px;border:1.5px solid var(--red);background:none;color:var(--red);font-weight:600;font-size:15px}
+.camelio .cl-end .acts button:hover{background:rgba(200,55,45,.08)}
+.camelio .cl-end .acts .main{background:var(--red);color:var(--cream)}
+.camelio .cl-end .acts .main:hover{background:var(--red-dark);border-color:var(--red-dark)}
+.camelio .cl-end .acts .ghost{padding:6px 12px;border-color:var(--line);color:var(--navy-soft);font-size:13px;font-weight:500}
+.camelio .cl-end .acts .ghost:hover{border-color:var(--navy-soft);background:none;color:var(--navy)}
+.camelio .cl-end .acts .ghost i,.camelio .cl-end .reopen i{font-size:15px;vertical-align:-2px;margin-right:3px}
+.camelio .cl-end .reopen{display:none}
+/* compacto (4 a 6 jogadores): título e motivo na mesma linha, linhas de 28px, personagem de 24 */
+.camelio .cl-end.compact{padding:10px 20px 12px}
+.camelio .cl-end.compact .hd{flex-direction:row;justify-content:center;align-items:baseline;gap:10px;margin-bottom:6px}
+.camelio .cl-end.compact h2{font-size:28px}
+.camelio .cl-end.compact .why{font-size:14px}
+.camelio .cl-end.compact ol{gap:2px}
+.camelio .cl-end.compact li{height:28px;gap:9px;border-radius:8px}
+.camelio .cl-end.compact .cr{width:24px;height:24px}
+.camelio .cl-end.compact .nm{font-size:14px}
+.camelio .cl-end.compact .rk{font-size:13px}
+.camelio .cl-end.compact .flag{width:12px;height:14px}
+.camelio .cl-end.compact .acts{margin-top:8px}
+.camelio .cl-end.compact .acts button{padding:6px 16px;font-size:14px}
+.camelio .cl-end.compact .acts .ghost{padding:5px 12px;font-size:13px}
+/* recolhido: só o título e os botões, numa faixa por cima do letreiro (clicar nela abre de novo) */
+.camelio .cl-end.mini{width:auto;padding:7px 10px 7px 22px;border-radius:999px;display:flex;align-items:center;gap:16px;cursor:pointer;white-space:nowrap}
+.camelio .cl-end.mini .hd{flex-direction:row;align-items:baseline;gap:10px;margin:0}
+.camelio .cl-end.mini h2{font-size:24px}
+.camelio .cl-end.mini .why,.camelio .cl-end.mini ol,.camelio .cl-end.mini .acts .ghost{display:none}
+.camelio .cl-end.mini .acts{margin:0;gap:8px}
+.camelio .cl-end.mini .acts button{padding:6px 14px;font-size:14px}
+.camelio .cl-end.mini .reopen{display:inline;font:500 13px/1 var(--ui);color:var(--navy-soft)}
+.camelio .cl-end.mini:hover .reopen{color:var(--red)}
+
+/* ---------- aviso ---------- */
+.camelio .cl-toast{position:absolute;left:50%;top:590px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--red-dark);color:var(--cream);
+  font:600 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow)}
+.camelio .cl-toast.on{opacity:1}
+
+/* ---------- o gesto: acertos ---------- */
+/* o `.card` global do ITO (table/table.css) põe margin negativa em toda carta: aqui ela fica no lugar
+   (as pilhas seguem com o margin-top próprio, que é mais específico); e nada de camada 3D/will-change em cada carta */
+.camelio .card{margin:0;left:auto;top:auto;will-change:auto;transform-style:flat}
+/* o `.seat` global do ITO é flex em linha com z-index 4: aqui o assento é bloco (cabeçalho em cima, pilhas embaixo)
+   e sem contexto de empilhamento (o holofote `.turn::before`, z -1, fica atrás do fundo do assento, como no protótipo) */
+.camelio .seat{display:block;align-items:normal;gap:0;z-index:auto}
+.camelio .cl-mine .seat{display:flex;align-items:stretch;gap:24px}
+/* carta levantada com o mouse em cima continua levantada (no protótipo o :hover não ganhava do .picked) */
+.camelio [data-pile].picked:hover .lift{transform:translateY(-14px)}

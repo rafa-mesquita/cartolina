@@ -89,6 +89,9 @@ async function historyPageOf(env: Env, game: GameId, before: number | null): Pro
       throw new Error('o Tatubum ainda não tem histórico');
     case 'coup':
       return coupHistoryPage(env.DB, before);
+    case 'camelio':
+      // sem `recordsHistory` a rota já respondeu 404; o histórico do Cama-Leão vem no C4
+      throw new Error('o Cama-Leão ainda não tem histórico');
     default: {
       const _never: never = game;
       throw new Error(`jogo sem página de histórico: ${String(_never)}`);

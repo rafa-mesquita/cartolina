@@ -12,8 +12,9 @@ No ar: site https://rafa-mesquita.github.io/cartolina/ · servidor https://carto
 | **Retratim** (nosso Pictures) | `pictures` | jogável no computador; histórico/museu ainda não |
 | **Tatubum** (nosso Exploding Kittens) | `kittens` | jogável no computador, com bots também no site publicado; histórico e celular ainda não |
 | **Cúpi** (nosso Coup) | `coup` | jogável no computador e no celular; artes dos 5 personagens do Flow prontas (C3 feito) |
+| **Cama-Leão** (nosso Camelio) | `camelio` | jogável no computador; celular e histórico ainda não |
 
-O id interno nunca muda: rotas, banco, registro e testes usam `ito`/`dixit`/`pictures`/`kittens`/`coup`. Só o que o jogador vê usa o nome novo.
+O id interno nunca muda: rotas, banco, registro e testes usam `ito`/`dixit`/`pictures`/`kittens`/`coup`/`camelio`. Só o que o jogador vê usa o nome novo.
 
 ## Regras de trabalho (importante)
 
@@ -60,7 +61,7 @@ Comandos: `npm install`, `npm test`, `npm run typecheck`, `npm run dev:server` (
 4. **Site**:
    - `web/src/games/catalog.ts`: nome de vitrine, frase, "como jogar", `playable` e `mobile`;
    - a mesa do jogo em `web/src/games/<id>/`, escolhida por jogo em `web/src/screens/Game.tsx`;
-   - cada jogo tem identidade visual própria. DITU: papel cartolina. Diquisti: "conto ilustrado", verde-floresta com mostarda e pintura a óleo de fundo. Retratim: "álbum de fotos". Tatubum: pixel art "cerrado" (fundo que amanhece e anoitece, mesa imperativa em `web/src/games/kittens/mesa.ts` portada do protótipo `prototipo/tatubum/`).
+   - cada jogo tem identidade visual própria. DITU: papel cartolina. Diquisti: "conto ilustrado", verde-floresta com mostarda e pintura a óleo de fundo. Retratim: "álbum de fotos". Tatubum: pixel art "cerrado" (fundo que amanhece e anoitece, mesa imperativa em `web/src/games/kittens/mesa.ts` portada do protótipo `prototipo/tatubum/`). Cúpi: cartaz de propaganda (papel creme com faixa vermelha, Bebas Neue e Oswald). Cama-Leão: circo (lona listrada, vermelho e azul-marinho, Rye no logo e Fredoka).
 5. **Histórico** (opcional): cada jogo grava as rodadas reveladas numa tabela própria do D1 (migração nova em `server/migrations/`).
    - O registro sai de uma função pura no `shared`: `pendingHistoryRecord` em `shared/src/history.ts`, com `switch` exaustivo por jogo.
    - O Durable Object guarda o pendente no mesmo `put` do estado, e o `INSERT` usa `ON CONFLICT DO NOTHING`. Assim a rodada grava uma vez só.
@@ -128,7 +129,7 @@ As cartas do Diquisti (191 até agora) e as fotos do Retratim são geradas no **
 - **Detecção:** `web/src/lib/device.ts`. `useLayout()` dá `'phone'` até 640px; `useIsPhone()` detecta aparelho de toque; celular deitado mostra "vira o celular em pé".
 - **Quais jogos:** `mobile: true` em `web/src/games/catalog.ts` libera o jogo no celular. Sem isso, o celular vê "esse jogo por enquanto é pra jogar no computador 💻" e nenhuma conexão é aberta.
 - **Mesa do celular do DITU:** fica em `web/src/table/phone/`, separada da mesa do computador (`web/src/table/engine.ts`). Mesa mista funciona: cada um vê o arrasto do outro no lugar certo. E2E com `newPhonePlayer(browser)` em `e2e/helpers.ts`.
-- **Diquisti e Retratim no celular:** ainda não. Não mude o `mobile` deles sem planejar junto com o Rafa.
+- **Diquisti, Retratim e Cama-Leão no celular:** ainda não. Não mude o `mobile` deles sem planejar junto com o Rafa.
 
 ## Pegadinhas conhecidas
 

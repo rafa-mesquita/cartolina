@@ -55,4 +55,14 @@ describe('catálogo de jogos do site', () => {
     expect(catalogEntry('dixit')?.mobile).toBe(false);
     expect(catalogEntry('pictures')?.mobile).toBe(false);
   });
+
+  it('Cama-Leão (o Camelio) aparece na estante, jogável', () => {
+    const entry = catalogEntry('camelio');
+    expect(entry?.name).toBe('Cama-Leão');
+    expect(entry?.players).toBe('2 a 6 pessoas');
+    expect(entry?.playable).toBe(true);
+    expect(entry?.mobile).toBe(false);
+    expect(entry?.hasHistory).toBe(false);
+    expect(entry?.rules.length).toBeGreaterThan(0);
+  });
 });

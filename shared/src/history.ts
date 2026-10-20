@@ -95,6 +95,8 @@ export interface HistoryResponses {
   /** O Tatubum também não grava histórico por enquanto (plano próprio): a rota responde 404 antes de chegar aqui. */
   kittens: never;
   coup: CoupHistoryResponse;
+  /** O Cama-Leão ainda não grava histórico (vem no C4): a rota responde 404 antes de chegar aqui. */
+  camelio: never;
 }
 export type HistoryResponseOf<G extends GameId> = HistoryResponses[G];
 
@@ -212,6 +214,8 @@ export function pendingHistoryRecord(room: Room, now: number, id: string): Pendi
       const pending = pendingCoupRecord(room, now, id);
       return pending ? { game: 'coup', ...pending } : null;
     }
+    case 'camelio':
+      return null; // histórico do Cama-Leão vem no C4
     default: {
       const _never: never = room.gameId;
       return _never;

@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App';
+import { CATALOG } from '../src/games/catalog';
 import { Home } from '../src/screens/Home';
 
 vi.mock('../src/net/api', async (importOriginal) => {
@@ -20,7 +21,12 @@ describe('estante de jogos', () => {
     expect(screen.getByRole('link', { name: /Retratim/ }).getAttribute('href')).toBe('#/pictures');
     expect(screen.getByRole('link', { name: /Tatubum/ }).getAttribute('href')).toBe('#/kittens');
     expect(screen.getByRole('link', { name: /Cúpi/ }).getAttribute('href')).toBe('#/coup');
-    expect(screen.queryByText('em breve')).toBeNull(); // todos os jogos da estante já dão pra jogar
+    const camelioLink = screen.getByRole('link', { name: /Cama-Leão/ });
+    expect(camelioLink.getAttribute('href')).toBe('#/camelio');
+    expect(within(camelioLink).queryByText('em breve')).toBeNull(); // a mesa do Cama-Leão já existe
+    // o selo "em breve" aparece só nos jogos que ainda não dá pra jogar
+    const soon = CATALOG.filter((g) => !g.playable);
+    expect(screen.queryAllByText('em breve')).toHaveLength(soon.length);
     expect(screen.queryByText(/grupo/i)).toBeNull();
     expect(screen.queryByText(/Dixit/)).toBeNull();
   });

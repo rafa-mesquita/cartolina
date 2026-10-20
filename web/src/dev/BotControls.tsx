@@ -1,11 +1,12 @@
 /**
  * Controles de bots (modo teste). No DITU e no Tatubum aparecem também no site no ar; nos outros jogos (Diquisti, Retratim,
- * Cúpi), só em dev (o lobby deles só renderiza isto em dev). Os bots do Cúpi ainda saem do build de produção pelo teste
- * `import.meta.env.DEV` no `API`.
+ * Cúpi, Cama-Leão), só em dev (o lobby deles só renderiza isto em dev). Os bots do Cúpi e do Cama-Leão ainda saem do build
+ * de produção pelo teste `import.meta.env.DEV` no `API`.
  */
 import { GAMES, type GameId } from '@cartolina/shared';
 import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
+import { addCamelioBot, camelioBotsIn, camelioBotsVersion, removeAllCamelioBots, subscribeCamelioBots } from './camelioBots';
 import { addCoupBot, coupBotsIn, coupBotsVersion, removeAllCoupBots, subscribeCoupBots } from './coupBots';
 import { addDixitBot, dixitBotsIn, dixitBotsVersion, removeAllDixitBots, subscribeDixitBots } from './dixitBots';
 import { addKittensBot, kittensBotsIn, kittensBotsVersion, removeAllKittensBots, subscribeKittensBots } from './kittensBots';
@@ -31,6 +32,10 @@ const API: Record<GameKey, Api> = {
   // os bots do Cúpi só existem em dev: no build de produção este ramo some e leva o módulo junto (o lobby do Cúpi nem renderiza isto)
   coup: import.meta.env.DEV
     ? { subscribe: subscribeCoupBots, version: coupBotsVersion, count: coupBotsIn, add: addCoupBot, removeAll: removeAllCoupBots }
+    : NO_BOTS,
+  // idem para o Cama-Leão: bots só em dev (o lobby dele também só renderiza isto em dev)
+  camelio: import.meta.env.DEV
+    ? { subscribe: subscribeCamelioBots, version: camelioBotsVersion, count: camelioBotsIn, add: addCamelioBot, removeAll: removeAllCamelioBots }
     : NO_BOTS,
 };
 

@@ -107,6 +107,9 @@ export const ERROR_CODES = [
   'not_losing',
   'bad_exchange',
   'bad_block',
+  // Cama-Leão (`not_your_turn` já vem do Tatubum)
+  'not_playing',
+  'cant_receive',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -169,6 +172,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_losing: 'Não é você que perde carta agora.',
   bad_exchange: 'Fique com o mesmo número de cartas que você tinha.',
   bad_block: 'Esse personagem não bloqueia essa ação.',
+  not_playing: 'A partida não está rolando agora.',
+  cant_receive: 'Essa pessoa não pode receber carta agora.',
 };
 
 export function errorMessage(code: string): string {

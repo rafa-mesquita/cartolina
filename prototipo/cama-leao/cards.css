@@ -1,0 +1,22 @@
+/* Cartas do Cama-Leão (frente e verso). Tamanho por --w; altura = 1,44 × largura. */
+.card{--w:64px;position:relative;flex:none;width:var(--w);height:calc(var(--w) * 1.44);border-radius:calc(var(--w) * .14);
+  border:2px solid #f7efe0;box-shadow:0 1px 3px rgba(31,42,74,.35);box-sizing:border-box;overflow:hidden}
+.card.front{background:var(--c);display:grid;place-items:center}
+.card .sphs{display:grid;grid-template-columns:repeat(2,auto);gap:calc(var(--w) * .07)}
+.card.n1 .sphs{grid-template-columns:auto}
+.card.n3 .sph:last-child{grid-column:1 / span 2;justify-self:center}
+.card .sph{width:calc(var(--w) * .25);height:calc(var(--w) * .25);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff 0 30%,#f3f0ea 60%,#d9d3c8 100%);box-shadow:0 0 0 1.5px rgba(31,42,74,.4)}
+/* marquinha do tipo na frente (depois de revelada dá pra saber que era bicolor/multicolor) */
+.card .kind{position:absolute;right:7%;top:5%;width:20%;height:14%;border-radius:50%;border:1.5px solid #f7efe0}
+.card .kind-bicolor{background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%)}
+.card .kind-multi{background:conic-gradient(#4caf50,#f2c230,#f08a24,#e04848,#8e5cc7,#3a8fd8,#4caf50)}
+/* versos */
+.card.back.normal{background:
+  radial-gradient(circle at 50% 100%,rgba(255,255,255,.2) 0 45%,transparent 47%) 0 0 / calc(var(--w) * .24) calc(var(--w) * .18),
+  var(--c)}
+.card.back.bicolor{background:linear-gradient(135deg,var(--a) 50%,var(--b) 50%)}
+.card.back.multi{background:linear-gradient(180deg,#4caf50 0 16.66%,#f2c230 0 33.33%,#f08a24 0 50%,#e04848 0 66.66%,#8e5cc7 0 83.33%,#3a8fd8 0)}
+.card .num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:1;border-radius:50%;
+  background:#f7efe0;color:#1f2a4a;display:grid;place-items:center;font:500 calc(var(--w) * .3)/1 'Fredoka',system-ui,sans-serif;
+  box-shadow:0 0 0 2px #1f2a4a}

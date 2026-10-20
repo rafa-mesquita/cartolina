@@ -87,6 +87,13 @@ function HistoryTab({ game }: { game: GameId }) {
       );
     case 'coup':
       return <CoupHistory />;
+    case 'camelio':
+      // histórico do Cama-Leão vem no C4
+      return (
+        <section className="panel">
+          <p>O histórico do Cama-Leão vem em breve.</p>
+        </section>
+      );
     default: {
       const _never: never = game;
       throw new Error(`jogo sem histórico: ${String(_never)}`);
