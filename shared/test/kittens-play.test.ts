@@ -12,9 +12,11 @@ const hands = () => ({
     'capivara-1',
     'capivara-2',
     'mico-0',
+    'mico-1',
     'quati-0',
     'tamandua-0',
     'preguica-0',
+    'preguica-1',
     'cafune-0',
     'pular-0',
   ],
@@ -52,36 +54,53 @@ describe('jogar', () => {
 
   it('par, trio e 5 diferentes', () => {
     const s = table({ hands: hands() });
-    expect(act(s, 'p0', play({ cards: ['capivara-0', 'capivara-1'], target: 'p1' }), ctx).pending!.play).toEqual({
+    expect(act(s, 'p0', play({ cards: ['mico-0', 'mico-1'], target: 'p1' }), ctx).pending!.play).toEqual({
       kind: 'par',
-      cards: ['capivara-0', 'capivara-1'],
+      cards: ['mico-0', 'mico-1'],
       target: 'p1',
       ask: null,
     });
+    // Trio não tem alvo nem pedido: o que vier é ignorado.
     expect(
       act(s, 'p0', play({ cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: 'p1', ask: 'favor' }), ctx).pending!.play,
-    ).toEqual({ kind: 'trio', cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: 'p1', ask: 'favor' });
+    ).toEqual({ kind: 'trio', cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: null, ask: null });
     expect(act(s, 'p0', play({ cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] }), ctx).pending!.play.kind).toBe(
       'cinco',
     );
   });
 
-  it('combo vale com quaisquer cartas, não só bichos', () => {
-    const s = table({ hands: { p0: ['ataque-0', 'ataque-1', 'pular-0', 'cafune-0', 'mico-0', 'nemvem-0'], p1: ['mico-1'], p2: [] } });
-    expect(act(s, 'p0', play({ cards: ['ataque-0', 'ataque-1'], target: 'p1' }), ctx).pending!.play.kind).toBe('par');
+  it('par só de bichos; trio e 5 diferentes valem com quaisquer cartas', () => {
+    const s = table({ hands: { p0: ['ataque-0', 'ataque-1', 'ataque-2', 'pular-0', 'cafune-0', 'mico-0', 'nemvem-0'], p1: ['mico-1'], p2: [] } });
+    expect(refuse(s, 'p0', play({ cards: ['ataque-0', 'ataque-1'], target: 'p1' }), ctx)).toBe('bad_combo');
+    expect(act(s, 'p0', play({ cards: ['ataque-0', 'ataque-1', 'ataque-2'] }), ctx).pending!.play.kind).toBe('trio');
     expect(act(s, 'p0', play({ cards: ['ataque-0', 'pular-0', 'cafune-0', 'mico-0', 'nemvem-0'] }), ctx).pending!.play.kind).toBe('cinco');
   });
 
   it.each<[Play, string]>([
-    [{ cards: ['capivara-0', 'capivara-1'] }, 'bad_target'],
-    [{ cards: ['capivara-0', 'capivara-1'], target: 'p0' }, 'bad_target'],
-    [{ cards: ['capivara-0', 'capivara-1'], target: 'p2' }, 'bad_target'],
-    [{ cards: ['capivara-0', 'capivara-1'], target: 'p9' }, 'bad_target'],
+    [{ cards: ['mico-0', 'mico-1'] }, 'bad_target'],
+    [{ cards: ['mico-0', 'mico-1'], target: 'p0' }, 'bad_target'],
+    [{ cards: ['mico-0', 'mico-1'], target: 'p2' }, 'bad_target'],
+    [{ cards: ['mico-0', 'mico-1'], target: 'p9' }, 'bad_target'],
     [{ cards: ['favor-1'], target: 'p2' }, 'bad_target'],
-    [{ cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: 'p1' }, 'bad_ask'],
-    [{ cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: 'p1', ask: 'tatubum' }, 'bad_ask'],
+    [{ cards: ['preguica-0', 'preguica-1'] }, 'bad_ask'],
+    [{ cards: ['preguica-0', 'preguica-1'], ask: 'ataque' }, 'bad_ask'],
   ])('alvo e pedido: %j → %s', (p, error) => {
     expect(refuse(table({ hands: hands() }), 'p0', play(p), ctx)).toBe(error);
+  });
+
+  it('par de Preguiça leva o bicho pedido; Quati, Tamanduá e Capivara não pedem nada', () => {
+    const s = table({
+      hands: { p0: ['preguica-0', 'preguica-1', 'quati-0', 'quati-1', 'tamandua-0', 'tamandua-1', 'capivara-0', 'capivara-1'], p1: ['mico-1'], p2: [] },
+    });
+    expect(act(s, 'p0', play({ cards: ['preguica-0', 'preguica-1'], ask: 'mico', target: 'p1' }), ctx).pending!.play).toEqual({
+      kind: 'par',
+      cards: ['preguica-0', 'preguica-1'],
+      target: null,
+      ask: 'mico',
+    });
+    for (const cards of [['quati-0', 'quati-1'], ['tamandua-0', 'tamandua-1'], ['capivara-0', 'capivara-1']]) {
+      expect(act(s, 'p0', play({ cards, target: 'p1', ask: 'mico' }), ctx).pending!.play).toEqual({ kind: 'par', cards, target: null, ask: null });
+    }
   });
 
   it('alvo que não precisa é ignorado', () => {

@@ -1,13 +1,7 @@
 import type { GameContext } from '../../game';
-import { randomInt, shuffle } from '../../rng';
-import { kittensKindOf } from './cards';
+import { shuffle } from '../../rng';
 import { logged, nextAlive, passTo, spendTurn } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
-
-/** Passa `card` da mão de `from` pra de `to`. */
-function moveCard(s: KittensState, from: string, to: string, card: string): KittensState {
-  return { ...s, hands: { ...s.hands, [from]: s.hands[from]!.filter((c) => c !== card), [to]: [...s.hands[to]!, card] } };
-}
 
 /** O efeito da jogada que não foi cancelada. `before` = descarte de antes da jogada. */
 function applyEffect(s: KittensState, by: string, play: KittensPlay, before: string[], ctx: GameContext): KittensState {
@@ -23,16 +17,9 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
       return { ...s, peek: { who: by, cards: s.draw.slice(-3).reverse() } };
     case 'favor':
       return { ...s, choice: { kind: 'favor', who: play.target!, to: by, deadline: ctx.now + KITTENS_CHOICE_MS } };
-    case 'par': {
-      const hand = s.hands[play.target!]!;
-      const card = hand[randomInt(ctx.rng, hand.length)]!;
-      return logged(moveCard(s, play.target!, by, card), { t: 'stole', from: play.target!, to: by, card }, [play.target!, by]);
-    }
-    case 'trio': {
-      const card = s.hands[play.target!]!.find((c) => kittensKindOf(c) === play.ask) ?? null;
-      const moved = card === null ? s : moveCard(s, play.target!, by, card);
-      return logged(moved, { t: 'asked', from: play.target!, to: by, ask: play.ask!, card });
-    }
+    case 'par':
+    case 'trio':
+      return s;
     case 'cinco':
       return before.length === 0
         ? s

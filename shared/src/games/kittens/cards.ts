@@ -38,7 +38,7 @@ export const KITTENS_CARD_NAMES: Record<KittensCardKind, string> = {
 export const KITTENS_ACTION_KINDS = ['ataque', 'pular', 'favor', 'embaralhar', 'espiar'] as const;
 export type KittensActionKind = (typeof KITTENS_ACTION_KINDS)[number];
 
-/** Os 5 bichos: sozinhos não fazem nada, só em combo. */
+/** Os 5 bichos: sozinhos não fazem nada; em par, cada um tem efeito próprio (spec "Par de cada bicho"). */
 export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica'] as const;
 
 export function kittensCardId(kind: KittensCardKind, n: number): string {

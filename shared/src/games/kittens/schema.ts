@@ -18,6 +18,7 @@ export const kittensActionSchema = z.discriminatedUnion('type', [
     type: z.literal('choose'),
     card: cardId.optional(),
     position: z.union([z.number().int().min(0).max(200), z.literal('random')]).optional(),
+    keep: z.boolean().optional(),
   }),
   z.object({ type: z.literal('again') }),
   z.object({ type: z.literal('lobby') }),

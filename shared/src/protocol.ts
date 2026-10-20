@@ -143,7 +143,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_in_hand: 'Essa carta não está na sua mão.',
   bad_combo: 'Essas cartas não formam jogada.',
   bad_target: 'Escolha um adversário vivo com carta na mão.',
-  bad_ask: 'Escolha qual carta pedir.',
+  bad_ask: 'Escolha qual bicho puxar.',
   nothing_to_nope: 'Não tem carta no ar pra usar o Nem vem!',
   no_nope: 'Você não tem nenhum Nem vem!',
   not_your_choice: 'Essa escolha não é sua.',

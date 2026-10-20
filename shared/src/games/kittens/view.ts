@@ -2,7 +2,7 @@ import type { GameModule } from '../../game';
 import { applyKittensAction, initialKittensState } from './rules';
 import { settleKittens } from './settle';
 import { tatusIn } from './turn';
-import type { KittensAction, KittensChoice, KittensChoiceView, KittensEvent, KittensState, KittensView } from './types';
+import type { KittensAction, KittensChoiceView, KittensEvent, KittensState, KittensView } from './types';
 
 /** Lê o registro só se a chave for própria (ids como '__proto__' não podem cair no protótipo). */
 function own<T>(record: Record<string, T>, key: string | null): T | undefined {
@@ -15,13 +15,22 @@ function hideCard(ev: KittensEvent): KittensEvent {
 }
 
 /**
- * A escolha sem o id do tatu que está sendo escondido: com ele, quem assiste poderia saber onde o tatu foi parar
- * (ex.: quando alguém sai, o tatu tirado do monte é o mais de baixo e aparece em `out`).
+ * A escolha como `viewerId` vê: sem o id do tatu que está sendo escondido (com ele, quem assiste poderia saber onde o
+ * tatu foi parar); a carta de cima do Quati só pra quem escolhe.
  */
-function choiceView(choice: KittensChoice | null): KittensChoiceView | null {
-  if (choice?.kind !== 'cafune') return choice;
-  const { kind, who, deadline } = choice;
-  return { kind, who, deadline };
+function choiceView(state: KittensState, viewerId: string | null): KittensChoiceView | null {
+  const c = state.choice;
+  if (c === null) return null;
+  switch (c.kind) {
+    case 'cafune': {
+      const { kind, who, deadline } = c;
+      return { kind, who, deadline };
+    }
+    case 'quati':
+      return { ...c, card: viewerId !== null && viewerId === c.who ? (state.draw.at(-1) ?? null) : null };
+    default:
+      return c;
+  }
 }
 
 /**
@@ -43,7 +52,7 @@ export function kittensViewFor(state: KittensState, viewerId: string | null): Ki
     discard: state.discard,
     out: state.out,
     pending: state.pending,
-    choice: choiceView(state.choice),
+    choice: choiceView(state, viewerId),
     peek: peek !== null && peek.who === viewerId ? peek.cards : null,
     peekBy: peek?.who ?? null,
     log: state.log.map(({ n, ev, seenBy }) => ({

@@ -119,6 +119,8 @@ export function applyKittensAction(
             return fail('bad_choice');
           }
           return ok(pickFromDiscard(s, c, action.card));
+        default:
+          return fail('bad_choice');
       }
     }
     case 'play': {

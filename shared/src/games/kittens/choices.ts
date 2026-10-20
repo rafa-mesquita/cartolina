@@ -42,5 +42,7 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
       const options = c.options.filter((x) => s.discard.includes(x));
       return options.length === 0 ? { ...s, choice: null } : pickFromDiscard(s, c, options[randomInt(rng, options.length)]!);
     }
+    default:
+      return { ...s, choice: null };
   }
 }

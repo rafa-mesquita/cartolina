@@ -82,6 +82,7 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   if (c && c.who === p && r() < 0.8) {
     if (c.kind === 'cafune') return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
     if (c.kind === 'favor') return { type: 'choose', card: pick(r, hand) ?? 'ataque-0' };
+    if (c.kind === 'quati') return { type: 'choose', keep: r() < 0.5 };
     return { type: 'choose', card: pick(r, c.options) ?? 'ataque-0' };
   }
   const a = r();
