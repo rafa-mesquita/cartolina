@@ -59,6 +59,12 @@
   .seat.turn { background: rgba(242,193,78,.16); box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow); }
   .seat.turn .who::before { content: '▶ '; color: var(--yellow); }
   .seat.dead { opacity: .55; filter: grayscale(1); }
+  .seat .order { position: absolute; top: -14px; font-family: var(--px); font-size: 9px; padding: 4px 6px; background: rgba(14,14,28,.85); color: var(--dim); }
+  .seat .order.next { background: var(--yellow); color: var(--ink); box-shadow: 2px 2px 0 #050510; animation: nextbob 1s steps(2) infinite; }
+  .seat.next .critter { filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)) drop-shadow(0 0 6px rgba(242,193,78,.7)); }
+  @keyframes nextbob { 50% { transform: translateY(-3px); } }
+  .turnflow { position: absolute; transform: translate(-50%, -50%); font-family: var(--px); font-size: 9px; color: var(--dim); text-shadow: 2px 2px 0 #050510; white-space: nowrap; pointer-events: none; }
+  .turnflow b { font-weight: normal; font-size: 22px; color: var(--yellow); opacity: .8; vertical-align: -4px; }
   .seat.winner { z-index: 45; background: rgba(242,193,78,.25); box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow); }
   .seat.winner .who::before { content: '♛ '; color: var(--yellow); }
   .seat.dead .who::after { content: ' ✝'; }
@@ -110,15 +116,11 @@
   .card.back { background: #1f3a6b; background-image: radial-gradient(#2c5a8c 1.5px, transparent 1.6px); background-size: 10px 10px; justify-content: center; }
   .card.back .art { width: 74px; margin-top: 0; }
   .card.back .name { color: var(--yellow); margin: 10px 0 0; font-size: 9px; text-shadow: 2px 2px 0 var(--ink); }
-  /* Categorias (pedido do Rafa): bomba vermelha, desarme amarelo, pares verde-água, efeitos no creme */
-  .card.cat-bomb { background: #e4572e; color: var(--cream); }
-  .card.cat-bomb .hint { color: #fff3c4; }
-  .card.cat-defuse { background-color: #f2c14e; background-size: 100% 100%; image-rendering: pixelated; }
-  .card.cat-defuse .hint { color: #4a2a08; }
-  .card .art.soldier-art { width: 104px; height: auto; margin-top: 12px; filter: drop-shadow(3px 3px 0 rgba(59,36,18,.35)); }
-  .card.cat-pair { background: #5cc8b8; }
-  .card.cat-pair .hint { color: #1d4f48; }
-  .card .art.flow { width: 96px; height: 96px; margin-top: 8px; image-rendering: auto; }
+  /* Cada carta com o cerrado na cor dela de fundo (pedido do Rafa); nome e frase em tinta escura com contorno claro */
+  .card:not(.back) { background-size: 100% 100%; background-color: var(--paper); }
+  .card:not(.back) .name { text-shadow: 1px 1px 0 rgba(255,255,255,.55); }
+  .card:not(.back) .hint { color: var(--ink); text-shadow: 1px 1px 0 rgba(255,255,255,.45); }
+  .card .art.flow { width: 100px; height: 100px; object-fit: contain; margin-top: 8px; filter: drop-shadow(3px 3px 0 rgba(43,26,16,.3)); }
   .card.flow-back { padding: 0; overflow: hidden; }
   .card.flow-back .back-art { width: 100%; height: 100%; object-fit: cover; }
   .flying { position: absolute; left: 0; top: 0; z-index: 30; pointer-events: none; }
@@ -211,8 +213,14 @@
   .seat .chip.think { background: #3b2412; animation: blink .8s steps(2) infinite; }
 
   /* Zoom de carta (rodinha) */
-  #viewer { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 400px; z-index: 35; pointer-events: none; transform: translate(-50%, -50%) scale(2.4); }
+  #viewer { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 380px; z-index: 35; pointer-events: none; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 34px; }
   #viewer:empty { display: none; }
+  #viewer .vcard { width: 246px; height: 343px; }
+  #viewer .vcard .card { transform: scale(2.2); transform-origin: 0 0; }
+  #viewer .vtext { width: 420px; padding: 20px 22px; background: rgba(14,14,28,.94); box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
+  #viewer .vtext h3 { margin: 0 0 12px; font-family: var(--px); font-weight: normal; font-size: 16px; color: var(--yellow); }
+  #viewer .vtext p { margin: 0; font-family: var(--vt); font-size: 26px; line-height: 1.15; color: var(--txt); }
+  #viewer .vtext b { color: var(--yellow); font-weight: normal; }
 
   /* Galeria das cartas */
   #gallery { position: absolute; inset: 0; z-index: 60; background: rgba(14,14,28,.94); padding: 30px 50px; display: flex; flex-direction: column; gap: 14px; }
@@ -421,36 +429,38 @@ function handRects() {
 }
 
 // ---------------------------------------------------------------- desenho das cartas
-/** Cartas que já têm arte do Flow escolhida pelo Rafa (o resto continua com o sprite provisório). */
-const FLOW_ART = new Set(['tatubum', 'nemvem', 'capivara']);
-/** Cor de fundo por categoria (pedido do Rafa): bomba e desarme chamativos, pares com cor própria, efeitos no creme. */
-const CATEGORY = { tatubum: 'cat-bomb', cafune: 'cat-defuse', capivara: 'cat-pair', mico: 'cat-pair', quati: 'cat-pair', tamandua: 'cat-pair', preguica: 'cat-pair' };
-const CAT_COLOR = { 'cat-bomb': '#e4572e', 'cat-defuse': '#f2c14e', 'cat-pair': '#5cc8b8', 'cat-effect': '#f4e9d0' };
-/** Desarme: fundo de cerrado de dia desenhado em código (uma vez só). */
-let dayBg = null;
-const dayUrl = () => (dayBg ??= Cerrado.day(56, 78, 11));
+/**
+ * Cada carta com a cor dela (pedido do Rafa): o fundo é um cerrado em pixel art nessa cor (desenhado em código) e o
+ * personagem vem recortado por cima. Cores provisórias, pra calibrar vendo na mesa.
+ */
+const CARD_COLOR = {
+  tatubum: '#e4572e', cafune: '#f2c14e', nemvem: '#c86fd4', ataque: '#9aa7bd', pular: '#5aa0e6', favor: '#f29bc0',
+  embaralhar: '#8d7ae6', espiar: '#3fa7c9', capivara: '#5cc8b8', mico: '#f4a259', quati: '#c79a6a', tamandua: '#b0b8c8', preguica: '#a8bf6a',
+};
+/** Cartas com arte do Flow já escolhida (fundo recortado, em art/<tipo>.png); as outras usam o sprite provisório. */
+const FLOW_ART = new Set(['tatubum', 'cafune', 'nemvem', 'capivara']);
+const sceneCache = new Map();
+function sceneUrl(k) {
+  if (!sceneCache.has(k)) sceneCache.set(k, Cerrado.scene(56, 78, 7 + k.length * 13, CARD_COLOR[k]));
+  return sceneCache.get(k);
+}
 
 function cardEl(id, { back = false } = {}) {
   const el = document.createElement('div');
   if (back || !id) {
     el.className = 'card back flow-back';
-    el.innerHTML = `<img class="back-art" src="art/verso.webp" alt="">`;
+    el.innerHTML = '<img class="back-art" src="art/verso.webp" alt="">';
     return el;
   }
   const k = kindOf(id);
   const st = Sprites.style[k];
-  const cat = CATEGORY[k] ?? 'cat-effect';
-  el.className = `card ${k} ${cat}`;
+  el.className = 'card ' + k;
   el.dataset.id = id;
+  el.style.backgroundImage = 'url(' + sceneUrl(k) + ')';
   // A faixa do topo é sempre um tom mais escuro do fundo da carta (pedido do Rafa).
-  const band = Sprites.shade(CAT_COLOR[cat], -0.25);
-  let art;
-  if (k === 'cafune') {
-    el.style.backgroundImage = `url(${dayUrl()})`;
-    art = '<img class="art soldier-art" src="art/soldado.png" alt="">';
-  } else if (FLOW_ART.has(k)) art = `<img class="art flow" src="art/${k}.webp" alt="">`;
-  else art = `<img class="art" src="${Sprites.card(k).url}" alt="">`;
-  el.innerHTML = `<div class="band" style="background:${band}"></div>${art}<div class="name">${cardName(k)}</div><div class="hint">${st.hint}</div>`;
+  const band = Sprites.shade(CARD_COLOR[k], -0.25);
+  const art = FLOW_ART.has(k) ? '<img class="art flow" src="art/' + k + '.png" alt="">' : '<img class="art" src="' + Sprites.card(k).url + '" alt="">';
+  el.innerHTML = '<div class="band" style="background:' + band + '"></div>' + art + '<div class="name">' + cardName(k) + '</div><div class="hint">' + st.hint + '</div>';
   return el;
 }
 
@@ -472,7 +482,8 @@ function renderTop() {
   const v = view;
   if (v.phase !== 'playing' || !v.current) { $('#turn').innerHTML = ''; return; }
   const who = v.current === ME ? '<b>SUA VEZ</b>' : `vez de <b>${nameOf(v.current).toUpperCase()}</b>`;
-  $('#turn').innerHTML = who + (v.owed > 1 ? `<span class="owed">· ${v.owed} TURNOS</span>` : '');
+  const meNext = orderFromCurrent(ME) === 1 ? '<span class="owed">· VOCÊ É O PRÓXIMO</span>' : '';
+  $('#turn').innerHTML = who + (v.owed > 1 ? `<span class="owed">· ${v.owed} TURNOS</span>` : '') + meNext;
 }
 
 function seatPos(i, n) {
@@ -504,6 +515,10 @@ function renderSeats() {
       el.classList.add('targetable');
       el.onclick = () => chooseTarget(p);
     }
+    // Ordem da vez: PRÓXIMO no que joga depois de quem está na vez, número nos outros.
+    const k = orderFromCurrent(p);
+    const order = dead || k < 1 ? '' : k === 1 ? '<div class="order next">PRÓXIMO</div>' : `<div class="order">${k + 1}º</div>`;
+    if (k === 1) el.classList.add('next');
     const n = v.handCounts[p] ?? 0;
     const thinking = v.phase === 'playing' && v.current === p && !dead && !v.pending && !v.choice;
     const chip = v.choice?.who === p ? '<div class="chip">escolhendo…</div>'
@@ -512,7 +527,7 @@ function renderSeats() {
     // Leque de versinhos (até 9) + o número grande: dá pra ver de longe quantas cartas cada um tem.
     const shown = Math.min(n, 9);
     const fan = Array.from({ length: shown }, (_, k) => `<i style="rotate:${(k - (shown - 1) / 2) * 9}deg"></i>`).join('');
-    el.innerHTML = `<img class="tatu critter" alt="">
+    el.innerHTML = `${order}<img class="tatu critter" alt="">
       <div class="who">${nameOf(p)}</div>
       ${dead ? '<div class="count out">FORA</div>' : `<div class="count"><span class="fan">${fan}</span><b>${n}</b></div>`}${chip}`;
     // O bichinho em pixel art fica pronto num instante (e depois vem do cache).
@@ -520,6 +535,31 @@ function renderSeats() {
     Sprites.critter(colorOf(p)).then((url) => { img.src = url; });
     box.appendChild(el);
   });
+  // Setinhas no sentido da vez: você → bots da esquerda pra direita → você de novo.
+  if (v.phase !== 'playing') return;
+  const pts = bots.map((_, i) => seatPos(i, bots.length));
+  const arrow = (x, y, label = '') => {
+    const a = document.createElement('div');
+    a.className = 'turnflow';
+    a.innerHTML = label ? label.replace('›', '<b>›</b>') : '<b>›</b>';
+    a.style.left = x + 'px';
+    a.style.top = y + 'px';
+    box.appendChild(a);
+  };
+  for (let i = 0; i + 1 < pts.length; i++) arrow((pts[i].x + pts[i + 1].x) / 2, (pts[i].y + pts[i + 1].y) / 2 + 40);
+  if (pts.length) {
+    arrow(pts[0].x - 120, pts[0].y + 40, 'VOCÊ ›');
+    arrow(pts[pts.length - 1].x + 120, pts[pts.length - 1].y + 40, '› VOCÊ');
+  }
+}
+
+/** Quantas vezes a vez anda até chegar em `p` (0 = está na vez, 1 = próximo); -1 se fora. */
+function orderFromCurrent(p) {
+  const v = view;
+  if (v.phase !== 'playing' || !v.current || !v.alive.includes(p)) return -1;
+  const ring = players.filter((q) => v.alive.includes(q) || q === v.current);
+  const i = ring.indexOf(v.current);
+  return (ring.indexOf(p) - i + ring.length) % ring.length;
 }
 
 function anchorOf(p) {
@@ -1225,13 +1265,39 @@ function toast(text) {
 }
 
 // ---------------------------------------------------------------- zoom (rodinha, como no Diquisti)
+/**
+ * Explicação completa de cada carta, que aparece no zoom (pedido do Rafa: na mão fica só o básico).
+ * Os 5 bichos usam o mesmo texto (o que importa são os combos).
+ */
+const PAIR_TEXT = 'Sozinho não faz nada: junte cartas iguais.<br><b>PAR</b> (2 iguais): você rouba uma carta ao acaso de um adversário.<br><b>TRIO</b> (3 iguais): você diz o nome de uma carta; se o adversário tiver, tem que te dar.<br><b>5 DIFERENTES</b> (cinco cartas de nomes diferentes): você pega a carta que quiser do descarte.<br>Os combos valem com qualquer carta, não só com bichos, e podem levar Nem vem!.';
+const DETAIL = {
+  tatubum: 'O tatu-bola com o pavio aceso. Comprou esta carta e não tem Desarme? <b>Explodiu</b> e saiu do jogo.<br>Com Desarme, o tatu soldado corta o fio e você esconde o Tatubum de volta no monte, onde quiser.<br>O monte tem sempre um Tatubum a menos que o número de jogadores vivos.',
+  cafune: 'Usado sozinho, na hora em que você compra um Tatubum: o tatu soldado corta o fio e você não explode.<br>Você escolhe <b>em segredo</b> onde o Tatubum volta no monte (no topo, no fundo, em qualquer posição ou ao acaso) e gasta um turno.<br>Não dá pra jogar Desarme fora dessa hora, nem cancelar com Nem vem!.',
+  nemvem: 'Cancela a carta que está no ar, <b>mesmo fora da sua vez</b>.<br>Toda carta jogada fica 5 segundos no ar esperando um Nem vem!, e cada Nem vem! recomeça os 5 segundos.<br>Dá pra dar Nem vem! no Nem vem!: conta quantos foram, número ímpar cancela e par deixa valer.<br>Não cancela o Tatubum nem o Desarme.',
+  ataque: 'Termina a sua vez <b>sem comprar</b>, e o próximo joga <b>2 turnos</b> seguidos.<br>Se você estava sob ataque, passa os turnos que você ainda devia + 2 (2 → 4 → 6…).<br>Pode levar Nem vem!.',
+  pular: 'Termina um turno seu <b>sem comprar</b> carta.<br>Se você estava sob ataque (devendo 2 turnos), gasta só um deles e continua na vez.<br>Pode levar Nem vem!.',
+  favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br>Pode levar Nem vem!.',
+  embaralhar: 'Embaralha o monte inteiro.<br>Bom quando você (ou alguém) espiou e sabe que tem Tatubum em cima, ou quando alguém acabou de esconder um tatu num lugar que você não sabe.<br>Pode levar Nem vem!.',
+  espiar: 'Você vê as <b>3 cartas de cima</b> do monte, na ordem, só você.<br>Elas ficam à mostra ao lado do monte até você comprar, a vez passar ou o monte mudar.<br>Pode levar Nem vem!.',
+};
+const detailOf = (k) => DETAIL[k] ?? PAIR_TEXT;
+
 let zoomed = null;
 function zoom(id) {
   if (id === zoomed) return;
   zoomed = id;
   const v = $('#viewer');
   v.innerHTML = '';
-  if (id) { v.appendChild(cardEl(id)); Sound.play('zoom'); }
+  if (!id) return;
+  const k = kindOf(id);
+  const big = document.createElement('div');
+  big.className = 'vcard';
+  big.appendChild(cardEl(id));
+  const txt = document.createElement('div');
+  txt.className = 'vtext';
+  txt.innerHTML = `<h3>${cardName(k)}</h3><p>${detailOf(k)}</p>`;
+  v.append(big, txt);
+  Sound.play('zoom');
 }
 stage.addEventListener('wheel', (e) => {
   const card = e.target.closest('.card[data-id]');
