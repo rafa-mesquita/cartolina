@@ -247,7 +247,11 @@
 
 /* ---------- o gesto: acertos ---------- */
 /* o `.card` global do ITO (table/table.css) põe margin negativa em toda carta: aqui ela fica no lugar
-   (as pilhas seguem com o margin-top próprio, que é mais específico) */
-.camelio .card{margin:0}
+   (as pilhas seguem com o margin-top próprio, que é mais específico); e nada de camada 3D/will-change em cada carta */
+.camelio .card{margin:0;left:auto;top:auto;will-change:auto;transform-style:flat}
+/* o `.seat` global do ITO é flex em linha com z-index 4: aqui o assento é bloco (cabeçalho em cima, pilhas embaixo)
+   e sem contexto de empilhamento (o holofote `.turn::before`, z -1, fica atrás do fundo do assento, como no protótipo) */
+.camelio .seat{display:block;align-items:normal;gap:0;z-index:auto}
+.camelio .cl-mine .seat{display:flex;align-items:stretch;gap:24px}
 /* carta levantada com o mouse em cima continua levantada (no protótipo o :hover não ganhava do .picked) */
 .camelio [data-pile].picked:hover .lift{transform:translateY(-14px)}
