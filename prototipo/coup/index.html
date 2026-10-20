@@ -30,7 +30,6 @@ header h1{margin:0;font:400 44px/1 var(--disp);letter-spacing:.04em}
 #score{margin-left:auto;font-size:15px;letter-spacing:.03em;color:var(--ink-soft);white-space:nowrap}
 #score em{font-style:normal;color:var(--ink);font-weight:500}
 .icon-btn{width:40px;height:40px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font-size:20px;line-height:1;display:grid;place-items:center;padding:0}
-.icon-btn:hover{background:#fff}
 
 main{flex:1;min-height:0;display:flex}
 #table{flex:1;min-width:0;padding:18px 24px 20px;display:flex;flex-direction:column;gap:16px}
@@ -71,7 +70,6 @@ main{flex:1;min-height:0;display:flex}
 .opp.turn{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
 .opp.out{opacity:.45}
 .opp.aim{cursor:pointer;animation:aim 1s ease-in-out infinite}
-.opp.aim:hover{background:#fff}
 @keyframes aim{0%,100%{box-shadow:0 0 0 2px var(--red)}50%{box-shadow:0 0 0 6px rgba(200,49,43,.35)}}
 
 /* ---------- palco ---------- */
@@ -95,9 +93,7 @@ main{flex:1;min-height:0;display:flex}
 #secs{font:400 26px/1 var(--disp);min-width:28px;text-align:right}
 #reacts{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
 .react{min-width:190px;min-height:64px;padding:0 30px;border:2px solid var(--ink);border-radius:5px;background:var(--paper);font:500 22px/1 var(--ui);letter-spacing:.06em;text-transform:uppercase}
-.react:hover{background:#fff}
 .react.red{background:var(--red);color:#fff}
-.react.red:hover{background:#d93d37}
 .wait{font-size:19px;letter-spacing:.04em;color:var(--ink-soft);min-height:64px;display:flex;align-items:center}
 .passed{font-size:15px;letter-spacing:.03em;color:var(--ink-soft)}
 
@@ -115,6 +111,18 @@ main{flex:1;min-height:0;display:flex}
 @keyframes flip{from{transform:perspective(600px) rotateY(90deg)}to{transform:perspective(600px) rotateY(0)}}
 .stamp{padding:8px 22px 4px;border:4px solid var(--red);border-radius:6px;color:var(--red);font:400 64px/1 var(--disp);letter-spacing:.1em;transform:rotate(-12deg);animation:stamp .3s cubic-bezier(.2,1.6,.4,1) both;animation-delay:.25s}
 @keyframes stamp{from{opacity:0;transform:rotate(-12deg) scale(1.8)}to{opacity:1;transform:rotate(-12deg) scale(1)}}
+/* com janela aberta pra você: faixa compacta no alto (a declaração, a barra e os botões seguem visíveis e clicáveis) */
+#moment.band{inset:0 0 auto 0;flex-direction:row;flex-wrap:wrap;gap:6px 16px;padding:8px 16px;border-bottom:2px solid var(--ink);border-radius:3px 3px 0 0;background:var(--paper);pointer-events:none;animation-name:bandIn}
+@keyframes bandIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+#moment.band.bye{animation:momOut .25s ease-in forwards}
+#moment.band .mt{font-size:28px}
+#moment.band .mt2,#moment.band .ms{font-size:22px}
+#moment.band .ms.ink{font-size:14px}
+#moment.band .row{gap:12px}
+#moment.band .card.l{width:30px;height:42px;gap:0}
+#moment.band .card.l i{font-size:17px}
+#moment.band .card.l em{display:none}
+#moment.band .stamp{font-size:22px;padding:3px 8px 1px;border-width:3px}
 
 /* ---------- sua área ---------- */
 #me{flex:none;height:212px;position:relative;border:2px solid var(--ink);border-radius:5px;background:var(--paper);padding:20px 22px;display:flex;gap:28px}
@@ -125,7 +133,6 @@ main{flex:1;min-height:0;display:flex}
 #myLine .tag{font:400 13px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
 #acts{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .act{position:relative;border:2px solid var(--ink);border-radius:4px;background:var(--cream);text-align:left;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;gap:4px}
-.act:hover{background:#fff}
 .act .an{font:500 18px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase}
 .act small{font-size:12.5px;line-height:1.15;color:var(--ink-soft)}
 .act.sel{background:var(--ink);color:var(--paper)}
@@ -149,12 +156,10 @@ main{flex:1;min-height:0;display:flex}
 .pickc{width:104px;height:146px;padding:0;gap:8px}
 .pickc i{font-size:30px}
 .pickc em{font-size:19px}
-.pickc:hover{background:#fff}
 .pickc.on{box-shadow:0 0 0 3px var(--red);border-color:var(--red)}
 .pickc .new{position:absolute;top:6px;left:50%;transform:translateX(-50%);padding:2px 6px;border-radius:3px;background:var(--red);color:#fff;font:500 10px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase}
 .btn{padding:12px 22px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font:500 18px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase}
 .btn.red{background:var(--red);color:#fff}
-.btn.red:hover{background:#d93d37}
 .btn:disabled{opacity:.35;cursor:default}
 .btn.huge{padding:20px 36px;font-size:24px}
 
@@ -182,24 +187,127 @@ main{flex:1;min-height:0;display:flex}
 #toast{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);padding:10px 20px;border:2px solid var(--ink);border-radius:4px;background:var(--ink);color:var(--paper);font:500 16px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 #toast.on{opacity:1}
 
-/* celular: provisório, só empilha (o layout em pé de verdade vem na Task 4) */
-body.mobile{overflow:auto;height:auto}
-body.mobile #app{position:relative;left:auto;top:auto;width:auto;height:auto;transform:none;min-height:100vh}
-body.mobile header{padding:0 12px;height:56px}
-body.mobile header h1{font-size:34px}
-body.mobile #score{display:none}
+/* a faixa do momento não cobre a declaração: o palco desce o conteúdo enquanto ela aparece */
+#stage:has(#moment.band:not([hidden])){padding-top:78px}
+
+/* só no celular */
+#lastLine,#logClose,#scrim,#rotate{display:none}
+@media (hover:hover){.opp.aim:hover,.act:not(:disabled):not(.sel):hover,.react:hover,.pickc:hover,.icon-btn:hover{background:#fff}.react.red:hover,.btn.red:not(:disabled):hover{background:#d93d37}}
+
+/* ---------- celular em pé: sem palco fixo, layout fluido da altura da tela ---------- */
+body.mobile #app{position:fixed;inset:0;width:auto;height:100vh;height:100dvh;transform:none;background:linear-gradient(var(--red) 0 5px,var(--cream) 5px)}
+body.mobile header{height:50px;margin-top:5px;padding:0 8px 0 12px;gap:6px}
+body.mobile header h1{font-size:28px}
+body.mobile #score{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;min-width:0}
+body.mobile .icon-btn{width:44px;height:44px;font-size:19px}
 body.mobile main{flex-direction:column}
-body.mobile #table{padding:10px}
-body.mobile #opps{flex-wrap:wrap}
-body.mobile .opp{width:auto;flex:1 1 30%}
-body.mobile #stage{min-height:300px;padding:40px 12px 16px}
-body.mobile .clock{width:100%}
-body.mobile #me{height:auto;flex-direction:column}
-body.mobile #acts{grid-template-columns:1fr 1fr}
-body.mobile #panel{position:fixed;inset:auto 0 0 0;flex-direction:column;align-items:stretch}
-body.mobile #panel .pick{flex-wrap:wrap}
-body.mobile #logbox{width:auto;border-left:0;border-top:2px solid var(--ink);max-height:300px}
-body.mobile #dev{right:8px;left:8px;width:auto;top:66px}
+body.mobile #table{padding:8px 8px calc(8px + env(safe-area-inset-bottom));gap:8px}
+/* oponentes: grade de até 5 colunas */
+body.mobile #opps{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(0,1fr));gap:6px}
+body.mobile .opp{width:auto;min-height:72px;padding:6px 2px 5px;gap:4px;border-radius:4px}
+body.mobile .opp .nm{font-size:13px;flex-direction:column;align-items:center;gap:1px}
+body.mobile .opp .tag{font-size:8.5px;letter-spacing:.06em}
+body.mobile .opp .hand{gap:3px}
+body.mobile .card.s{width:16px;height:22px;border-width:1.5px;border-radius:2px}
+body.mobile .card.s em{display:none}
+body.mobile .card.s i,body.mobile .card.s.dead i{font-size:11px}
+body.mobile .card.s.dead::after{opacity:.7}
+body.mobile .opp .coins{font-size:13px;gap:2px}
+body.mobile .opp .coins i{font-size:13px}
+body.mobile .opp .coins.gone{font-size:10px;letter-spacing:.08em}
+body.mobile .opp.turn{box-shadow:0 0 0 1px var(--red)}
+/* última linha do diário: toque abre a folha */
+body.mobile #lastLine{display:flex;align-items:center;gap:8px;flex:none;min-height:44px;padding:6px 10px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);text-align:left;font-size:14px;line-height:1.2}
+#lastLine .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#lastLine .txt::first-letter{text-transform:uppercase}
+#lastLine .more{flex:none;font:400 16px/1 var(--disp);letter-spacing:.06em;color:var(--ink-soft)}
+/* palco: ocupa o que sobra */
+body.mobile #stage{padding:30px 10px 12px;gap:12px}
+body.mobile #stage:has(#moment.band:not([hidden])){padding-top:64px}
+body.mobile #stage .corner{top:7px;font-size:10.5px;gap:4px}
+body.mobile #stage .corner em{font-size:18px}
+body.mobile #stage .corner i{font-size:14px}
+body.mobile #treasury{left:9px}
+body.mobile #deck{right:9px}
+body.mobile .big{font-size:36px}
+body.mobile .big.mid{font-size:26px}
+body.mobile .sub{font-size:14px}
+body.mobile .sub button{display:inline-block;min-height:44px;padding:0 6px}
+body.mobile #decl{font-size:24px}
+body.mobile #decl small{font-size:14px}
+body.mobile .clock{width:100%;gap:8px}
+body.mobile #secs{font-size:22px}
+body.mobile #reacts{width:100%;gap:8px}
+body.mobile .react{flex:1 1 130px;min-width:0;min-height:52px;padding:0 12px;font-size:18px}
+body.mobile .wait{font-size:16px;min-height:52px}
+body.mobile .passed{font-size:12.5px}
+body.mobile #moment{gap:10px;padding:10px}
+body.mobile #moment .mt{font-size:40px}
+body.mobile #moment .mt2{font-size:30px}
+body.mobile #moment .ms{font-size:20px}
+body.mobile #moment .ms.ink{font-size:14px}
+body.mobile #moment .card.l{width:64px;height:90px;gap:6px}
+body.mobile #moment .card.l i{font-size:22px}
+body.mobile #moment .card.l em{font-size:14px}
+body.mobile .stamp{font-size:36px;padding:5px 12px 2px;border-width:3px}
+body.mobile #moment.band{padding:6px 10px;gap:4px 10px}
+body.mobile #moment.band .mt{font-size:22px}
+body.mobile #moment.band .mt2,body.mobile #moment.band .ms{font-size:17px}
+body.mobile #moment.band .ms.ink{font-size:12px}
+body.mobile #moment.band .card.l{width:22px;height:30px}
+body.mobile #moment.band .card.l i{font-size:13px}
+body.mobile #moment.band .card.l em{display:none}
+body.mobile #moment.band .stamp{font-size:17px;padding:2px 6px 0;border-width:2px}
+/* sua mão + ações 4×2 */
+body.mobile #me{height:auto;flex:none;padding:8px;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:8px 10px;align-items:end}
+body.mobile #myRight{display:contents}
+body.mobile #myHand{grid-column:1;grid-row:1;gap:6px;align-items:flex-end}
+body.mobile #myLine{grid-column:2;grid-row:1;align-self:end;font-size:22px;flex-direction:column;align-items:flex-start;gap:4px}
+body.mobile #myLine .tag{font-size:10.5px;letter-spacing:.08em}
+body.mobile #myHand .card.l{width:64px;height:90px;gap:6px}
+body.mobile #myHand .card.l i{font-size:24px}
+body.mobile #myHand .card.l em{font-size:12.5px}
+body.mobile #myHand .card.m{width:44px;height:62px;gap:3px}
+body.mobile #myHand .card.m i{font-size:16px}
+body.mobile #myHand .card.m em{font-size:10px}
+body.mobile #acts{grid-column:1 / -1;grid-row:2;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+body.mobile .act{min-height:46px;padding:4px 5px;align-items:center;text-align:center;gap:0}
+body.mobile .act .an{font-size:12.5px;line-height:1.1;letter-spacing:.03em}
+body.mobile .act small{display:none}
+body.mobile .act .has{right:3px;top:3px;font-size:0;gap:0}
+body.mobile .act .has::before{width:7px;height:7px}
+/* painéis (perder carta, troca, fim) e diário: folhas que sobem de baixo */
+body.mobile #panel,body.mobile #logbox{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;z-index:20;border:2px solid var(--ink);border-bottom:0;border-radius:12px 12px 0 0;box-shadow:0 -6px 0 rgba(29,26,23,.12);animation:sheetUp .25s ease-out}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+body.mobile #panel{inset:auto 0 0 0;max-height:85dvh;overflow:auto;flex-direction:column;align-items:stretch;gap:14px;padding:16px 14px calc(16px + env(safe-area-inset-bottom))}
+body.mobile #panel h3{font-size:30px}
+body.mobile #panel h3.win{font-size:34px}
+body.mobile #panel p{font-size:15px}
+body.mobile #panel .pick{order:2;justify-content:center;gap:8px}
+body.mobile #panel .info .btn{order:3}
+body.mobile #panel .score em{font-size:22px}
+body.mobile .pickc{width:76px;height:106px;gap:6px}
+body.mobile .pickc i{font-size:22px}
+body.mobile .pickc em{font-size:14px}
+body.mobile #panel .info{display:contents}
+body.mobile #panel .info > *{order:1}
+body.mobile #panel .btn{min-height:50px;width:100%}
+body.mobile #panel .btn.huge{font-size:22px}
+body.mobile #panel > .btn{order:4}
+body.mobile #logbox{height:72dvh;border-left:2px solid var(--ink);display:none}
+body.mobile.logopen #logbox{display:flex}
+body.mobile #logbox h2{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 8px 16px}
+body.mobile #logClose{display:block;min-height:44px;padding:0 14px;border:2px solid var(--ink);border-radius:4px;background:var(--paper);font:500 15px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase}
+body.mobile #log{font-size:15px}
+body.mobile.logopen #scrim{display:block;position:fixed;inset:0;z-index:19;background:rgba(29,26,23,.35)}
+body.mobile #dev{position:fixed;left:8px;right:8px;top:62px;width:auto;max-height:80dvh;overflow:auto}
+body.mobile #dev .opts button{min-height:40px;min-width:40px}
+body.mobile #dev .wide{min-height:44px}
+body.mobile #toast{position:fixed;bottom:auto;top:64px;white-space:normal;max-width:90vw;text-align:center}
+/* celular deitado */
+body.rotate #app{display:none}
+body.rotate #rotate{display:flex;position:fixed;inset:0;z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--cream);text-align:center;font:400 34px/1 var(--disp);letter-spacing:.05em}
+body.rotate #rotate i{font-size:48px;color:var(--red)}
 </style>
 </head>
 <body>
@@ -225,6 +333,7 @@ body.mobile #dev{right:8px;left:8px;width:auto;top:66px}
   <main>
     <section id="table">
       <div id="opps"></div>
+      <button id="lastLine" data-do="logopen" aria-label="abrir o diário"><span class="txt"></span><span class="more">diário ›</span></button>
       <div id="stage">
         <div class="corner" id="treasury"></div>
         <div class="corner" id="deck"></div>
@@ -240,10 +349,12 @@ body.mobile #dev{right:8px;left:8px;width:auto;top:66px}
         <div id="panel" hidden></div>
       </div>
     </section>
-    <aside id="logbox"><h2>diário</h2><ol id="log"></ol></aside>
+    <aside id="logbox"><h2>diário<button id="logClose" data-do="logclose">fechar</button></h2><ol id="log"></ol></aside>
   </main>
   <div id="toast"></div>
+  <div id="scrim" data-do="logclose"></div>
 </div>
+<div id="rotate"><i class="ti ti-device-mobile-rotated"></i>vira o celular em pé</div>
 <script src="rules.js"></script>
 <script src="texts.js"></script>
 <script src="bots.js"></script>
@@ -281,9 +392,18 @@ const joinE = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(',
 
 /* ---------- escala do palco 1440×900 ---------- */
 const mobileQ = matchMedia('(max-width: 640px)');
+/** Celular deitado: só um aviso (o jogo é pensado em pé). */
+const rotateQ = matchMedia('(orientation: landscape) and (max-height: 500px) and (hover: none)');
+let wasMobile = null;
 function fit() {
   const mobile = mobileQ.matches;
   document.body.classList.toggle('mobile', mobile);
+  document.body.classList.toggle('rotate', rotateQ.matches);
+  if (mobile !== wasMobile) {
+    wasMobile = mobile;
+    if (!mobile) document.body.classList.remove('logopen');
+    if (typeof state !== 'undefined' && state) render(view()); // placar curto/longo
+  }
   if (mobile) { app.style.width = ''; app.style.transform = ''; return; }
   let sc = innerHeight / 900, w = innerWidth / sc;
   if (w < 1440) { sc = innerWidth / 1440; w = 1440; }
@@ -291,6 +411,8 @@ function fit() {
   app.style.transform = `translate(-50%,-50%) scale(${sc})`;
 }
 addEventListener('resize', fit);
+mobileQ.addEventListener('change', fit);
+rotateQ.addEventListener('change', fit);
 fit();
 
 /** Igual ao servidor: o schema das ações valida antes das regras. */
@@ -374,6 +496,7 @@ function opponents(v) {
 
 function renderOpps(v) {
   const aimable = aiming ? v.can.targets : [];
+  $('#opps').style.setProperty('--cols', Math.min(5, Math.max(1, v.players.length - 1)));
   $('#opps').innerHTML = opponents(v).map((s) => {
     const cls = ['opp', v.turn === s.id && v.phase !== 'over' ? 'turn' : '', s.out ? 'out' : '', aimable.includes(s.id) ? 'aim' : ''].join(' ');
     let hidden;
@@ -487,6 +610,7 @@ function renderLog(v) {
   box.innerHTML = lines.map((s, i) => `<li${i === lines.length - 1 ? ' class="last"' : ''}>${s}</li>`).join('');
   if (atEnd || box.dataset.match !== String(v.match)) box.scrollTop = box.scrollHeight;
   box.dataset.match = String(v.match);
+  $('#lastLine .txt').innerHTML = lines.length ? lines[lines.length - 1] : '';
 }
 
 /** "placar da noite: Bia 2 · você 1" (só quem já ganhou alguma). */
@@ -502,13 +626,23 @@ function scoreChips(v) {
   return '<span>placar da noite</span>' + order.map((p) => `<em class="${best > 0 && (v.wins[p] || 0) === best ? 'lead' : ''}">${nm(p)} ${v.wins[p] || 0}</em>`).join('');
 }
 
+/** Celular: só o seu placar e o do líder. */
+function scoreShort(v) {
+  const w = (p) => v.wins[p] || 0;
+  const lead = [...v.players].sort((a, b) => w(b) - w(a))[0];
+  const parts = [`<em>você ${w(ME)}</em>`];
+  if (lead && lead !== ME && w(lead) > w(ME)) parts.push(`<em>${nm(lead)} ${w(lead)}</em>`);
+  return 'placar ' + parts.join(' · ');
+}
+
 function render(v) {
   renderOpps(v);
   renderStage(v);
   renderMe(v);
   renderPanel(v);
   renderLog(v);
-  $('#score').innerHTML = scoreText(v);
+  $('#score').innerHTML = mobileQ.matches ? scoreShort(v) : scoreText(v);
+  syncMomentMode();
 }
 
 /** Barra dos 10 s, a cada quadro. A visão não tem relógio: passou o prazo, a mesa esconde os botões (o servidor responderia window_closed). */
@@ -550,11 +684,16 @@ function momentHTML(e) {
 function showMoment() {
   const el = $('#moment');
   if (momentTimer || !moments.length) return;
-  el.className = ''; el.innerHTML = momentHTML(moments.shift()); el.hidden = false;
+  el.className = ''; el.innerHTML = momentHTML(moments.shift()); el.hidden = false; syncMomentMode();
   momentTimer = setTimeout(() => {
     el.classList.add('bye');
     momentTimer = setTimeout(() => { momentTimer = 0; el.hidden = true; el.innerHTML = ''; showMoment(); }, 250);
   }, MOMENT_MS - 250);
+}
+/** Com uma janela em que você pode reagir, o momento vira uma faixa no alto do palco (não tira tempo da janela). */
+function syncMomentMode() {
+  const v = state ? view() : null;
+  $('#moment').classList.toggle('band', !!v && v.phase === 'reaction' && v.can.pass);
 }
 function clearMoments() { moments.length = 0; clearTimeout(momentTimer); momentTimer = 0; const el = $('#moment'); el.hidden = true; el.innerHTML = ''; }
 
@@ -573,9 +712,11 @@ function narrate(v) {
       case 'blocked': moments.push(e); break;
       case 'lose': snd.push('lose'); break;
       case 'out': moments.push(e); break;
-      case 'win': snd.push('win'); break;
+      case 'win': snd.push(e.player === ME ? 'win' : 'end'); break;
     }
   }
+  // acabou: o painel do fim já conta tudo, os momentos na fila (o "fora" do último) não aparecem por cima
+  if (v.phase === 'over') clearMoments();
   const myTurn = v.phase === 'turn' && v.turn === ME;
   if (myTurn && !seen.myTurn) snd.push('turn');
   seen.myTurn = myTurn;
@@ -630,6 +771,8 @@ app.addEventListener('click', (e) => {
       break;
     }
     case 'restart': restart(); break;
+    case 'logopen': document.body.classList.add('logopen'); $('#log').scrollTop = $('#log').scrollHeight; break;
+    case 'logclose': document.body.classList.remove('logopen'); break;
   }
 });
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && aiming) { aiming = null; render(view()); } });

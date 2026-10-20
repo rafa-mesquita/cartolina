@@ -55,6 +55,8 @@
     lose: (c) => { noise(c, { dur: .1, vol: .07, freq: 1500, freqTo: 700, q: .8 }); tone(c, { f: NOTE(57), t: .04, dur: .4, type: 'triangle', vol: .08, glideTo: NOTE(52) }); },
     /** moedas entrando: tilintar curto */
     coin: (c) => { tone(c, { f: NOTE(93), dur: .14, vol: .05, attack: .002, partial: 2.7 }); tone(c, { f: NOTE(98), t: .06, dur: .2, vol: .05, attack: .002, partial: 2.7 }); },
+    /** fim da partida quando outro venceu: uma nota só, neutra */
+    end: (c) => tone(c, { f: NOTE(64), dur: .7, type: 'triangle', vol: .07, partial: 2 }),
     win: (c) => [72, 76, 79, 84].forEach((n, i) => tone(c, { f: NOTE(n), t: i * .1, dur: .55, type: 'triangle', vol: .1, partial: 2 })),
     error: (c) => { tone(c, { f: 130, dur: .22, vol: .11, glideTo: 85 }); noise(c, { dur: .06, vol: .035, freq: 400 }); },
   };
