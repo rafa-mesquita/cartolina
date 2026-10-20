@@ -1,27 +1,30 @@
 'use strict';
 /**
  * window.Anim.play(prev, next, opts) → Promise que resolve quando a jogada `next.last` terminou de aparecer.
- * `prev` é a view desenhada (antes da jogada), `next` a de depois. Durante a animação o DOM ainda é o de `prev`.
- * Usa: #deck e #open (origem), .seat[data-pid] e .stack[data-color] (destino), window.play (sons).
- * Não muda estado de jogo; só cria elementos temporários (um `.fly` dentro do #app) e os remove antes de resolver.
+ * `prev` = view desenhada (o DOM ainda é o dela), `next` = view de depois. Não muda estado de jogo.
  *
- * opts (todos opcionais):
- *   nameOf(p)    → nome pro letreiro (padrão: o próprio id).
- *   say(html)    → troca o texto do letreiro (o setBanner do index, que faz o fade); sem ele, escreve no #banner .txt.
- *   dropFrom     → { x, y, from }: canto de cima (no palco) do clone do arrasto na hora da soltura. Se `from` bate
- *                  com a jogada, a carta nasce ali, ainda inclinada como no arrasto; senão nasce na origem.
- *   layout(p, n) → { w, gap, pad }: largura da carta, espaço entre pilhas e padding lateral da pilha (os dois lados)
- *                  na mesa de `p` com `n` cores. Com ele a carta de cor nova pousa onde vai ficar e as outras
- *                  pilhas abrem (ou fecham) espaço; sem ele vale o tamanho que está desenhado.
+ * opts (opcionais):
+ *   nameOf(p)    → nome pro letreiro.
+ *   say(html)    → troca o letreiro (o setBanner do index); sem ele, escreve no #banner .txt.
+ *   dropFrom     → { x, y, from } em coordenadas do palco: canto de cima do clone do arrasto na soltura
+ *                  (a carta nasce ali, inclinada, se `from` bate com a jogada; senão nasce na origem).
+ *   layout(p, n) → { w, gap, pad }: carta, espaço entre pilhas e padding lateral (somado) da mesa de `p` com `n` cores.
  *
- * window.Anim.stop(): interrompe a animação em curso (partida nova): tira tudo e resolve a Promise dela.
+ * Globais: CamaLeao (camelioCard, CAMELIO_COLORS, CAMELIO_EXACT), CardArt (front, back, HEX), narrate, play (sons).
+ * Lê: #app (palco), #deck/#open .lift > .card (origem), .seat[data-pid] (dentro de #mine = a sua mesa), .stacks,
+ *   .stack[data-color] > .pile, .sum, .head .flags .flag[data-color], .fans .fan[data-color].
+ * Cria uma camada `.fly` no #app; esconde e anima elementos reais da mesa e desfaz tudo antes de resolver.
+ * Teto de 4 s: se a animação não terminar (aba em segundo plano não faz quadros), encerra e resolve assim mesmo.
+ * window.Anim.stop(): encerra a animação em curso (partida nova); a Promise dela resolve.
  *
- * Tempos: voo 450ms (vira nos últimos 200 se veio do monte), pausa 200, e aí o resultado:
- * none +220 (≈0,87 s), scored +300 brilho +450 subida (≈1,4 s), bust/lost +240 tremida +450 queda (≈1,34 s).
+ * Tempos: voo 450ms (vira nos últimos 200 se veio do monte), pausa 200, e o resultado:
+ * none +220 (≈0,9 s), scored +300 brilho +450 subida (≈1,45 s), bust/lost +240 tremida +450 queda (≈1,4 s).
  */
 (function () {
   const FLY_MS = 450, FLIP_MS = 200, PAUSE_MS = 200;
   const BOUNCE_MS = 220, GLOW_MS = 300, RISE_MS = 450, SHAKE_MS = 240, FALL_MS = 450, POP_MS = 200;
+  /** Teto: a mais longa leva ~1,45 s; sem quadros (aba escondida) o `finished` pode nunca chegar. */
+  const WATCHDOG_MS = 4000;
   const EASE = 'cubic-bezier(.2,.8,.2,1)';
   const SHADOW = '0 1px 3px rgba(31,42,74,.35)'; // a de .card (cards.css)
   const LIFTED = '0 0 0 3px #e8b23a,0 22px 38px rgba(31,42,74,.42),0 6px 12px rgba(31,42,74,.25)'; // a do .drag-clone
@@ -80,6 +83,8 @@
         },
       };
       current = run;
+      // o jogo não pode ficar preso em `animating`: passou do teto, encerra do jeito que estiver
+      run.timers.push(setTimeout(() => { if (run.alive) console.warn('virada passou do teto de tempo; encerrada'); run.end(); }, WATCHDOG_MS));
       try {
         sequence(prev, next, opts, run).then(() => run.end(), (err) => run.end(err));
       } catch (err) { run.end(err); }
@@ -146,7 +151,9 @@
         const b = box(el), first = el.querySelector('.card');
         const k = first ? S.lay.w / widthOf(first) : 1;
         if (Math.abs(to.x - b.x) < 0.5 && Math.abs(k - 1) < 0.01) return;
+        const origin = el.style.transformOrigin;
         el.style.transformOrigin = '0 0';
+        run.undo.push(() => { el.style.transformOrigin = origin; });
         run.goReal(el, [{ transform: 'none' }, { transform: `translate(${to.x - b.x}px,${to.y - b.y}px) scale(${k})` }], { duration: ms, easing });
       });
     }
@@ -255,7 +262,7 @@
       sound(last.outcome);
       const falling = [ghost];
       if (last.outcome === 'lost') {
-        const fl = seat.querySelector(`.flag[title="pontuou o ${card.color}"]`);
+        const fl = seat.querySelector(`.flag[data-color="${card.color}"]`);
         if (fl) falling.push(pinFlat(fl, run));
         const fan = mine && seat.querySelector(`.fan[data-color="${card.color}"]`);
         if (fan) falling.push(pinFlat(fan, run));

@@ -346,7 +346,7 @@ function newGame() {
 const sumOf = (cards, color) => cards.reduce((n, c) => (c.color === color ? n + c.spheres : n), 0);
 /** Cores pontuadas, na ordem em que entraram na área de pontos. */
 const scoredColors = (cards) => [...new Set(cards.map((c) => c.color))];
-const flag = (color) => `<span class="flag" style="--c:${CardArt.HEX[color]}" title="pontuou o ${color}" aria-label="pontuou o ${color}"></span>`;
+const flag = (color) => `<span class="flag" data-color="${color}" style="--c:${CardArt.HEX[color]}" title="pontuou o ${color}" aria-label="pontuou o ${color}"></span>`;
 const ptsTxt = (n) => `${n} ${n === 1 ? 'ponto' : 'pontos'}`;
 const list = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}`);
 
