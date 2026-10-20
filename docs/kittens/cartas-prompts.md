@@ -1,6 +1,27 @@
 # Cartas do Tatubum: prompts (Google Flow, Nano Banana 2.1) — rascunho pro Plano T3
 
-Rascunho de 2026-10-19, ainda **não gerado**. Identidade: pixel art, paleta "noite no cerrado" (spec §5.4).
+## Decisões do Rafa (2026-10-19, lote de teste)
+
+- **Projeto no Flow:** https://flow.google.com/project/ce2b408e-ef7b-4a34-a82d-5837a7bf831a (só do Tatubum;
+  Imagem, 1:1, x2).
+- **Cartas com arte do Flow; efeitos do jogo continuam em código** (o BUM e a tela tremendo foram aprovados).
+- **Cor de fundo por categoria** (a cor vai no prompt e no fundo da carta): **Tatubum** vermelho-alaranjado
+  `#e4572e`; **desarme** amarelo de alerta `#f2c14e`; **bichos dos pares** verde-água `#5cc8b8`; **cartas de
+  efeito** (Nem vem!, Ataque, Pular, Favor, Embaralhar, Espiar) todas no creme `#f4e9d0`.
+- **Desarme** (era o "Cafuné" da mão fazendo carinho): **tatu das Forças Armadas** (capacete verde com a
+  bandeira, colete camuflado) com alicate corta-fio. No jogo, a mesma arte recortada vira o soldadinho que
+  entra andando pela mesa e corta o fio do Tatubum (`prototipo/tatubum/art/soldado.png`).
+- **Escolhidas:** Tatubum = B do lote vermelho; Nem vem! = B (creme); Capivara = A (verde-água); **capa e
+  verso** = o tatu-bola enrolado no céu estrelado com a lua (A) — já é a capa da estante. Desarme: A ou B
+  ainda a escolher. Artes provisórias no protótipo: `prototipo/tatubum/art/*.webp`.
+- Prompts que funcionaram (fim trocando a cor do fundo):
+  - Tatubum: `…curled into a tight ball, a lit fuse… bright yellow sparks… small pixel explosion stars around it… on a flat solid bright red-orange background (#e4572e)…`
+  - Desarme: `a small brown three-banded armadillo soldier of the Brazilian armed forces, wearing an olive green military helmet and a camouflage vest, holding a big pair of red wire cutters about to cut a wire, focused and brave face, a few bomb disposal tools hanging from its belt… on a flat solid bright warning-yellow background (#f2c14e)…`
+  - Capivara: o da tabela abaixo, com `on a flat solid aqua-green background (#5cc8b8)`.
+
+## Rascunho original
+
+Rascunho de 2026-10-19. Identidade: pixel art, paleta "noite no cerrado" (spec §5.4).
 A arte entra no meio da carta (o nome e a frase são desenhados pelo site), num quadro **1:1**.
 
 Configuração sugerida no Flow: **Imagem**, **1:1**, **x2** (como no Diquisti, o Rafa dá coração na que fica).

@@ -289,8 +289,9 @@ protótipo:
 - **Embaralhar:** as cartas do monte saltam e trocam de lugar.
 - **Espiar:** pra quem jogou, as 3 de cima levantam e brilham; pros outros, um olho pisca no monte.
 - **Favor / par / trio:** a carta voa de uma mão pra outra (de verso pra quem não pode ver).
-- **Tatubum comprado:** a carta treme, o pavio solta faíscas; com Cafuné, coraçõezinhos de pixel e
-  o tatu se acalma; sem Cafuné, **BUM** com explosão de partículas, tela tremendo e flash.
+- **Tatubum comprado:** a carta treme, o pavio solta faíscas; com o desarme, **o tatu soldado (arte da
+  carta de desarme, recortada) entra andando pela mesa, corta o fio com o alicate (faísca + "clic") e sai
+  andando** — pedido do Rafa, aprovado no protótipo; o painel de esconder o tatu só abre depois; sem Cafuné, **BUM** com explosão de partículas, tela tremendo e flash.
 - **Vitória:** fogos de pixel em cima do vencedor.
 - **Fundo:** estrelas piscando, vaga-lumes e nuvens andando (§5.4).
 
