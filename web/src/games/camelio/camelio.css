@@ -22,3 +22,11 @@
 .camelio .card .num{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46%;aspect-ratio:1;border-radius:50%;
   background:#f7efe0;color:#1f2a4a;display:grid;place-items:center;font:500 calc(var(--w) * .3)/1 'Fredoka',system-ui,sans-serif;
   box-shadow:0 0 0 2px #1f2a4a}
+
+/* ---- A virada (anim.ts): camada por cima da mesa enquanto a jogada aparece ---- */
+.camelio .cl-fly{position:absolute;inset:0;z-index:55;pointer-events:none}
+.camelio .cl-fly>*{position:absolute;left:0;top:0;margin:0}
+.camelio .fly-card{transform-origin:0 0;will-change:transform}
+.camelio .fly-flip{position:relative;transform-style:preserve-3d}
+.camelio .fly-face{position:absolute;left:0;top:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.camelio .fly-face.front{transform:rotateY(180deg)}
