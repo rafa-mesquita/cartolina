@@ -74,6 +74,8 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     }
     const quati = byKind.get('quati');
     if (quati && quati.length >= 2) return { cards: quati.slice(0, 2) };
+    const tamandua = byKind.get('tamandua');
+    if (tamandua && tamandua.length >= 2) return { cards: tamandua.slice(0, 2) };
   }
   const attack = first('ataque');
   if (g.owed >= 2 && attack && rng() < 0.8) return { cards: [attack] };
@@ -100,8 +102,8 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
       options.push({ cards: pair });
     }
   }
-  // Trio de qualquer carta: rouba um Desarme.
-  for (const list of byKind.values()) if (list.length >= 3 && rng() < 0.5) options.push({ cards: list.slice(0, 3) });
+  // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme.
+  for (const [k, list] of byKind) if (k !== 'cafune' && list.length >= 3 && rng() < 0.5) options.push({ cards: list.slice(0, 3) });
   const distinct = BICHOS.filter((b) => byKind.get(b)?.length);
   if (distinct.length === 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.map((b) => byKind.get(b)![0]!) });
   return options.length ? pickOne(rng, options) : null;

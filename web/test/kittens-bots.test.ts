@@ -174,7 +174,7 @@ describe('decisão do bot do Tatubum', () => {
     const lazy = play(['preguica-0', 'preguica-1']);
     expect(lazy).toMatchObject({ type: 'play', cards: ['preguica-0', 'preguica-1'] });
     expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica']).toContain((lazy as { ask: string }).ask);
-    expect(play(['cafune-0', 'cafune-1', 'cafune-2'])).toEqual({ type: 'play', cards: ['cafune-0', 'cafune-1', 'cafune-2'] });
+    expect(play(['nemvem-0', 'nemvem-1', 'nemvem-2'])).toEqual({ type: 'play', cards: ['nemvem-0', 'nemvem-1', 'nemvem-2'] });
   });
 
   it('numa partida inteira simulada, o que ele manda é aceito pelo servidor (jogar, Nem vem!, escolher, comprar) e nunca é ação de host', () => {

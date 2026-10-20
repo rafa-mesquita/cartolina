@@ -34,6 +34,7 @@
     if (top === 'tatubum') {
       for (const k of ['ataque', 'pular', 'embaralhar']) if (has(k)) return { cards: [has(k)] };
       if ((byKind.quati?.length ?? 0) >= 2) return { cards: byKind.quati.slice(0, 2) };
+      if ((byKind.tamandua?.length ?? 0) >= 2) return { cards: byKind.tamandua.slice(0, 2) };
     }
     if (v.owed >= 2 && has('ataque') && Math.random() < 0.8) return { cards: [has('ataque')] };
     if (mem.playedThisTurn >= 2 || Math.random() > 0.5) return null;
@@ -51,8 +52,8 @@
       else if (b === 'preguica') options.push({ cards: pair, ask: pick(BICHOS) });
       else options.push({ cards: pair });
     }
-    // Trio de qualquer carta: rouba um Desarme.
-    for (const list of Object.values(byKind)) if (list.length >= 3 && Math.random() < 0.5) options.push({ cards: list.slice(0, 3) });
+    // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme.
+    for (const [k, list] of Object.entries(byKind)) if (k !== 'cafune' && list.length >= 3 && Math.random() < 0.5) options.push({ cards: list.slice(0, 3) });
     const distinct = BICHOS.filter((b) => byKind[b]?.length);
     if (distinct.length === 5 && v.discard.length && Math.random() < 0.5) options.push({ cards: distinct.map((b) => byKind[b][0]) });
     return options.length ? pick(options) : null;
