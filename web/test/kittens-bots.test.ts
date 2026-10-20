@@ -159,6 +159,24 @@ describe('decisão do bot do Tatubum', () => {
     expect(decideKittens(v, mem, () => 0)!.action).toEqual({ type: 'draw' });
   });
 
+  it('escolha do Quati: manda Tatubum pro fundo e deixa o resto', () => {
+    const choice = (card: string) => ({ kind: 'quati' as const, who: 'p1', deadline: 9000, card });
+    const tatu = p1View([], { current: 'p1', choice: choice('tatubum-0') });
+    expect(decideKittens(tatu, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', keep: false });
+    const calm = p1View([], { current: 'p1', choice: choice('pular-0') });
+    expect(decideKittens(calm, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', keep: true });
+  });
+
+  it('par de Capivara vai sem alvo; par de Preguiça pede um bicho; trio vai sem alvo', () => {
+    const base = viewOf(started(3), 'p0');
+    const play = (hand: string[]) => decideKittens(withGame(base, { hand, peek: null, owed: 1 }), newKittensMemory(), () => 0)!.action;
+    expect(play(['capivara-0', 'capivara-1'])).toEqual({ type: 'play', cards: ['capivara-0', 'capivara-1'] });
+    const lazy = play(['preguica-0', 'preguica-1']);
+    expect(lazy).toMatchObject({ type: 'play', cards: ['preguica-0', 'preguica-1'] });
+    expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica']).toContain((lazy as { ask: string }).ask);
+    expect(play(['cafune-0', 'cafune-1', 'cafune-2'])).toEqual({ type: 'play', cards: ['cafune-0', 'cafune-1', 'cafune-2'] });
+  });
+
   it('numa partida inteira simulada, o que ele manda é aceito pelo servidor (jogar, Nem vem!, escolher, comprar) e nunca é ação de host', () => {
     const seen = new Set<string>();
     for (let seed = 1; seed <= 60; seed++) {

@@ -24,7 +24,6 @@ const RETRY_MS = 4000;
 
 type Rng = () => number;
 const BICHOS: readonly KittensCardKind[] = ['capivara', 'mico', 'quati', 'tamandua', 'preguica'];
-const ASKS: readonly KittensCardKind[] = ['cafune', 'nemvem', 'ataque'];
 
 /** O que o bot já decidiu (ele mesmo guarda; vive enquanto a partida dura). */
 export interface KittensBotMemory {
@@ -73,6 +72,8 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
       const c = first(k);
       if (c) return { cards: [c] };
     }
+    const quati = byKind.get('quati');
+    if (quati && quati.length >= 2) return { cards: quati.slice(0, 2) };
   }
   const attack = first('ataque');
   if (g.owed >= 2 && attack && rng() < 0.8) return { cards: [attack] };
@@ -89,12 +90,18 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
   if (favor && targets.length) options.push({ cards: [favor], target: pickOne(rng, targets) });
   for (const b of BICHOS) {
     const list = byKind.get(b) ?? [];
-    if (list.length >= 3 && targets.length && rng() < 0.5) {
-      options.push({ cards: list.slice(0, 3), target: pickOne(rng, targets), ask: pickOne(rng, ASKS) });
-    } else if (list.length >= 2 && targets.length) {
-      options.push({ cards: list.slice(0, 2), target: pickOne(rng, targets) });
+    if (list.length < 2) continue;
+    const pair = list.slice(0, 2);
+    if (b === 'mico') {
+      if (targets.length) options.push({ cards: pair, target: pickOne(rng, targets) });
+    } else if (b === 'preguica') {
+      options.push({ cards: pair, ask: pickOne(rng, BICHOS) });
+    } else {
+      options.push({ cards: pair });
     }
   }
+  // Trio de qualquer carta: rouba um Desarme.
+  for (const list of byKind.values()) if (list.length >= 3 && rng() < 0.5) options.push({ cards: list.slice(0, 3) });
   const distinct = BICHOS.filter((b) => byKind.get(b)?.length);
   if (distinct.length === 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.map((b) => byKind.get(b)![0]!) });
   return options.length ? pickOne(rng, options) : null;
@@ -121,7 +128,11 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
       const cheap = g.hand.filter((x) => BICHOS.includes(kittensKindOf(x) as KittensCardKind));
       return { key, delay: between(rng, 1000, 2000), action: { type: 'choose', card: pickOne(rng, cheap.length ? cheap : g.hand) } };
     }
-    if (c.kind === 'quati') return { key, delay: between(rng, 900, 1600), action: { type: 'choose', keep: true } };
+    if (c.kind === 'quati') {
+      // Fica, a não ser que a de cima seja Tatubum: aí vai pro fundo.
+      const keep = c.card === null || kittensKindOf(c.card) !== 'tatubum';
+      return { key, delay: between(rng, 900, 1600), action: { type: 'choose', keep } };
+    }
     if (!c.options.length) return null;
     const pref: KittensCardKind[] = ['cafune', 'nemvem', 'ataque', 'pular', 'espiar'];
     const best = pref.map((k) => c.options.find((x) => kittensKindOf(x) === k)).find(Boolean) ?? pickOne(rng, c.options);

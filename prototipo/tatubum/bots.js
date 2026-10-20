@@ -33,6 +33,7 @@
     // Espiou e o de cima é tatu: foge.
     if (top === 'tatubum') {
       for (const k of ['ataque', 'pular', 'embaralhar']) if (has(k)) return { cards: [has(k)] };
+      if ((byKind.quati?.length ?? 0) >= 2) return { cards: byKind.quati.slice(0, 2) };
     }
     if (v.owed >= 2 && has('ataque') && Math.random() < 0.8) return { cards: [has('ataque')] };
     if (mem.playedThisTurn >= 2 || Math.random() > 0.5) return null;
@@ -44,12 +45,14 @@
     if (has('favor') && tgs.length) options.push({ cards: [has('favor')], target: pick(tgs) });
     for (const b of BICHOS) {
       const list = byKind[b] ?? [];
-      if (list.length >= 3 && tgs.length && Math.random() < 0.5) {
-        options.push({ cards: list.slice(0, 3), target: pick(tgs), ask: pick(['cafune', 'nemvem', 'ataque']) });
-      } else if (list.length >= 2 && tgs.length) {
-        options.push({ cards: list.slice(0, 2), target: pick(tgs) });
-      }
+      if (list.length < 2) continue;
+      const pair = list.slice(0, 2);
+      if (b === 'mico') { if (tgs.length) options.push({ cards: pair, target: pick(tgs) }); }
+      else if (b === 'preguica') options.push({ cards: pair, ask: pick(BICHOS) });
+      else options.push({ cards: pair });
     }
+    // Trio de qualquer carta: rouba um Desarme.
+    for (const list of Object.values(byKind)) if (list.length >= 3 && Math.random() < 0.5) options.push({ cards: list.slice(0, 3) });
     const distinct = BICHOS.filter((b) => byKind[b]?.length);
     if (distinct.length === 5 && v.discard.length && Math.random() < 0.5) options.push({ cards: distinct.map((b) => byKind[b][0]) });
     return options.length ? pick(options) : null;
@@ -73,6 +76,11 @@
         if (c.kind === 'favor') {
           const cheap = hand.filter((x) => BICHOS.includes(kind(x)));
           return { action: { type: 'choose', card: pick(cheap.length ? cheap : hand) }, delay: between(1000, 2000) };
+        }
+        if (c.kind === 'quati') {
+          // Fica, a não ser que a de cima seja Tatubum: aí vai pro fundo.
+          const keep = !c.card || kind(c.card) !== 'tatubum';
+          return { action: { type: 'choose', keep }, delay: between(900, 1600) };
         }
         const pref = ['cafune', 'nemvem', 'ataque', 'pular', 'espiar'];
         const best = pref.map((k) => c.options.find((x) => kind(x) === k)).find(Boolean) ?? pick(c.options);
