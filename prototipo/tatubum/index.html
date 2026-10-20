@@ -113,8 +113,9 @@
   /* Categorias (pedido do Rafa): bomba vermelha, desarme amarelo, pares verde-água, efeitos no creme */
   .card.cat-bomb { background: #e4572e; color: var(--cream); }
   .card.cat-bomb .hint { color: #fff3c4; }
-  .card.cat-defuse { background: #f2c14e; }
-  .card.cat-defuse .hint { color: #5a3a10; }
+  .card.cat-defuse { background-color: #f2c14e; background-size: 100% 100%; image-rendering: pixelated; }
+  .card.cat-defuse .hint { color: #4a2a08; }
+  .card .art.soldier-art { width: 104px; height: auto; margin-top: 12px; filter: drop-shadow(3px 3px 0 rgba(59,36,18,.35)); }
   .card.cat-pair { background: #5cc8b8; }
   .card.cat-pair .hint { color: #1d4f48; }
   .card .art.flow { width: 96px; height: 96px; margin-top: 8px; image-rendering: auto; }
@@ -421,9 +422,13 @@ function handRects() {
 
 // ---------------------------------------------------------------- desenho das cartas
 /** Cartas que já têm arte do Flow escolhida pelo Rafa (o resto continua com o sprite provisório). */
-const FLOW_ART = new Set(['tatubum', 'cafune', 'nemvem', 'capivara']);
+const FLOW_ART = new Set(['tatubum', 'nemvem', 'capivara']);
 /** Cor de fundo por categoria (pedido do Rafa): bomba e desarme chamativos, pares com cor própria, efeitos no creme. */
 const CATEGORY = { tatubum: 'cat-bomb', cafune: 'cat-defuse', capivara: 'cat-pair', mico: 'cat-pair', quati: 'cat-pair', tamandua: 'cat-pair', preguica: 'cat-pair' };
+const CAT_COLOR = { 'cat-bomb': '#e4572e', 'cat-defuse': '#f2c14e', 'cat-pair': '#5cc8b8', 'cat-effect': '#f4e9d0' };
+/** Desarme: fundo de cerrado de dia desenhado em código (uma vez só). */
+let dayBg = null;
+const dayUrl = () => (dayBg ??= Cerrado.day(56, 78, 11));
 
 function cardEl(id, { back = false } = {}) {
   const el = document.createElement('div');
@@ -434,10 +439,18 @@ function cardEl(id, { back = false } = {}) {
   }
   const k = kindOf(id);
   const st = Sprites.style[k];
-  el.className = `card ${k} ${CATEGORY[k] ?? 'cat-effect'}`;
+  const cat = CATEGORY[k] ?? 'cat-effect';
+  el.className = `card ${k} ${cat}`;
   el.dataset.id = id;
-  const art = FLOW_ART.has(k) ? `<img class="art flow" src="art/${k}.webp" alt="">` : `<img class="art" src="${Sprites.card(k).url}" alt="">`;
-  el.innerHTML = `<div class="band" style="background:${st.band}"></div>${art}<div class="name">${cardName(k)}</div><div class="hint">${st.hint}</div>`;
+  // A faixa do topo é sempre um tom mais escuro do fundo da carta (pedido do Rafa).
+  const band = Sprites.shade(CAT_COLOR[cat], -0.25);
+  let art;
+  if (k === 'cafune') {
+    el.style.backgroundImage = `url(${dayUrl()})`;
+    art = '<img class="art soldier-art" src="art/soldado.png" alt="">';
+  } else if (FLOW_ART.has(k)) art = `<img class="art flow" src="art/${k}.webp" alt="">`;
+  else art = `<img class="art" src="${Sprites.card(k).url}" alt="">`;
+  el.innerHTML = `<div class="band" style="background:${band}"></div>${art}<div class="name">${cardName(k)}</div><div class="hint">${st.hint}</div>`;
   return el;
 }
 
@@ -911,7 +924,7 @@ function rawText(ev, prevPending) {
       }[ev.play];
     }
     case 'draw': return ev.card ? `Você comprou ${cardName(kindOf(ev.card))}` : `${n(ev.by)} comprou uma carta`;
-    case 'cafune': return `${n(ev.by)} comprou o TATUBUM… e fez CAFUNÉ!`;
+    case 'cafune': return `${n(ev.by)} comprou o TATUBUM… e o DESARME salvou!`;
     case 'hid': return `${n(ev.by)} escondeu o tatu no monte`;
     case 'boom': return `${n(ev.by)} EXPLODIU!`;
     case 'left': return `${n(ev.by)} caiu e saiu do jogo`;
@@ -1229,8 +1242,8 @@ stage.addEventListener('wheel', (e) => {
 
 // ---------------------------------------------------------------- galeria das cartas
 const ABOUT = {
-  tatubum: 'Comprou e não tem Cafuné? Explodiu, tá fora. Tem sempre um a menos que o número de jogadores.',
-  cafune: 'Usado na hora em que você compra o Tatubum: o tatu volta pro monte onde você quiser, em segredo.',
+  tatubum: 'Comprou e não tem Desarme? Explodiu, tá fora. Tem sempre um a menos que o número de jogadores.',
+  cafune: 'O tatu soldado corta o fio na hora em que você compra o Tatubum: o tatu volta pro monte onde você quiser, em segredo.',
   nemvem: 'Cancela a carta no ar, mesmo fora da sua vez. Dá pra dar Nem vem! no Nem vem!.',
   ataque: 'Termina sua vez sem comprar. O próximo joga 2 turnos (ou os seus + 2, se você estava sob ataque).',
   pular: 'Termina um turno seu sem comprar.',

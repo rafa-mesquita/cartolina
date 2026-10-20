@@ -19,7 +19,8 @@ export type KittensCardKind = (typeof KITTENS_CARD_KINDS)[number];
 /** Nome que o jogador vê. */
 export const KITTENS_CARD_NAMES: Record<KittensCardKind, string> = {
   tatubum: 'Tatubum',
-  cafune: 'Cafuné',
+  // Id interno `cafune` (o nome antigo); na tela é Desarme: o tatu das Forças Armadas (pedido do Rafa, 2026-10-19).
+  cafune: 'Desarme',
   nemvem: 'Nem vem!',
   ataque: 'Ataque',
   pular: 'Pular',

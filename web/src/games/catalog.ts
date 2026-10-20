@@ -60,7 +60,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
     tagline: 'compre do monte e torça pra não vir o tatu',
     rules: [
       'Todo mundo compra do mesmo monte, e lá dentro tem tatus-bola com o pavio aceso.',
-      'Comprou o Tatubum sem ter Cafuné? Explodiu, tá fora. Com Cafuné, você esconde o tatu de volta onde quiser.',
+      'Comprou o Tatubum sem ter Desarme? Explodiu, tá fora. Com Desarme, você esconde o tatu de volta onde quiser.',
       'Na sua vez, jogue quantas cartas quiser (Ataque, Pular, Espiar, Favor…) e termine comprando. Nem vem! cancela qualquer jogada.',
       'Quem sobrar vivo vence.',
     ],

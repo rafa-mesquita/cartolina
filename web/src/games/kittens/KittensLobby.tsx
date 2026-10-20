@@ -119,7 +119,7 @@ export function KittensLobby({ view, conn }: { view: KittensRoomView; conn: Game
         <section className="kt-panel">
           <h2>PARTIDA</h2>
           <p>
-            Todo mundo compra do mesmo monte. Quem comprar o Tatubum sem Cafuné explode. De {KITTENS_MIN_PLAYERS} a {KITTENS_MAX_PLAYERS}{' '}
+            Todo mundo compra do mesmo monte. Quem comprar o Tatubum sem Desarme explode. De {KITTENS_MIN_PLAYERS} a {KITTENS_MAX_PLAYERS}{' '}
             pessoas.
           </p>
           <div className="kt-row">

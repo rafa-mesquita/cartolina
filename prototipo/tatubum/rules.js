@@ -55,7 +55,8 @@ var Tatubum = (() => {
   ];
   var KITTENS_CARD_NAMES = {
     tatubum: "Tatubum",
-    cafune: "Cafun\xE9",
+    // Id interno `cafune` (o nome antigo); na tela é Desarme: o tatu das Forças Armadas (pedido do Rafa, 2026-10-19).
+    cafune: "Desarme",
     nemvem: "Nem vem!",
     ataque: "Ataque",
     pular: "Pular",

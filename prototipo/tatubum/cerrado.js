@@ -107,9 +107,60 @@
     return Array.from({ length: w }, (_, i) => Math.round(3 + Math.sin((i / w) * Math.PI) * 4 + (R() < 0.3 ? 1 : 0)));
   }
 
+  /**
+   * Cerrado de DIA, amarelado, pro fundo da carta Desarme (pedido do Rafa): céu em faixas com pontilhado, sol,
+   * morros, árvores tortas e capim, no mesmo molde do fundo noturno. Devolve a URL da imagem (cw×ch pixels).
+   */
+  function day(cw, ch, seed) {
+    const c = document.createElement('canvas');
+    c.width = cw;
+    c.height = ch;
+    const g = c.getContext('2d');
+    const R = rngOf(seed);
+    const px = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
+    const band = (y0, y1, c1, c2) => {
+      for (let y = y0; y < y1; y++) {
+        const f = (y - y0) / Math.max(1, y1 - y0);
+        for (let x = 0; x < cw; x++) px(x, y, B[y % 4][x % 4] / 16 < f ? c2 : c1);
+      }
+    };
+    const horizon = Math.round(ch * 0.58);
+    band(0, Math.round(horizon * 0.45), '#fff4c2', '#ffe58a');
+    band(Math.round(horizon * 0.45), horizon, '#ffe58a', '#f7c64e');
+    // sol
+    const sx = cw - 12, sy = 11;
+    for (let y = -6; y <= 6; y++) for (let x = -6; x <= 6; x++) if (x * x + y * y <= 36) px(sx + x, sy + y, x * x + y * y > 25 ? '#ffe9a0' : '#fffbe6');
+    // morros ao longe
+    for (let x = 0; x < cw; x++) {
+      const h = Math.round(4 + Math.sin(x / 9) * 2 + Math.sin(x / 4) * 1);
+      for (let y = 0; y < h; y++) px(x, horizon - y, '#d9a843');
+    }
+    // árvores tortas de copa achatada
+    const tree = (x, base, h, col, cw2) => {
+      let tx = x;
+      for (let y = 0; y < h; y++) {
+        if (R() < 0.35) tx += R() < 0.5 ? -1 : 1;
+        px(tx, base - y, col);
+      }
+      for (let r = 0; r < 3; r++) {
+        const half = Math.round(cw2 / 2 - (r === 0 ? 1 : 0) - R());
+        for (let i = -half; i <= half; i++) if (R() < 0.9) px(tx + i, base - h - r + 1, col);
+      }
+    };
+    for (let i = 0; i < Math.max(2, Math.round(cw / 14)); i++) tree(Math.floor(R() * cw), horizon, 6 + Math.floor(R() * 6), '#a87a2a', 8 + Math.floor(R() * 6));
+    // chão
+    band(horizon + 1, ch, '#e8ad3e', '#d39532');
+    for (let i = 0; i < cw * 1.5; i++) {
+      const x = Math.floor(R() * cw), y0 = horizon + 2 + Math.floor(R() * (ch - horizon - 2)), h = 1 + Math.floor(R() * 3);
+      for (let j = 0; j < h; j++) px(x, y0 - j, '#b8802a');
+    }
+    return c.toDataURL();
+  }
+
   let timer = null;
 
   window.Cerrado = {
+    day,
     /** Desenha e anima o cerrado em `canvas` (288×180). A mesma `seed` dá o mesmo cerrado. */
     start(canvas, seed = 7, width = 288) {
       this.stop();
