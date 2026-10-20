@@ -53,10 +53,26 @@ interface Play {
   cards: string[];
   target?: string;
   ask?: KittensCardKind;
+  as?: KittensCardKind;
+}
+
+/** Par de `b` (com as cartas dadas): Preguiça pede um bicho; `as` só no par de 2 Botos. */
+function pairOf(cards: string[], b: KittensCardKind, rng: Rng, botos: boolean): Play {
+  return { cards, ...(botos ? { as: b } : {}), ...(b === 'preguica' ? { ask: pickOne(rng, BICHOS) } : {}) };
+}
+
+/** Às cegas (Mau-olhado): de vez em quando arrisca 1 ou 2 fichas ao acaso (o servidor recusa se não formar jogada). */
+function blindPlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng): Play | null {
+  if (mem.playedThisTurn >= 1 || !g.hand.length || rng() > 0.15) return null;
+  const n = Math.min(g.hand.length, rng() < 0.7 ? 1 : 2);
+  const tokens = [...g.hand].sort(() => rng() - 0.5).slice(0, n);
+  const opponents = g.alive.filter((p) => p !== me);
+  return { cards: tokens, target: pickOne(rng, opponents), ask: pickOne(rng, BICHOS), as: pickOne(rng, BICHOS) };
 }
 
 /** Uma jogada possível com a mão (ou null). */
 function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng): Play | null {
+  if (g.blind.includes(me)) return blindPlay(g, me, mem, rng);
   const byKind = new Map<KittensCardKind, string[]>();
   for (const c of g.hand) {
     const k = kittensKindOf(c);
@@ -79,32 +95,45 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
   }
   const attack = first('ataque');
   if (g.owed >= 2 && attack && rng() < 0.8) return { cards: [attack] };
+  // Tatu Latidor: solta sempre que pode (quem tiver o outro se defende; ninguém tem, fica na frente).
+  const bark = first('latido');
+  if (bark && mem.playedThisTurn < 2 && rng() < 0.9) return { cards: [bark] };
   if (mem.playedThisTurn >= 2 || rng() > 0.5) return null;
   const options: Play[] = [];
   const spy = first('espiar');
   const shuffle = first('embaralhar');
   const skip = first('pular');
   const favor = first('favor');
+  const curse = first('olhado');
+  const spell = first('feitico');
+  const opponents = g.alive.filter((p) => p !== me);
   if (spy && !g.peek) options.push({ cards: [spy] });
   if (shuffle && rng() < 0.4) options.push({ cards: [shuffle] });
   if (attack && rng() < 0.5) options.push({ cards: [attack] });
   if (skip && rng() < 0.25) options.push({ cards: [skip] });
   if (favor && targets.length) options.push({ cards: [favor], target: pickOne(rng, targets) });
+  if (curse && opponents.length) options.push({ cards: [curse], target: pickOne(rng, opponents) });
+  if (spell && rng() < 0.4) options.push({ cards: [spell] });
+  const botos = byKind.get('boto') ?? [];
   for (const b of BICHOS) {
     const list = byKind.get(b) ?? [];
-    if (list.length < 2) continue;
-    const pair = list.slice(0, 2);
-    if (b === 'mico') {
-      // Sem alvo: os outros descartam uma carta (só vale a pena se alguém tiver carta).
-      if (targets.length) options.push({ cards: pair });
-    } else if (b === 'preguica') {
-      options.push({ cards: pair, ask: pickOne(rng, BICHOS) });
-    } else {
-      options.push({ cards: pair });
-    }
+    // Par do bicho; sem par, um Boto completa.
+    const pair = list.length >= 2 ? list.slice(0, 2) : list.length === 1 && botos.length ? [list[0]!, botos[0]!] : null;
+    if (!pair) continue;
+    // Par de Mico sem alvo: os outros descartam uma carta (só vale a pena se alguém tiver carta).
+    if (b !== 'mico' || targets.length) options.push(pairOf(pair, b, rng, false));
   }
-  // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme.
+  // Dois Botos: par do bicho que o bot quiser (nunca Mico sem ninguém com carta).
+  if (botos.length >= 2) {
+    const b = pickOne(rng, targets.length ? BICHOS : BICHOS.filter((x) => x !== 'mico'));
+    options.push(pairOf(botos.slice(0, 2), b, rng, true));
+  }
+  // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme; o Boto completa um par de bicho.
   for (const [k, list] of byKind) if (k !== 'cafune' && list.length >= 3 && rng() < 0.5) options.push({ cards: list.slice(0, 3) });
+  if (botos.length && rng() < 0.3) {
+    const two = BICHOS.find((b) => (byKind.get(b)?.length ?? 0) === 2);
+    if (two) options.push({ cards: [...byKind.get(two)!, botos[0]!] });
+  }
   const distinct = BICHOS.filter((b) => byKind.get(b)?.length);
   if (distinct.length === 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.map((b) => byKind.get(b)![0]!) });
   return options.length ? pickOne(rng, options) : null;
@@ -115,13 +144,18 @@ function keepValue(card: string, hand: readonly string[]): number {
   const k = kittensKindOf(card);
   if (k && BICHOS.includes(k)) return hand.filter((x) => kittensKindOf(x) === k).length >= 2 ? 1 : 0;
   switch (k) {
+    case 'boto':
+      return 1; // coringa: um pouco melhor que bicho sozinho
     case 'espiar':
     case 'embaralhar':
+    case 'feitico':
       return 2;
     case 'favor':
     case 'pular':
+    case 'olhado':
       return 3;
     case 'ataque':
+    case 'latido':
       return 4;
     case 'nemvem':
       return 5;
@@ -173,10 +207,16 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
       const cheap = g.hand.filter((x) => BICHOS.includes(kittensKindOf(x) as KittensCardKind));
       return { key, delay: between(rng, 1000, 2000), action: { type: 'choose', card: pickOne(rng, cheap.length ? cheap : g.hand) } };
     }
-    if (c.kind === 'quati') {
-      // Fica, a não ser que a de cima seja Tatubum: aí vai pro fundo.
+    if (c.kind === 'quati' || c.kind === 'feitico') {
+      // Quati: fica, a não ser que a de cima seja Tatubum (aí vai pro fundo). Feitiço: fica com a de baixo, a não ser
+      // que seja Tatubum (aí vai pro topo).
       const keep = c.card === null || kittensKindOf(c.card) !== 'tatubum';
       return { key, delay: between(rng, 900, 1600), action: { type: 'choose', keep } };
+    }
+    if (c.kind === 'latido') {
+      // Tatu Latidor: joga o Desarme (às cegas, qualquer ficha: o servidor acha o Desarme).
+      const card = g.blind.includes(me) ? g.hand[0] : g.hand.find((x) => kittensKindOf(x) === 'cafune');
+      return card ? { key, delay: between(rng, 1200, 2200), action: { type: 'choose', card } } : null;
     }
     if (!c.options.length) return null;
     const pref: KittensCardKind[] = ['cafune', 'nemvem', 'ataque', 'pular', 'espiar'];
