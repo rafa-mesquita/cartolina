@@ -131,6 +131,19 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cap{font:500 13px/1 var(--ui);color:var(--navy-soft);white-space:nowrap}
 .cap b{color:var(--navy);font-weight:600}
 
+/* ---------- o arrasto ---------- */
+#deck,#open{touch-action:none}
+#deck.can .lift,#open.can .lift{cursor:grab}
+/* a carta de origem fica apagadinha enquanto o clone viaja (e enquanto ele volta) */
+#deck.dragging .lift,#open.dragging .lift{opacity:.35;transform:none !important}
+#app.drag-on,#app.drag-on *{cursor:grabbing !important}
+/* o clone: fora segue o ponteiro (translate), dentro levanta e gira */
+.drag-clone{position:absolute;left:0;top:0;z-index:60;pointer-events:none;will-change:transform}
+.drag-clone.snap{transition:transform .11s ease-out}
+.drag-clone .tilt{transform:rotate(-4deg) scale(1.06);animation:pickup .14s ease-out}
+.drag-clone .card{box-shadow:0 0 0 3px var(--gold),0 22px 38px rgba(31,42,74,.42),0 6px 12px rgba(31,42,74,.25)}
+@keyframes pickup{from{transform:none}}
+
 /* ---------- letreiro (caixa parada; o texto troca com fade) ---------- */
 #banner{position:absolute;left:50%;top:332px;width:720px;height:46px;margin-left:-360px;z-index:5;border-radius:12px;padding:0 24px;
   display:grid;place-items:center;font:500 17px/1 var(--ui);color:var(--cream);white-space:nowrap;overflow:hidden;
@@ -187,7 +200,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     <div class="col">online (clique pra derrubar ou trazer de volta)<div class="opts online" id="optO"></div></div>
     <button class="wide" id="newBtn">nova partida</button>
     <a class="link" href="cartas.html" target="_blank" rel="noopener">ver as cartas</a>
-    <p>Protótipo descartável: as regras são as reais (as mesmas do servidor), os bots só olham a view, como um jogador. Por enquanto a jogada é por clique: escolha a aberta ou o monte, depois a mesa de alguém (Esc desfaz).</p>
+    <p>Protótipo descartável: as regras são as reais (as mesmas do servidor), os bots só olham a view, como um jogador. A jogada é arrastando a aberta ou a do monte até a mesa de alguém (a sua também vale), ou por clique: escolha a carta, depois a mesa (Esc desfaz).</p>
   </div>
   <div id="seats"></div>
   <div id="ring"><div id="deck"></div><div id="open"></div></div>
@@ -264,6 +277,8 @@ function presence() { const next = CamaLeao.camelioOnPresenceChange(state, ctx()
 
 /** Toda mudança passa aqui: jogada nova anima a partir do que está desenhado; o resto só redesenha. */
 function changed() {
+  // a vez acabou no meio do arrasto (pausa, partida nova): a carta volta pro lugar
+  if (drag && !canPlay()) cancelDrag();
   if (animating) return; // o fim da animação chama changed() de novo
   const v = view();
   const fresh = shown && v.last && v.match === shown.match && v.playCount === shown.playCount + 1;
@@ -305,6 +320,7 @@ function scheduleBot(v) {
 
 function newGame() {
   gameEpoch++;
+  killDrag();
   cancelBot(); picked = null; animating = false; shown = null; prevTurn = null; hoverPid = null;
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
   online = new Set(ids);
@@ -326,7 +342,7 @@ function seatClass(v, p) {
   if (p === ME) c += ' me';
   if (v.phase === 'playing' && v.turn === p) c += ' turn';
   if (!online.has(p)) c += ' off';
-  if (picked && canReceive(p)) { c += ' target'; if (hoverPid === p) c += ' hover'; }
+  if ((picked || dragging()) && canReceive(p)) { c += ' target'; if (hoverPid === p) c += ' hover'; }
   return c;
 }
 
@@ -393,6 +409,8 @@ function renderRing(v) {
   deck.classList.toggle('picked', picked === 'deck');
   open.classList.toggle('can', can && !!v.open);
   open.classList.toggle('picked', picked === 'open');
+  deck.classList.toggle('dragging', dimmed === 'deck');
+  open.classList.toggle('dragging', dimmed === 'open');
   const unders = Math.min(2, Math.max(0, v.deckCount - 1));
   const under = Array.from({ length: unders }, (_, i) => { const d = (unders - i) * 2; return `<span class="under" style="transform:translate(${d}px,${d}px)"></span>`; }).join('');
   deck.innerHTML = `<div class="slot">${under}${v.top ? `<div class="lift">${CardArt.back(v.top, 92)}</div>` : '<div class="none"></div>'}</div>`
@@ -438,7 +456,11 @@ function hint(v) {
   }
   if (v.phase !== 'playing') return 'preparando a partida…';
   if (v.paused) return 'pausado: esperando a galera voltar';
-  if (v.turn === ME) return picked ? `agora a mesa de alguém (a sua também vale) · <b>Esc</b> desfaz` : '<b>sua vez:</b> escolha uma carta e depois a mesa de alguém';
+  if (v.turn === ME) {
+    if (dragging()) return 'solte na mesa de alguém (a sua também vale) · <b>Esc</b> desfaz';
+    if (picked) return 'agora a mesa de alguém (a sua também vale) · <b>Esc</b> desfaz';
+    return '<b>sua vez:</b> arraste uma carta até a mesa de alguém (ou clique nela e depois na mesa)';
+  }
   return `vez de <b>${nameOf(v.turn)}</b>`;
 }
 
@@ -449,7 +471,7 @@ function render(v, { keepBanner = false } = {}) {
   if (!keepBanner) setBanner(hint(v));
 }
 
-/* ---------- o clique (gesto mínimo; o arrasto chega na Task 4) ---------- */
+/* ---------- o clique (o gesto mínimo; o principal é o arrasto, logo abaixo) ---------- */
 function canPlay() { return !animating && state && state.phase === 'playing' && !state.paused && state.turn === ME; }
 function canReceive(p) { return state.players.includes(p) && online.has(p); }
 /** Clica na aberta ou no monte: levanta a carta (clicar de novo solta). */
@@ -465,10 +487,16 @@ function dropOn(p) {
   const from = picked; picked = null;
   act(ME, { type: 'play', from, to: p });
 }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && picked) { picked = null; render(shown); } });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (dragging()) { cancelDrag(); return; }
+  if (picked) { picked = null; render(shown); }
+});
 
 app.addEventListener('click', (e) => {
   if (e.target.closest('#top, #dev')) return;
+  // o clique que o navegador manda no fim de um arrasto de verdade não é um clique
+  if (suppressClick) { suppressClick = false; return; }
   if (e.target.closest('#deck')) { pick('deck'); return; }
   if (e.target.closest('#open')) { pick('open'); return; }
   const seat = e.target.closest('.seat[data-pid]');
@@ -481,10 +509,146 @@ function setHover(pid) {
   app.querySelectorAll('.seat[data-pid]').forEach((el) => el.classList.toggle('hover', el.dataset.pid === pid));
 }
 app.addEventListener('mouseover', (e) => {
+  if (drag) return; // no arrasto quem cuida do destaque é o pointermove
   const seat = e.target.closest('.seat[data-pid]');
   setHover(picked && seat && canReceive(seat.dataset.pid) ? seat.dataset.pid : null);
 });
-app.addEventListener('mouseleave', () => setHover(null));
+app.addEventListener('mouseleave', () => { if (!drag) setHover(null); });
+
+/* ---------- o arrasto (o gesto principal) ----------
+ * pointerdown na aberta ou no topo do monte, na sua vez, arma o arrasto; ele só começa depois de 6px
+ * (antes disso, soltar é um clique normal). Os eventos de movimento ficam no window: se a mesa for
+ * redesenhada no meio, o arrasto não quebra. Durante o arrasto nada é redesenhado por causa do hover. */
+const DRAG_START_PX = 6;
+const CARD_W = 92, CARD_H = CARD_W * 1.44;
+/** { from, pointerId, x0, y0, started, clone, src } — `src` é o #deck/#open (fica no DOM; só o miolo é redesenhado). */
+let drag = null;
+/** De onde saiu a carta que está viajando (o original fica apagado até o clone voltar ou cair). */
+let dimmed = null;
+/** O clone que está voltando pro lugar (some no fim do voo). */
+let flying = null;
+/** Engole o clique que o navegador dispara depois de um arrasto de verdade. */
+let suppressClick = false;
+const dragging = () => !!(drag && drag.started);
+
+function stageScale() { return app.getBoundingClientRect().width / APPW; }
+function toStage(e) { const r = app.getBoundingClientRect(), s = stageScale(); return { x: (e.clientX - r.left) / s, y: (e.clientY - r.top) / s }; }
+function seatUnder(e) { const el = document.elementFromPoint(e.clientX, e.clientY); const seat = el && el.closest('.seat[data-pid]'); return seat && canReceive(seat.dataset.pid) ? seat : null; }
+/** Onde está (no palco) o canto de cima da carta original. */
+function srcPos(src) {
+  const card = src && src.querySelector('.lift .card');
+  if (!card) return null;
+  const r = card.getBoundingClientRect(), a = app.getBoundingClientRect(), s = stageScale();
+  return { x: (r.left - a.left) / s, y: (r.top - a.top) / s };
+}
+function placeClone(clone, x, y) { clone.style.transform = `translate(${x}px,${y}px)`; }
+function setDimmed(from) {
+  dimmed = from;
+  $('#deck').classList.toggle('dragging', from === 'deck');
+  $('#open').classList.toggle('dragging', from === 'open');
+}
+
+app.addEventListener('pointerdown', (e) => {
+  suppressClick = false; // um clique novo começa aqui
+  if (e.button !== 0 || drag) return;
+  const src = e.target.closest('#deck, #open');
+  if (!src || !e.target.closest('.lift')) return; // só a carta em si (não a legenda)
+  const from = src.id === 'deck' ? 'deck' : 'open';
+  if (!canPlay() || !shown || !(from === 'deck' ? shown.top : shown.open)) return; // fora da vez o clique avisa
+  drag = { from, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, started: false, clone: null, src };
+  try { src.setPointerCapture(e.pointerId); } catch (_) { /* sem captura, o window ainda escuta */ }
+});
+
+function startDrag(e) {
+  if (flying) { flying.remove(); flying = null; }
+  drag.started = true;
+  suppressClick = true;
+  picked = null; hoverPid = null;
+  const v = shown;
+  const clone = document.createElement('div');
+  clone.className = 'drag-clone snap';
+  clone.innerHTML = `<div class="tilt">${drag.from === 'deck' ? CardArt.back(v.top, CARD_W) : CardArt.front(v.open, CARD_W)}</div>`;
+  const p0 = srcPos(drag.src) || { x: toStage(e).x - CARD_W / 2, y: toStage(e).y - CARD_H / 2 };
+  placeClone(clone, p0.x, p0.y);
+  app.appendChild(clone);
+  drag.clone = clone;
+  dimmed = drag.from;
+  app.classList.add('drag-on');
+  play('pick');
+  render(shown); // uma vez só, no começo: alvos marcados, original apagado, letreiro novo
+  // a carta desliza até ficar centrada no ponteiro e depois gruda nele
+  clone.getBoundingClientRect();
+  moveDrag(e);
+  setTimeout(() => clone.classList.remove('snap'), 120);
+}
+
+function moveDrag(e) {
+  const p = toStage(e);
+  placeClone(drag.clone, p.x - CARD_W / 2, p.y - CARD_H / 2);
+  const seat = seatUnder(e);
+  setHover(seat ? seat.dataset.pid : null); // só troca classes, não redesenha
+}
+
+/** Tira o arrasto do estado (o clone fica por conta de quem chamou). */
+function endDrag() {
+  const d = drag;
+  drag = null; hoverPid = null;
+  app.classList.remove('drag-on');
+  if (d && d.src.hasPointerCapture && d.src.hasPointerCapture(d.pointerId)) { try { d.src.releasePointerCapture(d.pointerId); } catch (_) { /* já foi */ } }
+  return d;
+}
+
+/** Solta fora, Esc, pointercancel ou fim da vez: o clone volta voando pro lugar em 200ms e some. */
+function cancelDrag() {
+  const d = endDrag();
+  if (!d || !d.started) return;
+  const clone = d.clone, epoch = gameEpoch;
+  if (!animating) render(shown); // tira os alvos e o letreiro do arrasto (o original segue apagado)
+  const to = srcPos(d.src);
+  const finish = () => {
+    clone.remove();
+    if (flying === clone) flying = null;
+    if (epoch === gameEpoch && !drag) setDimmed(null);
+  };
+  if (!to) { finish(); return; }
+  flying = clone;
+  clone.classList.remove('snap');
+  const anim = clone.animate([{ transform: clone.style.transform }, { transform: `translate(${to.x}px,${to.y}px)` }], { duration: 200, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'forwards' });
+  clone.firstElementChild.animate([{ transform: 'rotate(-4deg) scale(1.06)' }, { transform: 'none' }], { duration: 200, easing: 'ease-out', fill: 'forwards' });
+  anim.onfinish = finish; anim.oncancel = finish;
+}
+
+/** Partida nova: nada de voo, só some. */
+function killDrag() {
+  const d = endDrag();
+  if (d && d.clone) d.clone.remove();
+  if (flying) { flying.remove(); flying = null; }
+  dimmed = null;
+}
+
+addEventListener('pointermove', (e) => {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  if (!drag.started) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < DRAG_START_PX) return;
+    if (!canPlay()) { endDrag(); return; } // a vez acabou antes de começar: nada a arrastar
+    startDrag(e);
+    return;
+  }
+  moveDrag(e);
+});
+
+addEventListener('pointerup', (e) => {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  if (!drag.started) { endDrag(); return; } // não passou dos 6px: o click que vem a seguir é a Task 3
+  const seat = canPlay() && seatUnder(e);
+  if (!seat) { cancelDrag(); return; }
+  const d = endDrag();
+  d.clone.remove();
+  dimmed = null;
+  if (!act(ME, { type: 'play', from: d.from, to: seat.dataset.pid })) render(shown);
+});
+
+addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.pointerId) { if (drag.started) cancelDrag(); else endDrag(); } });
 
 /* ---------- topo e painel de dev ---------- */
 function paintSound() {
