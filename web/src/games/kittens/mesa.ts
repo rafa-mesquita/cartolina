@@ -119,7 +119,7 @@ const CURSE_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(CURSE_SVG);
  */
 const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha (3 Favores: o adversário escolhido te dá 3 cartas).<br><b>5 DIFERENTES</b>: você pega <b>duas cartas</b> que quiser do descarte (do jeito que ele estava antes da jogada), uma de cada vez, no quadro do descarte.<br>Combos podem levar Nem vem!.';
 const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
-  mico: '<b>PAR DE MICO</b>: <b>todo mundo, menos você, descarta uma carta</b> à escolha, todos ao mesmo tempo (30 segundos; depois vai uma ao acaso). O efeito da carta descartada não vale, e todos veem o que foi pro descarte.',
+  mico: '<b>PAR DE MICO</b>: <b>todo mundo, menos você, descarta uma carta</b> à escolha, todos ao mesmo tempo (30 segundos; depois vai uma ao acaso). O efeito da carta descartada não vale, e todos veem o que foi pro descarte.<br>Depois <b>você pega uma das cartas descartadas</b> pra sua mão, no quadro do descarte (30 segundos; depois vai uma ao acaso).',
   quati: '<b>PAR DE QUATI</b>: só você vê a carta de cima do monte e decide se ela fica em cima ou vai pro fundo. Todo mundo sabe se foi pro fundo, ninguém sabe qual era.',
   tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte.',
@@ -152,7 +152,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   embaralhar: 'Embaralha o monte inteiro.',
   espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.',
   capivara: 'Par: todo mundo, menos você, passa uma carta pro próximo.',
-  mico: 'Par: todo mundo, menos você, descarta uma carta (o efeito não vale).',
+  mico: 'Par: todo mundo, menos você, descarta uma carta (o efeito não vale); depois você pega uma delas.',
   quati: 'Par: vê a de cima e decide se vai pro fundo.',
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir.',
@@ -578,7 +578,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     for (const e of fresh) {
       items.push({ run: () => animate(e.ev, prev, rects, v), skip: () => pushLog(textOf(e.ev, prev, playCardsOf(e.ev, v)), logClass(e.ev)) });
     }
-    // 5 diferentes: o quadro do descarte abre sozinho pra você escolher (depois que a jogada chega no descarte).
+    // 5 diferentes e o fim do par de Mico: o quadro do descarte abre sozinho pra você escolher (depois que a jogada, ou
+    // o último descarte do Mico, chega no descarte).
     const c = v.choice;
     if (c?.kind === 'cinco' && c.who === ME && !myCinco(prev)) {
       cincoFirst = c.left;
@@ -679,6 +680,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         if (c.waiting.includes(ME)) return `DESCARTE UMA CARTA (o efeito não vale) ${TIMER}`;
         return c.by === ME ? 'Todo mundo descartando…' : `Descartando pro par de Mico de ${nameOf(c.by)}…`;
       case 'cinco':
+        // Fim do par de Mico: quem jogou pega uma das descartadas.
+        if (c.from === 'mico') return c.who === ME ? `Pegue UMA das descartadas ${TIMER}` : `${nameOf(c.who)} vai pegar uma das descartadas…`;
         if (c.who === ME) return `${c.left === 2 ? 'Pegue DUAS do descarte' : cincoFirst === 2 ? 'Pegue MAIS UMA do descarte' : 'Pegue UMA do descarte'} ${TIMER}`;
         return `${nameOf(c.who)} vai pegar ${c.left === 2 ? 'duas' : cincoFirst === 2 ? 'mais uma' : 'uma'} do descarte…`;
       case 'latido':
@@ -1464,7 +1467,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
   /**
    * Todas as cartas do descarte, da mais nova pra mais velha. Na escolha dos 5 diferentes, só as que estavam no
-   * descarte antes da jogada (e continuam lá) acendem; um clique pega a carta.
+   * descarte antes da jogada (e continuam lá) acendem; na pegada do fim do par de Mico, só as descartadas nele. Um
+   * clique pega a carta.
    */
   function renderPile(): void {
     const pile = $('#pile');
@@ -1480,11 +1484,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     pileKey = key;
     const scroll = pile.querySelector('.grid')?.scrollTop ?? 0;
     const cards = [...v.discard].reverse();
+    const mico = pick?.from === 'mico';
     const title = !pick ? 'O DESCARTE'
+      : mico ? 'PEGUE UMA DAS DESCARTADAS'
       : pick.left === 2 ? 'PEGUE DUAS DO DESCARTE' : cincoFirst === 2 ? 'PEGUE MAIS UMA' : 'PEGUE UMA DO DESCARTE';
-    const sub = pick
-      ? 'Clique numa carta acesa. As apagadas foram pro descarte depois da sua jogada.'
-      : `${cards.length} carta${cards.length === 1 ? '' : 's'}, da mais nova pra mais velha.`;
+    const sub = !pick
+      ? `${cards.length} carta${cards.length === 1 ? '' : 's'}, da mais nova pra mais velha.`
+      : mico ? 'Clique numa carta acesa: são as que foram descartadas no seu par de Mico.'
+      : 'Clique numa carta acesa. As apagadas foram pro descarte depois da sua jogada.';
     pile.innerHTML = `<div class="box"><h2>${title}${pick ? ' ' + TIMER : ''}</h2><p class="psub">${sub}</p><div class="pbody"><div class="grid"></div><div class="pinfo"></div></div><div class="foot"><div class="note">ESC ou clique fora pra fechar</div></div></div>`;
     const grid = $('#pile .grid');
     // Ao lado da grade: o que faz a carta que está debaixo do mouse.

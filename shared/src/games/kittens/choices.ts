@@ -1,7 +1,7 @@
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf } from './cards';
 import { clearPeeks, cure, eliminate, logged, spendTurn, unpeek } from './turn';
-import type { KittensChoice, KittensState } from './types';
+import { KITTENS_CHOICE_MS, type KittensChoice, type KittensState } from './types';
 
 type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K }>;
 
@@ -69,12 +69,28 @@ export function pickFromDiscard(s: KittensState, c: Choice<'cinco'>, card: strin
   return logged({ ...s, discard, hands, choice }, { t: 'picked', by: c.who, card });
 }
 
-/** Par de Mico: `p` (que está na espera) descarta `card` da própria mão, à vista de todos; o efeito da carta não vale. */
-export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, card: string): KittensState {
-  const hands = { ...s.hands, [p]: s.hands[p]!.filter((x) => x !== card) };
+/**
+ * Par de Mico: `p` sai da espera, tendo descartado `card` (null = saiu do jogo sem descartar). A espera vazia fecha o
+ * descarte: se alguma carta foi descartada nele e quem jogou o par continua vivo, ele pega uma delas (pedido do Rafa,
+ * 2026-10-20) na escolha dos 5 diferentes (`from: 'mico'`, 1 carta, prazo `deadline`); senão, a escolha fecha.
+ */
+export function leaveMicoWait(s: KittensState, c: Choice<'mico'>, p: string, card: string | null, deadline: number): KittensState {
   const waiting = c.waiting.filter((x) => x !== p);
-  const choice = waiting.length > 0 ? { ...c, waiting } : null;
-  return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'discarded', by: p, card });
+  const discarded = card === null ? c.discarded : [...c.discarded, card];
+  if (waiting.length > 0) return { ...s, choice: { ...c, waiting, discarded } };
+  const options = discarded.filter((x) => s.discard.includes(x));
+  if (options.length === 0 || !s.alive.includes(c.by)) return { ...s, choice: null };
+  return { ...s, choice: { kind: 'cinco', who: c.by, options, left: 1, deadline, from: 'mico' } };
+}
+
+/**
+ * Par de Mico: `p` (que está na espera) descarta `card` da própria mão, à vista de todos; o efeito da carta não vale.
+ * `deadline` = prazo da pegada de quem jogou, se este for o último descarte.
+ */
+export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, card: string, deadline: number): KittensState {
+  const hands = { ...s.hands, [p]: s.hands[p]!.filter((x) => x !== card) };
+  const next = logged({ ...s, hands, discard: [...s.discard, card] }, { t: 'discarded', by: p, card });
+  return leaveMicoWait(next, c, p, card, deadline);
 }
 
 /**
@@ -119,10 +135,11 @@ export function conjure(s: KittensState, c: Choice<'feitico'>, keep: boolean, de
 
 /**
  * Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica; no Mico, cada um
- * que falta descarta uma; no Favor, dá o que faltar; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta
- * de baixo vai pro topo, seja qual for).
+ * que falta descarta uma, e a pegada de quem jogou abre com prazo novo; no Favor, dá o que faltar; nos 5 diferentes e
+ * na pegada do Mico, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta de baixo vai pro topo,
+ * seja qual for). `now` = agora (pro prazo da pegada do Mico).
  */
-export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
+export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensState {
   const c = s.choice!;
   switch (c.kind) {
     case 'tatu': {
@@ -156,13 +173,16 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
       return next;
     }
     case 'mico': {
-      // Cada um que falta descarta uma carta ao acaso, na ordem da espera.
+      // Cada um que falta descarta uma carta ao acaso, na ordem da espera; o último abre a pegada de quem jogou (com
+      // prazo novo, a partir de agora).
+      const deadline = now + KITTENS_CHOICE_MS;
       let next = s;
       for (const p of c.waiting) {
+        const cur = next.choice as Choice<'mico'>;
         const hand = next.hands[p]!;
-        if (hand.length > 0) next = discardForMico(next, next.choice as Choice<'mico'>, p, hand[randomInt(rng, hand.length)]!);
+        next = hand.length > 0 ? discardForMico(next, cur, p, hand[randomInt(rng, hand.length)]!, deadline) : leaveMicoWait(next, cur, p, null, deadline);
       }
-      return { ...next, choice: null };
+      return next;
     }
     case 'quati':
       // Sem resposta, a carta fica onde está (nada muda pra ninguém).

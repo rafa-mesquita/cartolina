@@ -4,7 +4,7 @@ export const KITTENS_MIN_PLAYERS = 2;
 export const KITTENS_MAX_PLAYERS = 8;
 /** Janela do Nem vem! (decisão do usuário, 2026-10-19): sempre corre, mesmo se ninguém tiver Nem vem!. */
 export const KITTENS_NOPE_MS = 5_000;
-/** Prazo das escolhas pessoais (Desarme, Favor, descarte do Mico, 5 diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
+/** Prazo das escolhas pessoais (Desarme, Favor, descarte e pegada do Mico, 5 diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
 export const KITTENS_CHOICE_MS = 30_000;
 /** Quantas entradas do diário ficam no estado. */
 export const KITTENS_LOG_SIZE = 30;
@@ -57,10 +57,17 @@ export type KittensChoice =
    * trio de Favor (ou a mão toda, se tiver menos). Fecha quando dá todas ou a mão de `who` acaba.
    */
   | { kind: 'favor'; who: string; to: string; left: number; deadline: number }
-  /** `who` pega, uma de cada vez, `left` cartas de `options` (o descarte de antes da jogada de 5 diferentes). */
-  | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number }
-  /** Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par. */
-  | { kind: 'mico'; by: string; waiting: string[]; deadline: number }
+  /**
+   * `who` pega do descarte, uma de cada vez, `left` cartas de `options`: nos 5 diferentes, 2 do descarte de antes da
+   * jogada; no fim do par de Mico (`from: 'mico'`; pedido do Rafa, 2026-10-20), 1 das cartas descartadas nele. `from`
+   * só muda os textos da mesa.
+   */
+  | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number; from?: 'mico' }
+  /**
+   * Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par;
+   * `discarded` = o que já foi descartado nele (público), de onde `by` pega uma quando todos terminam.
+   */
+  | { kind: 'mico'; by: string; waiting: string[]; discarded: string[]; deadline: number }
   /** Par de Quati: `who` vê a carta de cima do monte e decide se ela fica ou vai pro fundo. */
   | { kind: 'quati'; who: string; deadline: number }
   /** Tatu Latidor: `who` (quem tinha o outro Latidor) joga um Desarme à mão pra não explodir. Pública. */

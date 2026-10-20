@@ -197,8 +197,14 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
   if (g.choice && g.choice.who === me) {
     const c = g.choice;
     // Nos 5 diferentes são duas pegadas e no trio de Favor até 3 cartas a dar: `left` na chave faz o bot responder
-    // cada uma.
-    const key = c.kind === 'cinco' || c.kind === 'favor' ? `choice:${c.kind}:${c.deadline}:${c.left}` : `choice:${c.kind}:${c.deadline}`;
+    // cada uma. A pegada do fim do par de Mico usa a mesma escolha (`from: 'mico'`): a origem e as opções na chave a
+    // separam de qualquer pegada anterior.
+    const key =
+      c.kind === 'cinco'
+        ? `choice:cinco:${c.from ?? 'cinco'}:${c.deadline}:${c.left}:${c.options.join(',')}`
+        : c.kind === 'favor'
+          ? `choice:favor:${c.deadline}:${c.left}`
+          : `choice:${c.kind}:${c.deadline}`;
     if (c.kind === 'tatu') {
       // Comprou o Tatubum: joga o Desarme depois de uma pausa dramática.
       const cafune = g.hand.find((x) => kittensKindOf(x) === 'cafune');
@@ -225,6 +231,7 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
       const card = g.blind.includes(me) ? g.hand[0] : g.hand.find((x) => kittensKindOf(x) === 'cafune');
       return card ? { key, delay: between(rng, 1200, 2200), action: { type: 'choose', card } } : null;
     }
+    // 5 diferentes ou a pegada do fim do par de Mico: Desarme, Nem vem! e Ataque primeiro.
     if (!c.options.length) return null;
     const pref: KittensCardKind[] = ['cafune', 'nemvem', 'ataque', 'pular', 'espiar'];
     const best = pref.map((k) => c.options.find((x) => kittensKindOf(x) === k)).find(Boolean) ?? pickOne(rng, c.options);

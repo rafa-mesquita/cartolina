@@ -64,7 +64,7 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
     case 'mico': {
       // Cada adversário vivo com carta descarta uma, ao mesmo tempo; ninguém com carta, nada acontece.
       const waiting = s.alive.filter((p) => p !== by && s.hands[p]!.length > 0);
-      return waiting.length === 0 ? s : { ...s, choice: { kind: 'mico', by, waiting, deadline } };
+      return waiting.length === 0 ? s : { ...s, choice: { kind: 'mico', by, waiting, discarded: [], deadline } };
     }
     case 'quati':
       return { ...s, choice: { kind: 'quati', who: by, deadline } };

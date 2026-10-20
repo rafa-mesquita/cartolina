@@ -21,7 +21,7 @@ Decisões do usuário (2026-10-19):
 - **2 a 8 jogadores**, com baralho que cresce com a mesa (§3).
 - **Janela do Nem vem! de 5 s**, fixa, sempre corre, mesmo que ninguém tenha Nem vem! (assim a
   demora não entrega quem tem).
-- **Escolhas pessoais com 30 s** (Favor e par de Mico, Desarme, 5 diferentes, par de Quati, defesa do Tatu Latidor, Feitiço; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
+- **Escolhas pessoais com 30 s** (Favor, par de Mico (o descarte e a pegada no fim), Desarme, 5 diferentes, par de Quati, defesa do Tatu Latidor, Feitiço; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
   escolhe ao acaso (no Quati e no Feitiço, sem acaso: a carta fica / vai pro topo). **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
@@ -138,7 +138,7 @@ Sozinho o bicho continua não fazendo nada.
 
 | Par de… | Pede | Efeito |
 |---|---|---|
-| Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) |
+| Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) **Depois que todos descartam, você pega uma das cartas descartadas nesse par** pra sua mão (30 s, no quadro do descarte; depois, ao acaso); se ninguém descartou nada, ou se você saiu do jogo antes, não pega (pedido do Rafa, 2026-10-20). |
 | Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
 | Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: nada. Todos veem de onde veio. |
@@ -156,6 +156,12 @@ Regras de motor:
 - Par de Mico: escolha `{ kind: 'mico', by, waiting, deadline }` (`waiting` = quem ainda tem que descartar; pública).
   Cada um em `waiting` manda `choose { card }` com uma carta da própria mão; evento público `{ t: 'discarded', by, card }`.
   Prazo vencido: cada um que falta descarta uma ao acaso. Quem sai do jogo sai do `waiting`. `waiting` vazio fecha a escolha.
+  Pegada no fim (pedido do Rafa, 2026-10-20): a escolha guarda `discarded` (o que já foi descartado nela). Quando o
+  `waiting` esvazia (último descarte, prazo vencido ou o último da espera saiu do jogo), se `discarded` não está vazio
+  e `by` está vivo, abre a escolha dos 5 diferentes pra `by`: `{ kind: 'cinco', who: by, options: discarded, left: 1,
+  deadline: now + 30000, from: 'mico' }` (`from` só muda os textos da mesa). Pega com `choose { card }` (evento público
+  `picked`); prazo vencido, uma ao acaso. Senão a escolha fecha sem pegada. A vez continua com `by`. Escolha `mico`
+  salva sem `discarded` (antes da mudança) entra com `[]`.
 - 5 diferentes: a escolha `cinco` ganha `left` (quantas ainda pegar, 2 ou 1); cada `choose { card }` pega uma e o `left` cai;
   em 0 (ou sem opções) a escolha fecha.
 - Escolha nova `{ kind: 'quati', who, deadline }`; na visão, só `who` recebe `card` = a carta de cima.
@@ -496,6 +502,8 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
 - **Espiar:** painel só seu com as 3 do topo, na ordem, ao lado do monte; fica lá depois que a vez passa e perde as
   cartas que forem compradas (pedido do Rafa, 2026-10-20). Quem tem espiada ganha um olhinho no assento.
 - **5 diferentes:** painel com o descarte pra escolher.
+- **Pegada do par de Mico** (pedido do Rafa, 2026-10-20): o mesmo quadro abre pra quem jogou, "PEGUE UMA DAS
+  DESCARTADAS", só com as cartas descartadas no par acesas; os outros leem "Ana vai pegar uma das descartadas…".
 - **Explodiu:** quadro vermelho com **BUM!** pra todos por ~2 s; a cadeira vira fantasminha.
 - **Fim:** quadro "Ana sobreviveu!".
 
