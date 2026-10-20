@@ -20,7 +20,6 @@ import {
   type KittensAction,
   type KittensCardKind,
   type KittensEvent,
-  type KittensPending,
   type KittensPlayKind,
   type KittensView,
   type SeatView,
@@ -575,7 +574,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const items: QueueItem[] = [];
     if (v.phase === 'playing' && (!prev || prev.phase !== 'playing')) items.push({ run: () => dealAnim() });
     for (const e of fresh) {
-      items.push({ run: () => animate(e.ev, prev, rects, v), skip: () => pushLog(textOf(e.ev, prev?.pending, playCardsOf(e.ev, v)), logClass(e.ev)) });
+      items.push({ run: () => animate(e.ev, prev, rects, v), skip: () => pushLog(textOf(e.ev, prev, playCardsOf(e.ev, v)), logClass(e.ev)) });
     }
     // 5 diferentes: o quadro do descarte abre sozinho pra você escolher (depois que a jogada chega no descarte).
     const c = v.choice;
@@ -1501,11 +1500,23 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   function playCardsOf(ev: KittensEvent, v: KittensView): string[] | undefined {
     return ev.t === 'play' && v.pending?.by === ev.by ? v.pending.play.cards : undefined;
   }
-  /** "Você" só com maiúscula no começo da frase. `playCards` = as cartas de um evento `play`, se souber. */
-  function textOf(ev: KittensEvent, prevPending: KittensPending | null | undefined, playCards?: readonly string[]): string {
-    return rawText(ev, prevPending, playCards).replace(/(?!^)Você/g, 'você');
+  /**
+   * "Você" só com maiúscula no começo da frase. `prev` = a visão de antes da leva que trouxe a entrada (a carta que estava
+   * no ar e as mãos de então); `playCards` = as cartas de um evento `play`, se souber.
+   */
+  function textOf(ev: KittensEvent, prev: KittensView | null | undefined, playCards?: readonly string[]): string {
+    return rawText(ev, prev, playCards).replace(/(?!^)Você/g, 'você');
   }
-  function rawText(ev: KittensEvent, prevPending: KittensPending | null | undefined, playCards?: readonly string[]): string {
+  /**
+   * Trio de Favor que valeu: o alvo dá 3 cartas, ou a mão toda se tiver menos (`counts` = as mãos de antes da jogada
+   * resolver).
+   */
+  function favorTrioText(target: string | null, by: string, counts: Record<string, number> | undefined): string {
+    const k = Math.min(3, (target !== null ? counts?.[target] : undefined) ?? 3);
+    return `${target ? nameOf(target) : 'alguém'} vai dar ${k === 1 ? 'uma carta' : `${k} cartas`} pra ${nameOf(by)}`;
+  }
+  function rawText(ev: KittensEvent, prev: KittensView | null | undefined, playCards?: readonly string[]): string {
+    const prevPending = prev?.pending;
     const n = (p: string) => nameOf(p);
     switch (ev.t) {
       case 'play': {
@@ -1532,7 +1543,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           par: `${whose((pairKind && PAIR_LABEL[pairKind]) ?? 'PAR')} valeu!`,
           trio:
             prevPending && isFavorTrio(prevPending.play)
-              ? `${prevPending.play.target ? n(prevPending.play.target) : 'alguém'} vai dar 3 cartas pra ${n(ev.by)}`
+              ? favorTrioText(prevPending.play.target, ev.by, prev?.handCounts)
               : `${whose('TRIO')} valeu!`,
           cinco: `${n(ev.by)} vai pegar duas do descarte`,
         };
@@ -1610,7 +1621,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
    */
   async function animate(ev: KittensEvent, prev: KittensView | null, rects: Record<string, Box>, evView: KittensView): Promise<void> {
     if (!view) return;
-    const text = textOf(ev, prev?.pending, playCardsOf(ev, evView));
+    const text = textOf(ev, prev, playCardsOf(ev, evView));
     pushLog(text, logClass(ev));
     const air = $('#air');
     switch (ev.t) {

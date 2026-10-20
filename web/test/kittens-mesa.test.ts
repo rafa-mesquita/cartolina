@@ -807,6 +807,28 @@ describe('mesa do Tatubum', () => {
     c.mesa.destroy();
   });
 
+  it('trio de Favor que valeu: o diário diz quantas cartas vão de verdade (a mão toda, se tiver menos de 3)', async () => {
+    const v = midGame('p2');
+    const play = { kind: 'trio' as const, cards: ['favor-1', 'favor-2', 'favor-3'], target: 'p1', ask: null, as: 'favor' as const };
+    v.game = {
+      ...v.game,
+      current: 'p0',
+      handCounts: { ...v.game.handCounts, p1: 2 },
+      pending: { by: 'p0', play, nopes: [], resolvesAt: Date.now() + 5000 },
+    };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const n = v.game.log.at(-1)?.n ?? 0;
+    const choice = { kind: 'favor' as const, who: 'p1', to: 'p0', left: 2, deadline: Date.now() + 30_000 };
+    const ev: KittensEvent = { t: 'resolved', by: 'p0', play: 'trio', canceled: false };
+    mesa.update(toMesa({ ...v, game: { ...v.game, pending: null, choice, log: [...v.game.log, { n: n + 1, ev }] } }));
+    await vi.advanceTimersByTimeAsync(3000);
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('P1 vai dar 2 cartas pra P0');
+    expect(log).not.toContain('vai dar 3 cartas');
+    mesa.destroy();
+  });
+
   it('zoom do Favor e dos bichos explicam o trio de Favor (só o que a carta faz)', () => {
     expect(mesaSrc).toContain('<b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b>');
     expect(mesaSrc).toContain('(3 Favores: o adversário escolhido te dá 3 cartas)');

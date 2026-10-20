@@ -161,6 +161,21 @@ describe('escolha do Favor salva antes do trio de Favor (sem `left`)', () => {
     expect(gave.choice).toBeNull();
     expect(gave.hands.p0).toContain('pular-5');
   });
+
+  it('trio de 3 Favores no ar, salvo sem alvo: vale como trio comum (rouba um Desarme) e a sala não trava', () => {
+    const FAVORES = ['favor-0', 'favor-1', 'favor-2'];
+    const s = table({ hands: { p0: ['mico-0'], p1: ['ataque-5', 'cafune-5'], p2: ['quati-5'] }, draw: ['pular-9'] });
+    const air: KittensState = {
+      ...s,
+      pending: { by: 'p0', play: { kind: 'trio', cards: FAVORES, target: null, ask: null, as: 'favor' }, nopes: [], resolvesAt: T0 + 5000 },
+    };
+    const done = settleKittens(air, at(5000));
+    expect(done.pending).toBeNull();
+    expect(done.choice).toBeNull();
+    expect(done.discard).toEqual(FAVORES);
+    expect(done.hands.p0).toEqual(['mico-0', 'cafune-5']);
+    expect(done.log.at(-1)!.ev).toEqual({ t: 'grabbed', by: 'p0', from: 'p1', card: 'cafune-5' });
+  });
 });
 
 describe('combos', () => {
