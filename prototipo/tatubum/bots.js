@@ -92,6 +92,11 @@
       }
       if (v.choice && v.choice.who === me) {
         const c = v.choice;
+        if (c.kind === 'tatu') {
+          // Comprou o Tatubum: joga o Desarme depois de uma pausa dramática.
+          const cafune = hand.find((x) => kind(x) === 'cafune');
+          return cafune ? { action: { type: 'choose', card: cafune }, delay: between(1200, 2200) } : null;
+        }
         if (c.kind === 'cafune') {
           // Às vezes deixa o tatu bem em cima pro próximo.
           const position = Math.random() < 0.35 ? 0 : Math.floor(Math.random() * (v.drawCount + 1));

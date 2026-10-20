@@ -45,7 +45,8 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
     return;
   }
   // Monte com vivos − 1 tatus (contando o que está sendo escondido): no fim sobra exatamente 1 vivo.
-  const tatus = tatusIn(s.draw) + (s.choice?.kind === 'cafune' ? 1 : 0);
+  const heldTatu = s.choice?.kind === 'cafune' || s.choice?.kind === 'tatu' ? s.choice.tatu : null;
+  const tatus = tatusIn(s.draw) + (heldTatu !== null ? 1 : 0);
   if (tatus !== s.alive.length - 1) throw broken(`${tatus} tatus no monte com ${s.alive.length} vivos`);
   if (s.current === null || !s.alive.includes(s.current)) throw broken(`vez de ${s.current}, que não está vivo`);
   if (s.owed < 1) throw broken(`vez com ${s.owed} turnos devidos`);
@@ -55,7 +56,7 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   const seesTop = s.choice?.kind === 'quati' && viewer === s.choice.who ? s.draw.slice(-1) : [];
   const secret = [
     ...(viewer !== null && viewer === s.peek?.who ? [] : s.draw.filter((c) => !seesTop.includes(c))),
-    ...(s.choice?.kind === 'cafune' ? [s.choice.tatu] : []),
+    ...(heldTatu !== null ? [heldTatu] : []),
   ];
   const leaked = secret.filter((c) => json.includes(`"${c}"`));
   if (leaked.length > 0) throw broken(`cartas escondidas [${leaked}] na visão de ${viewer}`);
@@ -86,6 +87,8 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   // Par de Mico: qualquer um da espera descarta uma carta da própria mão.
   if (c?.kind === 'mico' && c.waiting.includes(p) && r() < 0.8) return { type: 'choose', card: pick(r, hand) ?? 'ataque-0' };
   if (c && c.kind !== 'mico' && c.who === p && r() < 0.8) {
+    // Tatu comprado: joga um Desarme da mão.
+    if (c.kind === 'tatu') return { type: 'choose', card: pick(r, hand.filter((x) => kittensKindOf(x) === 'cafune')) ?? 'cafune-0' };
     if (c.kind === 'cafune') return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
     if (c.kind === 'favor') return { type: 'choose', card: pick(r, hand) ?? 'ataque-0' };
     if (c.kind === 'quati') return { type: 'choose', keep: r() < 0.5 };

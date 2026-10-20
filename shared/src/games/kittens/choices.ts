@@ -1,5 +1,6 @@
 import { randomInt, type Rng } from '../../rng';
-import { logged, spendTurn } from './turn';
+import { kittensKindOf } from './cards';
+import { eliminate, logged, spendTurn } from './turn';
 import type { KittensChoice, KittensState } from './types';
 
 type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K }>;
@@ -10,6 +11,16 @@ export function hideTatu(s: KittensState, c: Choice<'cafune'>, position: number 
   const at = s.draw.length - pos;
   const draw = [...s.draw.slice(0, at), c.tatu, ...s.draw.slice(at)];
   return spendTurn(logged({ ...s, draw, choice: null }, { t: 'hid', by: c.who }));
+}
+
+/**
+ * Tatu comprado: `who` joga o Desarme `card` (vai pro descarte, todos veem). Abre a escolha de onde esconder o tatu,
+ * com prazo `deadline`.
+ */
+export function useCafune(s: KittensState, c: Choice<'tatu'>, card: string, deadline: number): KittensState {
+  const hands = { ...s.hands, [c.who]: s.hands[c.who]!.filter((x) => x !== card) };
+  const choice: Choice<'cafune'> = { kind: 'cafune', who: c.who, tatu: c.tatu, deadline };
+  return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'cafune', by: c.who });
 }
 
 /** Favor: `who` dá `card` pra `to`. Só os dois veem qual carta foi. */
@@ -56,6 +67,13 @@ export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): Ki
 export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
   const c = s.choice!;
   switch (c.kind) {
+    case 'tatu': {
+      // Usa o Desarme e esconde o tatu de uma vez só. (A mão não muda durante a escolha, então sempre há um Desarme.)
+      const card = s.hands[c.who]!.find((x) => kittensKindOf(x) === 'cafune');
+      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, [c.tatu]);
+      const used = useCafune(s, c, card, c.deadline);
+      return hideTatu(used, used.choice as Choice<'cafune'>, 'random', rng);
+    }
     case 'cafune':
       return hideTatu(s, c, 'random', rng);
     case 'favor': {

@@ -158,6 +158,11 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
     const c = g.choice;
     // Nos 5 diferentes são duas pegadas: `left` na chave faz o bot responder a segunda também.
     const key = c.kind === 'cinco' ? `choice:cinco:${c.deadline}:${c.left}` : `choice:${c.kind}:${c.deadline}`;
+    if (c.kind === 'tatu') {
+      // Comprou o Tatubum: joga o Desarme depois de uma pausa dramática.
+      const cafune = g.hand.find((x) => kittensKindOf(x) === 'cafune');
+      return cafune ? { key, delay: between(rng, 1200, 2200), action: { type: 'choose', card: cafune } } : null;
+    }
     if (c.kind === 'cafune') {
       // Às vezes deixa o tatu bem em cima pro próximo.
       const position = rng() < 0.35 ? 0 : Math.floor(rng() * (g.drawCount + 1));

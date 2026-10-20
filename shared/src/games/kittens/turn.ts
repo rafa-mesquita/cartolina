@@ -28,6 +28,11 @@ export function spendTurn(state: KittensState): KittensState {
   return passTo(state, nextAlive(state, state.current!), 1);
 }
 
+/** O tatu que alguém comprou e ainda não voltou pro monte (escolhendo o Desarme ou onde esconder), ou null. */
+export function heldTatu(choice: KittensState['choice']): string | null {
+  return choice?.kind === 'tatu' || choice?.kind === 'cafune' ? choice.tatu : null;
+}
+
 export function tatusIn(cards: readonly string[]): number {
   return cards.filter((c) => kittensKindOf(c) === 'tatubum').length;
 }
@@ -40,6 +45,7 @@ export function checkWin(state: KittensState): KittensState {
   if (state.alive.length > 1) return state;
   const winner = state.alive[0] ?? null;
   const { pending, choice } = state;
+  const held = heldTatu(choice);
   const ended: KittensState = {
     ...state,
     phase: 'gameover',
@@ -47,7 +53,7 @@ export function checkWin(state: KittensState): KittensState {
     current: null,
     owed: 0,
     discard: pending ? [...state.discard, ...pending.play.cards, ...pending.nopes.map((n) => n.card)] : state.discard,
-    out: choice?.kind === 'cafune' ? [...state.out, choice.tatu] : state.out,
+    out: held !== null ? [...state.out, held] : state.out,
     pending: null,
     choice: null,
     peek: null,
@@ -65,8 +71,8 @@ export function eliminate(state: KittensState, p: string, extraOut: string[] = [
   let draw = state.draw;
   let peek = state.peek;
   let out = [...state.out, ...extraOut, ...(state.hands[p] ?? [])];
-  // O tatu que alguém está escondendo (Cafuné) ainda não voltou pro monte, mas conta.
-  const held = state.choice?.kind === 'cafune' ? 1 : 0;
+  // O tatu que alguém comprou (decidindo o Desarme ou escondendo) ainda não voltou pro monte, mas conta.
+  const held = heldTatu(state.choice) !== null ? 1 : 0;
   if (tatusIn(draw) > 0 && tatusIn(draw) + held > alive.length - 1) {
     const i = draw.findIndex((c) => kittensKindOf(c) === 'tatubum');
     out = [...out, draw[i]!];

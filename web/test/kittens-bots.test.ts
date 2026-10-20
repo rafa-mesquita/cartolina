@@ -64,6 +64,21 @@ describe('decisão do bot do Tatubum', () => {
     expect(d.delay).toBeLessThanOrEqual(1700);
   });
 
+  it('comprou o Tatubum: joga o Desarme depois de uma pausa (1,2 a 2,2 s); sem Desarme na mão, nada', () => {
+    const choice = { kind: 'tatu' as const, who: 'p1', deadline: 9000 };
+    const v = p1View(['mico-1', 'cafune-3', 'cafune-4'], { current: 'p1', choice });
+    for (const r of [0, 0.5, 0.99]) {
+      const d = decideKittens(v, newKittensMemory(), () => r)!;
+      expect(d.action).toEqual({ type: 'choose', card: 'cafune-3' });
+      expect(d.key).toBe('choice:tatu:9000');
+      expect(d.delay).toBeGreaterThanOrEqual(1200);
+      expect(d.delay).toBeLessThanOrEqual(2200);
+    }
+    expect(decideKittens(p1View(['mico-1'], { current: 'p1', choice }), newKittensMemory(), () => 0)).toBeNull();
+    // a escolha de outro jogador: espera
+    expect(decideKittens(p1View(['cafune-3'], { choice: { ...choice, who: 'p0' } }), newKittensMemory(), () => 0)).toBeNull();
+  });
+
   it('escolha do Cafuné: manda choose com posição válida (0 até o tamanho do monte)', () => {
     const base = viewOf(started(3), 'p1');
     const v = withGame(base, { choice: { kind: 'cafune', who: 'p1', deadline: 9000 }, current: 'p1' });

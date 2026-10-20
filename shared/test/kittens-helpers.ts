@@ -56,7 +56,7 @@ export function everyCard(state: KittensState): string[] {
     ...state.discard,
     ...state.out,
     ...(state.pending ? [...state.pending.play.cards, ...state.pending.nopes.map((n) => n.card)] : []),
-    ...(state.choice?.kind === 'cafune' ? [state.choice.tatu] : []),
+    ...(state.choice?.kind === 'cafune' || state.choice?.kind === 'tatu' ? [state.choice.tatu] : []),
   ].sort();
 }
 

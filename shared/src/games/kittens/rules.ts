@@ -1,6 +1,6 @@
 import type { ActionResult, GameContext } from '../../game';
 import { kittensKindOf } from './cards';
-import { delayTop, discardForMico, giveFavor, hideTatu, pickFromDiscard } from './choices';
+import { delayTop, discardForMico, giveFavor, hideTatu, pickFromDiscard, useCafune } from './choices';
 import { kittensDeal } from './deck';
 import { parsePlay } from './play';
 import { settleKittens } from './settle';
@@ -48,7 +48,7 @@ function turnError(s: KittensState, p: string): string | null {
   return null;
 }
 
-/** Compra a de cima. Tatubum: com Cafuné, abre a escolha de onde esconder; sem, explode. */
+/** Compra a de cima. Tatubum: com Desarme, abre a escolha de jogá-lo (a carta fica na mão até lá); sem, explode. */
 function drawCard(s: KittensState, p: string, ctx: GameContext): KittensState {
   const card = s.draw.at(-1)!;
   const draw = s.draw.slice(0, -1);
@@ -56,18 +56,10 @@ function drawCard(s: KittensState, p: string, ctx: GameContext): KittensState {
   if (kittensKindOf(card) !== 'tatubum') {
     return spendTurn(logged({ ...s, draw, hands: { ...s.hands, [p]: [...hand, card] } }, { t: 'draw', by: p, card }, [p]));
   }
-  const cafune = hand.find((c) => kittensKindOf(c) === 'cafune');
-  if (cafune === undefined) return eliminate(logged({ ...s, draw }, { t: 'boom', by: p }), p, [card]);
+  if (!hand.some((c) => kittensKindOf(c) === 'cafune')) return eliminate(logged({ ...s, draw }, { t: 'boom', by: p }), p, [card]);
   return logged(
-    {
-      ...s,
-      draw,
-      peek: null,
-      hands: { ...s.hands, [p]: hand.filter((c) => c !== cafune) },
-      discard: [...s.discard, cafune],
-      choice: { kind: 'cafune', who: p, tatu: card, deadline: ctx.now + KITTENS_CHOICE_MS },
-    },
-    { t: 'cafune', by: p },
+    { ...s, draw, peek: null, choice: { kind: 'tatu', who: p, tatu: card, deadline: ctx.now + KITTENS_CHOICE_MS } },
+    { t: 'tatu', by: p },
   );
 }
 
@@ -110,6 +102,11 @@ export function applyKittensAction(
       }
       if (c.who !== playerId) return fail('not_your_choice');
       switch (c.kind) {
+        case 'tatu':
+          if (action.card === undefined || !s.hands[playerId]!.includes(action.card) || kittensKindOf(action.card) !== 'cafune') {
+            return fail('bad_choice');
+          }
+          return ok(useCafune(s, c, action.card, ctx.now + KITTENS_CHOICE_MS));
         case 'cafune': {
           const { position } = action;
           if (position === undefined) return fail('bad_choice');

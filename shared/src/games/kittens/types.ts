@@ -32,6 +32,8 @@ export interface KittensPending {
 }
 
 export type KittensChoice =
+  /** Comprou um Tatubum e tem Desarme: `who` joga o Desarme (o tatu fica na mão dele até voltar pro monte). */
+  | { kind: 'tatu'; who: string; tatu: string; deadline: number }
   /** Quem desarmou escolhe onde o `tatu` volta no monte. */
   | { kind: 'cafune'; who: string; tatu: string; deadline: number }
   /** `who` (o alvo do Favor) escolhe uma carta da mão pra dar pra `to`. */
@@ -45,6 +47,7 @@ export type KittensChoice =
 
 /** Escolha como os jogadores veem: sem o id do tatu escondido; a carta de cima do Quati só pra quem escolhe. */
 export type KittensChoiceView =
+  | { kind: 'tatu'; who: string; deadline: number }
   | { kind: 'cafune'; who: string; deadline: number }
   /** `card` = a carta de cima, só pra quem escolhe (null pros outros). */
   | { kind: 'quati'; who: string; deadline: number; card: string | null }
@@ -63,7 +66,9 @@ export type KittensEvent =
   /** A carta no ar resolveu; `canceled` = Nem vem! ímpar, ou quem jogou/alvo saiu antes. */
   | { t: 'resolved'; by: string; play: KittensPlayKind; canceled: boolean }
   | { t: 'draw'; by: string; card: string | null }
-  /** Comprou um Tatubum e usou o Cafuné. */
+  /** Comprou um Tatubum e tem Desarme: agora decide usá-lo (todos veem). */
+  | { t: 'tatu'; by: string }
+  /** Usou o Desarme (carta pro descarte) pra salvar o Tatubum que comprou. */
   | { t: 'cafune'; by: string }
   | { t: 'hid'; by: string }
   | { t: 'boom'; by: string }
@@ -120,7 +125,7 @@ export type KittensAction =
   | { type: 'play'; cards: string[]; target?: string; ask?: KittensCardKind }
   | { type: 'nope' }
   | { type: 'draw' }
-  /** Desarme: `position` (0 = topo, tamanho do monte = fundo, ou 'random'); Favor, descarte do Mico e 5 diferentes: `card`; Quati: `keep`. */
+  /** Desarme: `card` (o Desarme a jogar, ao comprar um Tatubum) e depois `position` (0 = topo, tamanho do monte = fundo, ou 'random'); Favor, descarte do Mico e 5 diferentes: `card`; Quati: `keep`. */
   | { type: 'choose'; card?: string; position?: number | 'random'; keep?: boolean }
   | { type: 'again' }
   | { type: 'lobby' };

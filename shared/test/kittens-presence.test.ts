@@ -133,12 +133,16 @@ describe('presença', () => {
 
     it('o tatu que estava sendo escondido vai pra fora do jogo', () => {
       const s = table({ hands: { p0: ['cafune-0', 'mico-0'], p1: ['mico-1'] }, draw: ['quati-0', 'tatubum-0'] });
-      const hiding = act(s, 'p0', { type: 'draw' }, two);
+      const holding = act(s, 'p0', { type: 'draw' }, two);
+      expect(holding.choice).toMatchObject({ kind: 'tatu', tatu: 'tatubum-0' });
+      const hiding = act(holding, 'p0', { type: 'choose', card: 'cafune-0' }, two);
       expect(hiding.choice).toMatchObject({ kind: 'cafune', tatu: 'tatubum-0' });
-      const over = settleKittens(hiding, p1Gone);
-      expect(over).toMatchObject({ phase: 'gameover', winner: 'p0', choice: null });
-      expect(over.out).toContain('tatubum-0');
-      expect(everyCard(over)).toEqual(everyCard(s));
+      for (const open of [holding, hiding]) {
+        const over = settleKittens(open, p1Gone);
+        expect(over).toMatchObject({ phase: 'gameover', winner: 'p0', choice: null });
+        expect(over.out).toContain('tatubum-0');
+        expect(everyCard(over)).toEqual(everyCard(s));
+      }
     });
 
     it('a carta no ar e os Nem vem! vão pro descarte', () => {

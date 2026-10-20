@@ -22,6 +22,7 @@ function choiceView(state: KittensState, viewerId: string | null): KittensChoice
   const c = state.choice;
   if (c === null) return null;
   switch (c.kind) {
+    case 'tatu':
     case 'cafune': {
       const { kind, who, deadline } = c;
       return { kind, who, deadline };

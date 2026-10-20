@@ -82,6 +82,18 @@ describe('visão do Tatubum', () => {
     }
   });
 
+  it('a escolha do Desarme (tatu comprado) também não leva o id do tatu', () => {
+    const holding = {
+      ...table({ hands: { p0: ['cafune-0'], p1: ['mico-0'], p2: [] }, draw: ['quati-0', 'tatubum-1'] }),
+      choice: { kind: 'tatu' as const, who: 'p0', tatu: 'tatubum-0', deadline: T0 + 30_000 },
+    };
+    for (const viewer of ['p0', 'p1', 'p2', 'p9', null]) {
+      const v = kittensViewFor(holding, viewer);
+      expect(v.choice).toEqual({ kind: 'tatu', who: 'p0', deadline: T0 + 30_000 });
+      expect(JSON.stringify(v)).not.toContain('tatubum-0');
+    }
+  });
+
   it('as outras escolhas aparecem como estão', () => {
     const choice = { kind: 'cinco' as const, who: 'p0', options: ['ataque-0'], left: 1, deadline: T0 + 30_000 };
     expect(kittensViewFor({ ...s, choice }, 'p1').choice).toEqual(choice);
