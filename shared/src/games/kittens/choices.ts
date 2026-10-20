@@ -1,6 +1,6 @@
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf } from './cards';
-import { cure, eliminate, logged, spendTurn } from './turn';
+import { clearPeeks, cure, eliminate, logged, spendTurn, unpeek } from './turn';
 import type { KittensChoice, KittensState } from './types';
 
 type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K }>;
@@ -10,24 +10,28 @@ const isKind = (k: string) => (c: string) => kittensKindOf(c) === k;
 /**
  * `p` pega `card`, que acabou de sair do monte (`draw` = o monte sem ela): é "comprar" (cura o Mau-olhado). Tatubum: com
  * Desarme, abre a escolha de jogá-lo (prazo `deadline`; a carta fica na mão até lá); sem, explode. Outra carta: vai pra
- * mão (só `p` vê qual) e gasta 1 turno. Usado pela compra normal e pelo Feitiço.
+ * mão (só `p` vê qual) e gasta 1 turno. Usado pela compra normal e pelo Feitiço. A carta sai das espiadas (o resto do
+ * monte não mudou de ordem: o que sobra de cada espiada continua sendo o topo).
  */
 export function takeCard(s: KittensState, p: string, card: string, draw: string[], deadline: number): KittensState {
-  const base = cure({ ...s, draw }, p);
+  const base = cure(unpeek({ ...s, draw }, [card]), p);
   const hand = base.hands[p]!;
   if (kittensKindOf(card) !== 'tatubum') {
     return spendTurn(logged({ ...base, hands: { ...base.hands, [p]: [...hand, card] } }, { t: 'draw', by: p, card }, [p]));
   }
   if (!hand.some(isKind('cafune'))) return eliminate(logged(base, { t: 'boom', by: p }), p, [card]);
-  return logged({ ...base, peek: null, choice: { kind: 'tatu', who: p, tatu: card, deadline } }, { t: 'tatu', by: p });
+  return logged({ ...base, choice: { kind: 'tatu', who: p, tatu: card, deadline } }, { t: 'tatu', by: p });
 }
 
-/** Cafuné: o tatu volta pro monte `position` cartas abaixo do topo (0 = topo, tamanho do monte = fundo). Gasta 1 turno. */
+/**
+ * Cafuné: o tatu volta pro monte `position` cartas abaixo do topo (0 = topo, tamanho do monte = fundo). Gasta 1 turno.
+ * Apaga as espiadas de todos, em qualquer posição (apagar só quando o tatu cai perto do topo contaria onde ele foi).
+ */
 export function hideTatu(s: KittensState, c: Choice<'cafune'>, position: number | 'random', rng: Rng): KittensState {
   const pos = position === 'random' ? randomInt(rng, s.draw.length + 1) : position;
   const at = s.draw.length - pos;
   const draw = [...s.draw.slice(0, at), c.tatu, ...s.draw.slice(at)];
-  return spendTurn(logged({ ...s, draw, choice: null }, { t: 'hid', by: c.who }));
+  return spendTurn(logged(clearPeeks({ ...s, draw, choice: null }), { t: 'hid', by: c.who }));
 }
 
 /**
@@ -40,14 +44,16 @@ export function useCafune(s: KittensState, c: Choice<'tatu'>, card: string, dead
   return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'cafune', by: c.who });
 }
 
-/** Favor: `who` dá `card` pra `to`. Só os dois veem qual carta foi. */
+/**
+ * Favor: `who` dá `card` pra `to`. Só os dois veem qual carta foi. No trio de Favor a escolha continua aberta (mesmo
+ * prazo, `left` menor) até dar todas ou a mão de `who` acabar.
+ */
 export function giveFavor(s: KittensState, c: Choice<'favor'>, card: string): KittensState {
-  const hands = {
-    ...s.hands,
-    [c.who]: s.hands[c.who]!.filter((x) => x !== card),
-    [c.to]: [...s.hands[c.to]!, card],
-  };
-  return logged({ ...s, hands, choice: null }, { t: 'gave', from: c.who, to: c.to, card }, [c.who, c.to]);
+  const mine = s.hands[c.who]!.filter((x) => x !== card);
+  const hands = { ...s.hands, [c.who]: mine, [c.to]: [...s.hands[c.to]!, card] };
+  const left = c.left - 1;
+  const choice = left > 0 && mine.length > 0 ? { ...c, left } : null;
+  return logged({ ...s, hands, choice }, { t: 'gave', from: c.who, to: c.to, card }, [c.who, c.to]);
 }
 
 /**
@@ -71,10 +77,14 @@ export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, ca
   return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'discarded', by: p, card });
 }
 
-/** Par de Quati: a carta de cima fica (`keep`) ou vai pro fundo. Todos sabem se foi, ninguém sabe qual. */
+/**
+ * Par de Quati: a carta de cima fica (`keep`) ou vai pro fundo. Todos sabem se foi, ninguém sabe qual. Indo pro fundo,
+ * ela sai das espiadas como se fosse comprada (o resto vira o topo, na mesma ordem).
+ */
 export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): KittensState {
-  const draw = keep ? s.draw : [s.draw.at(-1)!, ...s.draw.slice(0, -1)];
-  return logged({ ...s, draw, choice: null, peek: keep ? s.peek : null }, { t: 'delayed', by: c.who, moved: !keep });
+  const top = s.draw.at(-1)!;
+  const next = keep ? s : unpeek({ ...s, draw: [top, ...s.draw.slice(0, -1)] }, [top]);
+  return logged({ ...next, choice: null }, { t: 'delayed', by: c.who, moved: !keep });
 }
 
 /** O Tatu Latidor que `p` tem (na frente primeiro, depois na mão), ou undefined. */
@@ -97,19 +107,19 @@ export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string)
 
 /**
  * Feitiço: `who` fica com a carta de baixo do monte (`keep`: é comprar; Tatubum segue o fluxo do Desarme) ou ela vai pro
- * topo. Nos dois casos gasta 1 turno (o Tatubum guardado gasta quando o tatu volta pro monte, ou some com a explosão).
+ * topo (aí as espiadas de todos se apagam: o topo mudou). Ficando com ela, ela sai das espiadas. Nos dois casos gasta 1 turno (o Tatubum guardado gasta quando o tatu volta pro monte, ou some com a explosão).
  * `deadline` = prazo da escolha do Desarme, se o guardado for Tatubum.
  */
 export function conjure(s: KittensState, c: Choice<'feitico'>, keep: boolean, deadline: number): KittensState {
   const bottom = s.draw[0]!;
   const done = logged({ ...s, choice: null }, { t: 'conjured', by: c.who, kept: keep });
   if (keep) return takeCard(done, c.who, bottom, s.draw.slice(1), deadline);
-  return spendTurn({ ...done, draw: [...s.draw.slice(1), bottom], peek: null });
+  return spendTurn(clearPeeks({ ...done, draw: [...s.draw.slice(1), bottom] }));
 }
 
 /**
  * Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica; no Mico, cada um
- * que falta descarta uma; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta
+ * que falta descarta uma; no Favor, dá o que faltar; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta
  * de baixo vai pro topo, seja qual for).
  */
 export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
@@ -125,8 +135,14 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
     case 'cafune':
       return hideTatu(s, c, 'random', rng);
     case 'favor': {
-      const hand = s.hands[c.who]!;
-      return hand.length === 0 ? { ...s, choice: null } : giveFavor(s, c, hand[randomInt(rng, hand.length)]!);
+      // Dá as que faltam, ao acaso (cada uma atualiza `left` ou fecha a escolha).
+      let next = s;
+      while (next.choice?.kind === 'favor') {
+        const cur: Choice<'favor'> = next.choice;
+        const hand = next.hands[cur.who]!;
+        next = hand.length === 0 ? { ...next, choice: null } : giveFavor(next, cur, hand[randomInt(rng, hand.length)]!);
+      }
+      return next;
     }
     case 'cinco': {
       // Pega as que faltam, ao acaso (cada pegada atualiza `options`/`left` ou fecha a escolha).

@@ -159,7 +159,7 @@ describe('Mau-olhado: jogar às cegas', () => {
 
   it('carta que chega enquanto está cego vai pro fim, desconhecida (nem o diário mostra pra ele)', () => {
     const s = cursed();
-    const favor: KittensState = { ...s, hands: { ...s.hands, p2: ['quati-2'] }, choice: { kind: 'favor', who: 'p2', to: 'p1', deadline: T0 + 40_000 } };
+    const favor: KittensState = { ...s, hands: { ...s.hands, p2: ['quati-2'] }, choice: { kind: 'favor', who: 'p2', to: 'p1', left: 1, deadline: T0 + 40_000 } };
     const got = act(favor, 'p2', { type: 'choose', card: 'quati-2' }, at(6000));
     expect(got.hands.p1!.at(-1)).toBe('quati-2');
     const v = kittensViewFor(got, 'p1');

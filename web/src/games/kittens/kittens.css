@@ -145,6 +145,8 @@
 .kittens .kt-mesa .kt-seat .kt-cursed { position: absolute; left: 2px; top: 20px; width: 34px; height: 25px; animation: kt-cursebob 1.2s steps(2) infinite; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
 .kittens .kt-mesa .kt-cursed svg, .kittens .kt-mesa .kt-blindtag svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
 @keyframes kt-cursebob { 50% { translate: 0 -3px; } }
+.kittens .kt-mesa .kt-seat .kt-peeked { position: absolute; left: 6px; top: 50px; width: 27px; height: 18px; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa .kt-peeked svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
 @keyframes kt-pulse { 50% { box-shadow: 0 -3px 0 var(--red), 0 3px 0 var(--red), -3px 0 0 var(--red), 3px 0 0 var(--red); } }
 @keyframes kt-hit { 25% { transform: translateX(-50%) translateY(-8px); } 75% { transform: translateX(-50%) translateY(4px); } }
 @keyframes kt-blink { 50% { opacity: .35; } }
@@ -294,7 +296,15 @@
 .kittens .kt-mesa #pile h2 { margin: 0 0 6px; font-family: var(--px); font-size: 18px; color: var(--yellow); font-weight: normal; }
 .kittens .kt-mesa #pile h2 .timer { float: right; font-size: 14px; color: var(--red); }
 .kittens .kt-mesa #pile .psub { margin: 0; font-family: var(--vt); font-size: 26px; color: var(--txt); }
-.kittens .kt-mesa #pile .grid { display: flex; flex-wrap: wrap; gap: 26px 20px; overflow-y: auto; padding: 34px 16px 34px; margin: 6px 0 10px; min-height: 230px; scrollbar-color: var(--yellow) #0e0e1c; }
+.kittens .kt-mesa #pile .pbody { display: flex; gap: 18px; min-height: 0; flex: 1; margin: 6px 0 10px; }
+.kittens .kt-mesa #pile .grid { flex: 1; align-content: flex-start; display: flex; flex-wrap: wrap; gap: 26px 20px; overflow-y: auto; padding: 34px 16px 34px; min-height: 230px; scrollbar-color: var(--yellow) #0e0e1c; }
+/* O que faz a carta debaixo do mouse (zoom do quadro do descarte). */
+.kittens .kt-mesa #pile .pinfo { flex: none; width: 330px; align-self: stretch; overflow-y: auto; padding: 16px 18px; background: #0e0e1c;
+  box-shadow: 0 -3px 0 #2c3a66, 0 3px 0 #2c3a66, -3px 0 0 #2c3a66, 3px 0 0 #2c3a66; }
+.kittens .kt-mesa #pile .pinfo h3 { margin: 0 0 10px; font-family: var(--px); font-size: 14px; font-weight: normal; color: var(--yellow); }
+.kittens .kt-mesa #pile .pinfo p { margin: 0; font-family: var(--vt); font-size: 23px; line-height: 1.15; color: var(--txt); }
+.kittens .kt-mesa #pile .pinfo p.phint { color: var(--dim); }
+.kittens .kt-mesa #pile .pinfo b { color: var(--yellow); font-weight: normal; }
 .kittens .kt-mesa #pile .grid .kt-card { flex: none; }
 .kittens .kt-mesa #pile .grid .kt-card:hover { transform: scale(1.35); z-index: 2; }
 .kittens .kt-mesa #pile .grid .kt-card.pickable { cursor: pointer; animation: kt-selblink .5s steps(2) infinite;

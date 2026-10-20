@@ -28,7 +28,7 @@ export type KittensPlayKind =
 export interface KittensPlay {
   kind: KittensPlayKind;
   cards: string[];
-  /** Favor e Mau-olhado (o par de Mico não tem alvo). */
+  /** Favor, trio de Favor e Mau-olhado (o par de Mico não tem alvo). */
   target: string | null;
   /** Par de Preguiça: o bicho pedido. */
   ask: KittensCardKind | null;
@@ -52,8 +52,11 @@ export type KittensChoice =
   | { kind: 'tatu'; who: string; tatu: string; deadline: number }
   /** Quem desarmou escolhe onde o `tatu` volta no monte. */
   | { kind: 'cafune'; who: string; tatu: string; deadline: number }
-  /** `who` (o alvo do Favor) escolhe uma carta da mão pra dar pra `to`. */
-  | { kind: 'favor'; who: string; to: string; deadline: number }
+  /**
+   * `who` (o alvo do Favor) escolhe, uma de cada vez, `left` cartas da mão pra dar pra `to`: 1 no Favor sozinho; 3 no
+   * trio de Favor (ou a mão toda, se tiver menos). Fecha quando dá todas ou a mão de `who` acaba.
+   */
+  | { kind: 'favor'; who: string; to: string; left: number; deadline: number }
   /** `who` pega, uma de cada vez, `left` cartas de `options` (o descarte de antes da jogada de 5 diferentes). */
   | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number }
   /** Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par. */
@@ -75,7 +78,7 @@ export type KittensChoiceView =
   | { kind: 'feitico'; who: string; deadline: number; card: string | null }
   | Extract<KittensChoice, { kind: 'favor' | 'cinco' | 'mico' | 'latido' }>;
 
-/** Espiar: as 3 de cima, a do topo primeiro, só pra `who`. */
+/** Espiar no formato antigo (um só por vez, até 2026-10-20): só o `compat.ts` lê isso, de sala salva no meio da partida. */
 export interface KittensPeek {
   who: string;
   cards: string[];
@@ -150,7 +153,12 @@ export interface KittensState {
   owed: number;
   pending: KittensPending | null;
   choice: KittensChoice | null;
-  peek: KittensPeek | null;
+  /**
+   * Espiar (pedido do Rafa, 2026-10-20): o que cada um espiou e ainda está à mostra pra ele, a carta do topo primeiro.
+   * Sempre vale `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada): carta comprada ou tirada do monte sai
+   * das espiadas; o monte mudar de ordem perto do topo apaga todas. Espiada vazia não fica. Chave ausente = nada.
+   */
+  peeks: Record<string, string[]>;
   log: KittensLogEntry[];
   /** Número da próxima entrada do diário. */
   seq: number;
@@ -191,9 +199,10 @@ export interface KittensView {
   blind: string[];
   pending: KittensPending | null;
   choice: KittensChoiceView | null;
-  /** As 3 de cima, só pra quem espiou. */
+  /** O que você espiou e ainda está à mostra (até 3 de cima, a do topo primeiro); null se nada. */
   peek: string[] | null;
-  peekBy: string | null;
+  /** Quem tem espiada à mostra agora (público; as cartas de cada um, só ele vê), na ordem dos assentos. */
+  peekers: string[];
   log: { n: number; ev: KittensEvent }[];
   winner: string | null;
 }

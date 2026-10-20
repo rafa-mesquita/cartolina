@@ -21,7 +21,7 @@ function resolved(
   opts: { draw?: string[]; hands?: Record<string, string[]>; peek?: string[]; owed?: number } = {},
 ): KittensState {
   const base = table({ hands: opts.hands ?? hands(), draw: opts.draw ?? DRAW, owed: opts.owed });
-  const withPeek = opts.peek ? { ...base, peek: { who: 'p0', cards: opts.peek } } : base;
+  const withPeek = opts.peek ? { ...base, peeks: { p0: opts.peek } } : base;
   return settleKittens(act(withPeek, 'p0', action, ctx), at(5000));
 }
 const par = (cards: string[], extra: { target?: string; ask?: KittensCardKind } = {}): KittensAction => ({ type: 'play', cards, ...extra });
@@ -62,7 +62,7 @@ describe('par de Mico: os outros descartam uma carta à escolha deles', () => {
     expect(two.choice).toBeNull();
     expect(two.hands.p2).toEqual([]);
     expect(two.discard).toEqual(['mico-0', 'mico-1', 'pular-5', 'espiar-5']);
-    expect(two.peek).toBeNull(); // o Espiar descartado também não faz nada
+    expect(two.peeks).toEqual({}); // o Espiar descartado também não faz nada
     expect(two).toMatchObject({ current: 'p0', owed: 1 });
   });
 
@@ -158,8 +158,12 @@ describe('par de Tamanduá: compra 2, tatu vai pro fundo, a vez continua', () =>
     expect(one.log.at(-1)!.ev).toEqual({ t: 'buried', by: 'p0', tatus: 1 });
   });
 
-  it('a espiada some (o topo mudou)', () => {
-    expect(resolved(par(['tamandua-0', 'tamandua-1']), { peek: ['pular-9', 'embaralhar-9', 'cafune-9'] }).peek).toBeNull();
+  it('as 2 compradas saem da espiada; a que sobra continua à mostra (é o topo agora)', () => {
+    expect(resolved(par(['tamandua-0', 'tamandua-1']), { peek: ['pular-9', 'embaralhar-9', 'cafune-9'] }).peeks).toEqual({ p0: ['cafune-9'] });
+    // Tatubum comprado vai pro fundo e também sai da espiada.
+    const tatu = resolved(par(['tamandua-0', 'tamandua-1']), { draw: ['cafune-9', 'tatubum-0', 'pular-9'], peek: ['pular-9', 'tatubum-0', 'cafune-9'] });
+    expect(tatu.draw).toEqual(['tatubum-0', 'cafune-9']);
+    expect(tatu.peeks).toEqual({ p0: ['cafune-9'] });
   });
 
   it('sob ataque (owed 2) o par não gasta turno: a vez e a dívida ficam', () => {
@@ -300,9 +304,9 @@ describe('par de Quati: a carta de cima fica ou vai pro fundo', () => {
     expect(late.log.at(-1)!.ev).toEqual({ t: 'delayed', by: 'p0', moved: false });
   });
 
-  it('mandar pro fundo apaga a espiada', () => {
+  it('mandar pro fundo tira a carta da espiada (como se fosse comprada); ficar não muda nada', () => {
     const s = resolved(par(['quati-0', 'quati-1']), { peek: ['pular-9', 'embaralhar-9', 'cafune-9'] });
-    expect(act(s, 'p0', { type: 'choose', keep: false }, at(5000)).peek).toBeNull();
-    expect(act(s, 'p0', { type: 'choose', keep: true }, at(5000)).peek).toEqual({ who: 'p0', cards: ['pular-9', 'embaralhar-9', 'cafune-9'] });
+    expect(act(s, 'p0', { type: 'choose', keep: false }, at(5000)).peeks).toEqual({ p0: ['embaralhar-9', 'cafune-9'] });
+    expect(act(s, 'p0', { type: 'choose', keep: true }, at(5000)).peeks).toEqual({ p0: ['pular-9', 'embaralhar-9', 'cafune-9'] });
   });
 });

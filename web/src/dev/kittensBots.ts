@@ -130,7 +130,12 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     options.push(pairOf(botos.slice(0, 2), b, rng, true));
   }
   // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme; o Boto completa um par de bicho.
-  for (const [k, list] of byKind) if (k !== 'cafune' && list.length >= 3 && rng() < 0.5) options.push({ cards: list.slice(0, 3) });
+  // Trio de Favor pede alvo com carta na mão: o alvo dá 3 cartas.
+  for (const [k, list] of byKind) {
+    if (k === 'cafune' || list.length < 3 || rng() >= 0.5) continue;
+    if (k !== 'favor') options.push({ cards: list.slice(0, 3) });
+    else if (targets.length) options.push({ cards: list.slice(0, 3), target: pickOne(rng, targets) });
+  }
   if (botos.length && rng() < 0.3) {
     const two = BICHOS.find((b) => (byKind.get(b)?.length ?? 0) === 2);
     if (two) options.push({ cards: [...byKind.get(two)!, botos[0]!] });
@@ -191,8 +196,9 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
 
   if (g.choice && g.choice.who === me) {
     const c = g.choice;
-    // Nos 5 diferentes são duas pegadas: `left` na chave faz o bot responder a segunda também.
-    const key = c.kind === 'cinco' ? `choice:cinco:${c.deadline}:${c.left}` : `choice:${c.kind}:${c.deadline}`;
+    // Nos 5 diferentes são duas pegadas e no trio de Favor até 3 cartas a dar: `left` na chave faz o bot responder
+    // cada uma.
+    const key = c.kind === 'cinco' || c.kind === 'favor' ? `choice:${c.kind}:${c.deadline}:${c.left}` : `choice:${c.kind}:${c.deadline}`;
     if (c.kind === 'tatu') {
       // Comprou o Tatubum: joga o Desarme depois de uma pausa dramática.
       const cafune = g.hand.find((x) => kittensKindOf(x) === 'cafune');

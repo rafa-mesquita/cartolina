@@ -1,14 +1,15 @@
 import type { GameContext } from '../../game';
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf, type KittensCardKind } from './cards';
-import { cure, logged, moveCard, nextAlive } from './turn';
+import { cure, logged, moveCard, nextAlive, unpeek } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 const isKind = (k: KittensCardKind) => (c: string) => kittensKindOf(c) === k;
 
 /**
  * Par de Tamanduá: compra as 2 de cima; Tatubum vai pro fundo (sem gastar Desarme), o resto pra mão. A vez continua.
- * Comprou: o Mau-olhado de quem jogou passa.
+ * Comprou: o Mau-olhado de quem jogou passa. As 2 saem das espiadas (o resto do monte segue na mesma ordem; o tatu que vai
+ * pro fundo fica embaixo de tudo).
  */
 function tamandua(state: KittensState, by: string): KittensState {
   const s = cure(state, by);
@@ -16,17 +17,18 @@ function tamandua(state: KittensState, by: string): KittensState {
   const taken = s.draw.slice(-n).reverse(); // a de cima primeiro
   const tatus = taken.filter(isKind('tatubum'));
   const kept = taken.filter((c) => !isKind('tatubum')(c));
-  let next: KittensState = {
-    ...s,
-    draw: [...tatus, ...s.draw.slice(0, s.draw.length - n)],
-    peek: null,
-    hands: { ...s.hands, [by]: [...s.hands[by]!, ...kept] },
-  };
+  let next: KittensState = unpeek(
+    { ...s, draw: [...tatus, ...s.draw.slice(0, s.draw.length - n)], hands: { ...s.hands, [by]: [...s.hands[by]!, ...kept] } },
+    taken,
+  );
   for (const card of kept) next = logged(next, { t: 'draw', by, card }, [by]);
   return tatus.length > 0 ? logged(next, { t: 'buried', by, tatus: tatus.length }) : next;
 }
 
-/** Par de Preguiça: puxa um `ask` de um adversário sorteado entre os que têm; ninguém tem, procura no monte. */
+/**
+ * Par de Preguiça: puxa um `ask` de um adversário sorteado entre os que têm; ninguém tem, procura no monte (a carta sai
+ * das espiadas; o resto do monte não muda de ordem).
+ */
 function preguica(s: KittensState, by: string, ask: KittensCardKind, rng: Rng): KittensState {
   const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind(ask)));
   if (holders.length > 0) {
@@ -37,7 +39,7 @@ function preguica(s: KittensState, by: string, ask: KittensCardKind, rng: Rng): 
   const inDraw = s.draw.filter(isKind(ask));
   if (inDraw.length === 0) return logged(s, { t: 'called', by, ask, from: null, card: null });
   const card = inDraw[randomInt(rng, inDraw.length)]!;
-  const next: KittensState = { ...s, draw: s.draw.filter((c) => c !== card), peek: null, hands: { ...s.hands, [by]: [...s.hands[by]!, card] } };
+  const next = unpeek({ ...s, draw: s.draw.filter((c) => c !== card), hands: { ...s.hands, [by]: [...s.hands[by]!, card] } }, [card]);
   return logged(next, { t: 'called', by, ask, from: null, card });
 }
 
@@ -77,8 +79,17 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
   }
 }
 
-/** Trio: rouba um Desarme de um adversário sorteado entre os que têm (todos veem). */
-export function applyTrio(s: KittensState, by: string, ctx: GameContext): KittensState {
+/**
+ * Trio: rouba um Desarme de um adversário sorteado entre os que têm (todos veem). Exceção (pedido do Rafa, 2026-10-20):
+ * 3 Favores abrem a escolha do Favor pro alvo, que dá 3 cartas (a mão toda, se tiver menos), uma de cada vez. Trio de
+ * Favor que estava no ar antes dessa regra (salvo sem alvo) vale como trio comum: rouba um Desarme.
+ */
+export function applyTrio(s: KittensState, by: string, play: KittensPlay, ctx: GameContext): KittensState {
+  if (play.as === 'favor' && play.target !== null) {
+    const who = play.target;
+    const left = Math.min(3, s.hands[who]!.length);
+    return { ...s, choice: { kind: 'favor', who, to: by, left, deadline: ctx.now + KITTENS_CHOICE_MS } };
+  }
   const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind('cafune')));
   if (holders.length === 0) return logged(s, { t: 'grabbed', by, from: null, card: null });
   const from = holders[randomInt(ctx.rng, holders.length)]!;

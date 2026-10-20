@@ -53,6 +53,27 @@ describe('estado salvo antes das cartas novas (sem front/blind)', () => {
     expect(kittens.applyAction(s, 'p0', { type: 'draw' }, ctx).ok).toBe(true);
   });
 
+  it('Espiar salvo no formato antigo (`peek`, sem `peeks`) vira a espiada de quem espiou e continua à mostra', () => {
+    const { peeks: _peeks, ...rest } = table({ hands: { p0: ['mico-0'], p1: ['pular-0'], p2: [] }, draw: DRAW });
+    void _peeks;
+    const saved = (peek: unknown) => deepFreeze({ ...rest, peek } as unknown as KittensState);
+    const spied = saved({ who: 'p0', cards: ['pular-9', 'tatubum-1', 'tatubum-0'] });
+    expect(kittensViewFor(spied, 'p0')).toMatchObject({ peek: ['pular-9', 'tatubum-1', 'tatubum-0'], peekers: ['p0'] });
+    expect(kittensViewFor(spied, 'p1')).toMatchObject({ peek: null, peekers: ['p0'] });
+    const settled = settleKittens(spied, ctx);
+    expect(settled.peeks).toEqual({ p0: ['pular-9', 'tatubum-1', 'tatubum-0'] });
+    expect('peek' in settled).toBe(false);
+    // Comprando, a de cima sai e o resto fica (a vez passa e a espiada continua).
+    const drawn = act(spied, 'p0', { type: 'draw' }, ctx);
+    expect(drawn).toMatchObject({ current: 'p1', peeks: { p0: ['tatubum-1', 'tatubum-0'] } });
+    expect('peek' in drawn).toBe(false);
+    // Sem Espiar salvo: nenhuma espiada.
+    expect(settleKittens(saved(null), ctx).peeks).toEqual({});
+    // Espiada antiga desatualizada (não devia existir) fica só com o que ainda é o topo; de quem saiu, some.
+    expect(settleKittens(saved({ who: 'p0', cards: ['pular-9', 'mico-9'] }), ctx).peeks).toEqual({ p0: ['pular-9'] });
+    expect(settleKittens(deepFreeze({ ...rest, alive: ['p0', 'p2'], peek: { who: 'p1', cards: ['pular-9'] } } as unknown as KittensState), ctx).peeks).toEqual({});
+  });
+
   it('estado completo não muda: settle sem nada a fazer devolve o mesmo objeto', () => {
     const s = deepFreeze(table({ hands: { p0: ['mico-0'], p1: [], p2: [] }, draw: DRAW }));
     expect(settleKittens(s, ctx)).toBe(s);
