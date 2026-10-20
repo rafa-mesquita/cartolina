@@ -196,7 +196,7 @@ Escolhida num mockup lado a lado (savana, circo, terrário):
 - fundo creme `#f7efe0` com **listras de lona** (`#f3dcd2`) no picadeiro;
 - vermelho de circo `#c8372d` (logo, botões, destaques) e azul-marinho `#1f2a4a`
   (texto, verso das cartas);
-- fonte de letreiro **Rye só no logo "Cama-Leão"** (como o Caveat do Retratim);
+- fonte de letreiro **Rye no logo "Cama-Leão" e no título do cartaz do fim** (aprovado no protótipo);
   todo o resto em **Fredoka**;
 - esferas: verde `#4caf50`, amarelo `#f2c230`, laranja `#f08a24`, vermelho
   `#e04848`, roxo `#8e5cc7`, azul `#3a8fd8`, sempre com o nome da cor no

@@ -800,3 +800,23 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - [ ] **Step 2:** pedir pra ele jogar pelo menos uma partida com 2 e uma com 4, e perguntar, uma coisa de cada vez: o arrasto está gostoso? a virada se entende? o letreiro ajuda? os sons? o baralho (cartas demais/de menos, meta de 3 cores)?
 - [ ] **Step 3:** aplicar os ajustes pedidos (um commit por ajuste), anotar na memória do projeto o que ele aprovou e o que muda pro C3, e registrar no fim deste plano uma seção "Atualização depois do teste" com as decisões.
 - [ ] **Step 4:** quando ele disser que está bom, o protótipo está aprovado: próximo passo é o plano C3 (mesa no site), portando `cards.js`, `bot.js`, `narrate.js`, `anim.js` e `sounds.js`.
+
+---
+
+## Atualização depois do teste (2026-10-19)
+
+O Rafa jogou o protótipo e aprovou:
+
+- **Arrasto:** ficou bom assim (arrastar a aberta ou a do monte até a mesa de alguém; clique como alternativa).
+- **Virada e letreiro:** dá pra entender bem o que aconteceu em cada jogada.
+- **Sons:** volume e estilo bons.
+- **Baralho e meta:** não deu pra avaliar agora (ele estava focado em outro jogo). Ficam como estão (72 cartas, esferas 1–4, meta 3 cores / 4 com 2 jogadores) e voltam a ser avaliados numa partida de verdade. Números da simulação de bots (`node prototipo/cama-leao/sim.cjs`): ~48–53 jogadas com 2 a 4 jogadores, ~62–69 com 5–6; quase todas acabam pela meta.
+
+Decisões tomadas na execução (valem pro C3):
+
+- O bot só estoura o **líder** (spec §5.5 ao pé da letra); `choose` devolve `null` quando não há jogada.
+- O ponto onde a carta foi solta alimenta a animação (`dropFrom`); a origem fica escondida durante a virada; a virada tem teto de 4 s (`Anim.stop()` e watchdog).
+- O cartaz do fim fica na faixa do picadeiro (não cobre a sua mesa nem as pilhas) e tem "ver a mesa".
+- Título do cartaz do fim em Rye (além do logo) e "último monte" no topo (não no picadeiro): aceitos como estão.
+
+Pro C3 levar: um ranking final exportado do `shared` (hoje a ordenação do placar repete `camelioDeckEndWinners`), o lobby do §5.5, mostrar quem está assistindo, e os contratos de `cards.js`, `bot.js`, `narrate.js`, `anim.js` e `sounds.js`.
