@@ -3,6 +3,7 @@ import { MAX_PLAYERS } from '@cartolina/shared';
 import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
 import { addDixitBot, dixitBotsIn, dixitBotsVersion, removeAllDixitBots, subscribeDixitBots } from './dixitBots';
+import { addKittensBot, kittensBotsIn, kittensBotsVersion, removeAllKittensBots, subscribeKittensBots } from './kittensBots';
 import { addPicturesBot, picturesBotsIn, picturesBotsVersion, removeAllPicturesBots, subscribePicturesBots } from './picturesBots';
 
 type GameKey = 'ito' | 'dixit' | 'pictures' | 'kittens';
@@ -19,6 +20,7 @@ const API: Partial<Record<GameKey, Api>> = {
   ito: { subscribe: subscribeBots, version: botsVersion, count: (code: string) => botsIn(code).length, add: (code: string) => void addBot(code), removeAll: removeAllBots },
   dixit: { subscribe: subscribeDixitBots, version: dixitBotsVersion, count: dixitBotsIn, add: addDixitBot, removeAll: removeAllDixitBots },
   pictures: { subscribe: subscribePicturesBots, version: picturesBotsVersion, count: picturesBotsIn, add: addPicturesBot, removeAll: removeAllPicturesBots },
+  kittens: { subscribe: subscribeKittensBots, version: kittensBotsVersion, count: kittensBotsIn, add: addKittensBot, removeAll: removeAllKittensBots },
 };
 
 /** Jogo sem entrada em `API` não mostra nada. */

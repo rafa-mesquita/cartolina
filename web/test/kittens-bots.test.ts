@@ -1,0 +1,196 @@
+import {
+  PLAYER_COLORS,
+  createRoom,
+  isKittensRoomView,
+  joinRoom,
+  mulberry32,
+  roomAction,
+  roomView,
+  settleKittens,
+  type GameAction,
+  type KittensRoomView,
+  type KittensState,
+  type KittensView,
+  type Room,
+} from '@cartolina/shared';
+import { describe, expect, it } from 'vitest';
+import { decideKittens, newKittensMemory } from '../src/dev/kittensBots';
+
+const HOST_ACTIONS = ['start', 'again', 'lobby'];
+
+/** Sala de Tatubum começada com `n` jogadores p0…; o p0 (host) é o da vez. */
+function started(n = 3): Room {
+  let room = createRoom('ABCD', 0, 'kittens');
+  for (let i = 0; i < n; i++) {
+    const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+    if (!res.ok) throw new Error(res.error);
+    room = res.room;
+  }
+  const res = roomAction(room, 'p0', { type: 'start' }, mulberry32(7), 0);
+  if (!res.ok) throw new Error(res.error);
+  return res.room;
+}
+
+function viewOf(room: Room, me: string): KittensRoomView {
+  const v = roomView(room, me);
+  if (!isKittensRoomView(v)) throw new Error('esperava sala de Tatubum');
+  return v;
+}
+
+/** A mesma visão com campos do jogo trocados (pra montar situações exatas). */
+function withGame(v: KittensRoomView, game: Partial<KittensView>): KittensRoomView {
+  return { ...v, game: { ...v.game, ...game } };
+}
+
+/** Visão do p1 numa mesa de 3, fora da vez dele, com a mão dada. */
+function p1View(hand: string[], game: Partial<KittensView> = {}): KittensRoomView {
+  return withGame(viewOf(started(3), 'p1'), { hand, current: 'p0', pending: null, choice: null, peek: null, ...game });
+}
+
+const inAir = (by: string, target: string | null, kind: 'favor' | 'ataque' = 'favor', nopes = 0) => ({
+  by,
+  play: { kind, cards: [`${kind}-1`], target, ask: null },
+  nopes: Array.from({ length: nopes }, (_, i) => ({ by: `p${i}`, card: `nemvem-${i + 9}` })),
+  resolvesAt: 5000,
+});
+
+describe('decisão do bot do Tatubum', () => {
+  it('na vez dele, sem jogada escolhida (rng alto), compra', () => {
+    const room = started(3);
+    const d = decideKittens(viewOf(room, 'p0'), newKittensMemory(), () => 0.99)!;
+    expect(d.action).toEqual({ type: 'draw' });
+    expect(d.key).toMatch(/^turn:/);
+    expect(d.delay).toBeGreaterThanOrEqual(900);
+    expect(d.delay).toBeLessThanOrEqual(1700);
+  });
+
+  it('escolha do Cafuné: manda choose com posição válida (0 até o tamanho do monte)', () => {
+    const base = viewOf(started(3), 'p1');
+    const v = withGame(base, { choice: { kind: 'cafune', who: 'p1', deadline: 9000 }, current: 'p1' });
+    for (const r of [0, 0.2, 0.5, 0.99]) {
+      const d = decideKittens(v, newKittensMemory(), () => r)!;
+      expect(d.key).toBe('choice:cafune:9000');
+      const a = d.action as { type: string; position: number };
+      expect(a.type).toBe('choose');
+      expect(Number.isInteger(a.position)).toBe(true);
+      expect(a.position).toBeGreaterThanOrEqual(0);
+      expect(a.position).toBeLessThanOrEqual(v.game.drawCount);
+    }
+  });
+
+  it('escolha do Favor: dá uma carta da própria mão, de preferência um bicho', () => {
+    const hand = ['ataque-1', 'capivara-2', 'nemvem-3'];
+    const v = p1View(hand, { choice: { kind: 'favor', who: 'p1', to: 'p0', deadline: 9000 } });
+    const a = decideKittens(v, newKittensMemory(), () => 0.5)!.action as { type: string; card: string };
+    expect(a.type).toBe('choose');
+    expect(a.card).toBe('capivara-2');
+    // sem bicho, qualquer carta da mão
+    const v2 = p1View(['ataque-1', 'pular-4'], { choice: { kind: 'favor', who: 'p1', to: 'p0', deadline: 9000 } });
+    const b = decideKittens(v2, newKittensMemory(), () => 0.5)!.action as { card: string };
+    expect(['ataque-1', 'pular-4']).toContain(b.card);
+  });
+
+  it('escolha dos 5 diferentes: prefere o Cafuné entre as opções', () => {
+    const v = p1View([], { choice: { kind: 'cinco', who: 'p1', options: ['pular-1', 'cafune-2', 'espiar-3'], deadline: 9000 } });
+    expect(decideKittens(v, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', card: 'cafune-2' });
+  });
+
+  it('escolha dos outros: espera, não faz nada', () => {
+    const v = p1View(['nemvem-1'], { choice: { kind: 'cafune', who: 'p0', deadline: 9000 }, current: 'p1' });
+    expect(decideKittens(v, newKittensMemory(), () => 0)).toBeNull();
+  });
+
+  it('carta no ar contra ele, com Nem vem! na mão e rng 0: dá Nem vem!; na mesma etapa, a segunda chamada devolve null', () => {
+    const v = p1View(['nemvem-5', 'mico-1'], { pending: inAir('p0', 'p1') });
+    const mem = newKittensMemory();
+    const d = decideKittens(v, mem, () => 0)!;
+    expect(d.action).toEqual({ type: 'nope' });
+    expect(d.key).toBe('nope:p0:favor-1:0');
+    expect(d.delay).toBeGreaterThanOrEqual(800);
+    expect(d.delay).toBeLessThanOrEqual(3400);
+    expect(decideKittens(v, mem, () => 0)).toBeNull();
+    // um Nem vem! novo no ar é outra etapa: decide de novo
+    const v2 = p1View(['nemvem-5'], { pending: inAir('p0', 'p1', 'favor', 1) });
+    expect(decideKittens(v2, mem, () => 0)!.key).toBe('nope:p0:favor-1:1');
+  });
+
+  it('Ataque cujo próximo da vez é ele conta como "contra ele"; sem Nem vem! na mão, nunca dá', () => {
+    // p0 ataca: o próximo vivo é o p1; chance 0.7 passa com rng 0.6
+    const v = p1View(['nemvem-5'], { pending: inAir('p0', null, 'ataque') });
+    expect(decideKittens(v, newKittensMemory(), () => 0.6)!.action).toEqual({ type: 'nope' });
+    const sem = p1View(['mico-1'], { pending: inAir('p0', 'p1') });
+    expect(decideKittens(sem, newKittensMemory(), () => 0)).toBeNull();
+  });
+
+  it('não corta a própria jogada que está valendo, mas pode anular um Nem vem! contra ela', () => {
+    const own = p1View(['nemvem-5'], { current: 'p1', pending: inAir('p1', 'p0') });
+    expect(decideKittens(own, newKittensMemory(), () => 0)).toBeNull();
+    const noped = p1View(['nemvem-5'], { current: 'p1', pending: inAir('p1', 'p0', 'favor', 1) });
+    expect(decideKittens(noped, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'nope' });
+  });
+
+  it('fora da vez e sem nada no ar, não faz nada', () => {
+    expect(decideKittens(p1View(['ataque-1', 'nemvem-2']), newKittensMemory(), () => 0)).toBeNull();
+  });
+
+  it('quem não joga (espectador, fora da partida, sem lugar) não faz nada', () => {
+    const room = started(3);
+    expect(decideKittens(withGame(viewOf(room, 'p1'), { alive: ['p0', 'p2'] }), newKittensMemory(), () => 0)).toBeNull();
+    expect(decideKittens({ ...viewOf(room, 'p0'), you: null }, newKittensMemory(), () => 0)).toBeNull();
+    expect(decideKittens(withGame(viewOf(room, 'p0'), { phase: 'gameover' }), newKittensMemory(), () => 0)).toBeNull();
+  });
+
+  it('espiou e o tatu é o de cima: foge com Pular, Ataque ou Embaralhar', () => {
+    const v = withGame(viewOf(started(3), 'p0'), { hand: ['pular-1', 'mico-2'], peek: ['tatubum-1', 'mico-3', 'quati-1'], peekBy: 'p0' });
+    expect(decideKittens(v, newKittensMemory(), () => 0.99)!.action).toEqual({ type: 'play', cards: ['pular-1'] });
+  });
+
+  it('sob ataque (2 turnos devidos), joga o Ataque em 80% das vezes', () => {
+    const v = withGame(viewOf(started(3), 'p0'), { hand: ['ataque-1', 'mico-2'], owed: 2 });
+    expect(decideKittens(v, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'play', cards: ['ataque-1'] });
+    expect(decideKittens(v, newKittensMemory(), () => 0.99)!.action).toEqual({ type: 'draw' });
+  });
+
+  it('joga no máximo 2 cartas por turno', () => {
+    const v = withGame(viewOf(started(3), 'p0'), { hand: ['espiar-1', 'mico-2'] });
+    const mem = newKittensMemory();
+    expect(decideKittens(v, mem, () => 0)!.action).toMatchObject({ type: 'play' });
+    mem.playedThisTurn = 2;
+    expect(decideKittens(v, mem, () => 0)!.action).toEqual({ type: 'draw' });
+  });
+
+  it('numa partida inteira simulada, o que ele manda é aceito pelo servidor (jogar, Nem vem!, escolher, comprar) e nunca é ação de host', () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 60; seed++) {
+      let room = started(4);
+      const rng = mulberry32(seed);
+      let clock = 0;
+      for (let step = 0; step < 40; step++) {
+        const g = viewOf(room, 'p0').game;
+        if (g.phase !== 'playing') break;
+        // quem precisa agir: o dono da escolha, o da vez (se nada no ar) ou todos (nope)
+        const actors = g.choice ? [g.choice.who] : g.pending ? g.alive : g.current ? [g.current] : [];
+        let acted = false;
+        for (const who of actors) {
+          const d = decideKittens(viewOf(room, who), newKittensMemory(), rng);
+          if (!d) continue;
+          const a = d.action as GameAction & { type: string };
+          expect(HOST_ACTIONS).not.toContain(a.type);
+          seen.add(a.type);
+          const res = roomAction(room, who, d.action, mulberry32(seed + step), (clock += 100));
+          expect(res.ok, `${who} ${JSON.stringify(a)}`).toBe(true);
+          if (res.ok) room = res.room;
+          acted = true;
+          break;
+        }
+        if (!acted) {
+          // ninguém quis dar Nem vem!: o prazo vence e a carta resolve
+          const game = room.game as KittensState;
+          const ctx = { hostId: null, active: game.alive, rng: mulberry32(seed), now: (clock += 5_100) };
+          room = { ...room, game: settleKittens(game, ctx) };
+        }
+      }
+    }
+    expect([...seen].sort()).toEqual(['choose', 'draw', 'nope', 'play']);
+  });
+});
