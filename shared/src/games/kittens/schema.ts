@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { KITTENS_CARD_KINDS } from './cards';
 import type { KittensAction } from './types';
 
+/** Id de carta, ou ficha `?i` de quem está cego pelo Mau-olhado. */
 const cardId = z.string().min(1).max(32);
 
 export const kittensActionSchema = z.discriminatedUnion('type', [
@@ -11,8 +12,9 @@ export const kittensActionSchema = z.discriminatedUnion('type', [
     cards: z.array(cardId).min(1).max(5),
     target: z.string().min(1).max(64).optional(),
     ask: z.enum(KITTENS_CARD_KINDS).optional(),
+    as: z.enum(KITTENS_CARD_KINDS).optional(),
   }),
-  z.object({ type: z.literal('nope') }),
+  z.object({ type: z.literal('nope'), card: cardId.optional() }),
   z.object({ type: z.literal('draw') }),
   z.object({
     type: z.literal('choose'),

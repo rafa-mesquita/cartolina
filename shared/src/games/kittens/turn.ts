@@ -39,7 +39,7 @@ export function tatusIn(cards: readonly string[]): number {
 
 /**
  * Sobrou 1 vivo (ou ninguém): fim de jogo. Nenhuma carta some: a carta no ar e os Nem vem! vão pro descarte, e o tatu
- * que estava sendo escondido (Cafuné) vai pra fora do jogo.
+ * que estava sendo escondido (Cafuné) vai pra fora do jogo. Ninguém continua cego (as cartas na frente ficam onde estão).
  */
 export function checkWin(state: KittensState): KittensState {
   if (state.alive.length > 1) return state;
@@ -54,6 +54,7 @@ export function checkWin(state: KittensState): KittensState {
     owed: 0,
     discard: pending ? [...state.discard, ...pending.play.cards, ...pending.nopes.map((n) => n.card)] : state.discard,
     out: held !== null ? [...state.out, held] : state.out,
+    blind: [],
     pending: null,
     choice: null,
     peek: null,
@@ -62,15 +63,16 @@ export function checkWin(state: KittensState): KittensState {
 }
 
 /**
- * `p` sai da partida (explodiu ou caiu de vez): a mão (e `extraOut`, ex.: o tatu que explodiu) vai pra fora do jogo.
- * Se o monte ficou com mais tatus (contando o que está sendo escondido) que vivos − 1 (quem caiu de vez), um tatu
- * sai também. Se era a vez de `p`, a vez passa pro próximo vivo com 1 turno (os turnos devidos se perdem).
+ * `p` sai da partida (explodiu ou caiu de vez): a mão, as cartas na frente dele (Tatu Latidor) e `extraOut` (ex.: o tatu
+ * que explodiu) vão pra fora do jogo, e ele deixa de estar cego. Se o monte ficou com mais tatus (contando o que está
+ * sendo escondido) que vivos − 1 (quem caiu de vez), um tatu sai também. Se era a vez de `p`, a vez passa pro próximo
+ * vivo com 1 turno (os turnos devidos se perdem).
  */
 export function eliminate(state: KittensState, p: string, extraOut: string[] = []): KittensState {
   const alive = state.alive.filter((x) => x !== p);
   let draw = state.draw;
   let peek = state.peek;
-  let out = [...state.out, ...extraOut, ...(state.hands[p] ?? [])];
+  let out = [...state.out, ...extraOut, ...(state.hands[p] ?? []), ...(state.front[p] ?? [])];
   // O tatu que alguém comprou (decidindo o Desarme ou escondendo) ainda não voltou pro monte, mas conta.
   const held = heldTatu(state.choice) !== null ? 1 : 0;
   if (tatusIn(draw) > 0 && tatusIn(draw) + held > alive.length - 1) {
@@ -79,12 +81,19 @@ export function eliminate(state: KittensState, p: string, extraOut: string[] = [
     draw = draw.filter((_, k) => k !== i);
     peek = null; // o topo do monte pode ter mudado: o Espiar de quem joga ficaria desatualizado
   }
-  let next: KittensState = { ...state, alive, draw, out, peek, hands: { ...state.hands, [p]: [] } };
+  const front = (state.front[p]?.length ?? 0) > 0 ? { ...state.front, [p]: [] } : state.front;
+  const blind = state.blind.includes(p) ? state.blind.filter((x) => x !== p) : state.blind;
+  let next: KittensState = { ...state, alive, draw, out, peek, front, blind, hands: { ...state.hands, [p]: [] } };
   if (state.current === p) next = passTo(next, nextAlive(next, p), 1);
   return checkWin(next);
 }
 
-/** Passa `card` da mão de `from` pra de `to`. */
+/** Passa `card` da mão de `from` pra de `to` (no fim da mão: quem está cego não sabe qual ficha é a nova). */
 export function moveCard(s: KittensState, from: string, to: string, card: string): KittensState {
   return { ...s, hands: { ...s.hands, [from]: s.hands[from]!.filter((c) => c !== card), [to]: [...s.hands[to]!, card] } };
+}
+
+/** `p` comprou (do monte, pelo Tamanduá ou ficando com a carta do Feitiço): se estava cego, volta a ver a mão. */
+export function cure(s: KittensState, p: string): KittensState {
+  return s.blind.includes(p) ? logged({ ...s, blind: s.blind.filter((x) => x !== p) }, { t: 'cured', by: p }) : s;
 }

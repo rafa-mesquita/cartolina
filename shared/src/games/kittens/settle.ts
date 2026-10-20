@@ -4,7 +4,10 @@ import { resolvePending } from './resolve';
 import { eliminate, logged } from './turn';
 import type { KittensState } from './types';
 
-/** `p` caiu e não voltou em 30 s: a escolha dele é feita ao acaso e ele sai como se tivesse explodido. */
+/**
+ * `p` caiu e não voltou em 30 s: a escolha dele é feita ao acaso e ele sai como se tivesse explodido (a mão e o que
+ * estiver na frente dele vão pra fora do jogo; se estava cego, deixa de estar).
+ */
 function leave(state: KittensState, p: string, ctx: GameContext): KittensState {
   let s = state;
   const c = s.choice;
@@ -14,6 +17,8 @@ function leave(state: KittensState, p: string, ctx: GameContext): KittensState {
     if (waiting.length !== c.waiting.length) s = { ...s, choice: waiting.length > 0 ? { ...c, waiting } : null };
   } else if (c?.who === p) s = chooseAtRandom(s, ctx.rng);
   else if (c?.kind === 'favor' && c.to === p) s = { ...s, choice: null };
+  // A escolha ao acaso pode ter feito ele explodir (Desarme que sumiu da mão): já saiu.
+  if (s.phase !== 'playing' || !s.alive.includes(p)) return s;
   return eliminate(logged(s, { t: 'left', by: p }), p);
 }
 
@@ -26,6 +31,7 @@ export function settleKittens(state: KittensState, ctx: GameContext): KittensSta
   let s = state;
   for (const p of state.alive.filter((x) => !ctx.active.includes(x))) {
     if (s.phase !== 'playing') break;
+    if (!s.alive.includes(p)) continue;
     s = leave(s, p, ctx);
   }
   if (s.phase !== 'playing') return s;

@@ -46,8 +46,9 @@ export function started(n: number, seed = 1): { state: KittensState; ctx: GameCo
 }
 
 /**
- * Todas as cartas da partida, onde quer que estejam (mãos, monte, descarte, fora do jogo, cartas no ar e o tatu que
- * está sendo escondido), em ordem alfabética. Serve pra conferir que nenhuma carta some nem se duplica.
+ * Todas as cartas da partida, onde quer que estejam (mãos, monte, descarte, fora do jogo, cartas na frente dos
+ * jogadores, cartas no ar e o tatu que está sendo escondido), em ordem alfabética. Serve pra conferir que nenhuma carta
+ * some nem se duplica. (O cego do Mau-olhado só muda a visão: a mão dele continua em `hands`.)
  */
 export function everyCard(state: KittensState): string[] {
   return [
@@ -55,6 +56,7 @@ export function everyCard(state: KittensState): string[] {
     ...state.draw,
     ...state.discard,
     ...state.out,
+    ...Object.values(state.front).flat(),
     ...(state.pending ? [...state.pending.play.cards, ...state.pending.nopes.map((n) => n.card)] : []),
     ...(state.choice?.kind === 'cafune' || state.choice?.kind === 'tatu' ? [state.choice.tatu] : []),
   ].sort();
@@ -67,6 +69,8 @@ export function table(opts: {
   discard?: string[];
   current?: string;
   owed?: number;
+  front?: Record<string, string[]>;
+  blind?: string[];
 }): KittensState {
   const players = Object.keys(opts.hands);
   return {
@@ -77,7 +81,16 @@ export function table(opts: {
     hands: opts.hands,
     draw: opts.draw ?? [],
     discard: opts.discard ?? [],
+    front: opts.front ?? {},
+    blind: opts.blind ?? [],
     current: opts.current ?? players[0]!,
     owed: opts.owed ?? 1,
   };
+}
+
+/** Ficha (`?i`) da carta `card` na mão de quem está cego (a ordem das fichas é a da mão no estado). */
+export function tokenOf(state: KittensState, p: string, card: string): string {
+  const i = state.hands[p]!.indexOf(card);
+  if (i < 0) throw new Error(`${card} não está na mão de ${p}`);
+  return `?${i}`;
 }

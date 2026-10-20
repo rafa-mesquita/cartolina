@@ -1,13 +1,17 @@
 import type { GameContext } from '../../game';
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf, type KittensCardKind } from './cards';
-import { logged, moveCard, nextAlive } from './turn';
+import { cure, logged, moveCard, nextAlive } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 const isKind = (k: KittensCardKind) => (c: string) => kittensKindOf(c) === k;
 
-/** Par de Tamanduá: compra as 2 de cima; Tatubum vai pro fundo (sem gastar Desarme), o resto pra mão. A vez continua. */
-function tamandua(s: KittensState, by: string): KittensState {
+/**
+ * Par de Tamanduá: compra as 2 de cima; Tatubum vai pro fundo (sem gastar Desarme), o resto pra mão. A vez continua.
+ * Comprou: o Mau-olhado de quem jogou passa.
+ */
+function tamandua(state: KittensState, by: string): KittensState {
+  const s = cure(state, by);
   const n = Math.min(2, s.draw.length);
   const taken = s.draw.slice(-n).reverse(); // a de cima primeiro
   const tatus = taken.filter(isKind('tatubum'));
@@ -51,10 +55,10 @@ function roda(s: KittensState, by: string, rng: Rng): KittensState {
   return passes.reduce((acc, x) => logged(acc, { t: 'passed', ...x }, [x.from, x.to]), { ...s, hands });
 }
 
-/** O efeito de um par de bicho que não foi cancelado (spec "Par de cada bicho"). */
+/** O efeito de um par de bicho que não foi cancelado (spec "Par de cada bicho"); com Boto, o do bicho em `play.as`. */
 export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: GameContext): KittensState {
   const deadline = ctx.now + KITTENS_CHOICE_MS;
-  switch (kittensKindOf(play.cards[0]!)) {
+  switch (play.as) {
     case 'mico': {
       // Cada adversário vivo com carta descarta uma, ao mesmo tempo; ninguém com carta, nada acontece.
       const waiting = s.alive.filter((p) => p !== by && s.hands[p]!.length > 0);

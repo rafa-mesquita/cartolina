@@ -30,7 +30,7 @@ describe('começar', () => {
       out: [],
     });
     for (const p of ids(3)) expect(state.hands[p]).toHaveLength(8);
-    expect(state.draw).toHaveLength(46 - 21 + 2 + 2);
+    expect(state.draw).toHaveLength(52 + 2 - 21 + 2 + 2); // pacote + 2 Latidores − mãos + Desarmes extras + tatus
   });
 
   it('não começa de novo no meio da partida', () => {
