@@ -19,6 +19,24 @@
   - Desarme: `a small brown three-banded armadillo soldier of the Brazilian armed forces, wearing an olive green military helmet and a camouflage vest, holding a big pair of red wire cutters about to cut a wire, focused and brave face, a few bomb disposal tools hanging from its belt… on a flat solid bright warning-yellow background (#f2c14e)…`
   - Capivara: o da tabela abaixo, com `on a flat solid aqua-green background (#5cc8b8)`.
 
+## Lote 3 (2026-10-19): uma cor por carta, todas com arte do Flow
+
+- **Toda carta tem a sua cor** e um cerrado de dia desenhado em código nessa cor; a faixa do topo é a cor
+  25% mais escura. O prompt pede o fundo liso na mesma cor, e o recorte (preenchimento a partir da borda,
+  que para no contorno escuro) tira o fundo sem comer partes do bicho da mesma cor.
+- Cores: Tatubum `#e4572e`, Desarme `#f2c14e`, Nem vem! `#c86fd4`, Ataque `#9aa7bd`, Pular `#5aa0e6`,
+  Favor `#f29bc0`, Embaralhar `#8d7ae6`, Espiar `#3fa7c9`, Capivara `#5cc8b8`, Mico-leão `#f4a259`,
+  Quati `#c79a6a`, Tamanduá `#b0b8c8`, Preguiça `#a8bf6a`.
+- Cenas usadas (começo e fim padrão, fundo `flat solid <cor> background (#hex)`), favoritas com coração no Flow:
+  - Ataque: tatu guerreiro avançando com espada de aço erguida e capa vermelha.
+  - Pular: tatu saltando por cima de uma cerquinha de madeira, setas azuis pra direita.
+  - Favor: tatu de olhos brilhando oferecendo um presente amarelo com laço vermelho, coraçãozinho rosa.
+  - Embaralhar: tatu fazendo malabarismo com três cartas de verso azul.
+  - Espiar: tatu olhando por um binóculo preto, olhos enormes nas lentes.
+  - Mico-leão, Quati, Tamanduá, Preguiça: os bichos da tabela abaixo.
+- Na carta a arte fica numa caixa de 84×74 px, alinhada por baixo, longe do nome e da frase (pedido do Rafa:
+  nenhum desenho atrapalha o texto).
+
 ## Rascunho original
 
 Rascunho de 2026-10-19. Identidade: pixel art, paleta "noite no cerrado" (spec §5.4).
