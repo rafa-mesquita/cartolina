@@ -143,6 +143,24 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('Ataque acumulado: os turnos que faltam aparecem na sua mão e no assento de quem está na vez', () => {
+    const mine = midGame('p0');
+    mine.game = { ...mine.game, current: 'p0', owed: 3 };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(mine));
+    expect(root.querySelector('#hand .kt-owedtag')?.textContent).toContain('FALTAM 3 TURNOS');
+    mesa.destroy();
+
+    const theirs = midGame('p0');
+    theirs.game = { ...theirs.game, current: 'p1', owed: 2 };
+    const other = mount();
+    other.mesa.update(toMesa(theirs));
+    expect(other.root.querySelector('.kt-seat[data-p="p1"] .kt-owed')?.textContent).toBe('2 TURNOS');
+    expect(other.root.querySelector('.kt-seat[data-p="p2"] .kt-owed')).toBeNull();
+    expect(other.root.querySelector('#hand .kt-owedtag')).toBeNull();
+    other.mesa.destroy();
+  });
+
   it('nomes vão escapados pro HTML', () => {
     let room = started(2);
     room = { ...room, seats: room.seats.map((s) => (s.id === 'p1' ? { ...s, name: '<b>x</b>' } : s)) };
