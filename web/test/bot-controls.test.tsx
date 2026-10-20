@@ -1,4 +1,4 @@
-import { MAX_PLAYERS } from '@cartolina/shared';
+import { CAMELIO_MAX_PLAYERS, MAX_PLAYERS } from '@cartolina/shared';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -63,8 +63,26 @@ vi.mock('../src/dev/picturesBots', () => ({
   }),
 }));
 
+vi.mock('../src/dev/camelioBots', () => ({
+  subscribeCamelioBots: (fn: () => void) => {
+    fake.listeners.add(fn);
+    return () => fake.listeners.delete(fn);
+  },
+  camelioBotsVersion: () => fake.state.version,
+  camelioBotsIn: (code: string) => fake.state.bots.filter((b) => b.code === code).length,
+  addCamelioBot: vi.fn((code: string) => {
+    fake.state.bots.push({ code });
+    fake.emit();
+  }),
+  removeAllCamelioBots: vi.fn(() => {
+    fake.state.bots = [];
+    fake.emit();
+  }),
+}));
+
 import BotControls from '../src/dev/BotControls';
 import { addBot, removeAllBots } from '../src/dev/bots';
+import { addCamelioBot, removeAllCamelioBots } from '../src/dev/camelioBots';
 import { addDixitBot, removeAllDixitBots } from '../src/dev/dixitBots';
 import { addPicturesBot, removeAllPicturesBots } from '../src/dev/picturesBots';
 import { Lobby } from '../src/screens/Lobby';
@@ -119,6 +137,24 @@ describe('BotControls (dev)', () => {
     expect(removeAllPicturesBots).toHaveBeenCalled();
     expect(removeAllBots).not.toHaveBeenCalled();
     expect(removeAllDixitBots).not.toHaveBeenCalled();
+  });
+
+  it('no Cama-Leão usa os bots do Cama-Leão e o botão trava com 6 assentos', () => {
+    const { rerender } = render(<BotControls code="ABCD" seats={2} game="camelio" />);
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /adicionar bot/ }));
+    });
+    expect(addCamelioBot).toHaveBeenCalledWith('ABCD');
+    expect(addBot).not.toHaveBeenCalled();
+    expect(addPicturesBot).not.toHaveBeenCalled();
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /tirar bots \(1\)/ }));
+    });
+    expect(removeAllCamelioBots).toHaveBeenCalled();
+    expect(removeAllBots).not.toHaveBeenCalled();
+    expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(false);
+    rerender(<BotControls code="ABCD" seats={CAMELIO_MAX_PLAYERS} game="camelio" />);
+    expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('sala cheia desabilita "adicionar bot"', () => {
