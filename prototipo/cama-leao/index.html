@@ -153,7 +153,7 @@ button{font:inherit;color:inherit;cursor:pointer}
     var(--navy);
   box-shadow:inset 0 0 0 2px var(--gold),0 6px 16px rgba(31,42,74,.3)}
 #banner .txt{transition:opacity .16s ease}
-#banner .txt.fade{opacity:0}
+#banner .txt.fade{opacity:0;transition-duration:.12s}
 #banner b{color:var(--gold);font-weight:600}
 
 /* ---------- a sua mesa ---------- */
@@ -214,6 +214,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 <script src="narrate.js"></script>
 <script src="bot.js"></script>
 <script src="sounds.js"></script>
+<script src="anim.js"></script>
 <script>
 'use strict';
 /* Protótipo da mesa do Cama-Leão (descartável). Regras: shared/src/games/camelio empacotadas em rules.js. */
@@ -230,9 +231,8 @@ const ERR = {
 };
 const { CAMELIO_COLORS, CAMELIO_EXACT } = CamaLeao;
 const SEAT_W = 230;
-
-// A virada de verdade chega na Task 5 (anim.js); até lá a jogada só aparece no lugar.
-window.Anim = window.Anim || { play: () => Promise.resolve() };
+/** Cartas da sua mesa; o espaço entre as pilhas (14) e o padding delas (4 + 4) são os do CSS de #mine. */
+const MINE_W = 64;
 
 let N = 4, SPEED = 1;
 let ids = [], online = new Set(), state = null;
@@ -285,22 +285,33 @@ function changed() {
   if (fresh) {
     animating = true; picked = null; hoverPid = null;
     const epoch = gameEpoch;
+    // a frase dessa jogada é a que fica no letreiro até a próxima vez começar
+    releaseHold(); hold = { match: v.match, playCount: v.playCount };
+    // o ponto da soltura vale só pra esta jogada
+    const from = dropFrom; dropFrom = null;
     // nada levantado nem marcado como alvo durante a virada; o letreiro fica com a Anim
     render(shown, { keepBanner: true });
-    Promise.resolve()
-      .then(() => Anim.play(shown, v))
+    // o executor roda na hora: o clone da Anim nasce no mesmo quadro em que o do arrasto saiu
+    new Promise((resolve) => resolve(Anim.play(shown, v, { nameOf, say: setBanner, dropFrom: from, layout: stackLayout })))
       .catch((err) => console.error('animação falhou (o jogo segue)', err))
       .finally(() => {
         if (epoch !== gameEpoch) return; // partida nova no meio: não mexe no que é dela
-        animating = false; shown = null; changed();
+        animating = false; shown = null;
+        if (!drag && !flying) dimmed = null; // a origem fica apagada até aqui
+        changed();
       });
     return;
   }
   // carta levantada não sobrevive a perder a vez (pausa, partida nova)
   if (picked && !(v.phase === 'playing' && !v.paused && v.turn === ME)) picked = null;
+  if (v.paused) releaseHold();
   if (v.phase === 'playing' && v.turn === ME && prevTurn !== ME) play('turn');
   prevTurn = v.turn;
   shown = v; render(v); scheduleBot(v);
+  // na sua vez (ou no fim) a dica entra depois de a frase da jogada ficar um pouco no letreiro
+  if (hold && !holdTimer && (v.phase === 'over' || (v.phase === 'playing' && v.turn === ME))) {
+    holdTimer = setTimeout(() => { holdTimer = 0; hold = null; if (!animating && shown) setBanner(hint(shown)); }, HOLD_MS);
+  }
 }
 
 let botTimer = 0;
@@ -320,6 +331,8 @@ function scheduleBot(v) {
 
 function newGame() {
   gameEpoch++;
+  Anim.stop(); // a virada da partida anterior some na hora
+  releaseHold(); dropFrom = null;
   killDrag();
   cancelBot(); picked = null; animating = false; shown = null; prevTurn = null; hoverPid = null;
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
@@ -380,6 +393,8 @@ function seatFit(n) {
   }
   return { w: 30, gap: 3, pad: 2 }; // não acontece com 6 cores (dá 30 exato)
 }
+/** Como ficam as pilhas de `p` com `n` cores (a Anim usa pra pousar a carta onde ela vai ficar). */
+const stackLayout = (p, n) => (p === ME ? { w: MINE_W, gap: 14, pad: 8 } : seatFit(n));
 
 function renderTop(v) {
   const meta = `meta: <b>${v.target} cores</b>`;
@@ -433,7 +448,7 @@ function renderMine(v) {
   }).join('');
   mine.innerHTML = `<div class="${seatClass(v, ME)}" data-pid="${ME}">`
     + `<div class="who"><span class="cr">${critter(ME)}</span><span class="nm">você</span><span class="flags">${done.map(flag).join('')}</span></div>`
-    + stacksHTML(v, ME, 64)
+    + stacksHTML(v, ME, MINE_W)
     + `<div class="pts"><div class="pts-h">pontos: <b>${done.length}</b> de ${v.target}</div>`
     + `<div class="fans">${fans || '<span class="none">feche 5 esferas exatas de uma cor pra guardar ela aqui</span>'}</div></div></div>`;
 }
@@ -445,7 +460,19 @@ function setBanner(html) {
   el.dataset.t = html;
   el.classList.add('fade');
   clearTimeout(setBanner.t);
-  setBanner.t = setTimeout(() => { el.innerHTML = html; el.classList.remove('fade'); }, 160);
+  // o texto antigo some em 120ms, o novo entra em 160ms (a transição do .txt)
+  setBanner.t = setTimeout(() => { el.innerHTML = html; el.classList.remove('fade'); }, 120);
+}
+/**
+ * A frase da última jogada fica no letreiro até a próxima vez começar de fato: a jogada seguinte troca por
+ * outra frase; na sua vez (e no fim da partida) a dica entra ~1 s depois da animação. Pausa tira a frase na hora.
+ */
+let hold = null, holdTimer = 0;
+function releaseHold() { clearTimeout(holdTimer); holdTimer = 0; hold = null; }
+const HOLD_MS = 1100;
+function bannerFor(v) {
+  const held = hold && v.last && !v.paused && hold.match === v.match && hold.playCount === v.playCount;
+  return held ? narrate(v.last, nameOf) : hint(v);
 }
 function hint(v) {
   if (v.phase === 'over') {
@@ -468,7 +495,7 @@ function hint(v) {
 function render(v, { keepBanner = false } = {}) {
   if (!v) return;
   renderTop(v); renderSeats(v); renderRing(v); renderMine(v);
-  if (!keepBanner) setBanner(hint(v));
+  if (!keepBanner) setBanner(bannerFor(v));
 }
 
 /* ---------- o clique (o gesto mínimo; o principal é o arrasto, logo abaixo) ---------- */
@@ -479,6 +506,7 @@ function pick(from) {
   if (animating) return; // clique durante a virada: só ignora
   if (!canPlay()) { if (state.phase === 'playing') toast(state.paused ? 'Pausado: esperando a galera voltar.' : ERR.not_your_turn); return; }
   if (from === 'deck' && !shown.top) return;
+  releaseHold(); // escolher a carta já é a sua vez começando: o letreiro passa a guiar
   picked = picked === from ? null : from; play('pick'); render(shown);
 }
 /** Clica numa mesa com a carta levantada: joga. */
@@ -521,8 +549,13 @@ app.addEventListener('mouseleave', () => { if (!drag) setHover(null); });
  * redesenhada no meio, o arrasto não quebra. Durante o arrasto nada é redesenhado por causa do hover. */
 const DRAG_START_PX = 6;
 const CARD_W = 92, CARD_H = CARD_W * 1.44;
-/** { from, pointerId, x0, y0, started, clone, src } — `src` é o #deck/#open (fica no DOM; só o miolo é redesenhado). */
+/**
+ * { from, pointerId, x0, y0, started, clone, src, pos } — `src` é o #deck/#open (fica no DOM; só o miolo é
+ * redesenhado); `pos` é o canto de cima do clone, no palco.
+ */
 let drag = null;
+/** Onde o clone estava na soltura ({ x, y, from }): a carta da Anim nasce ali. Vale só pra próxima jogada. */
+let dropFrom = null;
 /** De onde saiu a carta que está viajando (o original fica apagado até o clone voltar ou cair). */
 let dimmed = null;
 /** O clone que está voltando pro lugar (some no fim do voo). */
@@ -564,12 +597,14 @@ function startDrag(e) {
   drag.started = true;
   suppressClick = true;
   picked = null; hoverPid = null;
+  releaseHold(); // o letreiro passa a guiar o arrasto
   const v = shown;
   const clone = document.createElement('div');
   clone.className = 'drag-clone snap';
   clone.innerHTML = `<div class="tilt">${drag.from === 'deck' ? CardArt.back(v.top, CARD_W) : CardArt.front(v.open, CARD_W)}</div>`;
   const p0 = srcPos(drag.src) || { x: toStage(e).x - CARD_W / 2, y: toStage(e).y - CARD_H / 2 };
   placeClone(clone, p0.x, p0.y);
+  drag.pos = p0;
   app.appendChild(clone);
   drag.clone = clone;
   dimmed = drag.from;
@@ -584,7 +619,8 @@ function startDrag(e) {
 
 function moveDrag(e) {
   const p = toStage(e);
-  placeClone(drag.clone, p.x - CARD_W / 2, p.y - CARD_H / 2);
+  drag.pos = { x: p.x - CARD_W / 2, y: p.y - CARD_H / 2 };
+  placeClone(drag.clone, drag.pos.x, drag.pos.y);
   const seat = seatUnder(e);
   setHover(seat ? seat.dataset.pid : null); // só troca classes, não redesenha
 }
@@ -626,8 +662,12 @@ function killDrag() {
   dimmed = null;
 }
 
+/** O arrasto acabou sem soltura de verdade (botão solto fora da janela, janela perdeu o foco). */
+function abortDrag() { if (!drag) return; if (drag.started) cancelDrag(); else endDrag(); }
+
 addEventListener('pointermove', (e) => {
   if (!drag || e.pointerId !== drag.pointerId) return;
+  if (e.buttons === 0) { abortDrag(); return; } // o pointerup se perdeu (soltou fora da janela)
   if (!drag.started) {
     if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < DRAG_START_PX) return;
     if (!canPlay()) { endDrag(); return; } // a vez acabou antes de começar: nada a arrastar
@@ -644,11 +684,13 @@ addEventListener('pointerup', (e) => {
   if (!seat) { cancelDrag(); return; }
   const d = endDrag();
   d.clone.remove();
-  dimmed = null;
-  if (!act(ME, { type: 'play', from: d.from, to: seat.dataset.pid })) render(shown);
+  // a origem segue apagada (dimmed) até a Anim terminar; a carta dela nasce onde o clone estava
+  dropFrom = { ...d.pos, from: d.from };
+  if (!act(ME, { type: 'play', from: d.from, to: seat.dataset.pid })) { dropFrom = null; setDimmed(null); render(shown); }
 });
 
-addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.pointerId) { if (drag.started) cancelDrag(); else endDrag(); } });
+addEventListener('pointercancel', (e) => { if (drag && e.pointerId === drag.pointerId) abortDrag(); });
+addEventListener('blur', abortDrag);
 
 /* ---------- topo e painel de dev ---------- */
 function paintSound() {
