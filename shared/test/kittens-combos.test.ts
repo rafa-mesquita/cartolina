@@ -43,19 +43,61 @@ describe('Favor', () => {
 });
 
 describe('combos', () => {
-  it('5 diferentes: escolhe do descarte de antes da jogada', () => {
-    const cinco: KittensAction = { type: 'play', cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] };
-    const s = resolved(cinco, ['ataque-7', 'espiar-7']);
-    expect(s.choice).toEqual({ kind: 'cinco', who: 'p0', options: ['ataque-7', 'espiar-7'], deadline: T0 + 5000 + KITTENS_CHOICE_MS });
+  const cinco: KittensAction = { type: 'play', cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] };
+  const picks = (s: ReturnType<typeof resolved>) => s.log.filter((e) => e.ev.t === 'picked').map((e) => e.ev);
+
+  it('5 diferentes: pega duas cartas do descarte de antes da jogada, uma de cada vez', () => {
+    const s = resolved(cinco, ['ataque-7', 'espiar-7', 'pular-7']);
+    expect(s.choice).toEqual({
+      kind: 'cinco',
+      who: 'p0',
+      options: ['ataque-7', 'espiar-7', 'pular-7'],
+      left: 2,
+      deadline: T0 + 5000 + KITTENS_CHOICE_MS,
+    });
     expect(refuse(s, 'p0', { type: 'choose', card: 'mico-0' }, at(5000))).toBe('bad_choice');
-    const picked = act(s, 'p0', { type: 'choose', card: 'espiar-7' }, at(5000));
-    expect(picked.discard).not.toContain('espiar-7');
-    expect(picked.hands.p0).toContain('espiar-7');
+    expect(refuse(s, 'p1', { type: 'choose', card: 'espiar-7' }, at(5000))).toBe('not_your_choice');
+    const first = act(s, 'p0', { type: 'choose', card: 'espiar-7' }, at(5000));
+    expect(first.discard).not.toContain('espiar-7');
+    expect(first.hands.p0).toContain('espiar-7');
+    expect(first.choice).toMatchObject({ kind: 'cinco', who: 'p0', left: 1, deadline: T0 + 5000 + KITTENS_CHOICE_MS });
+    expect(first.log.at(-1)!.ev).toEqual({ t: 'picked', by: 'p0', card: 'espiar-7' });
+    expect(refuse(first, 'p0', { type: 'choose', card: 'espiar-7' }, at(5000))).toBe('bad_choice'); // já pegou essa
+    const second = act(first, 'p0', { type: 'choose', card: 'ataque-7' }, at(5000));
+    expect(second.choice).toBeNull();
+    expect(second.hands.p0).toEqual(expect.arrayContaining(['espiar-7', 'ataque-7']));
+    expect(second.discard).toEqual(['pular-7', 'capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0']);
+    expect(picks(second)).toEqual([
+      { t: 'picked', by: 'p0', card: 'espiar-7' },
+      { t: 'picked', by: 'p0', card: 'ataque-7' },
+    ]);
+    expect(second).toMatchObject({ current: 'p0', owed: 1 });
+  });
+
+  it('5 diferentes com uma só carta no descarte: começa com 1 e fecha ao pegar', () => {
+    const s = resolved(cinco, ['ataque-7']);
+    expect(s.choice).toMatchObject({ kind: 'cinco', options: ['ataque-7'], left: 1 });
+    const picked = act(s, 'p0', { type: 'choose', card: 'ataque-7' }, at(5000));
     expect(picked.choice).toBeNull();
-    expect(picked.log.at(-1)!.ev).toEqual({ t: 'picked', by: 'p0', card: 'espiar-7' });
-    const late = settleKittens(s, at(5000 + KITTENS_CHOICE_MS));
+    expect(picked.hands.p0).toContain('ataque-7');
+  });
+
+  it('5 diferentes: sem resposta, no fim do prazo o que falta sai ao acaso', () => {
+    const s = resolved(cinco, ['ataque-7', 'espiar-7', 'pular-7']);
+    const none = settleKittens(s, at(5000 + KITTENS_CHOICE_MS));
+    expect(none.choice).toBeNull();
+    expect(picks(none)).toHaveLength(2);
+    expect(none.hands.p0!.filter((c) => c.endsWith('-7'))).toHaveLength(2);
+    expect(none.discard.filter((c) => c.endsWith('-7'))).toHaveLength(1);
+    const half = act(s, 'p0', { type: 'choose', card: 'espiar-7' }, at(5000));
+    const late = settleKittens(half, at(5000 + KITTENS_CHOICE_MS));
     expect(late.choice).toBeNull();
-    expect(late.hands.p0!.filter((c) => c === 'ataque-7' || c === 'espiar-7')).toHaveLength(1);
+    expect(picks(late)).toHaveLength(2);
+    expect(late.hands.p0).toContain('espiar-7');
+    expect(late.hands.p0!.filter((c) => c.endsWith('-7'))).toHaveLength(2);
+    const one = settleKittens(resolved(cinco, ['ataque-7']), at(5000 + KITTENS_CHOICE_MS));
+    expect(one.choice).toBeNull();
+    expect(one.hands.p0).toContain('ataque-7');
   });
 
   it('5 diferentes com o descarte vazio: nada acontece', () => {

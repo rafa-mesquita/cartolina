@@ -29,7 +29,7 @@ export function parsePlay(
   const kind = playKindOf(kinds);
   if (kind === null) return 'bad_combo';
   let target: string | null = null;
-  if (kind === 'favor' || (kind === 'par' && kinds[0] === 'mico')) {
+  if (kind === 'favor') {
     const t = action.target;
     if (t === undefined || t === p || !s.alive.includes(t) || (s.hands[t]?.length ?? 0) === 0) return 'bad_target';
     target = t;

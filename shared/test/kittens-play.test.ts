@@ -54,12 +54,15 @@ describe('jogar', () => {
 
   it('par, trio e 5 diferentes', () => {
     const s = table({ hands: hands() });
-    expect(act(s, 'p0', play({ cards: ['mico-0', 'mico-1'], target: 'p1' }), ctx).pending!.play).toEqual({
-      kind: 'par',
-      cards: ['mico-0', 'mico-1'],
-      target: 'p1',
-      ask: null,
-    });
+    // Par de Mico não tem alvo: vale sem ele, e o que vier é ignorado.
+    for (const extra of [{}, { target: 'p1' }, { target: 'p9' }]) {
+      expect(act(s, 'p0', play({ cards: ['mico-0', 'mico-1'], ...extra }), ctx).pending!.play).toEqual({
+        kind: 'par',
+        cards: ['mico-0', 'mico-1'],
+        target: null,
+        ask: null,
+      });
+    }
     // Trio não tem alvo nem pedido: o que vier é ignorado.
     expect(
       act(s, 'p0', play({ cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: 'p1', ask: 'favor' }), ctx).pending!.play,
@@ -77,11 +80,10 @@ describe('jogar', () => {
   });
 
   it.each<[Play, string]>([
-    [{ cards: ['mico-0', 'mico-1'] }, 'bad_target'],
-    [{ cards: ['mico-0', 'mico-1'], target: 'p0' }, 'bad_target'],
-    [{ cards: ['mico-0', 'mico-1'], target: 'p2' }, 'bad_target'],
-    [{ cards: ['mico-0', 'mico-1'], target: 'p9' }, 'bad_target'],
+    [{ cards: ['favor-1'] }, 'bad_target'],
+    [{ cards: ['favor-1'], target: 'p0' }, 'bad_target'],
     [{ cards: ['favor-1'], target: 'p2' }, 'bad_target'],
+    [{ cards: ['favor-1'], target: 'p9' }, 'bad_target'],
     [{ cards: ['preguica-0', 'preguica-1'] }, 'bad_ask'],
     [{ cards: ['preguica-0', 'preguica-1'], ask: 'ataque' }, 'bad_ask'],
   ])('alvo e pedido: %j → %s', (p, error) => {

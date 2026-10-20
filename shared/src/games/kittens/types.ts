@@ -4,7 +4,7 @@ export const KITTENS_MIN_PLAYERS = 2;
 export const KITTENS_MAX_PLAYERS = 8;
 /** Janela do Nem vem! (decisão do usuário, 2026-10-19): sempre corre, mesmo se ninguém tiver Nem vem!. */
 export const KITTENS_NOPE_MS = 5_000;
-/** Prazo das escolhas pessoais (Desarme, Favor/Mico, 5 diferentes, Quati); depois o servidor escolhe. */
+/** Prazo das escolhas pessoais (Desarme, Favor, descarte do Mico, 5 diferentes, Quati); depois o servidor escolhe. */
 export const KITTENS_CHOICE_MS = 30_000;
 /** Quantas entradas do diário ficam no estado. */
 export const KITTENS_LOG_SIZE = 30;
@@ -17,7 +17,7 @@ export type KittensPlayKind = 'ataque' | 'pular' | 'favor' | 'embaralhar' | 'esp
 export interface KittensPlay {
   kind: KittensPlayKind;
   cards: string[];
-  /** Favor e par de Mico. */
+  /** Só o Favor (o par de Mico não tem alvo). */
   target: string | null;
   /** Par de Preguiça: o bicho pedido. */
   ask: KittensCardKind | null;
@@ -34,10 +34,12 @@ export interface KittensPending {
 export type KittensChoice =
   /** Quem desarmou escolhe onde o `tatu` volta no monte. */
   | { kind: 'cafune'; who: string; tatu: string; deadline: number }
-  /** `who` (o alvo do Favor ou do par de Mico) escolhe uma carta da mão pra dar pra `to`. */
+  /** `who` (o alvo do Favor) escolhe uma carta da mão pra dar pra `to`. */
   | { kind: 'favor'; who: string; to: string; deadline: number }
-  /** `who` escolhe uma carta de `options` (o descarte de antes da jogada de 5 diferentes). */
-  | { kind: 'cinco'; who: string; options: string[]; deadline: number }
+  /** `who` pega, uma de cada vez, `left` cartas de `options` (o descarte de antes da jogada de 5 diferentes). */
+  | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number }
+  /** Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par. */
+  | { kind: 'mico'; by: string; waiting: string[]; deadline: number }
   /** Par de Quati: `who` vê a carta de cima do monte e decide se ela fica ou vai pro fundo. */
   | { kind: 'quati'; who: string; deadline: number };
 
@@ -46,7 +48,7 @@ export type KittensChoiceView =
   | { kind: 'cafune'; who: string; deadline: number }
   /** `card` = a carta de cima, só pra quem escolhe (null pros outros). */
   | { kind: 'quati'; who: string; deadline: number; card: string | null }
-  | Extract<KittensChoice, { kind: 'favor' | 'cinco' }>;
+  | Extract<KittensChoice, { kind: 'favor' | 'cinco' | 'mico' }>;
 
 /** Espiar: as 3 de cima, a do topo primeiro, só pra `who`. */
 export interface KittensPeek {
@@ -69,6 +71,8 @@ export type KittensEvent =
   | { t: 'left'; by: string }
   | { t: 'gave'; from: string; to: string; card: string | null }
   | { t: 'picked'; by: string; card: string | null }
+  /** Par de Mico: `by` descartou `card` (todos veem; o efeito da carta não vale). */
+  | { t: 'discarded'; by: string; card: string }
   /** Par de Quati: a carta de cima foi pro fundo (`moved`) ou ficou. Ninguém vê qual era. */
   | { t: 'delayed'; by: string; moved: boolean }
   /** Par de Tamanduá: quantos Tatubuns comprados foram pro fundo. */
@@ -116,7 +120,7 @@ export type KittensAction =
   | { type: 'play'; cards: string[]; target?: string; ask?: KittensCardKind }
   | { type: 'nope' }
   | { type: 'draw' }
-  /** Desarme: `position` (0 = topo, tamanho do monte = fundo, ou 'random'); Favor/Mico e 5 diferentes: `card`; Quati: `keep`. */
+  /** Desarme: `position` (0 = topo, tamanho do monte = fundo, ou 'random'); Favor, descarte do Mico e 5 diferentes: `card`; Quati: `keep`. */
   | { type: 'choose'; card?: string; position?: number | 'random'; keep?: boolean }
   | { type: 'again' }
   | { type: 'lobby' };

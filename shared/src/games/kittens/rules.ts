@@ -1,6 +1,6 @@
 import type { ActionResult, GameContext } from '../../game';
 import { kittensKindOf } from './cards';
-import { delayTop, giveFavor, hideTatu, pickFromDiscard } from './choices';
+import { delayTop, discardForMico, giveFavor, hideTatu, pickFromDiscard } from './choices';
 import { kittensDeal } from './deck';
 import { parsePlay } from './play';
 import { settleKittens } from './settle';
@@ -101,7 +101,14 @@ export function applyKittensAction(
     case 'choose': {
       if (s.phase !== 'playing') return fail('bad_phase');
       const c = s.choice;
-      if (!c || c.who !== playerId) return fail('not_your_choice');
+      if (!c) return fail('not_your_choice');
+      // Par de Mico: não há um dono só; descarta quem ainda está na espera.
+      if (c.kind === 'mico') {
+        if (!c.waiting.includes(playerId)) return fail('not_your_choice');
+        if (action.card === undefined || !s.hands[playerId]!.includes(action.card)) return fail('bad_choice');
+        return ok(discardForMico(s, c, playerId, action.card));
+      }
+      if (c.who !== playerId) return fail('not_your_choice');
       switch (c.kind) {
         case 'cafune': {
           const { position } = action;

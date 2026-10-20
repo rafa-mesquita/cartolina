@@ -25,7 +25,7 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
     case 'cinco':
       return before.length === 0
         ? s
-        : { ...s, choice: { kind: 'cinco', who: by, options: before, deadline: ctx.now + KITTENS_CHOICE_MS } };
+        : { ...s, choice: { kind: 'cinco', who: by, options: before, left: Math.min(2, before.length), deadline: ctx.now + KITTENS_CHOICE_MS } };
   }
 }
 

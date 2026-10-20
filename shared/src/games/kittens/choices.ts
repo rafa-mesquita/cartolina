@@ -22,10 +22,25 @@ export function giveFavor(s: KittensState, c: Choice<'favor'>, card: string): Ki
   return logged({ ...s, hands, choice: null }, { t: 'gave', from: c.who, to: c.to, card }, [c.who, c.to]);
 }
 
-/** 5 diferentes: `who` pega `card` do descarte (todos veem). */
+/**
+ * 5 diferentes: `who` pega `card` do descarte (todos veem). São duas cartas, uma por vez: a escolha continua aberta
+ * (mesmo prazo, `left` menor) até pegar todas ou não sobrar opção no descarte.
+ */
 export function pickFromDiscard(s: KittensState, c: Choice<'cinco'>, card: string): KittensState {
   const hands = { ...s.hands, [c.who]: [...s.hands[c.who]!, card] };
-  return logged({ ...s, discard: s.discard.filter((x) => x !== card), hands, choice: null }, { t: 'picked', by: c.who, card });
+  const discard = s.discard.filter((x) => x !== card);
+  const options = c.options.filter((x) => x !== card && discard.includes(x));
+  const left = c.left - 1;
+  const choice = left > 0 && options.length > 0 ? { ...c, options, left } : null;
+  return logged({ ...s, discard, hands, choice }, { t: 'picked', by: c.who, card });
+}
+
+/** Par de Mico: `p` (que está na espera) descarta `card` da própria mão, à vista de todos; o efeito da carta não vale. */
+export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, card: string): KittensState {
+  const hands = { ...s.hands, [p]: s.hands[p]!.filter((x) => x !== card) };
+  const waiting = c.waiting.filter((x) => x !== p);
+  const choice = waiting.length > 0 ? { ...c, waiting } : null;
+  return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'discarded', by: p, card });
 }
 
 /** Par de Quati: a carta de cima fica (`keep`) ou vai pro fundo. Todos sabem se foi, ninguém sabe qual. */
@@ -34,7 +49,10 @@ export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): Ki
   return logged({ ...s, draw, choice: null, peek: keep ? s.peek : null }, { t: 'delayed', by: c.who, moved: !keep });
 }
 
-/** Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica). */
+/**
+ * Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica; no Mico, cada um
+ * que falta descarta uma; nos 5 diferentes, pega o que faltar).
+ */
 export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
   const c = s.choice!;
   switch (c.kind) {
@@ -45,8 +63,24 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
       return hand.length === 0 ? { ...s, choice: null } : giveFavor(s, c, hand[randomInt(rng, hand.length)]!);
     }
     case 'cinco': {
-      const options = c.options.filter((x) => s.discard.includes(x));
-      return options.length === 0 ? { ...s, choice: null } : pickFromDiscard(s, c, options[randomInt(rng, options.length)]!);
+      // Pega as que faltam, ao acaso (cada pegada atualiza `options`/`left` ou fecha a escolha).
+      let next = s;
+      while (next.choice?.kind === 'cinco') {
+        const cur: Choice<'cinco'> = next.choice;
+        const options = cur.options.filter((x) => next.discard.includes(x));
+        next =
+          options.length === 0 ? { ...next, choice: null } : pickFromDiscard(next, cur, options[randomInt(rng, options.length)]!);
+      }
+      return next;
+    }
+    case 'mico': {
+      // Cada um que falta descarta uma carta ao acaso, na ordem da espera.
+      let next = s;
+      for (const p of c.waiting) {
+        const hand = next.hands[p]!;
+        if (hand.length > 0) next = discardForMico(next, next.choice as Choice<'mico'>, p, hand[randomInt(rng, hand.length)]!);
+      }
+      return { ...next, choice: null };
     }
     case 'quati':
       // Sem resposta, a carta fica onde está (nada muda pra ninguém).

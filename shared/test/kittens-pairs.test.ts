@@ -26,13 +26,102 @@ function resolved(
 }
 const par = (cards: string[], extra: { target?: string; ask?: KittensCardKind } = {}): KittensAction => ({ type: 'play', cards, ...extra });
 
-describe('par de Mico: o adversário escolhe o que te dar', () => {
-  it('abre a escolha do Favor pro alvo', () => {
-    const s = resolved(par(['mico-0', 'mico-1'], { target: 'p1' }));
-    expect(s.choice).toEqual({ kind: 'favor', who: 'p1', to: 'p0', deadline: T0 + 5000 + KITTENS_CHOICE_MS });
-    const given = act(s, 'p1', { type: 'choose', card: 'pular-5' }, at(5000));
-    expect(given.hands.p0).toContain('pular-5');
-    expect(given.log.at(-1)).toMatchObject({ ev: { t: 'gave', from: 'p1', to: 'p0', card: 'pular-5' }, seenBy: ['p1', 'p0'] });
+describe('par de Mico: os outros descartam uma carta à escolha deles', () => {
+  const mico = (opts: Parameters<typeof resolved>[1] = {}) => resolved(par(['mico-0', 'mico-1']), opts);
+
+  it('abre a escolha pra quem tem carta, na ordem dos assentos; não precisa de alvo', () => {
+    const s = mico();
+    expect(s.choice).toEqual({ kind: 'mico', by: 'p0', waiting: ['p1', 'p2'], deadline: T0 + 5000 + KITTENS_CHOICE_MS });
+    expect(s.pending).toBeNull();
+    expect(s.discard).toEqual(['mico-0', 'mico-1']);
+    // A escolha é pública: todo mundo vê quem ainda falta.
+    expect(kittensViewFor(s, 'p2').choice).toEqual(s.choice);
+    expect(kittensViewFor(s, null).choice).toEqual(s.choice);
+  });
+
+  it('quem está sem carta não entra na espera', () => {
+    expect(mico({ hands: { ...hands(), p1: [] } }).choice).toMatchObject({ kind: 'mico', waiting: ['p2'] });
+  });
+
+  it('ninguém mais tem carta: nada acontece (sem escolha)', () => {
+    const s = mico({ hands: { ...hands(), p1: [], p2: [] } });
+    expect(s.choice).toBeNull();
+    expect(s).toMatchObject({ current: 'p0', owed: 1 });
+  });
+
+  it('cada um descarta uma carta de verdade: evento público, a carta vai pro descarte sem efeito', () => {
+    const s = mico();
+    const one = act(s, 'p1', { type: 'choose', card: 'pular-5' }, at(5000));
+    expect(one.hands.p1).toEqual(['ataque-5']);
+    expect(one.discard).toEqual(['mico-0', 'mico-1', 'pular-5']);
+    expect(one.choice).toMatchObject({ kind: 'mico', waiting: ['p2'] });
+    expect(one.log.at(-1)).toMatchObject({ ev: { t: 'discarded', by: 'p1', card: 'pular-5' }, seenBy: null });
+    expect(one).toMatchObject({ current: 'p0', owed: 1 }); // o Pular descartado não pulou nada
+    expect(kittensViewFor(one, 'p2').log.at(-1)!.ev).toEqual({ t: 'discarded', by: 'p1', card: 'pular-5' });
+    const two = act(one, 'p2', { type: 'choose', card: 'espiar-5' }, at(5000));
+    expect(two.choice).toBeNull();
+    expect(two.hands.p2).toEqual([]);
+    expect(two.discard).toEqual(['mico-0', 'mico-1', 'pular-5', 'espiar-5']);
+    expect(two.peek).toBeNull(); // o Espiar descartado também não faz nada
+    expect(two).toMatchObject({ current: 'p0', owed: 1 });
+  });
+
+  it('só quem falta escolhe, com carta da própria mão', () => {
+    const s = mico();
+    expect(refuse(s, 'p0', { type: 'choose', card: 'quati-0' }, at(5000))).toBe('not_your_choice');
+    expect(refuse(s, 'espectador', { type: 'choose', card: 'quati-0' }, at(5000))).toBe('not_your_choice');
+    expect(refuse(s, 'p1', { type: 'choose', card: 'espiar-5' }, at(5000))).toBe('bad_choice');
+    expect(refuse(s, 'p1', { type: 'choose', card: 'nao-existe' }, at(5000))).toBe('bad_choice');
+    expect(refuse(s, 'p1', { type: 'choose' }, at(5000))).toBe('bad_choice');
+    const after = act(s, 'p1', { type: 'choose', card: 'pular-5' }, at(5000));
+    expect(refuse(after, 'p1', { type: 'choose', card: 'ataque-5' }, at(5000))).toBe('not_your_choice');
+  });
+
+  it('quem jogou não age enquanto a escolha está aberta', () => {
+    const s = mico();
+    expect(refuse(s, 'p0', { type: 'draw' }, at(5000))).toBe('waiting_choice');
+    expect(refuse(s, 'p0', par(['quati-0', 'quati-1']), at(5000))).toBe('waiting_choice');
+  });
+
+  it('prazo vencido: cada um que falta descarta uma carta ao acaso', () => {
+    const half = act(mico(), 'p1', { type: 'choose', card: 'pular-5' }, at(5000));
+    const late = settleKittens(half, at(5000 + KITTENS_CHOICE_MS));
+    expect(late.choice).toBeNull();
+    expect(late.hands.p1).toEqual(['ataque-5']); // quem já tinha descartado não perde outra
+    expect(late.hands.p2).toEqual([]);
+    expect(late.log.at(-1)!.ev).toEqual({ t: 'discarded', by: 'p2', card: 'espiar-5' });
+    const none = settleKittens(mico(), at(5000 + KITTENS_CHOICE_MS));
+    expect(none.choice).toBeNull();
+    expect(none.hands.p1).toHaveLength(1);
+    expect(none.hands.p2).toHaveLength(0);
+    expect(none.discard).toHaveLength(4);
+    expect(none.log.filter((e) => e.ev.t === 'discarded').map((e) => e.ev)).toEqual([
+      expect.objectContaining({ t: 'discarded', by: 'p1' }),
+      expect.objectContaining({ t: 'discarded', by: 'p2', card: 'espiar-5' }),
+    ]);
+  });
+
+  it('quem está na espera e cai de vez sai dela (a mão vai pra fora); o último a sair fecha a escolha', () => {
+    const noP1 = settleKittens(mico(), ctxOf(['p0', 'p2'], { now: T0 + 5000 }));
+    expect(noP1.choice).toMatchObject({ kind: 'mico', waiting: ['p2'] });
+    expect(noP1.alive).toEqual(['p0', 'p2']);
+    expect(noP1.out).toEqual(expect.arrayContaining(['ataque-5', 'pular-5']));
+    const noBoth = settleKittens(noP1, ctxOf(['p0'], { now: T0 + 5000 }));
+    expect(noBoth.choice).toBeNull();
+    expect(noBoth.phase).toBe('gameover');
+    // O que sobrou descartando depois da saída do outro também fecha.
+    const done = act(noP1, 'p2', { type: 'choose', card: 'espiar-5' }, ctxOf(['p0', 'p2'], { now: T0 + 5000 }));
+    expect(done.choice).toBeNull();
+  });
+
+  it('se quem jogou cai, a escolha continua pros outros', () => {
+    const only = ctxOf(['p1', 'p2'], { now: T0 + 5000 });
+    const left = settleKittens(mico(), only);
+    expect(left.choice).toMatchObject({ kind: 'mico', by: 'p0', waiting: ['p1', 'p2'] });
+    expect(left.current).toBe('p1');
+    const a = act(left, 'p1', { type: 'choose', card: 'pular-5' }, only);
+    const b = act(a, 'p2', { type: 'choose', card: 'espiar-5' }, only);
+    expect(b.choice).toBeNull();
   });
 });
 

@@ -55,8 +55,11 @@ function roda(s: KittensState, by: string, rng: Rng): KittensState {
 export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: GameContext): KittensState {
   const deadline = ctx.now + KITTENS_CHOICE_MS;
   switch (kittensKindOf(play.cards[0]!)) {
-    case 'mico':
-      return { ...s, choice: { kind: 'favor', who: play.target!, to: by, deadline } };
+    case 'mico': {
+      // Cada adversário vivo com carta descarta uma, ao mesmo tempo; ninguém com carta, nada acontece.
+      const waiting = s.alive.filter((p) => p !== by && s.hands[p]!.length > 0);
+      return waiting.length === 0 ? s : { ...s, choice: { kind: 'mico', by, waiting, deadline } };
+    }
     case 'quati':
       return { ...s, choice: { kind: 'quati', who: by, deadline } };
     case 'tamandua':

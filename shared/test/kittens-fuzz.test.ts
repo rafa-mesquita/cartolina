@@ -83,11 +83,14 @@ function cardsToPlay(r: Rng, hand: string[]): string[] {
 function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const hand = s.hands[p] ?? [];
   const c = s.choice;
-  if (c && c.who === p && r() < 0.8) {
+  // Par de Mico: qualquer um da espera descarta uma carta da própria mão.
+  if (c?.kind === 'mico' && c.waiting.includes(p) && r() < 0.8) return { type: 'choose', card: pick(r, hand) ?? 'ataque-0' };
+  if (c && c.kind !== 'mico' && c.who === p && r() < 0.8) {
     if (c.kind === 'cafune') return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
     if (c.kind === 'favor') return { type: 'choose', card: pick(r, hand) ?? 'ataque-0' };
     if (c.kind === 'quati') return { type: 'choose', keep: r() < 0.5 };
-    return { type: 'choose', card: pick(r, c.options) ?? 'ataque-0' };
+    // 5 diferentes: uma das opções que ainda estão no descarte.
+    return { type: 'choose', card: pick(r, c.options.filter((x) => s.discard.includes(x))) ?? 'ataque-0' };
   }
   const a = r();
   if (s.pending && a < 0.5) return { type: 'nope' };
