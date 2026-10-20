@@ -351,6 +351,8 @@ const nameOf = (p) => NAMES[idx(p)];
 const colorOf = (p) => COLORS[idx(p)];
 const kindOf = (c) => T.kittensKindOf(c);
 const cardName = (k) => T.KITTENS_CARD_NAMES[k].toUpperCase();
+/** Nome do par no diário, pelo bicho. */
+const PAIR_LABEL = { mico: 'PAR DE MICO', quati: 'PAR DE QUATI', tamandua: 'PAR DE TAMANDUÁ', preguica: 'PAR DE PREGUIÇA', capivara: 'RODA DE CAPIVARA' };
 const PLAY_LABEL = { ataque: 'ATAQUE', pular: 'PULAR', favor: 'FAVOR', embaralhar: 'EMBARALHAR', espiar: 'ESPIAR', par: 'PAR', trio: 'TRIO', cinco: '5 DIFERENTES' };
 
 function ctx() {
@@ -666,7 +668,9 @@ function orderedHand() {
 }
 
 let drag = null;
-const needsTarget = (kind) => kind === 'favor' || kind === 'par' || kind === 'trio';
+/** Favor e par de Mico pedem um adversário; par de Preguiça pede um bicho. */
+const needsTarget = (kind, ids) => kind === 'favor' || (kind === 'par' && kindOf(ids[0]) === 'mico');
+const needsAsk = (kind, ids) => kind === 'par' && kindOf(ids[0]) === 'preguica';
 
 function stagePoint(e) {
   const r = stage.getBoundingClientRect();
@@ -762,7 +766,13 @@ function dropPlay(ids, t) {
   selected = new Set(ids);
   const kind = selectedPlay();
   if (!kind) { toast('Essas cartas não formam jogada.'); Sound.play('error'); render(); return; }
-  if (needsTarget(kind)) {
+  if (needsAsk(kind, ids)) {
+    mode = { type: 'ask', play: { cards: ids } };
+    captionText = 'Que bicho você quer puxar?';
+    render();
+    return;
+  }
+  if (needsTarget(kind, ids)) {
     mode = { type: 'target', play: { cards: ids }, kind };
     if (t.type === 'seat' && validTarget(t.p)) { chooseTarget(t.p); return; }
     captionText = 'Escolha um adversário <span class="timer">↑</span>';
@@ -797,7 +807,7 @@ function selectedPlay() {
   if (!kinds.length) return null;
   const same = kinds.every((k) => k === kinds[0]);
   if (kinds.length === 1) return ['ataque', 'pular', 'favor', 'embaralhar', 'espiar'].includes(kinds[0]) ? kinds[0] : null;
-  if (kinds.length === 2 && same) return 'par';
+  if (kinds.length === 2 && same && T.KITTENS_BICHOS.includes(kinds[0])) return 'par';
   if (kinds.length === 3 && same) return 'trio';
   if (kinds.length === 5 && new Set(kinds).size === 5) return 'cinco';
   return null;
@@ -811,7 +821,13 @@ function playSelected() {
   const kind = selectedPlay();
   if (!kind) return;
   const play = { cards: [...selected] };
-  if (kind === 'favor' || kind === 'par' || kind === 'trio') {
+  if (needsAsk(kind, play.cards)) {
+    mode = { type: 'ask', play };
+    captionText = 'Que bicho você quer puxar?';
+    render();
+    return;
+  }
+  if (needsTarget(kind, play.cards)) {
     mode = { type: 'target', play, kind };
     captionText = 'Escolha um adversário <span class="timer">↑</span>';
     render();
@@ -822,12 +838,6 @@ function playSelected() {
 
 function chooseTarget(p) {
   const play = { ...mode.play, target: p };
-  if (mode.kind === 'trio') {
-    mode = { type: 'ask', play };
-    captionText = `Que carta você pede pra ${nameOf(p)}?`;
-    render();
-    return;
-  }
   send(play);
 }
 
@@ -859,7 +869,7 @@ function renderActions() {
   if (v.current === ME && !v.pending && !v.choice) {
     const kind = selectedPlay();
     if (mode?.type === 'ask') {
-      box.appendChild(hint('escolha a carta no painel'));
+      box.appendChild(hint('escolha o bicho no painel'));
     } else if (mode?.type === 'target') {
       box.appendChild(hint('clique num adversário'));
       box.appendChild(button('CANCELAR', () => { mode = null; captionText = ''; render(); }, 'ghost'));
@@ -899,9 +909,9 @@ function renderPanel() {
   const c = v.choice;
   const timer = '<span class="timer" data-timer></span>';
   if (mode?.type === 'ask') {
-    panel.innerHTML = `<h2>QUAL CARTA VOCÊ PEDE?</h2><p>Se ${nameOf(mode.play.target)} tiver, tem que te dar.</p><div class="row"></div>`;
+    panel.innerHTML = `<h2>QUE BICHO VOCÊ PUXA?</h2><p>Vem de um adversário que tenha; se ninguém tiver, do monte.</p><div class="row"></div>`;
     const row = panel.querySelector('.row');
-    T.KITTENS_CARD_KINDS.filter((k) => k !== 'tatubum').forEach((k) => {
+    T.KITTENS_BICHOS.forEach((k) => {
       row.appendChild(button(cardName(k), () => send({ ...mode.play, ask: k }), 'small'));
     });
     row.appendChild(button('CANCELAR', () => { mode = null; render(); }, 'small ghost'));
@@ -934,6 +944,12 @@ function renderPanel() {
       el.onclick = () => dispatch(ME, { type: 'choose', card: id });
       row.appendChild(el);
     });
+  } else if (c.kind === 'quati') {
+    panel.innerHTML = `<h2>A CARTA DE CIMA ${timer}</h2><p>Só você vê. Fica em cima ou vai pro fundo?</p><div class="cards"></div><div class="row"></div>`;
+    if (c.card) panel.querySelector('.cards').appendChild(cardEl(c.card));
+    const row = panel.querySelector('.row');
+    row.appendChild(button('FICA EM CIMA', () => dispatch(ME, { type: 'choose', keep: true }), 'small'));
+    row.appendChild(button('PRO FUNDO', () => dispatch(ME, { type: 'choose', keep: false }), 'yellow'));
   }
   tickTimers();
 }
@@ -958,7 +974,7 @@ function rawText(ev, prevPending) {
         embaralhar: `${n(ev.by)} embaralhou o monte`,
         espiar: `${n(ev.by)} espiou o futuro`,
         favor: `${prevPending?.play.target ? n(prevPending.play.target) : 'alguém'} vai dar uma carta pra ${n(ev.by)}`,
-        par: `${whose('PAR')} valeu!`,
+        par: `${whose(PAIR_LABEL[kindOf(prevPending?.play.cards[0] ?? 'mico-0')] ?? 'PAR')} valeu!`,
         trio: `${whose('TRIO')} valeu!`,
         cinco: `${n(ev.by)} vai pegar uma do descarte`,
       }[ev.play];
@@ -969,9 +985,14 @@ function rawText(ev, prevPending) {
     case 'boom': return `${n(ev.by)} EXPLODIU!`;
     case 'left': return `${n(ev.by)} caiu e saiu do jogo`;
     case 'gave': return ev.card ? `${n(ev.from)} deu ${cardName(kindOf(ev.card))} pra ${n(ev.to)}` : `${n(ev.from)} deu uma carta pra ${n(ev.to)}`;
-    case 'stole': return ev.card ? `${n(ev.to)} roubou ${cardName(kindOf(ev.card))} de ${n(ev.from)}` : `${n(ev.to)} roubou uma carta de ${n(ev.from)}`;
-    case 'asked': return ev.card ? `${n(ev.from)} teve que dar ${cardName(ev.ask)} pra ${n(ev.to)}` : `${n(ev.from)} não tinha ${cardName(ev.ask)}`;
     case 'picked': return `${n(ev.by)} pegou ${ev.card ? cardName(kindOf(ev.card)) : 'uma carta'} do descarte`;
+    case 'delayed': return ev.moved ? `${n(ev.by)} mandou a carta de cima pro fundo` : `${n(ev.by)} deixou a carta de cima onde estava`;
+    case 'buried': return `${n(ev.by)} mandou ${ev.tatus === 1 ? 'um TATUBUM' : 'dois TATUBUNS'} pro fundo!`;
+    case 'called':
+      if (!ev.card) return `Ninguém tinha ${cardName(ev.ask)}, nem o monte`;
+      return ev.from ? `${n(ev.by)} puxou ${cardName(ev.ask)} de ${n(ev.from)}` : `${n(ev.by)} puxou ${cardName(ev.ask)} do monte`;
+    case 'passed': return ev.card ? `${n(ev.from)} passou ${cardName(kindOf(ev.card))} pra ${n(ev.to)}` : `${n(ev.from)} passou uma carta pra ${n(ev.to)}`;
+    case 'grabbed': return ev.from ? `${n(ev.by)} roubou o DESARME de ${n(ev.from)}!` : 'Ninguém tinha Desarme pra roubar';
     case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
   }
   return '';
@@ -1141,18 +1162,33 @@ async function animate(ev, prev, rects) {
       break;
     }
     case 'gave':
-    case 'stole':
-    case 'asked':
+    case 'passed':
+    case 'called':
+    case 'grabbed':
     case 'picked': {
       say(text);
       Sound.play('give');
       const card = ev.card;
-      if (ev.t === 'asked' && !card) { await Fx.wait(700); break; }
-      const from = ev.t === 'picked' ? $('#discard') : ev.from === ME && card && rects[card] ? rects[card] : anchorOf(ev.from);
-      const toP = ev.t === 'picked' ? ev.by : ev.to;
+      if ((ev.t === 'called' || ev.t === 'grabbed') && !ev.card) { await Fx.wait(700); break; }
+      const src = ev.t === 'picked' ? 'discard' : ev.t === 'called' && !ev.from ? 'deck' : ev.from;
+      const from = src === 'discard' ? $('#discard') : src === 'deck' ? $('#deck .stack') : src === ME && card && rects[card] ? rects[card] : anchorOf(src);
+      const toP = ev.t === 'picked' || ev.t === 'called' || ev.t === 'grabbed' ? ev.by : ev.to;
       const target = toP === ME && card ? document.querySelector(`#hand .card[data-id="${card}"]`) ?? $('#hand') : anchorOf(toP);
-      await Fx.fly({ node: cardEl(card, { back: !card }), from, to: target, dur: 520, trail: '#ff8fab' });
+      await Fx.fly({ node: cardEl(card, { back: !card }), from, to: target, dur: ev.t === 'passed' ? 360 : 520, trail: '#ff8fab' });
       if (card) { arriving.delete(card); document.querySelector(`#hand .card[data-id="${card}"]`)?.classList.remove('arriving'); }
+      break;
+    }
+    case 'delayed':
+    case 'buried': {
+      say(text);
+      Sound.play('card');
+      if (ev.t === 'buried' || ev.moved) {
+        const deck = $('#deck .stack');
+        const from = ev.t === 'buried' ? anchorOf(ev.by) : deck;
+        await Fx.fly({ node: ev.t === 'buried' ? cardEl('tatubum-0') : cardEl(null, { back: true }), from, to: deck, dur: 520 });
+      } else {
+        await Fx.wait(500);
+      }
       break;
     }
     case 'win': {
@@ -1267,9 +1303,16 @@ function toast(text) {
 // ---------------------------------------------------------------- zoom (rodinha, como no Diquisti)
 /**
  * Explicação completa de cada carta, que aparece no zoom (pedido do Rafa: na mão fica só o básico).
- * Os 5 bichos usam o mesmo texto (o que importa são os combos).
+ * Cada bicho explica o próprio par; o trio e os 5 diferentes valem pra qualquer carta.
  */
-const PAIR_TEXT = 'Sozinho não faz nada: junte cartas iguais.<br><b>PAR</b> (2 iguais): você rouba uma carta ao acaso de um adversário.<br><b>TRIO</b> (3 iguais): você diz o nome de uma carta; se o adversário tiver, tem que te dar.<br><b>5 DIFERENTES</b> (cinco cartas de nomes diferentes): você pega a carta que quiser do descarte.<br>Os combos valem com qualquer carta, não só com bichos, e podem levar Nem vem!.';
+const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha.<br><b>5 DIFERENTES</b>: você pega a carta que quiser do descarte.<br>Combos podem levar Nem vem!.';
+const PAIR_DETAIL = {
+  mico: '<b>PAR DE MICO</b>: escolha um adversário; ele escolhe uma carta da mão dele pra te dar. Só vocês dois sabem qual foi.',
+  quati: '<b>PAR DE QUATI</b>: só você vê a carta de cima do monte e decide se ela fica em cima ou vai pro fundo. Todo mundo sabe se foi pro fundo, ninguém sabe qual era.',
+  tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
+  preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte.',
+  capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
+};
 const DETAIL = {
   tatubum: 'O tatu-bola com o pavio aceso. Comprou esta carta e não tem Desarme? <b>Explodiu</b> e saiu do jogo.<br>Com Desarme, o tatu soldado corta o fio e você esconde o Tatubum de volta no monte, onde quiser.<br>O monte tem sempre um Tatubum a menos que o número de jogadores vivos.',
   cafune: 'Usado sozinho, na hora em que você compra um Tatubum: o tatu soldado corta o fio e você não explode.<br>Você escolhe <b>em segredo</b> onde o Tatubum volta no monte (no topo, no fundo, em qualquer posição ou ao acaso) e gasta um turno.<br>Não dá pra jogar Desarme fora dessa hora, nem cancelar com Nem vem!.',
@@ -1280,7 +1323,7 @@ const DETAIL = {
   embaralhar: 'Embaralha o monte inteiro.<br>Bom quando você (ou alguém) espiou e sabe que tem Tatubum em cima, ou quando alguém acabou de esconder um tatu num lugar que você não sabe.<br>Pode levar Nem vem!.',
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, na ordem, só você.<br>Elas ficam à mostra ao lado do monte até você comprar, a vez passar ou o monte mudar.<br>Pode levar Nem vem!.',
 };
-const detailOf = (k) => DETAIL[k] ?? PAIR_TEXT;
+const detailOf = (k) => DETAIL[k] ?? `Sozinho não faz nada.<br>${PAIR_DETAIL[k]}${COMBO_TEXT}`;
 
 let zoomed = null;
 function zoom(id) {
@@ -1316,19 +1359,23 @@ const ABOUT = {
   favor: 'Um adversário escolhe uma carta da mão dele pra te dar.',
   embaralhar: 'Embaralha o monte. Bom quando você sabe que tem tatu em cima.',
   espiar: 'Você vê as 3 cartas de cima do monte. Só você.',
-  capivara: 'Os bichos sozinhos não fazem nada: junte pares e trios.',
+  capivara: 'Par: todo mundo, menos você, passa uma carta pro próximo.',
+  mico: 'Par: um adversário escolhe uma carta pra te dar.',
+  quati: 'Par: vê a de cima e decide se vai pro fundo.',
+  tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
+  preguica: 'Par: puxa o bicho que você pedir.',
 };
 $('#cards').onclick = () => {
   const g = $('#gallery');
-  const kinds = ['tatubum', 'cafune', 'nemvem', 'ataque', 'pular', 'favor', 'embaralhar', 'espiar', 'capivara'];
-  g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos (qualquer carta): PAR rouba uma carta ao acaso · TRIO pede uma carta pelo nome · 5 DIFERENTES pega uma do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!.</p></div>';
+  const kinds = ['tatubum', 'cafune', 'nemvem', 'ataque', 'pular', 'favor', 'embaralhar', 'espiar', 'capivara', 'mico', 'quati', 'tamandua', 'preguica'];
+  g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa) · TRIO de qualquer carta rouba um Desarme · 5 DIFERENTES pega uma do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!.</p></div>';
   const grid = g.querySelector('.grid');
   kinds.forEach((k, i) => {
     const item = document.createElement('div');
     item.className = 'item';
     item.appendChild(cardEl(`${k}-${i}`));
     const p = document.createElement('p');
-    p.innerHTML = `<b>${k === 'capivara' ? 'BICHOS (5 TIPOS)' : cardName(k)}</b>${ABOUT[k]}`;
+    p.innerHTML = `<b>${cardName(k)}</b>${ABOUT[k]}`;
     item.appendChild(p);
     grid.appendChild(item);
   });

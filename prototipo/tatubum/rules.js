@@ -1,4 +1,4 @@
-// Gerado com esbuild a partir de shared/src/games/kittens (regras reais, só para o protótipo). Não editar à mão.
+// Gerado com esbuild a partir de prototipo/tatubum/_entry.ts (não editar à mão).
 var Tatubum = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -21,6 +21,7 @@ var Tatubum = (() => {
   // prototipo/tatubum/_entry.ts
   var entry_exports = {};
   __export(entry_exports, {
+    KITTENS_BICHOS: () => KITTENS_BICHOS,
     KITTENS_CARD_KINDS: () => KITTENS_CARD_KINDS,
     KITTENS_CARD_NAMES: () => KITTENS_CARD_NAMES,
     KITTENS_CHOICE_MS: () => KITTENS_CHOICE_MS,
@@ -70,6 +71,7 @@ var Tatubum = (() => {
     preguica: "Pregui\xE7a"
   };
   var KITTENS_ACTION_KINDS = ["ataque", "pular", "favor", "embaralhar", "espiar"];
+  var KITTENS_BICHOS = ["capivara", "mico", "quati", "tamandua", "preguica"];
   function kittensCardId(kind, n) {
     return `${kind}-${n}`;
   }
@@ -166,6 +168,9 @@ var Tatubum = (() => {
     if (state.current === p) next = passTo(next, nextAlive(next, p), 1);
     return checkWin(next);
   }
+  function moveCard(s, from, to, card) {
+    return { ...s, hands: { ...s.hands, [from]: s.hands[from].filter((c) => c !== card), [to]: [...s.hands[to], card] } };
+  }
 
   // shared/src/games/kittens/choices.ts
   function hideTatu(s, c, position, rng) {
@@ -186,6 +191,10 @@ var Tatubum = (() => {
     const hands = { ...s.hands, [c.who]: [...s.hands[c.who], card] };
     return logged({ ...s, discard: s.discard.filter((x) => x !== card), hands, choice: null }, { t: "picked", by: c.who, card });
   }
+  function delayTop(s, c, keep) {
+    const draw = keep ? s.draw : [s.draw.at(-1), ...s.draw.slice(0, -1)];
+    return logged({ ...s, draw, choice: null, peek: keep ? s.peek : null }, { t: "delayed", by: c.who, moved: !keep });
+  }
   function chooseAtRandom(s, rng) {
     const c = s.choice;
     switch (c.kind) {
@@ -199,6 +208,8 @@ var Tatubum = (() => {
         const options = c.options.filter((x) => s.discard.includes(x));
         return options.length === 0 ? { ...s, choice: null } : pickFromDiscard(s, c, options[randomInt(rng, options.length)]);
       }
+      case "quati":
+        return delayTop(s, c, true);
     }
   }
 
@@ -247,12 +258,13 @@ var Tatubum = (() => {
   }
 
   // shared/src/games/kittens/play.ts
+  var isBicho = (k) => KITTENS_BICHOS.includes(k);
   function playKindOf(kinds) {
     const same = kinds.every((k) => k === kinds[0]);
     if (kinds.length === 1) {
       return KITTENS_ACTION_KINDS.includes(kinds[0]) ? kinds[0] : null;
     }
-    if (kinds.length === 2 && same) return "par";
+    if (kinds.length === 2 && same && isBicho(kinds[0])) return "par";
     if (kinds.length === 3 && same) return "trio";
     if (kinds.length === 5 && new Set(kinds).size === 5) return "cinco";
     return null;
@@ -262,26 +274,88 @@ var Tatubum = (() => {
     const hand = s.hands[p] ?? [];
     if (cards.length === 0 || new Set(cards).size !== cards.length) return "bad_combo";
     if (!cards.every((c) => hand.includes(c))) return "not_in_hand";
-    const kind = playKindOf(cards.map((c) => kittensKindOf(c)));
+    const kinds = cards.map((c) => kittensKindOf(c));
+    const kind = playKindOf(kinds);
     if (kind === null) return "bad_combo";
     let target = null;
-    if (kind === "favor" || kind === "par" || kind === "trio") {
+    if (kind === "favor" || kind === "par" && kinds[0] === "mico") {
       const t = action.target;
       if (t === void 0 || t === p || !s.alive.includes(t) || (s.hands[t]?.length ?? 0) === 0) return "bad_target";
       target = t;
     }
     let ask = null;
-    if (kind === "trio") {
-      if (action.ask === void 0 || action.ask === "tatubum") return "bad_ask";
+    if (kind === "par" && kinds[0] === "preguica") {
+      if (action.ask === void 0 || !isBicho(action.ask)) return "bad_ask";
       ask = action.ask;
     }
     return { kind, cards: [...cards], target, ask };
   }
 
-  // shared/src/games/kittens/resolve.ts
-  function moveCard(s, from, to, card) {
-    return { ...s, hands: { ...s.hands, [from]: s.hands[from].filter((c) => c !== card), [to]: [...s.hands[to], card] } };
+  // shared/src/games/kittens/combos.ts
+  var isKind = (k) => (c) => kittensKindOf(c) === k;
+  function tamandua(s, by) {
+    const n = Math.min(2, s.draw.length);
+    const taken = s.draw.slice(-n).reverse();
+    const tatus = taken.filter(isKind("tatubum"));
+    const kept = taken.filter((c) => !isKind("tatubum")(c));
+    let next = {
+      ...s,
+      draw: [...tatus, ...s.draw.slice(0, s.draw.length - n)],
+      peek: null,
+      hands: { ...s.hands, [by]: [...s.hands[by], ...kept] }
+    };
+    for (const card of kept) next = logged(next, { t: "draw", by, card }, [by]);
+    return tatus.length > 0 ? logged(next, { t: "buried", by, tatus: tatus.length }) : next;
   }
+  function preguica(s, by, ask, rng) {
+    const holders = s.alive.filter((p) => p !== by && s.hands[p].some(isKind(ask)));
+    if (holders.length > 0) {
+      const from = holders[randomInt(rng, holders.length)];
+      const card2 = s.hands[from].find(isKind(ask));
+      return logged(moveCard(s, from, by, card2), { t: "called", by, ask, from, card: card2 });
+    }
+    const inDraw = s.draw.filter(isKind(ask));
+    if (inDraw.length === 0) return logged(s, { t: "called", by, ask, from: null, card: null });
+    const card = inDraw[randomInt(rng, inDraw.length)];
+    const next = { ...s, draw: s.draw.filter((c) => c !== card), peek: null, hands: { ...s.hands, [by]: [...s.hands[by], card] } };
+    return logged(next, { t: "called", by, ask, from: null, card });
+  }
+  function roda(s, by, rng) {
+    const passes = s.alive.filter((p) => p !== by && s.hands[p].length > 0).map((p) => {
+      const hand = s.hands[p];
+      return { from: p, to: nextAlive(s, p), card: hand[randomInt(rng, hand.length)] };
+    });
+    const hands = { ...s.hands };
+    for (const { from, card } of passes) hands[from] = hands[from].filter((c) => c !== card);
+    for (const { to, card } of passes) hands[to] = [...hands[to], card];
+    return passes.reduce((acc, x) => logged(acc, { t: "passed", ...x }, [x.from, x.to]), { ...s, hands });
+  }
+  function applyPair(s, by, play, ctx) {
+    const deadline = ctx.now + KITTENS_CHOICE_MS;
+    switch (kittensKindOf(play.cards[0])) {
+      case "mico":
+        return { ...s, choice: { kind: "favor", who: play.target, to: by, deadline } };
+      case "quati":
+        return { ...s, choice: { kind: "quati", who: by, deadline } };
+      case "tamandua":
+        return tamandua(s, by);
+      case "preguica":
+        return preguica(s, by, play.ask, ctx.rng);
+      case "capivara":
+        return roda(s, by, ctx.rng);
+      default:
+        return s;
+    }
+  }
+  function applyTrio(s, by, ctx) {
+    const holders = s.alive.filter((p) => p !== by && s.hands[p].some(isKind("cafune")));
+    if (holders.length === 0) return logged(s, { t: "grabbed", by, from: null, card: null });
+    const from = holders[randomInt(ctx.rng, holders.length)];
+    const card = s.hands[from].find(isKind("cafune"));
+    return logged(moveCard(s, from, by, card), { t: "grabbed", by, from, card });
+  }
+
+  // shared/src/games/kittens/resolve.ts
   function applyEffect(s, by, play, before, ctx) {
     switch (play.kind) {
       case "ataque":
@@ -294,16 +368,10 @@ var Tatubum = (() => {
         return { ...s, peek: { who: by, cards: s.draw.slice(-3).reverse() } };
       case "favor":
         return { ...s, choice: { kind: "favor", who: play.target, to: by, deadline: ctx.now + KITTENS_CHOICE_MS } };
-      case "par": {
-        const hand = s.hands[play.target];
-        const card = hand[randomInt(ctx.rng, hand.length)];
-        return logged(moveCard(s, play.target, by, card), { t: "stole", from: play.target, to: by, card }, [play.target, by]);
-      }
-      case "trio": {
-        const card = s.hands[play.target].find((c) => kittensKindOf(c) === play.ask) ?? null;
-        const moved = card === null ? s : moveCard(s, play.target, by, card);
-        return logged(moved, { t: "asked", from: play.target, to: by, ask: play.ask, card });
-      }
+      case "par":
+        return applyPair(s, by, play, ctx);
+      case "trio":
+        return applyTrio(s, by, ctx);
       case "cinco":
         return before.length === 0 ? s : { ...s, choice: { kind: "cinco", who: by, options: before, deadline: ctx.now + KITTENS_CHOICE_MS } };
     }
@@ -437,6 +505,14 @@ var Tatubum = (() => {
               return fail("bad_choice");
             }
             return ok(pickFromDiscard(s, c, action.card));
+          case "quati":
+            if (action.keep === void 0) return fail("bad_choice");
+            return ok(delayTop(s, c, action.keep));
+          default: {
+            const unhandled = c;
+            void unhandled;
+            return fail("bad_choice");
+          }
         }
       }
       case "play": {
@@ -478,10 +554,19 @@ var Tatubum = (() => {
   function hideCard(ev) {
     return "card" in ev ? { ...ev, card: null } : ev;
   }
-  function choiceView(choice) {
-    if (choice?.kind !== "cafune") return choice;
-    const { kind, who, deadline } = choice;
-    return { kind, who, deadline };
+  function choiceView(state, viewerId) {
+    const c = state.choice;
+    if (c === null) return null;
+    switch (c.kind) {
+      case "cafune": {
+        const { kind, who, deadline } = c;
+        return { kind, who, deadline };
+      }
+      case "quati":
+        return { ...c, card: viewerId !== null && viewerId === c.who ? state.draw.at(-1) ?? null : null };
+      default:
+        return c;
+    }
   }
   function kittensViewFor(state, viewerId) {
     const peek = state.peek;
@@ -498,7 +583,7 @@ var Tatubum = (() => {
       discard: state.discard,
       out: state.out,
       pending: state.pending,
-      choice: choiceView(state.choice),
+      choice: choiceView(state, viewerId),
       peek: peek !== null && peek.who === viewerId ? peek.cards : null,
       peekBy: peek?.who ?? null,
       log: state.log.map(({ n, ev, seenBy }) => ({
@@ -4565,7 +4650,8 @@ var Tatubum = (() => {
     external_exports.object({
       type: external_exports.literal("choose"),
       card: cardId.optional(),
-      position: external_exports.union([external_exports.number().int().min(0).max(200), external_exports.literal("random")]).optional()
+      position: external_exports.union([external_exports.number().int().min(0).max(200), external_exports.literal("random")]).optional(),
+      keep: external_exports.boolean().optional()
     }),
     external_exports.object({ type: external_exports.literal("again") }),
     external_exports.object({ type: external_exports.literal("lobby") })
@@ -4682,7 +4768,7 @@ var Tatubum = (() => {
     not_in_hand: "Essa carta n\xE3o est\xE1 na sua m\xE3o.",
     bad_combo: "Essas cartas n\xE3o formam jogada.",
     bad_target: "Escolha um advers\xE1rio vivo com carta na m\xE3o.",
-    bad_ask: "Escolha qual carta pedir.",
+    bad_ask: "Escolha qual bicho puxar.",
     nothing_to_nope: "N\xE3o tem carta no ar pra usar o Nem vem!",
     no_nope: "Voc\xEA n\xE3o tem nenhum Nem vem!",
     not_your_choice: "Essa escolha n\xE3o \xE9 sua.",
