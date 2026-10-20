@@ -1,6 +1,6 @@
 # cartolina~
 
-Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável), **Retratim**, a nossa versão do Pictures (id `pictures`) e **Cúpi**, a nossa versão do Coup (id `coup`; regras prontas, mesa em construção).
+Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável), **Retratim**, a nossa versão do Pictures (id `pictures`) e **Cúpi**, a nossa versão do Coup (id `coup`; jogável no computador e no celular).
 
 ## Estrutura
 
@@ -42,6 +42,7 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 ## Celular
 
 - O **DITU** joga no celular **em pé**. A fila fica na vertical (1 em cima, 100 embaixo). A carta vai pra fila tocando nela e depois no "colocar aqui", ou arrastando (segura um instante e arrasta). A dica se escreve numa folha que sobe de baixo.
+- O **Cúpi** joga no celular em pé desde o começo.
 - Celular deitado mostra "vira o celular em pé".
 - Mesa mista funciona: quem está no computador vê o arrasto de quem está no celular no lugar certo.
 - O **Diquisti** vem na etapa 2 do Plano 5; até lá, no celular, ele mostra o aviso de jogar no computador. O **Pictures** fica só no computador por enquanto.

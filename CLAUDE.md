@@ -10,7 +10,7 @@ No ar: site https://rafa-mesquita.github.io/cartolina/ · servidor https://carto
 | **DITU** (nosso ITO) | `ito` | jogável no computador e no celular |
 | **Diquisti** (nosso Dixit) | `dixit` | jogável no computador; celular ainda não |
 | **Retratim** (nosso Pictures) | `pictures` | jogável no computador; histórico/museu ainda não |
-| **Cúpi** (nosso Coup) | `coup` | regras prontas; mesa (computador e celular) em construção |
+| **Cúpi** (nosso Coup) | `coup` | jogável no computador e no celular; artes ainda são ícones (vêm no C3) |
 
 O id interno nunca muda: rotas, banco, registro e testes usam `ito`/`dixit`/`pictures`/`coup`. Só o que o jogador vê usa o nome novo.
 

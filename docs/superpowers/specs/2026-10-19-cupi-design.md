@@ -341,8 +341,8 @@ saíram. Sem estatísticas por enquanto.
 1. **Plano C1 — regras e base:** módulo `shared/src/games/coup/` completo com
    testes, registro, catálogo com o Cúpi **"em breve"** na estante.
 2. **Protótipo** (`prototipo/coup/`): o usuário testa o ritmo com bots e aprova.
-3. **Plano C2 — mesa:** computador e celular, bots de desenvolvimento, sons,
-   E2E. Aqui o Cúpi fica jogável (com ícones no lugar das artes).
+3. **Plano C2 — mesa (feito):** computador e celular, bots de desenvolvimento,
+   sons, E2E. Aqui o Cúpi fica jogável (com ícones no lugar das artes).
 4. **Plano C3 — artes:** lote de teste (Duque e Condessa) no Flow, depois os
    outros três; script de conversão.
 5. **Plano C4 — histórico:** migração, gravação, rota e aba.
