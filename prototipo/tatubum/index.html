@@ -975,7 +975,7 @@ function rawText(ev, prevPending) {
         embaralhar: `${n(ev.by)} embaralhou o monte`,
         espiar: `${n(ev.by)} espiou o futuro`,
         favor: `${prevPending?.play.target ? n(prevPending.play.target) : 'alguém'} vai dar uma carta pra ${n(ev.by)}`,
-        par: `${whose(PAIR_LABEL[kindOf(prevPending?.play.cards[0] ?? 'mico-0')] ?? 'PAR')} valeu!`,
+        par: `${whose(PAIR_LABEL[kindOf(prevPending?.play.cards[0] ?? '')] ?? 'PAR')} valeu!`,
         trio: `${whose('TRIO')} valeu!`,
         cinco: `${n(ev.by)} vai pegar uma do descarte`,
       }[ev.play];
