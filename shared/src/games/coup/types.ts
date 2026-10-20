@@ -39,6 +39,9 @@ export const COUP_COST: Record<CoupActionKind, number> = {
   exchange: 0,
 };
 
+/** Quanto a ação rende a quem age (extorquir: tirado do alvo, no máximo o que ele tem). */
+export const COUP_GAIN = { income: 1, foreignAid: 2, tax: 3, steal: 2 } as const;
+
 /** A ação tem alvo (outro jogador vivo). */
 export const COUP_TARGETED: Record<CoupActionKind, boolean> = {
   income: false,
@@ -162,9 +165,11 @@ export type CoupAction =
   /** "jogar de novo" (só o anfitrião, no fim da partida). */
   | { type: 'restart' }
   | { type: 'act'; kind: CoupActionKind; target?: string }
-  /** "deixa" */
+  /**
+   * Reações (`pass` = "deixa", `challenge` = duvidar, `block` = bloquear): `windowId` = id da janela que o jogador viu
+   * (o site sempre manda; sem ele, vale a janela aberta).
+   */
   | { type: 'pass'; windowId?: number }
-  /** Nas três reações (deixa, duvidar, bloquear), `windowId` = id da janela que o jogador viu (o site sempre manda; sem ele, vale a janela aberta). */
   | { type: 'challenge'; windowId?: number }
   | { type: 'block'; as: CoupCharacter; windowId?: number }
   | { type: 'lose'; card: CoupCharacter }

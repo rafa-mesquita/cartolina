@@ -61,6 +61,21 @@ describe('Cúpi: início', () => {
     expect(s.out).toEqual([]);
   });
 
+  it('jogar de novo sem o vencedor anterior entre os ativos: começa um ativo sorteado e as moedas ficam normais', () => {
+    const over: CoupState = { ...table(THREE), phase: 'over', turn: null, winner: 'p1', wins: { p0: 0, p1: 1 } };
+    const active = ['p0', 'p2', 'p3'];
+    const firsts = new Set<string>();
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const s = act(over, 'p0', { type: 'restart' }, ctxOf(active, { seed }));
+      expect(s.players).toEqual(active);
+      expect(active).toContain(s.turn);
+      for (const p of active) expect(s.hands[p]!.coins).toBe(2);
+      expect(s.wins).toEqual({ p0: 0, p1: 1, p2: 0, p3: 0 });
+      firsts.add(s.turn!);
+    }
+    expect(firsts.size).toBeGreaterThan(1);
+  });
+
   it('jogar de novo: o contador de janelas não zera (reação atrasada da partida anterior não casa)', () => {
     const last = act(table(THREE), 'p0', { type: 'act', kind: 'tax' }, ctx3).window!.id;
     const over: CoupState = { ...table(THREE), phase: 'over', turn: null, winner: 'p1', wins: { p0: 0, p1: 1 }, windowSeq: last };

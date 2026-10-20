@@ -6,6 +6,7 @@ import {
   COUP_CHARACTERS,
   COUP_CLAIM,
   COUP_COST,
+  COUP_GAIN,
   COUP_TARGETED,
 } from '../src/games/coup/types';
 import { mulberry32 } from '../src/rng';
@@ -37,6 +38,7 @@ describe('Cúpi: baralho e tabelas', () => {
     });
     expect(COUP_COST.coup).toBe(7);
     expect(COUP_COST.assassinate).toBe(3);
+    expect(COUP_GAIN).toEqual({ income: 1, foreignAid: 2, tax: 3, steal: 2 });
     expect(COUP_ACTION_KINDS.filter((k) => COUP_TARGETED[k])).toEqual(['coup', 'assassinate', 'steal']);
     expect(COUP_BLOCKERS.foreignAid).toEqual(['duke']);
     expect(COUP_BLOCKERS.assassinate).toEqual(['contessa']);

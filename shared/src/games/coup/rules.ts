@@ -6,6 +6,7 @@ import {
   COUP_BLOCKERS,
   COUP_CLAIM,
   COUP_COST,
+  COUP_GAIN,
   COUP_MAX_PLAYERS,
   COUP_MIN_PLAYERS,
   COUP_MUST_COUP_AT,
@@ -23,9 +24,6 @@ import {
 
 const fail = (error: string): ActionResult<CoupState> => ({ ok: false, error });
 const ok = (state: CoupState): ActionResult<CoupState> => ({ ok: true, state });
-
-/** Quanto renda, ajuda externa e taxar rendem. */
-const GAIN = { income: 1, foreignAid: 2, tax: 3 } as const;
 
 export function initialCoupState(): CoupState {
   return {
@@ -144,12 +142,12 @@ function resolveAction(state: CoupState, ctx: GameContext): CoupState {
     case 'income':
     case 'foreignAid':
     case 'tax': {
-      const amount = Math.min(GAIN[d.kind], treasury(s));
+      const amount = Math.min(COUP_GAIN[d.kind], treasury(s));
       return endTurn(done(withCoins(s, d.actor, amount), amount));
     }
     case 'steal': {
       if (!isAlive(s, d.target!)) return endTurn(s);
-      const amount = Math.min(2, coinsOf(s, d.target!));
+      const amount = Math.min(COUP_GAIN.steal, coinsOf(s, d.target!));
       return endTurn(done(withCoins(withCoins(s, d.target!, -amount), d.actor, amount), amount));
     }
     case 'coup':
