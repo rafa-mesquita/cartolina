@@ -7,7 +7,7 @@ import { loadSoundPref, saveSoundPref } from '../../net/identity';
 
 export type KittensSound =
   | 'select' | 'card' | 'draw' | 'nope' | 'tic' | 'shuffle' | 'peek' | 'attack' | 'skip' | 'give'
-  | 'cafune' | 'fuse' | 'boom' | 'win' | 'turn' | 'snip' | 'zoom' | 'error';
+  | 'cafune' | 'fuse' | 'boom' | 'win' | 'turn' | 'snip' | 'zoom' | 'error' | 'bark' | 'curse' | 'conjure';
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -109,6 +109,23 @@ export const SOUNDS: Record<KittensSound, () => void> = {
   snip: () => { tone({ f0: 2200, dur: 0.03, vol: 0.5 }); noise({ dur: 0.04, at: 0.03, filter: 'highpass', f0: 5000, vol: 0.6 }); tone({ f0: 1600, dur: 0.04, at: 0.07, vol: 0.4 }); },
   zoom: () => tone({ type: 'sine', f0: 1320, dur: 0.05, vol: 0.25 }),
   error: () => { tone({ f0: 200, dur: 0.07, vol: 0.4 }); tone({ f0: 150, dur: 0.1, at: 0.08, vol: 0.4 }); },
+  // Tatu Latidor: "au au" (dois latidos curtos descendo).
+  bark: () => {
+    tone({ f0: 620, f1: 290, dur: 0.11, vol: 0.6 });
+    noise({ dur: 0.05, filter: 'bandpass', f0: 1400, vol: 0.3 });
+    tone({ f0: 580, f1: 260, dur: 0.13, at: 0.19, vol: 0.6 });
+    noise({ dur: 0.05, at: 0.19, filter: 'bandpass', f0: 1300, vol: 0.3 });
+  },
+  // Mau-olhado: notinhas descendo, tortas, e um zumbido grave.
+  curse: () => {
+    [392, 370, 349, 311].forEach((f, i) => tone({ type: 'sine', f0: f, f1: f * 0.94, dur: 0.18, at: i * 0.12, vol: 0.35 }));
+    tone({ type: 'triangle', f0: 110, f1: 70, dur: 0.6, vol: 0.4 });
+  },
+  // Feitiço: arpejo mágico subindo com brilho.
+  conjure: () => {
+    [523, 784, 659, 1047].forEach((f, i) => tone({ type: 'triangle', f0: f, dur: 0.1, at: i * 0.07, vol: 0.35 }));
+    noise({ dur: 0.3, filter: 'highpass', f0: 3000, f1: 6000, vol: 0.2 });
+  },
 };
 
 export const Sound = {
