@@ -1,6 +1,9 @@
 import type { CamelioView } from '@cartolina/shared';
 
-/** Quantas jogadas a tela pode ficar atrás antes de pular direto (sem animar). */
+/**
+ * Quantas views a fila aguenta antes de pular direto (sem animar). O destino da animação em curso
+ * também está na fila: com uma animação rodando, a 3ª jogada que chega já faz a tela pular.
+ */
 export const MAX_BEHIND = 2;
 
 export interface Playback {
