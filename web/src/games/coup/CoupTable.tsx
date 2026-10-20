@@ -12,6 +12,7 @@ import { useMoments } from './moments';
 import { MyArea } from './MyArea';
 import { Panels } from './Panels';
 import { Seats } from './Seats';
+import { RulesSheet } from './RulesSheet';
 import { playCoupSound } from './sounds';
 import { Stage, type Reaction } from './Stage';
 import { nameFrom } from './texts';
@@ -89,6 +90,16 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
       }),
     [key],
   );
+
+  // Colinha de regras: guarda a situação em que abriu (`rulesAt`). Se a situação muda pra uma que pede você (reagir,
+  // perder carta, trocar), ela fecha sozinha pra você não perder o prazo; aberta numa situação que já pedia você, fica.
+  const needsYou = g.can.pass || g.can.lose || g.can.keep > 0;
+  const [rulesAt, setRulesAt] = useState<string | null>(null);
+  const rulesStale = rulesAt !== null && rulesAt !== key && needsYou;
+  if (rulesStale) setRulesAt(null);
+  const rulesOpen = rulesAt !== null && !rulesStale;
+  const toggleRules = useCallback(() => setRulesAt((at) => (at === null ? key : null)), [key]);
+  const closeRules = useCallback(() => setRulesAt(null), []);
   // Recusas do servidor (que não são de entrada na sala) viram aviso no palco.
   useEffect(
     () =>
@@ -167,18 +178,19 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   const onExchange = useCallback((keep: CoupCharacter[]) => send({ type: 'exchange', keep }), [send]);
   const onRestart = useCallback(() => send({ type: 'restart' }), [send]);
 
-  // Esc sai do modo "escolher alvo" (e fecha a folha do diário)
+  // Esc sai do modo "escolher alvo" (e fecha, antes, a folha do diário ou a colinha de regras)
   const hasAim = aiming !== null;
   useEffect(() => {
-    if (!hasAim && !diaryOpen) return undefined;
+    if (!hasAim && !diaryOpen && !rulesOpen) return undefined;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (diaryOpen) setDiaryOpen(false);
+      else if (rulesOpen) setRulesAt(null);
       else setUi((u) => ({ ...u, aiming: null }));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [hasAim, diaryOpen]);
+  }, [hasAim, diaryOpen, rulesOpen]);
 
   // Modo alvo: o foco vai pro primeiro assento-alvo; ao mirar ou cancelar, volta pro botão da ação.
   const prevAim = useRef<CoupActionKind | null>(null);
@@ -199,6 +211,16 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
     if (was && !diaryOpen) rootRef.current?.querySelector<HTMLElement>('.cp-lastline')?.focus();
   }, [diaryOpen]);
 
+  // Colinha fechada ("fechar", fundo, Esc ou sozinha): o foco que estava nela volta pro botão "regras". Se o foco
+  // estava em outro lugar (fechou sozinha com você na mesa), ninguém mexe nele.
+  const rulesWasOpen = useRef(false);
+  useEffect(() => {
+    const was = rulesWasOpen.current;
+    rulesWasOpen.current = rulesOpen;
+    const lost = document.activeElement === null || document.activeElement === document.body;
+    if (was && !rulesOpen && lost) rootRef.current?.querySelector<HTMLElement>('.cp-rulesbtn')?.focus();
+  }, [rulesOpen]);
+
   // celular: reagindo na janela (o modo compacto da tela baixa esconde as ações, que estão todas apagadas)
   const reacting = phone && g.phase === 'reaction' && g.can.pass;
   const rootClass = ['coup', phone ? 'coup--phone' : '', reacting ? 'cp-reacting' : ''].filter(Boolean).join(' ');
@@ -206,7 +228,7 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   return (
     <div className={rootClass} ref={rootRef} data-button-sounds="">
       <div className="cp-app" style={phone ? undefined : stage}>
-        <TopBar wins={g.wins} nameOf={names.nameOf} phone={phone} me={me} />
+        <TopBar wins={g.wins} nameOf={names.nameOf} phone={phone} me={me} rulesOpen={rulesOpen} onRules={toggleRules} />
         <main className="cp-main">
           <section className="cp-table">
             <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={names.nameOf} aiming={hasAim} onTarget={onTarget} />
@@ -230,8 +252,10 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
             </div>
           </section>
           <Diary log={g.log} match={g.match} names={names} phone={phone} open={diaryOpen} onClose={closeDiary} />
+          {rulesOpen && <RulesSheet phone={phone} onClose={closeRules} />}
         </main>
         {phone && diaryOpen && <div className="cp-scrim" aria-hidden="true" onClick={closeDiary} />}
+        {phone && rulesOpen && !diaryOpen && <div className="cp-scrim" aria-hidden="true" onClick={closeRules} />}
         <div role="status" aria-live="polite">
           {toast && (
             <div key={toast.id} className="cp-toast">

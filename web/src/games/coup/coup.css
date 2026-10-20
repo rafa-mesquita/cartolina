@@ -271,6 +271,48 @@
 .coup .cp-log .ph-char, .coup .cp-log .ph-em { color: var(--red-text); }
 .coup .cp-log li.last { color: var(--ink); background: var(--cream); font-weight: 500; box-shadow: inset 4px 0 0 var(--red); }
 
+/* colinha de regras: no computador, painel à direita por cima do diário (a partida segue; o palco fica à vista) */
+.coup .cp-main { position: relative; }
+.coup .cp-rulesbtn[aria-expanded='true'] { background: var(--ink); color: var(--paper); }
+.coup .cp-rulesheet {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 340px; z-index: 30; display: flex; flex-direction: column; min-height: 0;
+  border-left: 2px solid var(--ink); background: var(--paper); box-shadow: -6px 0 0 rgba(29, 26, 23, .12);
+  animation: cp-rules-in .2s ease-out;
+}
+@keyframes cp-rules-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+.coup .cp-rules-head {
+  flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px 8px 18px;
+  border-bottom: 2px solid var(--ink);
+}
+.coup .cp-rules-head h2 { margin: 0; font: 400 30px/1 var(--title); letter-spacing: .06em; }
+.coup .cp-rulesheet .cp-close {
+  min-height: 40px; padding: 0 12px; border: 2px solid var(--ink); border-radius: 4px; background: var(--paper);
+  font: 500 14px/1 var(--ui); letter-spacing: .05em; text-transform: uppercase;
+}
+.coup .cp-rules-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px 18px 20px; }
+.coup .cp-goal { margin: 0; font-size: 15px; line-height: 1.35; font-weight: 500; }
+.coup .cp-rules-body h3 {
+  margin: 18px 0 8px; padding-bottom: 4px; border-bottom: 2px solid var(--ink); font: 400 24px/1 var(--title); letter-spacing: .06em;
+  color: var(--red);
+}
+.coup .cp-acttable { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.2; }
+.coup .cp-acttable th, .coup .cp-acttable td {
+  padding: 5px 4px; text-align: left; vertical-align: top; border-bottom: 1px dashed rgba(29, 26, 23, .22);
+}
+.coup .cp-acttable thead th {
+  font: 500 10.5px/1.1 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); border-bottom: 2px solid var(--ink);
+}
+.coup .cp-acttable tbody th { font-weight: 500; text-transform: uppercase; letter-spacing: .03em; }
+.coup .cp-acttable td.char { color: var(--red-text); font-weight: 500; }
+.coup .cp-acttable td.none { color: var(--ink-soft); }
+.coup .cp-chars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.coup .cp-chars li { display: flex; gap: 12px; align-items: flex-start; }
+.coup .cp-card.cp-charart { width: 46px; height: 64px; }
+.coup .cp-chars strong { display: block; font: 400 22px/1 var(--title); letter-spacing: .05em; }
+.coup .cp-chars p { margin: 3px 0 0; font-size: 13.5px; line-height: 1.25; }
+.coup .cp-chars p span { margin-right: 4px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.coup .cp-how { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; line-height: 1.35; }
+
 @media (hover: hover) {
   .coup .cp-opp.aim:hover, .coup .cp-act:not(:disabled):not(.sel):hover, .coup .cp-react:hover, .coup .cp-pickc:hover,
   .coup .cp-pbtn:not(.red):not(:disabled):hover { background: #fff; }
@@ -410,6 +452,15 @@
 .coup--phone .cp-scrim { position: fixed; inset: 0; z-index: 21; background: rgba(29, 26, 23, .35); }
 .coup--phone .cp-app .cp-toast { position: fixed; bottom: auto; top: 64px; white-space: normal; max-width: 90vw; text-align: center; }
 .coup .cp-panel h3[tabindex] { outline: none; }
+/* colinha de regras: folha que sobe de baixo, como a do diário (acima dos painéis; o fundo escurecido fecha) */
+.coup--phone .cp-rulesheet {
+  position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; height: 85dvh; z-index: 22; border: 2px solid var(--ink);
+  border-bottom: 0; border-radius: 12px 12px 0 0; box-shadow: 0 -6px 0 rgba(29, 26, 23, .12); animation: cp-sheet-up .25s ease-out;
+}
+.coup--phone .cp-rules-head { padding: 8px 10px 8px 16px; }
+.coup--phone .cp-rulesheet .cp-close { min-height: 44px; padding: 0 14px; font-size: 15px; }
+.coup--phone .cp-rules-body { padding: 10px 14px calc(18px + env(safe-area-inset-bottom)); }
+.coup--phone .cp-acttable { font-size: 12.5px; }
 
 /* ---------- celular com a tela baixa (360×640, ou 360×560 com a barra do navegador): modo compacto ---------- */
 @media (max-height: 700px) {
