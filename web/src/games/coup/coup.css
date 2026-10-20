@@ -317,7 +317,8 @@
 .coup--phone .cp-lastline .ph-char, .coup--phone .cp-lastline .ph-em { color: var(--red-text); }
 .coup--phone .cp-lastline .more { flex: none; font: 400 16px/1 var(--title); letter-spacing: .06em; color: var(--ink-soft); }
 /* palco: ocupa o que sobra */
-.coup--phone .cp-felt { padding: 30px 10px 12px; gap: 12px; }
+/* o que não cabe some dentro do palco (nunca passa por baixo da sua área); centro "seguro": sobra corta embaixo, não em cima */
+.coup--phone .cp-felt { padding: 30px 10px 12px; gap: 12px; overflow: hidden; justify-content: safe center; }
 .coup--phone .cp-felt.has-band { padding-top: 64px; }
 .coup--phone .cp-corner { top: 7px; font-size: 10.5px; gap: 4px; }
 .coup--phone .cp-corner em { font-size: 18px; }
@@ -391,7 +392,7 @@
 .coup--phone .cp-panel p { font-size: 15px; }
 .coup--phone .cp-info { display: contents; }
 .coup--phone .cp-info > * { order: 1; }
-.coup--phone .cp-pick { order: 2; justify-content: center; gap: 8px; }
+.coup--phone .cp-pick { order: 2; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .coup--phone .cp-info .cp-pbtn { order: 3; }
 .coup--phone .cp-panel > .cp-pbtn, .coup--phone .cp-panel > .cp-hostwait { order: 4; }
 .coup--phone .cp-hostwait { text-align: center; }
@@ -401,7 +402,8 @@
 .coup--phone .cp-pickc em { font-size: 14px; }
 .coup--phone .cp-pbtn { min-height: 50px; width: 100%; }
 .coup--phone .cp-pbtn.huge { font-size: 22px; }
-.coup--phone .cp-diary { height: 72dvh; border-left: 2px solid var(--ink); }
+/* o diário fica acima das folhas de painel (e o fundo escurecido entre os dois) */
+.coup--phone .cp-diary { z-index: 22; height: 72dvh; border-left: 2px solid var(--ink); }
 .coup--phone .cp-diary-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 8px 16px; }
 .coup--phone .cp-diary h2 { padding: 0; }
 .coup--phone .cp-close {
@@ -409,5 +411,49 @@
   font: 500 15px/1 var(--ui); letter-spacing: .05em; text-transform: uppercase;
 }
 .coup--phone .cp-log { font-size: 15px; }
-.coup--phone .cp-scrim { position: fixed; inset: 0; z-index: 19; background: rgba(29, 26, 23, .35); }
+.coup--phone .cp-scrim { position: fixed; inset: 0; z-index: 21; background: rgba(29, 26, 23, .35); }
 .coup--phone .cp-app .cp-toast { position: fixed; bottom: auto; top: 64px; white-space: normal; max-width: 90vw; text-align: center; }
+.coup .cp-panel h3[tabindex] { outline: none; }
+
+/* ---------- celular com a tela baixa (360×640, ou 360×560 com a barra do navegador): modo compacto ---------- */
+@media (max-height: 700px) {
+  .coup--phone .cp-top { height: 46px; }
+  .coup--phone .cp-top h1 { font-size: 24px; }
+  .coup--phone .cp-table { padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); gap: 6px; }
+  .coup--phone .cp-opp { min-height: 0; padding: 4px 2px; gap: 2px; }
+  .coup--phone .cp-felt { padding: 24px 8px 8px; gap: 6px; }
+  .coup--phone .cp-felt.has-band { padding-top: 54px; }
+  .coup--phone .cp-corner { top: 5px; }
+  .coup--phone .cp-corner em { font-size: 16px; }
+  .coup--phone .cp-big { font-size: 30px; }
+  .coup--phone .cp-big.mid { font-size: 22px; }
+  .coup--phone .cp-sub { font-size: 13px; }
+  .coup--phone .cp-decl { font-size: 20px; line-height: 1.05; }
+  .coup--phone .cp-decl small { margin-top: 3px; font-size: 12.5px; }
+  .coup--phone .cp-bar { height: 10px; }
+  .coup--phone .cp-secs { font-size: 18px; }
+  .coup--phone .cp-reacts { gap: 6px; }
+  /* "bloquear como Embaixador" quebra em duas linhas dentro do botão, sem passar dos 48 px */
+  .coup--phone .cp-react { min-height: 48px; padding: 4px 8px; font-size: 15px; line-height: 1.1; letter-spacing: .03em; }
+  .coup--phone .cp-wait { min-height: 48px; font-size: 14px; }
+  .coup--phone .cp-passed { display: none; }
+  .coup--phone .cp-moment { gap: 6px; padding: 6px; }
+  .coup--phone .cp-mt { font-size: 30px; }
+  .coup--phone .cp-mt2 { font-size: 24px; }
+  .coup--phone .cp-ms { font-size: 16px; }
+  .coup--phone .cp-moment .cp-card.l { width: 48px; height: 68px; }
+  .coup--phone .cp-stamp { font-size: 28px; }
+  .coup--phone .cp-moment.band { padding: 4px 8px; gap: 2px 8px; }
+  .coup--phone .cp-moment.band .cp-mt { font-size: 18px; }
+  .coup--phone .cp-moment.band .cp-mt2, .coup--phone .cp-moment.band .cp-ms { font-size: 15px; }
+  .coup--phone .cp-me { padding: 6px; gap: 6px 8px; }
+  .coup--phone .cp-myline { font-size: 20px; }
+  .coup--phone .cp-myhand .cp-card.l { width: 48px; height: 68px; gap: 4px; }
+  .coup--phone .cp-myhand .cp-card.l i { font-size: 18px; }
+  .coup--phone .cp-myhand .cp-card.l em { font-size: 10px; }
+  .coup--phone .cp-myhand .cp-card.m { width: 34px; height: 48px; }
+  .coup--phone .cp-myhand .cp-card.m em { display: none; }
+  .coup--phone .cp-act { min-height: 44px; }
+  /* reagindo, as 7 ações estão todas apagadas: saem da frente e o palco ganha a altura delas (as cartas ficam) */
+  .coup--phone.cp-reacting .cp-acts { display: none; }
+}

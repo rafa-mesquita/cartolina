@@ -188,15 +188,26 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
     else if (aiming === null && prev !== null) root.querySelector<HTMLElement>(`.cp-act[data-kind="${prev}"]`)?.focus();
   }, [aiming]);
 
+  // Folha do diário fechada (botão, fundo ou Esc): o foco volta pra faixa que abriu.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const was = wasOpen.current;
+    wasOpen.current = diaryOpen;
+    if (was && !diaryOpen) rootRef.current?.querySelector<HTMLElement>('.cp-lastline')?.focus();
+  }, [diaryOpen]);
+
+  // celular: reagindo na janela (o modo compacto da tela baixa esconde as ações, que estão todas apagadas)
+  const reacting = phone && g.phase === 'reaction' && g.can.pass;
+  const rootClass = ['coup', phone ? 'coup--phone' : '', reacting ? 'cp-reacting' : ''].filter(Boolean).join(' ');
   const stage = { width, transform: `translate(-50%, -50%) scale(${scale})` } as CSSProperties;
   return (
-    <div className={phone ? 'coup coup--phone' : 'coup'} ref={rootRef} data-button-sounds="">
+    <div className={rootClass} ref={rootRef} data-button-sounds="">
       <div className="cp-app" style={phone ? undefined : stage}>
         <TopBar wins={g.wins} nameOf={names.nameOf} phone={phone} me={me} />
         <main className="cp-main">
           <section className="cp-table">
             <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={names.nameOf} aiming={hasAim} onTarget={onTarget} />
-            {phone && <LastLine log={g.log} names={names} onOpen={openDiary} />}
+            {phone && <LastLine log={g.log} names={names} open={diaryOpen} onOpen={openDiary} />}
             <Stage game={g} names={names} clock={clock} aiming={aiming} onCancelAim={onCancelAim} onReact={onReact} moment={moment} />
             <div className="cp-mebox">
               <MyArea game={g} me={me} aiming={aiming} onAct={onAct} />

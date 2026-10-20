@@ -71,21 +71,64 @@ describe('Cúpi no celular em pé', () => {
 
   it('a faixa do diário mostra a última linha e abre e fecha a folha', () => {
     const { container } = mesa(viewOf(betoTaxa(), 'p0'));
-    const strip = screen.getByRole('button', { name: 'abrir o diário' });
-    expect(strip.querySelector('.txt')!.textContent).toBe('Beto disse Duque');
+    // o nome do botão é a própria última linha (nada escondido do leitor de tela)
+    const strip = screen.getByRole('button', { name: 'Beto disse Duque' });
+    expect(strip.classList.contains('cp-lastline')).toBe(true);
+    expect(strip.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(strip.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByRole('dialog', { name: 'diário' })).toBeNull();
     fireEvent.click(strip);
     const sheet = screen.getByRole('dialog', { name: 'diário' });
     expect(within(sheet).getAllByRole('listitem')).toHaveLength(3);
     expect(container.querySelector('.cp-scrim')).toBeTruthy();
     expect(document.activeElement).toBe(within(sheet).getByRole('button', { name: 'fechar' }));
+    expect(strip.getAttribute('aria-expanded')).toBe('true');
     fireEvent.click(within(sheet).getByRole('button', { name: 'fechar' }));
     expect(screen.queryByRole('dialog', { name: 'diário' })).toBeNull();
     expect(container.querySelector('.cp-scrim')).toBeNull();
+    expect(document.activeElement).toBe(strip);
     // o fundo escurecido também fecha
     fireEvent.click(strip);
     fireEvent.click(container.querySelector('.cp-scrim')!);
     expect(screen.queryByRole('dialog', { name: 'diário' })).toBeNull();
+    expect(document.activeElement).toBe(strip);
+  });
+
+  it('Esc fecha a folha do diário e o foco volta pra faixa', () => {
+    mesa(viewOf(betoTaxa(), 'p0'));
+    const strip = screen.getByRole('button', { name: 'Beto disse Duque' });
+    fireEvent.click(strip);
+    expect(screen.getByRole('dialog', { name: 'diário' })).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'diário' })).toBeNull();
+    expect(document.activeElement).toBe(strip);
+  });
+
+  it('a folha de painel foca o título quando aparece', () => {
+    const tax = betoTaxa();
+    const room = step(tax, 'p0', { type: 'challenge', windowId: viewOf(tax, null).game.window!.id });
+    const game = viewOf(room, null).game;
+    mesa(viewOf(room, game.loss!.player));
+    const title = screen.getByRole('heading', { name: lossTitle(game.loss!.reason) });
+    expect(title.getAttribute('tabindex')).toBe('-1');
+    expect(document.activeElement).toBe(title);
+  });
+
+  it('no computador o painel não rouba o foco', () => {
+    media([]);
+    const tax = betoTaxa();
+    const room = step(tax, 'p0', { type: 'challenge', windowId: viewOf(tax, null).game.window!.id });
+    const game = viewOf(room, null).game;
+    mesa(viewOf(room, game.loss!.player));
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it('reagindo, a raiz ganha cp-reacting (o modo compacto esconde as ações apagadas)', () => {
+    const { container, unmount } = mesa(viewOf(betoTaxa(), 'p0'));
+    expect(container.querySelector('.coup')!.classList.contains('cp-reacting')).toBe(true);
+    unmount();
+    const { container: actor } = mesa(viewOf(betoTaxa(), 'p1'));
+    expect(actor.querySelector('.coup')!.classList.contains('cp-reacting')).toBe(false);
   });
 
   it('as ações mandam o mesmo que no computador', () => {
@@ -133,7 +176,7 @@ describe('Cúpi no celular em pé', () => {
   it('o diário fechado não vira folha no computador (sem a faixa, sem dialog)', () => {
     media([]);
     mesa(viewOf(betoTaxa(), 'p0'));
-    expect(screen.queryByRole('button', { name: 'abrir o diário' })).toBeNull();
+    expect(document.querySelector('.cp-lastline')).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
     rtlAct(() => {});
     expect(screen.getByRole('heading', { name: 'diário' })).toBeTruthy();

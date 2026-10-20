@@ -1,4 +1,4 @@
-import { memo, useId } from 'react';
+import { memo, useEffect, useId, useRef } from 'react';
 import type { CoupCharacter, CoupView } from '@cartolina/shared';
 import { CHARACTER_ICONS, CHARACTER_NAMES } from './names';
 import { LOSS_SUB, joinNames, lossTitle, type NameOf } from './texts';
@@ -53,12 +53,19 @@ export const Panels = memo(function Panels(p: Props) {
   const c = game.can;
   const titleId = useId();
   const box = p.sheet ? ({ role: 'dialog', 'aria-labelledby': titleId } as const) : {};
+  // qual painel está aberto (a folha nova recebe o foco no título, pro leitor de tela perceber)
+  const kind = game.phase === 'over' && game.winner !== null ? 'over' : c.lose && game.loss ? 'lose' : c.keep > 0 ? 'keep' : null;
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (p.sheet && kind !== null) title.current?.focus();
+  }, [p.sheet, kind]);
+  const head = { id: titleId, ref: title, tabIndex: -1 };
   if (game.phase === 'over' && game.winner !== null) {
     const outs = game.out.filter((id) => id !== game.winner).map(nameOf);
     return (
       <div className="cp-panel" {...box}>
         <div className="cp-info">
-          <h3 className="win" id={titleId}>{nameOf(game.winner)} tomou o poder</h3>
+          <h3 className="win" {...head}>{nameOf(game.winner)} tomou o poder</h3>
           {game.winnerCards.length > 0 && (
             <p>
               ficou com <em>{joinNames(game.winnerCards.map((x) => CHARACTER_NAMES[x]))}</em>
@@ -86,7 +93,7 @@ export const Panels = memo(function Panels(p: Props) {
     return (
       <div className="cp-panel" {...box}>
         <div className="cp-info">
-          <h3 id={titleId}>{lossTitle(game.loss.reason)}</h3>
+          <h3 {...head}>{lossTitle(game.loss.reason)}</h3>
           <p>{LOSS_SUB}</p>
           <button type="button" className="cp-pbtn red" disabled={chosen === null} onClick={() => chosen && p.onLose(chosen)}>
             {chosen ? `revelar ${CHARACTER_NAMES[chosen]}` : 'revelar'}
@@ -106,7 +113,7 @@ export const Panels = memo(function Panels(p: Props) {
     return (
       <div className="cp-panel" {...box}>
         <div className="cp-info">
-          <h3 id={titleId}>
+          <h3 {...head}>
             Fique com {c.keep} das {pool.length} cartas
           </h3>
           <p>

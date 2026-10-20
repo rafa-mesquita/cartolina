@@ -79,12 +79,20 @@ export const Diary = memo(function Diary({ log, match, names, phone, open, onClo
   );
 });
 
-/** Celular: a última linha do diário numa faixa; o toque abre a folha do diário inteiro. */
-export const LastLine = memo(function LastLine({ log, names, onOpen }: { log: readonly CoupLogEntry[]; names: Names; onOpen: () => void }) {
+interface LastLineProps {
+  log: readonly CoupLogEntry[];
+  names: Names;
+  /** A folha do diário está aberta. */
+  open: boolean;
+  onOpen: () => void;
+}
+
+/** Celular: a última linha do diário numa faixa (o texto é o nome do botão); o toque abre a folha do diário inteiro. */
+export const LastLine = memo(function LastLine({ log, names, open, onOpen }: LastLineProps) {
   const lines = diaryLines(log, names);
   const last = lines[lines.length - 1];
   return (
-    <button type="button" className="cp-lastline" aria-label="abrir o diário" onClick={onOpen}>
+    <button type="button" className="cp-lastline" aria-haspopup="dialog" aria-expanded={open} onClick={onOpen}>
       <span className="txt">{last && <PhraseView phrase={last} />}</span>
       <span className="more" aria-hidden="true">
         diário ›
