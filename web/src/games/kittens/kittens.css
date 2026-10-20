@@ -66,8 +66,10 @@
   box-shadow: 0 -4px 0 var(--kt-ink), 0 4px 0 var(--kt-ink), -4px 0 0 var(--kt-ink), 4px 0 0 var(--kt-ink); }
 
 /* ================================================================ Mesa (porta do protótipo)
- * Tudo escopado em .kittens .kt-mesa: as classes do protótipo ficam como estão, menos as que batem com o
- * global.css do site (btn, hint, critter, tag → kt-btn, kt-hint, kt-critter, kt-ftag); keyframes com prefixo kt-. */
+ * Tudo escopado em .kittens .kt-mesa: as classes do protótipo ficam como estão, menos as que batem com regras sem
+ * escopo do CSS do site (global.css: btn, hint, critter, tag; table.css do ITO, que fica no bundle principal: card,
+ * row, name, seat → kt-btn, kt-hint, kt-critter, kt-ftag, kt-card, kt-row, kt-name, kt-seat); keyframes com prefixo kt-.
+ * O teste da mesa confere que nenhuma regra sem escopo do site pega classe da mesa. */
 .kittens .kt-mesa {
   --ink: #2b1a10; --night: #0e0e1c; --paper: #f4e9d0; --yellow: #f2c14e; --red: #e4572e;
   --btn: #e0605a; --btn-edge: #1a0f1f; --btn-hi: #f08a80; --btn-lo: #b8423e; --cream: #fff3e0;
@@ -75,6 +77,10 @@
   --px: 'Press Start 2P', monospace; --vt: 'VT323', monospace;
 }
 .kittens .kt-mesa * { box-sizing: border-box; }
+/* Reset de defesa (especificidade 0,2,0, abaixo de qualquer regra da mesa): o que uma regra genérica do site
+ * pudesse pôr numa classe nossa (margem negativa, 3D, will-change, z-index) volta ao normal. Pointer-events
+ * fica de fora: os efeitos do #fxlayer herdam o "none" dele. */
+.kittens .kt-mesa :where(*) { margin: 0; will-change: auto; transform-style: flat; z-index: auto; }
 .kittens .kt-mesa { position: absolute; inset: 0; overflow: hidden; background: var(--night); font-family: var(--vt); color: var(--txt); user-select: none; }
 .kittens .kt-mesa #stage { position: absolute; left: 50%; top: 50%; width: 1440px; height: 900px; --w: 1440px; transform-origin: center; overflow: hidden; image-rendering: pixelated; }
 .kittens .kt-mesa #bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
@@ -105,32 +111,32 @@
 
 /* Assentos dos outros jogadores */
 .kittens .kt-mesa #seats { position: absolute; left: 0; right: 0; top: 60px; height: 170px; z-index: 2; }
-.kittens .kt-mesa .seat { position: absolute; width: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px; cursor: default; }
-.kittens .kt-mesa .seat .tatu { width: 80px; height: 44px; }
-.kittens .kt-mesa .seat .kt-critter { width: 68px; height: 68px; filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)); }
-.kittens .kt-mesa .seat .who { font-family: var(--px); font-size: 10px; color: var(--cream); text-shadow: 2px 2px 0 #050510; margin-top: 4px; }
-.kittens .kt-mesa .seat .count { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
-.kittens .kt-mesa .seat .count .fan { position: relative; width: 44px; height: 34px; }
-.kittens .kt-mesa .seat .count .fan i { position: absolute; left: 14px; top: 2px; width: 16px; height: 23px; background: #1f3a6b; transform-origin: 50% 120%;
+.kittens .kt-mesa .kt-seat { position: absolute; width: 150px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px; cursor: default; }
+.kittens .kt-mesa .kt-seat .tatu { width: 80px; height: 44px; }
+.kittens .kt-mesa .kt-seat .kt-critter { width: 68px; height: 68px; filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa .kt-seat .who { font-family: var(--px); font-size: 10px; color: var(--cream); text-shadow: 2px 2px 0 #050510; margin-top: 4px; }
+.kittens .kt-mesa .kt-seat .count { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.kittens .kt-mesa .kt-seat .count .fan { position: relative; width: 44px; height: 34px; }
+.kittens .kt-mesa .kt-seat .count .fan i { position: absolute; left: 14px; top: 2px; width: 16px; height: 23px; background: #1f3a6b; transform-origin: 50% 120%;
   box-shadow: 0 -2px 0 var(--ink), 0 2px 0 var(--ink), -2px 0 0 var(--ink), 2px 0 0 var(--ink); background-image: linear-gradient(#f2c14e, #f2c14e); background-size: 6px 4px; background-repeat: no-repeat; background-position: center; }
-.kittens .kt-mesa .seat .count b { font-family: var(--px); font-size: 20px; font-weight: normal; color: var(--yellow); text-shadow: 3px 3px 0 #050510, -2px 0 0 #050510, 0 -2px 0 #050510; min-width: 26px; }
-.kittens .kt-mesa .seat .count.out { font-family: var(--px); font-size: 11px; color: var(--dim); }
-.kittens .kt-mesa .seat .chip { font-family: var(--px); font-size: 8px; padding: 4px 6px; background: #2c3a66; color: var(--cream); margin-top: 2px; }
-.kittens .kt-mesa .seat.turn { background: rgba(242,193,78,.16); box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow); }
-.kittens .kt-mesa .seat.turn .who::before { content: '▶ '; color: var(--yellow); }
-.kittens .kt-mesa .seat.dead { opacity: .55; filter: grayscale(1); }
-.kittens .kt-mesa .seat .order { position: absolute; top: -14px; font-family: var(--px); font-size: 9px; padding: 4px 6px; background: rgba(14,14,28,.85); color: var(--dim); }
-.kittens .kt-mesa .seat .order.next { background: var(--yellow); color: var(--ink); box-shadow: 2px 2px 0 #050510; animation: kt-nextbob 1s steps(2) infinite; }
-.kittens .kt-mesa .seat.next .kt-critter { filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)) drop-shadow(0 0 6px rgba(242,193,78,.7)); }
+.kittens .kt-mesa .kt-seat .count b { font-family: var(--px); font-size: 20px; font-weight: normal; color: var(--yellow); text-shadow: 3px 3px 0 #050510, -2px 0 0 #050510, 0 -2px 0 #050510; min-width: 26px; }
+.kittens .kt-mesa .kt-seat .count.out { font-family: var(--px); font-size: 11px; color: var(--dim); }
+.kittens .kt-mesa .kt-seat .chip { font-family: var(--px); font-size: 8px; padding: 4px 6px; background: #2c3a66; color: var(--cream); margin-top: 2px; }
+.kittens .kt-mesa .kt-seat.turn { background: rgba(242,193,78,.16); box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow); }
+.kittens .kt-mesa .kt-seat.turn .who::before { content: '▶ '; color: var(--yellow); }
+.kittens .kt-mesa .kt-seat.dead { opacity: .55; filter: grayscale(1); }
+.kittens .kt-mesa .kt-seat .order { position: absolute; top: -14px; font-family: var(--px); font-size: 9px; padding: 4px 6px; background: rgba(14,14,28,.85); color: var(--dim); }
+.kittens .kt-mesa .kt-seat .order.next { background: var(--yellow); color: var(--ink); box-shadow: 2px 2px 0 #050510; animation: kt-nextbob 1s steps(2) infinite; }
+.kittens .kt-mesa .kt-seat.next .kt-critter { filter: drop-shadow(3px 3px 0 rgba(5,5,16,.6)) drop-shadow(0 0 6px rgba(242,193,78,.7)); }
 @keyframes kt-nextbob { 50% { transform: translateY(-3px); } }
 .kittens .kt-mesa .turnflow { position: absolute; transform: translate(-50%, -50%); font-family: var(--px); font-size: 9px; color: var(--dim); text-shadow: 2px 2px 0 #050510; white-space: nowrap; pointer-events: none; }
 .kittens .kt-mesa .turnflow b { font-weight: normal; font-size: 22px; color: var(--yellow); opacity: .8; vertical-align: -4px; }
-.kittens .kt-mesa .seat.winner { z-index: 45; background: rgba(242,193,78,.25); box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow); }
-.kittens .kt-mesa .seat.winner .who::before { content: '♛ '; color: var(--yellow); }
-.kittens .kt-mesa .seat.dead .who::after { content: ' ✝'; }
-.kittens .kt-mesa .seat.targetable { cursor: pointer; animation: kt-pulse .6s steps(2) infinite; }
-.kittens .kt-mesa .seat.targetable:hover { background: rgba(228,87,46,.25); }
-.kittens .kt-mesa .seat.hit { animation: kt-hit .5s steps(4); }
+.kittens .kt-mesa .kt-seat.winner { z-index: 45; background: rgba(242,193,78,.25); box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow); }
+.kittens .kt-mesa .kt-seat.winner .who::before { content: '♛ '; color: var(--yellow); }
+.kittens .kt-mesa .kt-seat.dead .who::after { content: ' ✝'; }
+.kittens .kt-mesa .kt-seat.targetable { cursor: pointer; animation: kt-pulse .6s steps(2) infinite; }
+.kittens .kt-mesa .kt-seat.targetable:hover { background: rgba(228,87,46,.25); }
+.kittens .kt-mesa .kt-seat.hit { animation: kt-hit .5s steps(4); }
 @keyframes kt-pulse { 50% { box-shadow: 0 -3px 0 var(--red), 0 3px 0 var(--red), -3px 0 0 var(--red), 3px 0 0 var(--red); } }
 @keyframes kt-hit { 25% { transform: translateX(-50%) translateY(-8px); } 75% { transform: translateX(-50%) translateY(4px); } }
 @keyframes kt-blink { 50% { opacity: .35; } }
@@ -149,19 +155,19 @@
 .kittens .kt-mesa .slot .label { position: absolute; bottom: -30px; left: 0; right: 0; text-align: center; font-size: 22px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
 .kittens .kt-mesa #deck { left: 90px; cursor: pointer; }
 .kittens .kt-mesa #deck .stack { position: relative; width: 112px; height: 156px; }
-.kittens .kt-mesa #deck .stack .card { position: absolute; left: 0; top: 0; }
-.kittens .kt-mesa #deck.shuffling .stack .card { animation: kt-shuffle .12s steps(2) 6; }
-.kittens .kt-mesa #deck.mine:hover .stack .card:last-child { transform: translate(-4px, -10px); }
+.kittens .kt-mesa #deck .stack .kt-card { position: absolute; left: 0; top: 0; }
+.kittens .kt-mesa #deck.shuffling .stack .kt-card { animation: kt-shuffle .12s steps(2) 6; }
+.kittens .kt-mesa #deck.mine:hover .stack .kt-card:last-child { transform: translate(-4px, -10px); }
 @keyframes kt-shuffle { 50% { translate: 10px -6px; } }
 .kittens .kt-mesa #air { left: calc(50% - 70px); }
-.kittens .kt-mesa #air .card { position: absolute; }
+.kittens .kt-mesa #air .kt-card { position: absolute; }
 .kittens .kt-mesa #air .empty { width: 112px; height: 156px; border: 4px dashed rgba(244,233,208,.35); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 22px; color: rgba(244,233,208,.5); }
 .kittens .kt-mesa #bar { position: absolute; left: calc(50% - 70px); top: 248px; width: 140px; display: flex; justify-content: center; gap: 6px; }
 .kittens .kt-mesa #bar i { width: 18px; height: 12px; background: #1a2a20; box-shadow: 0 0 0 3px var(--night); }
 .kittens .kt-mesa #bar i.on { background: var(--red); }
 .kittens .kt-mesa #bar i.on.last { animation: kt-blink .3s steps(2) infinite; }
 .kittens .kt-mesa #discard { left: auto; right: 90px; }
-.kittens .kt-mesa #discard .card { position: absolute; }
+.kittens .kt-mesa #discard .kt-card { position: absolute; }
 .kittens .kt-mesa #discard { cursor: zoom-in; }
 /* Olho do descarte: abre o quadro com todas as cartas da pilha */
 .kittens .kt-mesa #eye { position: absolute; right: 22px; top: 62px; width: 56px; padding: 8px 0 6px; border: none; background: #141f42; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -173,47 +179,47 @@
 @keyframes kt-eyepulse { 50% { background: #3b2412; box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow), 4px 6px 0 rgba(0,0,0,.35); } }
 .kittens .kt-mesa #future { position: absolute; left: 230px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
 .kittens .kt-mesa #future .kt-ftag { font-family: var(--px); font-size: 8px; color: var(--yellow); margin-bottom: 2px; }
-.kittens .kt-mesa #future .card { transform: scale(.38); transform-origin: left top; margin-bottom: -96px; }
+.kittens .kt-mesa #future .kt-card { transform: scale(.38); transform-origin: left top; margin-bottom: -96px; }
 
 /* Cartas */
-.kittens .kt-mesa .card { width: 112px; height: 156px; background: var(--paper); color: var(--ink); position: relative; display: flex; flex-direction: column; align-items: center;
+.kittens .kt-mesa .kt-card { width: 112px; height: 156px; background: var(--paper); color: var(--ink); position: relative; display: flex; flex-direction: column; align-items: center;
   box-shadow: 0 -4px 0 var(--ink), 0 4px 0 var(--ink), -4px 0 0 var(--ink), 4px 0 0 var(--ink), 5px 8px 0 rgba(0,0,0,.35); }
-.kittens .kt-mesa .card .band { width: 100%; height: 14px; }
-.kittens .kt-mesa .card .art { width: 80px; height: auto; max-height: 80px; flex: none; margin-top: 12px; }
-.kittens .kt-mesa .card .name { font-family: var(--px); font-size: 9px; margin-top: auto; text-align: center; padding: 0 4px; }
-.kittens .kt-mesa .card .kt-hint { font-size: 16px; line-height: 1; margin: 4px 0 8px; color: #6b5440; text-align: center; padding: 0 4px; }
-.kittens .kt-mesa .card.back { background: #1f3a6b; background-image: radial-gradient(#2c5a8c 1.5px, transparent 1.6px); background-size: 10px 10px; justify-content: center; }
-.kittens .kt-mesa .card.back .art { width: 74px; margin-top: 0; }
-.kittens .kt-mesa .card.back .name { color: var(--yellow); margin: 10px 0 0; font-size: 9px; text-shadow: 2px 2px 0 var(--ink); }
+.kittens .kt-mesa .kt-card .band { width: 100%; height: 14px; }
+.kittens .kt-mesa .kt-card .art { width: 80px; height: auto; max-height: 80px; flex: none; margin-top: 12px; }
+.kittens .kt-mesa .kt-card .kt-name { font-family: var(--px); font-size: 9px; margin-top: auto; text-align: center; padding: 0 4px; }
+.kittens .kt-mesa .kt-card .kt-hint { font-size: 16px; line-height: 1; margin: 4px 0 8px; color: #6b5440; text-align: center; padding: 0 4px; }
+.kittens .kt-mesa .kt-card.back { background: #1f3a6b; background-image: radial-gradient(#2c5a8c 1.5px, transparent 1.6px); background-size: 10px 10px; justify-content: center; }
+.kittens .kt-mesa .kt-card.back .art { width: 74px; margin-top: 0; }
+.kittens .kt-mesa .kt-card.back .kt-name { color: var(--yellow); margin: 10px 0 0; font-size: 9px; text-shadow: 2px 2px 0 var(--ink); }
 /* Cada carta com o cerrado na cor dela de fundo (pedido do Rafa); nome e frase em tinta escura com contorno claro */
-.kittens .kt-mesa .card:not(.back) { background-size: 100% 100%; background-color: var(--paper); }
-.kittens .kt-mesa .card:not(.back) .name { text-shadow: 1px 1px 0 rgba(255,255,255,.55); }
-.kittens .kt-mesa .card:not(.back) .kt-hint { color: var(--ink); text-shadow: 1px 1px 0 rgba(255,255,255,.45); }
-.kittens .kt-mesa .card .art.flow { width: 84px; height: 74px; flex: none; object-fit: contain; object-position: center bottom; margin-top: 10px; filter: drop-shadow(3px 3px 0 rgba(43,26,16,.3)); }
-.kittens .kt-mesa .card.flow-back { padding: 0; overflow: hidden; }
-.kittens .kt-mesa .card.flow-back .back-art { width: 100%; height: 100%; object-fit: cover; }
+.kittens .kt-mesa .kt-card:not(.back) { background-size: 100% 100%; background-color: var(--paper); }
+.kittens .kt-mesa .kt-card:not(.back) .kt-name { text-shadow: 1px 1px 0 rgba(255,255,255,.55); }
+.kittens .kt-mesa .kt-card:not(.back) .kt-hint { color: var(--ink); text-shadow: 1px 1px 0 rgba(255,255,255,.45); }
+.kittens .kt-mesa .kt-card .art.flow { width: 84px; height: 74px; flex: none; object-fit: contain; object-position: center bottom; margin-top: 10px; filter: drop-shadow(3px 3px 0 rgba(43,26,16,.3)); }
+.kittens .kt-mesa .kt-card.flow-back { padding: 0; overflow: hidden; }
+.kittens .kt-mesa .kt-card.flow-back .back-art { width: 100%; height: 100%; object-fit: cover; }
 .kittens .kt-mesa .flying { position: absolute; left: 0; top: 0; z-index: 30; pointer-events: none; }
 
 /* Mão */
 .kittens .kt-mesa #hand { position: absolute; left: 190px; width: calc(var(--bw) - 500px); bottom: 26px; height: 200px; z-index: 6; }
-.kittens .kt-mesa #hand .card { position: absolute; bottom: 0; cursor: pointer; transition: none; }
-.kittens .kt-mesa #hand .card:hover { bottom: 14px; }
-.kittens .kt-mesa #hand .card.sel { bottom: 34px; box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); animation: kt-selblink .5s steps(2) infinite; }
-.kittens .kt-mesa #hand .card.arriving { visibility: hidden; }
-.kittens .kt-mesa #hand .card { touch-action: none; }
-.kittens .kt-mesa #hand .card.dragging { opacity: .25; }
-.kittens .kt-mesa .card img { -webkit-user-drag: none; user-select: none; }
-.kittens .kt-mesa .card.ghost { position: absolute; left: 0; top: 0; z-index: 40; pointer-events: none;
+.kittens .kt-mesa #hand .kt-card { position: absolute; bottom: 0; cursor: pointer; transition: none; }
+.kittens .kt-mesa #hand .kt-card:hover { bottom: 14px; }
+.kittens .kt-mesa #hand .kt-card.sel { bottom: 34px; box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); animation: kt-selblink .5s steps(2) infinite; }
+.kittens .kt-mesa #hand .kt-card.arriving { visibility: hidden; }
+.kittens .kt-mesa #hand .kt-card { touch-action: none; }
+.kittens .kt-mesa #hand .kt-card.dragging { opacity: .25; }
+.kittens .kt-mesa .kt-card img { -webkit-user-drag: none; user-select: none; }
+.kittens .kt-mesa .kt-card.ghost { position: absolute; left: 0; top: 0; z-index: 40; pointer-events: none;
   box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 12px 18px 0 rgba(0,0,0,.4); }
-.kittens .kt-mesa .card.ghost[data-n]::after { content: '×' attr(data-n); position: absolute; right: -14px; top: -14px; padding: 6px 7px; background: var(--red); color: var(--cream); font-family: var(--px); font-size: 12px; box-shadow: 0 0 0 3px var(--ink); }
+.kittens .kt-mesa .kt-card.ghost[data-n]::after { content: '×' attr(data-n); position: absolute; right: -14px; top: -14px; padding: 6px 7px; background: var(--red); color: var(--cream); font-family: var(--px); font-size: 12px; box-shadow: 0 0 0 3px var(--ink); }
 .kittens .kt-mesa #stage.dragging #table { box-shadow: 0 -6px 0 var(--yellow), 0 6px 0 var(--yellow), -6px 0 0 var(--yellow), 6px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.4); }
 .kittens .kt-mesa #table.drop { background-color: #3b7349; }
-.kittens .kt-mesa .seat.drop { background: rgba(228,87,46,.3); box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
-.kittens .kt-mesa #hand.giving .card:hover { bottom: 30px; box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
+.kittens .kt-mesa .kt-seat.drop { background: rgba(228,87,46,.3); box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
+.kittens .kt-mesa #hand.giving .kt-card:hover { bottom: 30px; box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
 /* Comprou o Tatubum: só o Desarme acende (e pulsa); o resto da mão apaga */
-.kittens .kt-mesa #hand.defusing .card:not(.cafune) { filter: grayscale(.75) brightness(.55); cursor: not-allowed; }
-.kittens .kt-mesa #hand.defusing .card.cafune { bottom: 22px; animation: kt-defusepulse .45s steps(2) infinite; }
-.kittens .kt-mesa #hand.defusing .card.cafune:hover { bottom: 36px; }
+.kittens .kt-mesa #hand.defusing .kt-card:not(.cafune) { filter: grayscale(.75) brightness(.55); cursor: not-allowed; }
+.kittens .kt-mesa #hand.defusing .kt-card.cafune { bottom: 22px; animation: kt-defusepulse .45s steps(2) infinite; }
+.kittens .kt-mesa #hand.defusing .kt-card.cafune:hover { bottom: 36px; }
 @keyframes kt-defusepulse {
   0% { box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 0 0 0 8px rgba(242,193,78,.35), 5px 8px 0 rgba(0,0,0,.35); }
   50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 0 0 0 14px rgba(242,193,78,.55), 5px 8px 0 rgba(0,0,0,.35); }
@@ -242,10 +248,10 @@
 .kittens .kt-mesa #panel:empty { display: none; }
 .kittens .kt-mesa #panel h2 { margin: 0 0 6px; font-family: var(--px); font-size: 16px; color: var(--yellow); font-weight: normal; }
 .kittens .kt-mesa #panel p { margin: 0 0 14px; font-size: 24px; }
-.kittens .kt-mesa #panel .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.kittens .kt-mesa #panel .kt-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .kittens .kt-mesa #panel .cards { display: flex; gap: 14px; margin: 22px 0 8px; }
-.kittens .kt-mesa #panel .cards .card { cursor: pointer; }
-.kittens .kt-mesa #panel .cards .card:hover { transform: translateY(-8px); }
+.kittens .kt-mesa #panel .cards .kt-card { cursor: pointer; }
+.kittens .kt-mesa #panel .cards .kt-card:hover { transform: translateY(-8px); }
 .kittens .kt-mesa #panel input[type=range] { width: 100%; accent-color: var(--yellow); margin: 6px 0 14px; }
 .kittens .kt-mesa #panel .pos { font-family: var(--px); font-size: 12px; color: var(--cream); margin-bottom: 4px; }
 .kittens .kt-mesa #panel .timer { float: right; font-family: var(--px); font-size: 12px; color: var(--red); }
@@ -268,11 +274,11 @@
 .kittens .kt-mesa #pile h2 .timer { float: right; font-size: 14px; color: var(--red); }
 .kittens .kt-mesa #pile .psub { margin: 0; font-family: var(--vt); font-size: 26px; color: var(--txt); }
 .kittens .kt-mesa #pile .grid { display: flex; flex-wrap: wrap; gap: 26px 20px; overflow-y: auto; padding: 34px 16px 34px; margin: 6px 0 10px; min-height: 230px; scrollbar-color: var(--yellow) #0e0e1c; }
-.kittens .kt-mesa #pile .grid .card { flex: none; }
-.kittens .kt-mesa #pile .grid .card:hover { transform: scale(1.35); z-index: 2; }
-.kittens .kt-mesa #pile .grid .card.pickable { cursor: pointer; animation: kt-selblink .5s steps(2) infinite;
+.kittens .kt-mesa #pile .grid .kt-card { flex: none; }
+.kittens .kt-mesa #pile .grid .kt-card:hover { transform: scale(1.35); z-index: 2; }
+.kittens .kt-mesa #pile .grid .kt-card.pickable { cursor: pointer; animation: kt-selblink .5s steps(2) infinite;
   box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); }
-.kittens .kt-mesa #pile .grid .card.off { filter: grayscale(.8) brightness(.5); }
+.kittens .kt-mesa #pile .grid .kt-card.off { filter: grayscale(.8) brightness(.5); }
 .kittens .kt-mesa #pile .grid .none { font-size: 28px; color: var(--dim); margin: auto; }
 .kittens .kt-mesa #pile .foot { display: flex; justify-content: space-between; align-items: center; }
 .kittens .kt-mesa #pile .foot .note { font-size: 22px; color: var(--dim); }
@@ -300,15 +306,15 @@
 .kittens .kt-mesa .cross::before, .kittens .kt-mesa .cross::after { content: ''; position: absolute; left: 50%; top: 50%; width: 170px; height: 22px; background: var(--red); box-shadow: 0 0 0 5px var(--ink); translate: -50% -50%; }
 .kittens .kt-mesa .cross::before { rotate: 45deg; }
 .kittens .kt-mesa .cross::after { rotate: -45deg; }
-.kittens .kt-mesa #air .card .art { animation: kt-bob .5s steps(2) infinite; }
+.kittens .kt-mesa #air .kt-card .art { animation: kt-bob .5s steps(2) infinite; }
 @keyframes kt-bob { 50% { translate: 0 -4px; } }
-.kittens .kt-mesa .seat .chip.think { background: #3b2412; animation: kt-blink .8s steps(2) infinite; }
+.kittens .kt-mesa .kt-seat .chip.think { background: #3b2412; animation: kt-blink .8s steps(2) infinite; }
 
 /* Zoom de carta (rodinha) */
 .kittens .kt-mesa #viewer { position: absolute; left: calc(200px + (var(--bw) - 540px) / 2); top: 380px; z-index: 35; pointer-events: none; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 34px; }
 .kittens .kt-mesa #viewer:empty { display: none; }
 .kittens .kt-mesa #viewer .vcard { width: 246px; height: 343px; }
-.kittens .kt-mesa #viewer .vcard .card { transform: scale(2.2); transform-origin: 0 0; }
+.kittens .kt-mesa #viewer .vcard .kt-card { transform: scale(2.2); transform-origin: 0 0; }
 .kittens .kt-mesa #viewer .vtext { width: 420px; padding: 20px 22px; background: rgba(14,14,28,.94); box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
 .kittens .kt-mesa #viewer .vtext h3 { margin: 0 0 12px; font-family: var(--px); font-weight: normal; font-size: 16px; color: var(--yellow); }
 .kittens .kt-mesa #viewer .vtext p { margin: 0; font-family: var(--vt); font-size: 26px; line-height: 1.15; color: var(--txt); }
@@ -320,7 +326,7 @@
 .kittens .kt-mesa #gallery h2 { margin: 0; font-family: var(--px); font-size: 20px; color: var(--yellow); font-weight: normal; }
 .kittens .kt-mesa #gallery .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px 30px; overflow: hidden; padding: 10px 6px; }
 .kittens .kt-mesa #gallery .item { display: flex; gap: 22px; align-items: center; }
-.kittens .kt-mesa #gallery .item .card { flex: none; }
+.kittens .kt-mesa #gallery .item .kt-card { flex: none; }
 .kittens .kt-mesa #gallery .item p { margin: 0; font-size: 23px; line-height: 1.05; }
 .kittens .kt-mesa #gallery .item b { font-family: var(--px); font-size: 10px; color: var(--yellow); font-weight: normal; display: block; margin-bottom: 6px; }
 .kittens .kt-mesa #gallery .foot { display: flex; justify-content: space-between; align-items: center; }
