@@ -242,7 +242,9 @@ let shown = null, animating = false, picked = null;
 let prevTurn = null;
 /** Mesa sob o mouse com a carta levantada (destaque `.hover`). */
 let hoverPid = null;
+const SOUND_KEY = 'cama-leao.sound';
 let soundOn = true;
+try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (err) { /* sem localStorage: som ligado */ }
 /** Sobe a cada newGame(): o fim de uma animação da partida anterior não mexe na nova. */
 let gameEpoch = 0;
 
@@ -698,7 +700,7 @@ function paintSound() {
   $('#soundBtn').innerHTML = `<i class="ti ${soundOn ? 'ti-volume' : 'ti-volume-off'}"></i>`;
   $('#soundBtn').title = soundOn ? 'som ligado' : 'som desligado';
 }
-$('#soundBtn').onclick = () => { soundOn = !soundOn; paintSound(); };
+$('#soundBtn').onclick = () => { soundOn = !soundOn; paintSound(); try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch (err) { /* ignora */ } };
 $('#devBtn').onclick = () => { const on = $('#dev').classList.toggle('on'); $('#devBtn').classList.toggle('on', on); };
 
 function opts(el, values, isOn, label, set) {
