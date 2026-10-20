@@ -57,7 +57,7 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
       <>
         {reconnecting}
         <Suspense fallback={null}>
-          {view.game.phase === 'lobby' ? <KittensLobby view={view} conn={conn} /> : <KittensTable view={view} conn={conn} />}
+          {view.game.phase === 'lobby' ? <KittensLobby view={view} conn={conn} /> : <KittensTable view={view} conn={conn} serverOffset={snap.serverOffset} />}
         </Suspense>
       </>
     );
