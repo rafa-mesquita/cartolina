@@ -254,7 +254,9 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
     if (valendo && contraMim) chance = 0.7;
     if (!valendo && p.by === me) chance = 0.55;
     if (rng() > chance) return null;
-    return { key, delay: between(rng, 800, 3400), action: { type: 'nope' } };
+    // Vai junto o que o bot viu: se outro deu Nem vem! antes (dois juntos), o servidor recusa e a carta fica na mão;
+    // a visão nova (outra chave) dá a ele a chance de decidir de novo.
+    return { key, delay: between(rng, 800, 3400), action: { type: 'nope', at: p.nopes.length, on: p.play.cards[0]! } };
   }
 
   if (g.current !== me) return null;

@@ -96,6 +96,8 @@ export const ERROR_CODES = [
   'blind_pick',
   'nothing_to_nope',
   'no_nope',
+  'nope_late',
+  'nope_stale',
   'not_your_choice',
   'bad_choice',
   // Cúpi (`not_your_turn` e `bad_target` já vêm do Tatubum)
@@ -159,6 +161,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   blind_pick: 'Mau-olhado: escolha uma das suas cartas viradas.',
   nothing_to_nope: 'Não tem carta no ar pra usar o Nem vem!',
   no_nope: 'Você não tem nenhum Nem vem!',
+  nope_late: 'Alguém deu Nem vem! antes de você: sua carta voltou pra mão.',
+  nope_stale: 'A carta no ar mudou: seu Nem vem! voltou pra mão.',
   not_your_choice: 'Essa escolha não é sua.',
   bad_choice: 'Escolha inválida.',
   not_enough_coins: 'Faltam moedas pra essa ação.',

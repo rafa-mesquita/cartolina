@@ -176,8 +176,14 @@ export type KittensAction =
   | { type: 'start' }
   /** `as`: par de 2 Botos, o bicho que o par vale. Quem está cego manda fichas (`?0`…) no lugar dos ids. */
   | { type: 'play'; cards: string[]; target?: string; ask?: KittensCardKind; as?: KittensCardKind }
-  /** `card`: qual Nem vem! usar (opcional; sem ela, o servidor usa um). Quem está cego tem que mandar uma ficha. */
-  | { type: 'nope'; card?: string }
+  /**
+   * `card`: qual Nem vem! usar (opcional; sem ela, o servidor usa um). Quem está cego tem que mandar uma ficha.
+   * `at` e `on` (pedido do Rafa, 2026-10-20) dizem o que o jogador viu ao clicar: `at` = quantos Nem vem! já havia na
+   * carta no ar (`pending.nopes.length`) e `on` = a primeira carta da jogada no ar (`pending.play.cards[0]`; os ids
+   * são únicos). Se a mesa mudou nesse meio-tempo, o Nem vem! chegou atrasado: é recusado e a carta fica na mão.
+   * Opcionais pra clientes antigos (sem eles, vale como antes).
+   */
+  | { type: 'nope'; card?: string; at?: number; on?: string }
   | { type: 'draw' }
   /**
    * Desarme: `card` (o Desarme a jogar, ao comprar um Tatubum ou contra o Tatu Latidor) e depois `position` (0 = topo,
