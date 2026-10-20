@@ -49,10 +49,14 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   if (tatus !== s.alive.length - 1) throw broken(`${tatus} tatus no monte com ${s.alive.length} vivos`);
   if (s.current === null || !s.alive.includes(s.current)) throw broken(`vez de ${s.current}, que não está vivo`);
   if (s.owed < 1) throw broken(`vez com ${s.owed} turnos devidos`);
-  // Segredo: o monte não aparece na visão de ninguém (só quem espiou vê as 3 de cima), nem o id do tatu que está
-  // sendo escondido.
+  // Segredo: o monte não aparece na visão de ninguém (só quem espiou vê as 3 de cima, e quem decide o par de Quati vê a
+  // de cima), nem o id do tatu que está sendo escondido.
   const json = JSON.stringify(kittensViewFor(s, viewer));
-  const secret = [...(viewer !== null && viewer === s.peek?.who ? [] : s.draw), ...(s.choice?.kind === 'cafune' ? [s.choice.tatu] : [])];
+  const seesTop = s.choice?.kind === 'quati' && viewer === s.choice.who ? s.draw.slice(-1) : [];
+  const secret = [
+    ...(viewer !== null && viewer === s.peek?.who ? [] : s.draw.filter((c) => !seesTop.includes(c))),
+    ...(s.choice?.kind === 'cafune' ? [s.choice.tatu] : []),
+  ];
   const leaked = secret.filter((c) => json.includes(`"${c}"`));
   if (leaked.length > 0) throw broken(`cartas escondidas [${leaked}] na visão de ${viewer}`);
 }

@@ -77,3 +77,8 @@ export function eliminate(state: KittensState, p: string, extraOut: string[] = [
   if (state.current === p) next = passTo(next, nextAlive(next, p), 1);
   return checkWin(next);
 }
+
+/** Passa `card` da mão de `from` pra de `to`. */
+export function moveCard(s: KittensState, from: string, to: string, card: string): KittensState {
+  return { ...s, hands: { ...s.hands, [from]: s.hands[from]!.filter((c) => c !== card), [to]: [...s.hands[to]!, card] } };
+}

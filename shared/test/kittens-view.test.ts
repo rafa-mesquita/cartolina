@@ -54,18 +54,18 @@ describe('visão do Tatubum', () => {
     expect(kittensViewFor(gave, 'p2').log.at(-1)!.ev).toEqual(gaveEv(null));
     expect(kittensViewFor(gave, null).log.at(-1)!.ev).toEqual(gaveEv(null));
 
-    const pairAir = act(
+    const rodaAir = act(
       table({ hands: { p0: ['capivara-0', 'capivara-1'], p1: ['mico-0'], p2: [] }, draw: ['pular-0', 'quati-0'] }),
       'p0',
-      { type: 'play', cards: ['capivara-0', 'capivara-1'], target: 'p1' },
+      { type: 'play', cards: ['capivara-0', 'capivara-1'] },
       ctxOf(ids(3)),
     );
-    const stole = settleKittens(pairAir, later);
-    const last = (viewer: string | null) => kittensViewFor(stole, viewer).log.at(-1)!.ev;
-    expect(last('p0')).toMatchObject({ t: 'stole', card: 'mico-0' });
-    expect(last('p1')).toMatchObject({ t: 'stole', card: 'mico-0' });
-    expect(last('p2')).toMatchObject({ t: 'stole', card: null });
-    expect(last(null)).toMatchObject({ t: 'stole', card: null });
+    const passed = settleKittens(rodaAir, later);
+    const last = (viewer: string | null) => kittensViewFor(passed, viewer).log.at(-1)!.ev;
+    expect(last('p1')).toMatchObject({ t: 'passed', from: 'p1', to: 'p2', card: 'mico-0' });
+    expect(last('p2')).toMatchObject({ t: 'passed', card: 'mico-0' });
+    expect(last('p0')).toMatchObject({ t: 'passed', card: null });
+    expect(last(null)).toMatchObject({ t: 'passed', card: null });
 
     expect(JSON.stringify(kittensViewFor(s, 'p1'))).not.toContain('tatubum-0');
   });

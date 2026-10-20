@@ -1,5 +1,6 @@
 import type { GameContext } from '../../game';
 import { shuffle } from '../../rng';
+import { applyPair, applyTrio } from './combos';
 import { logged, nextAlive, passTo, spendTurn } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
@@ -18,8 +19,9 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
     case 'favor':
       return { ...s, choice: { kind: 'favor', who: play.target!, to: by, deadline: ctx.now + KITTENS_CHOICE_MS } };
     case 'par':
+      return applyPair(s, by, play, ctx);
     case 'trio':
-      return s;
+      return applyTrio(s, by, ctx);
     case 'cinco':
       return before.length === 0
         ? s

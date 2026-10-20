@@ -43,25 +43,6 @@ describe('Favor', () => {
 });
 
 describe('combos', () => {
-  it('par: rouba uma carta ao acaso; só os dois veem qual', () => {
-    const s = resolved({ type: 'play', cards: ['capivara-0', 'capivara-1'], target: 'p1' });
-    expect(s.hands.p1).toHaveLength(1);
-    const stolen = s.hands.p0!.find((c) => c === 'ataque-5' || c === 'pular-5');
-    expect(stolen).toBeDefined();
-    expect(s.log.at(-1)).toMatchObject({ ev: { t: 'stole', from: 'p1', to: 'p0', card: stolen }, seenBy: ['p1', 'p0'] });
-  });
-
-  it('trio: pede pelo nome; se o alvo tiver, entrega; se não, nada', () => {
-    const trio = ['capivara-0', 'capivara-1', 'capivara-2'];
-    const got = resolved({ type: 'play', cards: trio, target: 'p1', ask: 'pular' });
-    expect(got.hands.p1).toEqual(['ataque-5']);
-    expect(got.hands.p0).toContain('pular-5');
-    expect(got.log.at(-1)!.ev).toEqual({ t: 'asked', from: 'p1', to: 'p0', ask: 'pular', card: 'pular-5' });
-    const none = resolved({ type: 'play', cards: trio, target: 'p1', ask: 'favor' });
-    expect(none.hands.p1).toEqual(['ataque-5', 'pular-5']);
-    expect(none.log.at(-1)!.ev).toEqual({ t: 'asked', from: 'p1', to: 'p0', ask: 'favor', card: null });
-  });
-
   it('5 diferentes: escolhe do descarte de antes da jogada', () => {
     const cinco: KittensAction = { type: 'play', cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] };
     const s = resolved(cinco, ['ataque-7', 'espiar-7']);
