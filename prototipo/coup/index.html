@@ -50,6 +50,8 @@ main{flex:1;min-height:0;display:flex}
 .card.s{width:52px;height:72px}
 .card.s i{font-size:22px}
 .card.s em{font-size:10.5px}
+/* perdida pequena (oponentes): só o ícone, maior e na tinta; o nome vai no title */
+.card.s.dead i{font-size:30px;color:var(--ink)}
 .card.l{width:120px;height:168px;gap:10px}
 .card.l i{font-size:34px}
 .card.l em{font-size:22px}
@@ -99,6 +101,21 @@ main{flex:1;min-height:0;display:flex}
 .wait{font-size:19px;letter-spacing:.04em;color:var(--ink-soft);min-height:64px;display:flex;align-items:center}
 .passed{font-size:15px;letter-spacing:.03em;color:var(--ink-soft)}
 
+/* momentos narrados: por cima do palco, um de cada vez */
+#moment{position:absolute;inset:0;z-index:4;border-radius:3px;background:var(--felt);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;animation:momIn .22s ease-out}
+#moment.bye{animation:momOut .25s ease-in forwards}
+@keyframes momIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+@keyframes momOut{to{opacity:0}}
+#moment .mt{font:400 64px/1 var(--disp);letter-spacing:.04em}
+#moment .mt2{font:400 46px/1 var(--disp);letter-spacing:.04em;color:var(--red)}
+#moment .ms{font:400 26px/1.1 var(--disp);letter-spacing:.04em;color:var(--red)}
+#moment .ms.ink{color:var(--ink-soft);font:400 18px/1.2 var(--ui)}
+#moment .row{display:flex;align-items:center;gap:26px}
+#moment .card.l{animation:flip .5s ease-out both;animation-delay:.15s}
+@keyframes flip{from{transform:perspective(600px) rotateY(90deg)}to{transform:perspective(600px) rotateY(0)}}
+.stamp{padding:8px 22px 4px;border:4px solid var(--red);border-radius:6px;color:var(--red);font:400 64px/1 var(--disp);letter-spacing:.1em;transform:rotate(-12deg);animation:stamp .3s cubic-bezier(.2,1.6,.4,1) both;animation-delay:.25s}
+@keyframes stamp{from{opacity:0;transform:rotate(-12deg) scale(1.8)}to{opacity:1;transform:rotate(-12deg) scale(1)}}
+
 /* ---------- sua área ---------- */
 #me{flex:none;height:212px;position:relative;border:2px solid var(--ink);border-radius:5px;background:var(--paper);padding:20px 22px;display:flex;gap:28px}
 #me.turn{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
@@ -124,6 +141,10 @@ main{flex:1;min-height:0;display:flex}
 #panel h3.win{font-size:44px;color:var(--red)}
 #panel p{margin:0;font-size:17px;color:var(--ink-soft)}
 #panel p em{font-style:normal;color:var(--ink)}
+#panel .score{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 18px;margin-top:4px;padding-top:8px;border-top:2px solid var(--ink)}
+#panel .score span{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+#panel .score em{font:400 30px/1 var(--disp);font-style:normal;letter-spacing:.04em;color:var(--ink)}
+#panel .score em.lead{color:var(--red)}
 #panel .pick{flex:none;display:flex;gap:12px;align-items:center}
 .pickc{width:104px;height:146px;padding:0;gap:8px}
 .pickc i{font-size:30px}
@@ -208,6 +229,7 @@ body.mobile #dev{right:8px;left:8px;width:auto;top:66px}
         <div class="corner" id="treasury"></div>
         <div class="corner" id="deck"></div>
         <div id="stageMain"></div>
+        <div id="moment" hidden></div>
       </div>
       <div id="me">
         <div id="myHand"></div>
@@ -290,6 +312,7 @@ setInterval(tick, 200);
 function newGame() {
   for (const t of timers) clearTimeout(t);
   timers.clear(); plans.clear(); exSel.clear(); loseSel = -1; aiming = null;
+  clearMoments(); seen = { match: 0, log: 0, myTurn: false, coins: null }; prevMatch = 0;
   away.clear(); syncAway();
   state = Cupi.initialCoupState();
   act(ME, { type: 'start' });
@@ -338,7 +361,9 @@ const EMBLEM = '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="
   + '<path d="M20 8.5l3.2 7.6 8.2.6-6.3 5.3 2 8-7.1-4.4-7.1 4.4 2-8-6.3-5.3 8.2-.6z" fill="#efe6d2"/></svg>';
 const cardBack = (size) => `<span class="card back ${size}">${EMBLEM}</span>`;
 const cardFace = (c, size, cls = '') => `<span class="card ${size} ${cls}"><i class="ti ${CH(c).icon}"></i><em>${CH(c).nome}</em></span>`;
-const cardDead = (c, size) => cardFace(c, size, 'dead');
+const cardDead = (c, size) => (size === 's'
+  ? `<span class="card s dead" title="${CH(c).nome} (perdida)"><i class="ti ${CH(c).icon}"></i></span>`
+  : cardFace(c, size, 'dead'));
 
 /** Oponentes na ordem dos assentos, começando por quem vem depois de você. */
 function opponents(v) {
@@ -388,6 +413,7 @@ function stageHTML(v) {
           + (c.challenge ? '<button class="react red" data-do="challenge">duvidar</button>' : '')
           + c.block.map((ch) => `<button class="react red" data-do="block" data-as="${ch}">bloquear como ${CH(ch).nome}</button>`).join('')
           + '<button class="react" data-do="pass">deixa</button></div>'
+          + `<div class="wait" id="timeup"${left <= 0 ? '' : ' hidden'}>tempo esgotado…</div>`
         : '<div class="wait">esperando os outros…</div>';
       return `<div id="decl">${Txt.declaration(v)}</div>`
         + `<div class="clock"><div id="bar"><i style="width:${pct}%"></i></div><div id="secs">${Math.ceil(left / 1000)}</div></div>`
@@ -437,7 +463,7 @@ function renderPanel(v) {
       + `<h3 class="win">${nm(v.winner)} tomou o poder</h3>`
       + `<p>ficou com <em>${joinE(v.winnerCards.map((x) => CH(x).nome))}</em></p>`
       + (outs.length ? `<p>saíram: <em>${outs.join(' → ')}</em></p>` : '')
-      + `<p>${scoreText(v)}</p></div>`
+      + `<div class="score">${scoreChips(v)}</div></div>`
       + '<button class="btn red huge" data-do="restart">jogar de novo</button>';
   } else if (c.lose) {
     const chosen = loseSel >= 0 ? v.myCards[loseSel] : null;
@@ -469,6 +495,13 @@ function scoreText(v) {
   return 'placar da noite: ' + (who.length ? who.map((p) => `<em>${nm(p)} ${v.wins[p]}</em>`).join(' · ') : 'ninguém ganhou ainda');
 }
 
+/** Placar grande da tela de fim: todos os jogadores, quem lidera em vermelho. */
+function scoreChips(v) {
+  const best = Math.max(0, ...v.players.map((p) => v.wins[p] || 0));
+  const order = [...v.players].sort((a, b) => (v.wins[b] || 0) - (v.wins[a] || 0));
+  return '<span>placar da noite</span>' + order.map((p) => `<em class="${best > 0 && (v.wins[p] || 0) === best ? 'lead' : ''}">${nm(p)} ${v.wins[p] || 0}</em>`).join('');
+}
+
 function render(v) {
   renderOpps(v);
   renderStage(v);
@@ -479,25 +512,87 @@ function render(v) {
 }
 
 /** Barra dos 10 s, a cada quadro. A visão não tem relógio: passou o prazo, a mesa esconde os botões (o servidor responderia window_closed). */
+let lastTick = '';
 function renderClock() {
   const w = state && state.phase === 'reaction' ? state.window : null;
   if (w) {
     const left = Math.max(0, w.endsAt - Date.now());
+    const sec = Math.ceil(left / 1000);
     const bar = $('#bar i'); if (bar) bar.style.width = (100 * left / Cupi.COUP_WINDOW_MS).toFixed(2) + '%';
-    const secs = $('#secs'); if (secs) secs.textContent = Math.ceil(left / 1000);
-    const reacts = $('#reacts'); if (reacts && left <= 0) reacts.hidden = true;
+    const secs = $('#secs'); if (secs) secs.textContent = sec;
+    const reacts = $('#reacts');
+    if (reacts && left <= 0 && !reacts.hidden) { reacts.hidden = true; const tu = $('#timeup'); if (tu) tu.hidden = false; }
+    // tique só nos 3 últimos segundos e só pra quem ainda pode reagir (os botões estão na tela)
+    if (reacts && !reacts.hidden && sec >= 1 && sec <= 3 && lastTick !== `${w.id}:${sec}`) { lastTick = `${w.id}:${sec}`; play('tick'); }
   }
   requestAnimationFrame(renderClock);
 }
 requestAnimationFrame(renderClock);
+
+/* ---------- momentos narrados (fila sobre o palco, 2,2 s cada) ---------- */
+const MOMENT_MS = 2200;
+const moments = [];
+let momentTimer = 0;
+function momentHTML(e) {
+  switch (e.t) {
+    case 'challenge': {
+      const head = `<div class="mt">${nm(e.by)} duvidou!</div>`;
+      if (e.had) return head + `<div class="row">${cardFace(e.claim, 'l')}</div><div class="ms">${nm(e.of)} tinha ${Txt.the(e.claim)}</div>`;
+      return head + `<div class="row"><div class="mt2">${nm(e.of)} blefou!</div><div class="stamp">blefe</div></div>`;
+    }
+    case 'blocked':
+      return `<div class="mt">bloqueado!</div><div class="row">${cardFace(e.as, 'l')}</div><div class="ms ink">${nm(e.by)} bloqueou como ${Txt.the(e.as)}</div>`;
+    case 'out':
+      return `<div class="mt">${nm(e.player)} está fora</div>`;
+  }
+  return '';
+}
+function showMoment() {
+  const el = $('#moment');
+  if (momentTimer || !moments.length) return;
+  el.className = ''; el.innerHTML = momentHTML(moments.shift()); el.hidden = false;
+  momentTimer = setTimeout(() => {
+    el.classList.add('bye');
+    momentTimer = setTimeout(() => { momentTimer = 0; el.hidden = true; el.innerHTML = ''; showMoment(); }, 250);
+  }, MOMENT_MS - 250);
+}
+function clearMoments() { moments.length = 0; clearTimeout(momentTimer); momentTimer = 0; const el = $('#moment'); el.hidden = true; el.innerHTML = ''; }
+
+/* ---------- sons pelo que mudou (entradas novas do diário, sua vez, suas moedas) ---------- */
+let seen = { match: 0, log: 0, myTurn: false, coins: null };
+function sfx(names) { names.forEach((n, i) => (i ? setTimeout(() => play(n), i * 260) : play(n))); }
+function narrate(v) {
+  if (v.match !== seen.match) seen = { match: v.match, log: 0, myTurn: false, coins: null };
+  const fresh = v.log.slice(seen.log);
+  seen.log = v.log.length;
+  const snd = [];
+  for (const e of fresh) {
+    switch (e.t) {
+      case 'act': case 'block': snd.push('declare'); break;
+      case 'challenge': snd.push('challenge', e.had ? 'reveal' : 'bluff'); moments.push(e); break;
+      case 'blocked': moments.push(e); break;
+      case 'lose': snd.push('lose'); break;
+      case 'out': moments.push(e); break;
+      case 'win': snd.push('win'); break;
+    }
+  }
+  const myTurn = v.phase === 'turn' && v.turn === ME;
+  if (myTurn && !seen.myTurn) snd.push('turn');
+  seen.myTurn = myTurn;
+  const seat = v.seats.find((s) => s.id === ME), coins = seat ? seat.coins : 0;
+  if (seen.coins !== null && coins > seen.coins) snd.push('coin');
+  seen.coins = coins;
+  sfx([...new Set(snd)]);
+  showMoment();
+}
 
 function changed() {
   const v = view();
   const key = `${v.match}:${v.log.length}:${v.phase}`;
   if (key !== selKey) { exSel.clear(); loseSel = -1; selKey = key; }
   if (aiming && !(v.can.act.includes(aiming) && Cupi.COUP_TARGETED[aiming])) aiming = null;
-  if (v.match !== prevMatch) { prevMatch = v.match; plans.clear(); }
-  render(v); scheduleBots();
+  if (v.match !== prevMatch) { prevMatch = v.match; plans.clear(); clearMoments(); }
+  render(v); narrate(v); scheduleBots();
 }
 
 /* ---------- cliques (tudo vem de view().can) ---------- */
