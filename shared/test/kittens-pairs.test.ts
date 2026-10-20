@@ -18,10 +18,9 @@ const DRAW = ['cafune-9', 'embaralhar-9', 'pular-9'];
 /** p0 joga `action` e a janela de 5 s passa sem Nem vem!. */
 function resolved(
   action: KittensAction,
-  opts: { draw?: string[]; hands?: Record<string, string[]>; peek?: string[]; owed?: number; alive?: string[] } = {},
+  opts: { draw?: string[]; hands?: Record<string, string[]>; peek?: string[]; owed?: number } = {},
 ): KittensState {
-  const built = table({ hands: opts.hands ?? hands(), draw: opts.draw ?? DRAW, owed: opts.owed });
-  const base = opts.alive ? { ...built, alive: opts.alive } : built;
+  const base = table({ hands: opts.hands ?? hands(), draw: opts.draw ?? DRAW, owed: opts.owed });
   const withPeek = opts.peek ? { ...base, peek: { who: 'p0', cards: opts.peek } } : base;
   return settleKittens(act(withPeek, 'p0', action, ctx), at(5000));
 }
@@ -139,11 +138,18 @@ describe('par de Capivara: todos menos você passam uma carta pro próximo', () 
   });
 
   it('jogador fora da partida é pulado: nada passa de ou pra ele', () => {
-    const s = resolved(par(['capivara-0', 'capivara-1']), { alive: ['p0', 'p2'], hands: { ...hands(), p1: [] } });
-    expect(s.log.filter((e) => e.ev.t === 'passed').map((e) => e.ev)).toEqual([expect.objectContaining({ from: 'p2', to: 'p0' })]);
-    expect(s.hands.p1).toEqual([]);
-    expect(s.hands.p0).toHaveLength(10); // 11 − 2 do par + 1 que recebeu
-    expect(s.hands.p2).toHaveLength(0);
+    const ctx4 = ctxOf(ids(4));
+    const four = table({
+      hands: { p0: ['capivara-0', 'capivara-1'], p1: ['ataque-5'], p2: [], p3: ['espiar-5'] },
+      draw: DRAW,
+    });
+    const start = { ...four, alive: ['p0', 'p1', 'p3'] }; // p2 já saiu
+    const s = settleKittens(act(start, 'p0', par(['capivara-0', 'capivara-1']), ctx4), ctxOf(ids(4), { now: T0 + 5000 }));
+    expect(s.log.filter((e) => e.ev.t === 'passed').map((e) => e.ev)).toEqual([
+      expect.objectContaining({ from: 'p1', to: 'p3', card: 'ataque-5' }),
+      expect.objectContaining({ from: 'p3', to: 'p0', card: 'espiar-5' }),
+    ]);
+    expect(s.hands).toEqual({ p0: ['espiar-5'], p1: [], p2: [], p3: ['ataque-5'] });
   });
 
   it('quem não deu nem recebeu não vê a carta', () => {
@@ -208,6 +214,6 @@ describe('par de Quati: a carta de cima fica ou vai pro fundo', () => {
   it('mandar pro fundo apaga a espiada', () => {
     const s = resolved(par(['quati-0', 'quati-1']), { peek: ['pular-9', 'embaralhar-9', 'cafune-9'] });
     expect(act(s, 'p0', { type: 'choose', keep: false }, at(5000)).peek).toBeNull();
-    expect(act(s, 'p0', { type: 'choose', keep: true }, at(5000)).peek).not.toBeNull();
+    expect(act(s, 'p0', { type: 'choose', keep: true }, at(5000)).peek).toEqual({ who: 'p0', cards: ['pular-9', 'embaralhar-9', 'cafune-9'] });
   });
 });

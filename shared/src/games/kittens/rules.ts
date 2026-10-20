@@ -122,6 +122,11 @@ export function applyKittensAction(
         case 'quati':
           if (action.keep === undefined) return fail('bad_choice');
           return ok(delayTop(s, c, action.keep));
+        default: {
+          const unhandled: never = c;
+          void unhandled;
+          return fail('bad_choice');
+        }
       }
     }
     case 'play': {
