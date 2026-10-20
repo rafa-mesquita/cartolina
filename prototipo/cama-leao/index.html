@@ -177,6 +177,29 @@ button{font:inherit;color:inherit;cursor:pointer}
 .leaf>span{position:absolute;bottom:0;transform-origin:50% 100%}
 .fans .none{font-size:13px;line-height:1.4;color:var(--navy-soft);opacity:.8;max-width:240px}
 
+/* ---------- fim da partida (cartaz de circo sobre o picadeiro: não cobre os personagens dos assentos nem a sua mesa inteira) ---------- */
+#end{position:absolute;left:50%;top:478px;width:520px;transform:translate(-50%,-50%);z-index:20;padding:18px 26px 20px;text-align:center;
+  background:var(--cream);border:6px double var(--red);border-radius:18px;
+  box-shadow:0 0 0 3px var(--cream),0 0 0 5px var(--gold),0 18px 40px rgba(31,42,74,.34);animation:end-in .38s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes end-in{from{opacity:0;transform:translate(-50%,-50%) scale(.86)}}
+#end h2{margin:0;font:34px/1.1 var(--logo);color:var(--red);text-shadow:0 2px 0 rgba(158,42,34,.16)}
+#end .why{margin:6px 0 12px;font:500 15px/1.2 var(--ui);color:var(--navy-soft)}
+#end ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;text-align:left}
+#end li{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:10px;border:1.5px solid transparent}
+#end li.win{background:rgba(232,178,58,.18);border-color:var(--gold)}
+#end .rk{width:22px;flex:none;font:600 14px/1 var(--ui);color:var(--navy-soft)}
+#end li.win .rk{color:#9a6d10}
+#end .cr{width:32px;height:32px}
+#end .nm{font:600 15px/1 var(--ui);min-width:64px}
+#end .flags{flex:1}
+#end .flags .none{font-size:12px;color:var(--navy-soft);opacity:.8}
+#end .sph{font:500 13px/1 var(--ui);color:var(--navy-soft);white-space:nowrap}
+#end .acts{display:flex;justify-content:center;gap:12px;margin-top:16px}
+#end .acts button{padding:9px 20px;border-radius:999px;border:1.5px solid var(--red);background:none;color:var(--red);font-weight:600;font-size:15px}
+#end .acts button:hover{background:rgba(200,55,45,.08)}
+#end .acts .main{background:var(--red);color:var(--cream)}
+#end .acts .main:hover{background:var(--red-dark);border-color:var(--red-dark)}
+
 /* ---------- aviso ---------- */
 #toast{position:absolute;left:50%;top:590px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--red-dark);color:var(--cream);
   font:600 14px/1 var(--ui);z-index:40;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow)}
@@ -206,6 +229,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   <div id="ring"><div id="deck"></div><div id="open"></div></div>
   <div id="banner"><span class="txt"></span></div>
   <div id="mine"></div>
+  <div id="end" hidden></div>
   <div id="toast"></div>
 </div>
 <script src="../dixit/critters.js"></script>
@@ -247,6 +271,8 @@ let soundOn = true;
 try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (err) { /* sem localStorage: som ligado */ }
 /** Sobe a cada newGame(): o fim de uma animação da partida anterior não mexe na nova. */
 let gameEpoch = 0;
+/** `gameEpoch:match` da partida cujo som de fim já tocou (o match recomeça em 1 a cada newGame). */
+let endSounded = null;
 
 const nameOf = (p) => NAMES[Number(p.slice(1))];
 const critter = (p) => window.CRITTERS[CRITTER_COLORS[Number(p.slice(1)) % CRITTER_COLORS.length]];
@@ -309,6 +335,9 @@ function changed() {
   if (v.paused) releaseHold();
   if (v.phase === 'playing' && v.turn === ME && prevTurn !== ME) play('turn');
   prevTurn = v.turn;
+  // o fim chega aqui depois da animação da última jogada: o som toca uma vez por partida
+  const endKey = `${gameEpoch}:${v.match}`;
+  if (v.phase === 'over' && endSounded !== endKey) { endSounded = endKey; play(v.winners.includes(ME) ? 'win' : 'lose'); }
   shown = v; render(v); scheduleBot(v);
   // na sua vez (ou no fim) a dica entra depois de a frase da jogada ficar um pouco no letreiro
   if (hold && !holdTimer && (v.phase === 'over' || (v.phase === 'playing' && v.turn === ME))) {
@@ -331,12 +360,26 @@ function scheduleBot(v) {
   }, (900 + Math.random() * 900) * SPEED);
 }
 
-function newGame() {
+/** Nada da partida anterior sobra: virada, arrasto, carta levantada, frase presa no letreiro, bot agendado. */
+function clearTable() {
   gameEpoch++;
-  Anim.stop(); // a virada da partida anterior some na hora
+  Anim.stop(); // a virada da partida anterior some na hora (e a camada .fly com ela)
+  app.querySelectorAll('.fly').forEach((el) => el.remove());
   releaseHold(); dropFrom = null;
   killDrag();
   cancelBot(); picked = null; animating = false; shown = null; prevTurn = null; hoverPid = null;
+}
+
+/** "Jogar de novo" (só o host): mesma mesa, começa quem ficou em último. A partida nova tem outro `match`: não anima. */
+function playAgain() {
+  if (!state || state.phase !== 'over') return;
+  const before = shown;
+  clearTable();
+  if (!act(ME, { type: 'again' })) { shown = before; render(before); } // falhou (gente de menos): o cartaz fica
+}
+
+function newGame() {
+  clearTable();
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
   online = new Set(ids);
   state = CamaLeao.initialCamelioState();
@@ -480,7 +523,7 @@ function hint(v) {
   if (v.phase === 'over') {
     const w = v.winners.map(nameOf);
     if (v.endReason === 'target') return w[0] === 'você' ? `fim: <b>você ganhou!</b> fechou ${v.target} cores` : `fim: <b>${w[0]} ganhou!</b> fechou ${v.target} cores`;
-    if (w.length > 1) return `o monte acabou: <b>empate entre ${list(w)}</b>`;
+    if (w.length > 1) return `o monte acabou: <b>empate entre ${winnersTxt(v)}</b>`;
     return w[0] === 'você' ? 'o monte acabou: <b>você ganhou!</b>' : `o monte acabou: <b>${w[0]} ganhou!</b>`;
   }
   if (v.phase !== 'playing') return 'preparando a partida…';
@@ -493,10 +536,50 @@ function hint(v) {
   return `vez de <b>${nameOf(v.turn)}</b>`;
 }
 
+/** Esferas na área de jogo sem as cores já pontuadas (o desempate do fim pelo monte, spec §2.4). */
+function spheresInPlay(v, p) {
+  const done = scoredColors(v.scored[p] || []);
+  return (v.table[p] || []).reduce((n, c) => (done.includes(c.color) ? n : n + c.spheres), 0);
+}
+/** Quem ganhou, com "você" por último ("Bia e você"). */
+function winnersTxt(v) {
+  const w = [...v.winners].sort((a, b) => (a === ME) - (b === ME)).map(nameOf);
+  return list(w);
+}
+/** O cartaz do fim: só com a partida acabada (e já depois da animação da última jogada, que é quando o changed() desenha). */
+function renderEnd(v) {
+  const el = $('#end');
+  if (v.phase !== 'over') { el.hidden = true; el.innerHTML = ''; delete el.dataset.t; return; }
+  const key = (p) => [v.points[p] || 0, spheresInPlay(v, p)];
+  // mais pontos; empate → mais esferas em jogo (o sort é estável: empate total fica na ordem dos assentos)
+  const rows = v.players.map((p) => ({ p, k: key(p) })).sort((a, b) => b.k[0] - a.k[0] || b.k[1] - a.k[1]);
+  const title = v.winners.length > 1 ? `empate: ${winnersTxt(v)}` : `${winnersTxt(v)} ganhou!`;
+  const why = v.endReason === 'target' ? `chegou a ${v.target} cores` : 'o monte acabou';
+  let rank = 0;
+  const lines = rows.map((r, i) => {
+    if (i === 0 || r.k[0] !== rows[i - 1].k[0] || r.k[1] !== rows[i - 1].k[1]) rank = i + 1; // empate divide a posição
+    const done = scoredColors(v.scored[r.p] || []);
+    const flags = done.length ? done.map(flag).join('') : '<span class="none">nenhuma cor</span>';
+    const n = r.k[1];
+    return `<li class="${v.winners.includes(r.p) ? 'win' : ''}" data-pid="${r.p}" title="${nameOf(r.p)} · ${ptsTxt(r.k[0])}">`
+      + `<span class="rk">${rank}º</span><span class="cr">${critter(r.p)}</span><span class="nm">${nameOf(r.p)}</span>`
+      + `<span class="flags">${flags}</span><span class="sph">${n} ${n === 1 ? 'esfera' : 'esferas'} em jogo</span></li>`;
+  }).join('');
+  const html = `<h2>${title}</h2><div class="why">${why}</div><ol>${lines}</ol>`
+    + '<div class="acts"><button class="main" data-act="again">jogar de novo</button><button data-act="new">nova mesa</button></div>';
+  if (el.dataset.t !== html) { el.dataset.t = html; el.innerHTML = html; } // redesenho igual não mexe nos botões
+  el.hidden = false;
+}
+$('#end').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  if (b.dataset.act === 'again') playAgain(); else newGame();
+});
+
 /** `keepBanner`: redesenha a mesa sem trocar o texto do letreiro (durante a animação ele é da Anim). */
 function render(v, { keepBanner = false } = {}) {
   if (!v) return;
-  renderTop(v); renderSeats(v); renderRing(v); renderMine(v);
+  renderTop(v); renderSeats(v); renderRing(v); renderMine(v); renderEnd(v);
   if (!keepBanner) setBanner(bannerFor(v));
 }
 
@@ -524,7 +607,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 app.addEventListener('click', (e) => {
-  if (e.target.closest('#top, #dev')) return;
+  if (e.target.closest('#top, #dev, #end')) return;
   // o clique que o navegador manda no fim de um arrasto de verdade não é um clique
   if (suppressClick) { suppressClick = false; return; }
   if (e.target.closest('#deck')) { pick('deck'); return; }
