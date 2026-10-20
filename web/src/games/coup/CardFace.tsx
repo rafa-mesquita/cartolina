@@ -41,19 +41,16 @@ export function CardArt({ card, alt, band = true }: { card: CoupCharacter; alt: 
 /**
  * Frente de uma carta: a arte do personagem com o nome na faixa de baixo. `dead` = perdida (arte apagada em cinza e um
  * risco vermelho na diagonal; o nome vai também no `title`). A pequena (`s`, dos oponentes) mostra só a arte.
- * Com `tip` (as suas cartas), a carta ganha a dica rápida e entra no Tab (o foco também mostra a dica).
+ * Com `tip` (as suas cartas), a carta ganha a dica rápida e entra no Tab (o foco também mostra a dica); aí ela mesma é
+ * a imagem com nome (`role="img"`), pro leitor de tela ler o nome e a descrição no foco.
  */
 export function CardFace({ card, size, dead = false, tip }: { card: CoupCharacter; size: CardSize; dead?: boolean; tip?: TipProps }) {
   const name = CHARACTER_NAMES[card];
   const label = dead ? `${name} (perdida)` : name;
+  const focusable = tip ? ({ role: 'img', 'aria-label': label, tabIndex: 0, ...tip } as const) : {};
   return (
-    <span
-      className={`cp-card face ${size}${dead ? ' dead' : ''}${tip ? ' tipped' : ''}`}
-      title={dead || size === 's' ? label : undefined}
-      tabIndex={tip ? 0 : undefined}
-      {...tip}
-    >
-      <CardArt card={card} alt={label} band={size !== 's'} />
+    <span className={`cp-card face ${size}${dead ? ' dead' : ''}${tip ? ' tipped' : ''}`} title={dead || size === 's' ? label : undefined} {...focusable}>
+      <CardArt card={card} alt={tip ? '' : label} band={size !== 's'} />
     </span>
   );
 }

@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { CoupRoomView, Room } from '@cartolina/shared';
 import { CoupTable } from '../src/games/coup/CoupTable';
+import { CHARACTER_NAMES } from '../src/games/coup/names';
+import { playCoupSound } from '../src/games/coup/sounds';
 import { actionTip, characterTip, reactionTip } from '../src/games/coup/rules';
 import { useTip } from '../src/games/coup/Tip';
 import type { GameConn } from '../src/net/connection';
@@ -34,6 +36,8 @@ const betoTaxa = () => step(step(anaDaVez(), 'p0', { type: 'act', kind: 'income'
 const balloon = () => document.querySelector<HTMLElement>('.cp-tip');
 /** O texto ligado ao elemento por aria-describedby. */
 const described = (el: Element) => document.getElementById(el.getAttribute('aria-describedby') ?? '')?.textContent;
+/** Clique que vem de ponteiro (o do teclado tem detail 0). */
+const TAP = { detail: 1 };
 const wait = (ms: number) => act(() => vi.advanceTimersByTime(ms));
 const hold = (el: Element) => {
   fireEvent.pointerDown(el, { pointerType: 'touch' });
@@ -93,7 +97,7 @@ describe('dica rápida nas ações', () => {
     fireEvent.pointerEnter(renda, { pointerType: 'mouse' });
     fireEvent.pointerDown(renda, { pointerType: 'mouse' });
     fireEvent.pointerUp(renda, { pointerType: 'mouse' });
-    fireEvent.click(renda);
+    fireEvent.click(renda, TAP);
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'act', kind: 'income' });
   });
 });
@@ -109,13 +113,13 @@ describe('dica rápida no toque', () => {
     wait(1);
     expect(balloon()!.textContent).toBe(actionTip('income'));
     fireEvent.pointerUp(renda, { pointerType: 'touch' });
-    fireEvent.click(renda);
+    fireEvent.click(renda, TAP);
     expect(c.sendAction).not.toHaveBeenCalled();
     // o toque seguinte, curto, volta a mandar
     fireEvent.pointerDown(renda, { pointerType: 'touch' });
     wait(100);
     fireEvent.pointerUp(renda, { pointerType: 'touch' });
-    fireEvent.click(renda);
+    fireEvent.click(renda, TAP);
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'act', kind: 'income' });
   });
 
@@ -127,7 +131,7 @@ describe('dica rápida no toque', () => {
     wait(120);
     fireEvent.pointerUp(renda, { pointerType: 'touch' });
     fireEvent.focus(renda);
-    fireEvent.click(renda);
+    fireEvent.click(renda, TAP);
     expect(balloon()).toBeNull();
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'act', kind: 'income' });
     wait(1000);
@@ -142,6 +146,46 @@ describe('dica rápida no toque', () => {
     expect(balloon()).toBeTruthy();
     wait(200);
     expect(balloon()).toBeNull();
+  });
+
+  it('segurar mais de 3 s: o foco que chega no fim do toque não reabre o balão, e o clique não sai', () => {
+    const c = conn();
+    mesa(viewOf(anaDaVez(), 'p0'), c);
+    const renda = screen.getByRole('button', { name: /^renda/ });
+    fireEvent.pointerDown(renda, { pointerType: 'touch' });
+    wait(450);
+    expect(balloon()).toBeTruthy();
+    wait(3100);
+    expect(balloon()).toBeNull();
+    fireEvent.pointerUp(renda, { pointerType: 'touch' });
+    fireEvent.focus(renda);
+    fireEvent.click(renda, TAP);
+    expect(balloon()).toBeNull();
+    expect(c.sendAction).not.toHaveBeenCalled();
+  });
+
+  it('o balão sumiu sozinho: um Enter depois não é engolido', () => {
+    const c = conn();
+    mesa(viewOf(anaDaVez(), 'p0'), c);
+    const renda = screen.getByRole('button', { name: /^renda/ });
+    hold(renda);
+    wait(3100);
+    expect(balloon()).toBeNull();
+    // clique do teclado (Enter/espaço): detail 0
+    fireEvent.click(renda, { detail: 0 });
+    expect(c.sendAction).toHaveBeenCalledWith({ type: 'act', kind: 'income' });
+  });
+
+  it('o clique engolido depois de segurar não faz o som de clique; o toque curto faz', () => {
+    mesa(viewOf(anaDaVez(), 'p0'));
+    const renda = screen.getByRole('button', { name: /^renda/ });
+    hold(renda);
+    fireEvent.click(renda, TAP);
+    expect(playCoupSound).not.toHaveBeenCalledWith('click');
+    fireEvent.pointerDown(renda, { pointerType: 'touch' });
+    fireEvent.pointerUp(renda, { pointerType: 'touch' });
+    fireEvent.click(renda, TAP);
+    expect(playCoupSound).toHaveBeenCalledWith('click');
   });
 
   it('tocar em outro lugar esconde o balão', () => {
@@ -160,6 +204,26 @@ describe('dica rápida no toque', () => {
     fireEvent.pointerCancel(renda, { pointerType: 'touch' });
     wait(500);
     expect(balloon()).toBeNull();
+  });
+});
+
+describe('dica rápida: teclado', () => {
+  it('Esc fecha a dica aberta pelo foco', () => {
+    mesa(viewOf(anaDaVez(), 'p0'));
+    const renda = screen.getByRole('button', { name: /^renda/ });
+    fireEvent.focus(renda);
+    expect(balloon()).toBeTruthy();
+    fireEvent.keyDown(renda, { key: 'Escape' });
+    expect(balloon()).toBeNull();
+  });
+
+  it('sua carta focável é uma imagem com o nome e a dica como descrição', () => {
+    const view = viewOf(anaDaVez(), 'p0');
+    mesa(view);
+    const first = view.game.myCards[0]!;
+    const card = screen.getAllByRole('img', { name: CHARACTER_NAMES[first], description: characterTip(first) })[0]!;
+    expect(card.classList.contains('cp-card')).toBe(true);
+    expect(card.tabIndex).toBe(0);
   });
 });
 
@@ -189,10 +253,10 @@ describe('dica rápida nas suas cartas e na janela', () => {
     expect(balloon()!.textContent).toBe(reactionTip('challenge'));
     fireEvent.pointerLeave(duvidar, { pointerType: 'mouse' });
     hold(deixa);
-    fireEvent.click(deixa);
+    fireEvent.click(deixa, TAP);
     expect(balloon()!.textContent).toBe(reactionTip('pass'));
     expect(c.sendAction).not.toHaveBeenCalled();
-    fireEvent.click(deixa);
+    fireEvent.click(deixa, TAP);
     expect(c.sendAction).toHaveBeenCalledTimes(1);
   });
 

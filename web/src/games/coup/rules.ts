@@ -11,19 +11,16 @@ import {
   COUP_GAIN,
   COUP_MUST_COUP_AT,
   COUP_START_COINS,
+  COUP_TARGETED,
   COUP_WINDOW_MS,
   type CoupActionKind,
   type CoupCharacter,
 } from '@cartolina/shared';
 import { CHARACTER_NAMES } from './names';
-import { actionLabel } from './texts';
+import { actionLabel, the } from './texts';
 
 /** Cartas que a troca compra do baralho (as regras do `shared` compram 2 e devolvem o mesmo tanto). */
 const EXCHANGE_DRAW = 2;
-
-/** "o Duque" / "a Condessa". */
-const ART: Record<CoupCharacter, 'o' | 'a'> = { duke: 'o', assassin: 'o', captain: 'o', ambassador: 'o', contessa: 'a' };
-const the = (c: CoupCharacter): string => `${ART[c]} ${CHARACTER_NAMES[c]}`;
 
 /** A ação como coisa barrada ("bloqueia a ajuda externa"). */
 const NOUN: Record<CoupActionKind, string> = {
@@ -121,14 +118,27 @@ export const CHARACTER_INFO: readonly CharacterInfo[] = COUP_CHARACTERS.map((cha
   };
 });
 
-/** Objetivo e o resto do jogo em frases curtas. */
+const actionNames = (ks: readonly CoupActionKind[]): string => andList(ks.map((k) => actionLabel(k).name));
+const capitalized = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+/** Ações sem personagem e sem bloqueio: acontecem direto, sem janela (renda e golpe). */
+const DIRECT = COUP_ACTION_KINDS.filter((k) => COUP_CLAIM[k] === null && COUP_BLOCKERS[k].length === 0);
+/** Bloqueáveis com alvo: só o alvo bloqueia (assassinar e extorquir). */
+const TARGET_BLOCKS = COUP_ACTION_KINDS.filter((k) => COUP_TARGETED[k] && COUP_BLOCKERS[k].length > 0);
+/** Bloqueáveis sem alvo: qualquer um bloqueia (ajuda externa, como Duque). */
+const ANYONE_BLOCKS = COUP_ACTION_KINDS.filter((k) => !COUP_TARGETED[k] && COUP_BLOCKERS[k].length > 0);
+
+/** Objetivo e o resto do jogo em frases curtas (fiéis a quando o jogo abre janela e a quem pode bloquear). */
 export const HOW_IT_WORKS: { goal: string; items: readonly string[] } = {
   goal: `Ser o último com carta na mão. Cada um começa com 2 cartas viradas pra baixo e ${COUP_START_COINS} moedas.`,
   items: [
     'Na sua vez, escolha uma ação. Dá pra dizer que é qualquer personagem, mesmo sem ter a carta.',
-    `Depois de cada ação, os outros têm ${COUP_WINDOW_MS / 1000} segundos pra duvidar, bloquear ou deixar.`,
+    `Quando a ação diz ser um personagem, ou dá pra ser bloqueada, os outros têm ${COUP_WINDOW_MS / 1000} segundos pra ` +
+      `duvidar, bloquear ou deixar. ${capitalized(actionNames(DIRECT))} acontecem direto.`,
     'Duvidou e a pessoa não tinha a carta: ela perde uma. Se tinha, quem duvidou perde, e ela troca a carta mostrada.',
-    'Bloquear também é dizer que tem um personagem: dá pra duvidar do bloqueio.',
+    'Bloquear também é dizer que tem um personagem, e dá pra duvidar. ' +
+      `Em ${actionNames(TARGET_BLOCKS)}, só o alvo bloqueia; ` +
+      ANYONE_BLOCKS.map((k) => `na ${actionLabel(k).name}, qualquer um bloqueia como ${orNames(COUP_BLOCKERS[k])}`).join('; ') +
+      '.',
     'Perder carta é virá-la pra cima. Sem carta virada pra baixo, você está fora.',
     `Trocar: você compra ${EXCHANGE_DRAW} do baralho, olha tudo e devolve ${EXCHANGE_DRAW}.`,
     `Com ${COUP_MUST_COUP_AT} moedas ou mais, a única ação é o golpe.`,

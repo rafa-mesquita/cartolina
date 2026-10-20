@@ -16,7 +16,7 @@ import { createPortal } from 'react-dom';
 export const TIP_HOLD_MS = 450;
 /** A dica do toque some sozinha depois disso (ms). */
 export const TIP_TOUCH_MS = 3000;
-/** Foco que chega até aqui (ms) depois de um toque/clique é do ponteiro, não do teclado: não mostra a dica. */
+/** Foco que chega até aqui (ms) depois de o dedo/mouse descer ou subir é do ponteiro, não do teclado: não mostra a dica. */
 const POINTER_FOCUS_MS = 800;
 /** Distância mínima (px) do balão até a borda da tela. */
 const EDGE = 8;
@@ -38,9 +38,9 @@ export interface TipProps {
 /**
  * Dica rápida de um elemento (carta, ação, botão da janela). No computador aparece ao passar o mouse ou focar pelo
  * teclado; no toque, ao segurar o dedo `TIP_HOLD_MS` — e aí o clique que vem ao soltar **não** dispara o elemento; some
- * sozinha em `TIP_TOUCH_MS` ou ao tocar em outro lugar. O texto fica sempre no DOM (escondido), ligado ao elemento por
- * `aria-describedby`: o leitor de tela ouve sem precisar do balão. Devolve as `props` do elemento e o `tip` (o texto
- * escondido e, quando aparece, o balão), que vai do lado do elemento.
+ * sozinha em `TIP_TOUCH_MS` ou ao tocar em outro lugar. O Esc fecha. O clique do teclado nunca é engolido. O texto fica
+ * sempre no DOM (escondido), ligado ao elemento por `aria-describedby`: o leitor de tela ouve sem precisar do balão.
+ * Devolve as `props` do elemento e o `tip` (o texto escondido e, quando aparece, o balão), que vai do lado do elemento.
  */
 export function useTip(text: string): { props: TipProps; tip: ReactNode } {
   const id = useId();
@@ -50,7 +50,8 @@ export function useTip(text: string): { props: TipProps; tip: ReactNode } {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // o dedo segurou até a dica: o próximo clique é engolido
   const held = useRef(false);
-  const lastPointer = useRef<{ at: number; type: string }>({ at: -Infinity, type: '' });
+  // último ponteiro: quando desceu/subiu, de que tipo e se ainda está apertado
+  const lastPointer = useRef<{ at: number; type: string; down: boolean }>({ at: -Infinity, type: '', down: false });
 
   const props = useMemo<TipProps>(() => {
     const stopTimers = () => {
@@ -71,7 +72,7 @@ export function useTip(text: string): { props: TipProps; tip: ReactNode } {
         if (e.pointerType !== 'touch') hide();
       },
       onPointerDown: (e) => {
-        lastPointer.current = { at: Date.now(), type: e.pointerType };
+        lastPointer.current = { at: Date.now(), type: e.pointerType, down: true };
         held.current = false;
         if (e.pointerType !== 'touch') return;
         const el = e.currentTarget;
@@ -82,6 +83,9 @@ export function useTip(text: string): { props: TipProps; tip: ReactNode } {
           setAnchor(el);
           hideTimer.current = setTimeout(() => {
             hideTimer.current = undefined;
+            // sumiu sozinha com o dedo já fora: o próximo clique é outro gesto (com o dedo ainda apertado, o clique
+            // de soltar continua engolido)
+            if (!lastPointer.current.down) held.current = false;
             setAnchor(null);
           }, TIP_TOUCH_MS);
         }, TIP_HOLD_MS);
@@ -89,19 +93,25 @@ export function useTip(text: string): { props: TipProps; tip: ReactNode } {
       onPointerUp: () => {
         clearTimeout(holdTimer.current);
         holdTimer.current = undefined;
+        lastPointer.current = { ...lastPointer.current, at: Date.now(), down: false };
       },
       onPointerCancel: () => {
         clearTimeout(holdTimer.current);
         holdTimer.current = undefined;
+        lastPointer.current = { ...lastPointer.current, at: Date.now(), down: false };
       },
       onFocus: (e) => {
-        if (Date.now() - lastPointer.current.at < POINTER_FOCUS_MS) return;
+        // o foco que vem com o toque/clique (inclusive o do fim de um toque longo) não abre o balão
+        const p = lastPointer.current;
+        if (p.down || Date.now() - p.at < POINTER_FOCUS_MS) return;
         setAnchor(e.currentTarget);
       },
       onBlur: hide,
       onClickCapture: (e) => {
         if (!held.current) return;
         held.current = false;
+        // clique do teclado (Enter/espaço, detail 0) nunca é engolido
+        if (e.detail === 0) return;
         e.preventDefault();
         e.stopPropagation();
       },
@@ -121,16 +131,27 @@ export function useTip(text: string): { props: TipProps; tip: ReactNode } {
     [],
   );
 
-  // com o balão aberto, tocar/clicar em outro lugar esconde
+  // com o balão aberto, tocar/clicar em outro lugar esconde, e o Esc também
   useEffect(() => {
     if (anchor === null) return undefined;
-    const onDown = (e: PointerEvent) => {
-      if (e.target instanceof Node && anchor.contains(e.target)) return;
+    const hide = () => {
       clearTimeout(hideTimer.current);
+      hideTimer.current = undefined;
       setAnchor(null);
     };
+    const onDown = (e: PointerEvent) => {
+      if (e.target instanceof Node && anchor.contains(e.target)) return;
+      hide();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') hide();
+    };
     document.addEventListener('pointerdown', onDown, true);
-    return () => document.removeEventListener('pointerdown', onDown, true);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [anchor]);
 
   const tip = (

@@ -50,6 +50,14 @@ interface Ui {
 const NO_KEEP: number[] = [];
 const freshUi = (key: string): Ui => ({ key, aiming: null, lose: -1, keep: NO_KEEP, sent: false });
 
+/** Colinha de regras: `at` = situação em que abriu (null = fechada); `auto` = fechou sozinha (a situação pediu você). */
+interface Rules {
+  at: string | null;
+  auto: boolean;
+}
+const RULES_CLOSED: Rules = { at: null, auto: false };
+const RULES_AUTO_CLOSED: Rules = { at: null, auto: true };
+
 /**
  * A mesa do Cúpi: no computador, palco 1440×900 escalado com o topo, os oponentes, o palco (feltro), a sua área e o diário.
  * No celular em pé (`coup--phone`), os mesmos componentes em coluna, na altura da tela: topo fino, oponentes em grade,
@@ -91,15 +99,16 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
     [key],
   );
 
-  // Colinha de regras: guarda a situação em que abriu (`rulesAt`). Se a situação muda pra uma que pede você (reagir,
+  // Colinha de regras: guarda a situação em que abriu (`rules.at`). Se a situação muda pra uma que pede você (reagir,
   // perder carta, trocar), ela fecha sozinha pra você não perder o prazo; aberta numa situação que já pedia você, fica.
   const needsYou = g.can.pass || g.can.lose || g.can.keep > 0;
-  const [rulesAt, setRulesAt] = useState<string | null>(null);
-  const rulesStale = rulesAt !== null && rulesAt !== key && needsYou;
-  if (rulesStale) setRulesAt(null);
-  const rulesOpen = rulesAt !== null && !rulesStale;
-  const toggleRules = useCallback(() => setRulesAt((at) => (at === null ? key : null)), [key]);
-  const closeRules = useCallback(() => setRulesAt(null), []);
+  const [rules, setRules] = useState<Rules>(RULES_CLOSED);
+  const rulesStale = rules.at !== null && rules.at !== key && needsYou;
+  if (rulesStale) setRules(RULES_AUTO_CLOSED);
+  const rulesOpen = rules.at !== null && !rulesStale;
+  const rulesAuto = rules.auto;
+  const toggleRules = useCallback(() => setRules((r) => (r.at === null ? { at: key, auto: false } : RULES_CLOSED)), [key]);
+  const closeRules = useCallback(() => setRules(RULES_CLOSED), []);
   // Recusas do servidor (que não são de entrada na sala) viram aviso no palco.
   useEffect(
     () =>
@@ -185,7 +194,7 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (diaryOpen) setDiaryOpen(false);
-      else if (rulesOpen) setRulesAt(null);
+      else if (rulesOpen) setRules(RULES_CLOSED);
       else setUi((u) => ({ ...u, aiming: null }));
     };
     window.addEventListener('keydown', onKey);
@@ -211,15 +220,21 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
     if (was && !diaryOpen) rootRef.current?.querySelector<HTMLElement>('.cp-lastline')?.focus();
   }, [diaryOpen]);
 
-  // Colinha fechada ("fechar", fundo, Esc ou sozinha): o foco que estava nela volta pro botão "regras". Se o foco
+  // Colinha fechada ("fechar", fundo, Esc ou sozinha): o foco que estava nela volta pro botão "regras" — ou, se ela
+  // fechou sozinha porque abriu a janela pra você, pro primeiro botão da janela (duvidar, bloquear ou deixa). Se o foco
   // estava em outro lugar (fechou sozinha com você na mesa), ninguém mexe nele.
   const rulesWasOpen = useRef(false);
+  const canPass = g.can.pass;
   useEffect(() => {
     const was = rulesWasOpen.current;
     rulesWasOpen.current = rulesOpen;
+    if (!was || rulesOpen) return;
     const lost = document.activeElement === null || document.activeElement === document.body;
-    if (was && !rulesOpen && lost) rootRef.current?.querySelector<HTMLElement>('.cp-rulesbtn')?.focus();
-  }, [rulesOpen]);
+    if (!lost) return;
+    const root = rootRef.current;
+    const react = rulesAuto && canPass ? root?.querySelector<HTMLElement>('.cp-reacts button') : null;
+    (react ?? root?.querySelector<HTMLElement>('.cp-rulesbtn'))?.focus();
+  }, [rulesOpen, rulesAuto, canPass]);
 
   // celular: reagindo na janela (o modo compacto da tela baixa esconde as ações, que estão todas apagadas)
   const reacting = phone && g.phase === 'reaction' && g.can.pass;

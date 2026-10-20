@@ -90,7 +90,25 @@ describe('HOW_IT_WORKS', () => {
     const all = HOW_IT_WORKS.items.join(' ');
     expect(all).toContain(`${COUP_WINDOW_MS / 1000} segundos`);
     expect(all).toContain(`${COUP_MUST_COUP_AT} moedas`);
-    for (const t of HOW_IT_WORKS.items) expect(t.length).toBeLessThan(140);
+    for (const t of HOW_IT_WORKS.items) expect(t.length).toBeLessThan(170);
+  });
+
+  it('a janela é fiel ao jogo: só abre pra ação com personagem ou bloqueável; o resto acontece direto', () => {
+    const win = HOW_IT_WORKS.items.find((t) => t.includes(`${COUP_WINDOW_MS / 1000} segundos`))!;
+    // nada de "depois de cada ação": renda e golpe não abrem janela
+    expect(win).not.toMatch(/cada ação/);
+    expect(win).toMatch(/diz ser um personagem/);
+    expect(win).toMatch(/bloqueada/);
+    const direct = COUP_ACTION_KINDS.filter((k) => COUP_CLAIM[k] === null && COUP_BLOCKERS[k].length === 0);
+    expect(direct).toEqual(['income', 'coup']);
+    expect(win.toLowerCase()).toContain(`${direct.map((k) => actionLabel(k).name).join(' e ')} acontecem direto`);
+  });
+
+  it('quem pode bloquear: só o alvo em extorquir e assassinar; na ajuda externa, qualquer um como Duque', () => {
+    const block = HOW_IT_WORKS.items.find((t) => t.startsWith('Bloquear'))!;
+    expect(block).toContain('dá pra duvidar');
+    expect(block).toContain(`${actionLabel('assassinate').name} e ${actionLabel('steal').name}, só o alvo bloqueia`);
+    expect(block).toContain(`${actionLabel('foreignAid').name}, qualquer um bloqueia como ${CHARACTER_NAMES.duke}`);
   });
 });
 

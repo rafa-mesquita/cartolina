@@ -139,6 +139,32 @@ describe('Cúpi: botão "regras" e a colinha', () => {
     expect(screen.getByRole('button', { name: 'deixa' })).toBeTruthy();
   });
 
+  it('fechando sozinha com o foco nela, o foco vai pro primeiro botão da janela', () => {
+    const { rerender } = mesa(viewOf(betoDaVez(), 'p0'));
+    fireEvent.click(rulesBtn());
+    expect(document.activeElement?.textContent).toMatch(/^fechar/);
+    rerender(table(viewOf(betoTaxa(), 'p0')));
+    expect(sheet()).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'duvidar' }));
+  });
+
+  it('fechando sozinha com o foco fora dela, ninguém mexe no foco', () => {
+    const { rerender } = mesa(viewOf(betoDaVez(), 'p0'));
+    fireEvent.click(rulesBtn());
+    const card = document.querySelector<HTMLElement>('.cp-myhand .cp-card.tipped')!;
+    act(() => card.focus());
+    rerender(table(viewOf(betoTaxa(), 'p0')));
+    expect(sheet()).toBeNull();
+    expect(document.activeElement).toBe(card);
+  });
+
+  it('fechada no "fechar" com a janela aberta, o foco volta pro botão "regras"', () => {
+    mesa(viewOf(betoTaxa(), 'p0'));
+    fireEvent.click(rulesBtn());
+    fireEvent.click(within(sheet()!).getByRole('button', { name: 'fechar' }));
+    expect(document.activeElement).toBe(rulesBtn());
+  });
+
   it('você precisa perder carta ou trocar: a colinha fecha sozinha', () => {
     const base = viewOf(betoDaVez(), 'p0');
     const { rerender } = mesa(base);
