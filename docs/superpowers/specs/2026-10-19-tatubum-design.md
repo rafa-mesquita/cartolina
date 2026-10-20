@@ -21,7 +21,7 @@ Decisões do usuário (2026-10-19):
 - **2 a 8 jogadores**, com baralho que cresce com a mesa (§3).
 - **Janela do Nem vem! de 5 s**, fixa, sempre corre, mesmo que ninguém tenha Nem vem! (assim a
   demora não entrega quem tem).
-- **Escolhas pessoais com 30 s** (Favor e par de Mico, Desarme, 5 diferentes, par de Quati; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
+- **Escolhas pessoais com 30 s** (Favor e par de Mico, Desarme, 5 diferentes, par de Quati, defesa do Tatu Latidor, Feitiço; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
   escolhe ao acaso. **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
@@ -75,6 +75,10 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. | sim |
 | **Capivara, Mico-leão, Quati, Tamanduá, Preguiça** | 4 de cada | Sozinhas não fazem nada; só em combo. | (combo sim) |
+| **Tatu Latidor** (id `latido`) | (fora do pacote: **2 na partida**) | Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
+| **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
+| **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (é comprar) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
+| **Boto** (id `boto`) | 2 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
 
 **Ataque, exemplos:** Ana (normal, `owed = 1`) ataca → Bia joga 2. Bia, no 1º dos 2 turnos, ataca →
 Caio joga 4. Caio, no último turno devido (`owed = 1`), ataca → Duda joga 2.
@@ -127,6 +131,113 @@ Regras de motor:
 - Trio: evento `{ t: 'grabbed', by, from, card }` (público; `from`/`card` = `null` quando ninguém tinha
   Desarme). O evento antigo `asked` (trio pelo nome) sai.
 
+### Cartas novas (pedido do Rafa, 2026-10-20)
+
+Quatro cartas novas, adaptadas de expansões do Exploding Kittens. O Rafa pediu as cartas e deixou os detalhes pra
+decidir; onde ele não disse, vale a regra mais simples que bate com a carta original, e cada decisão está marcada
+com **(decisão)**. As três de ação aceitam Nem vem! como qualquer carta de ação (`KITTENS_ACTION_KINDS`); o Boto é
+bicho.
+
+#### Tatu Latidor (`latido`; do "Barking Kitten"; arte: tatu numa casinha de cachorro latindo "AU AU")
+
+- **2 na partida**, qualquer que seja o número de jogadores (entram no baralho uma vez só, fora dos pacotes, e são
+  distribuídos como as outras cartas).
+- Jogado sozinho, sem alvo; vai pro ar e aceita Nem vem! (cancelado: vai pro descarte e nada acontece).
+- Ao resolver: se **outro jogador vivo** tem o outro Latidor **na mão ou na frente dele**, esse jogador tem que se
+  defender:
+  - **Tem Desarme:** abre a escolha **pública** `{ kind: 'latido', who, deadline }` (30 s). Ele joga o Desarme à mão
+    (`choose { card: <Desarme> }`): o Desarme vai pro descarte (evento `{ t: 'cafune', by }`, o mesmo do Tatubum) e o
+    Latidor dele (da frente ou da mão) também. O jogado já está no descarte: **os dois Latidores acabam no
+    descarte.** Prazo vencido (ou ele cai de vez): o Desarme vai sozinho. A vez continua com quem jogou o Latidor
+    (a carta não gasta turno).
+  - **Não tem Desarme:** **explode na hora** (sem escolha), como quem compra um Tatubum sem Desarme: sai do jogo, a
+    mão vai pra fora e um Tatubum sai do monte pra manter `vivos − 1`. **(decisão)** O Latidor dele vai **pra fora
+    do jogo junto com a mão** (ou com o que estava na frente dele); só o jogado fica no descarte.
+- Ninguém mais tem o outro: o Latidor jogado sai do descarte e fica **na frente de quem jogou** (estado público
+  `front: Record<jogador, carta[]>`; chave ausente = nada). Quem tem um Latidor na frente é alvo quando o outro for
+  jogado.
+- **(decisão)** Quem jogou já tem o outro Latidor na frente (ou na mão): ele não conta como alvo de si mesmo; o
+  jogado também fica na frente dele e nada acontece.
+- **(decisão)** A escolha `latido` só abre pra quem tem Desarme, então nunca trava; mesmo assim, se no prazo não
+  houver Desarme na mão, ele explode.
+- Quem sai do jogo (explodiu ou caiu de vez) com Latidor na frente: o Latidor vai **pra fora do jogo** com a mão.
+- Quem está cego (Mau-olhado) e tem que se defender não sabe qual ficha é o Desarme: **(decisão)** qualquer ficha da
+  própria mão vale, e o servidor joga o Desarme dele.
+- Eventos públicos: `{ t: 'barked', by, target }` (`target` = quem tem que se defender, ou `null` quando foi pra
+  frente de `by`), depois `{ t: 'cafune', by }` ou `{ t: 'boom', by }`.
+
+#### Mau-olhado (`olhado`; do "Curse of the Cat Butt"; arte: tatu botando mau-olhado)
+
+- 2 por pacote. Carta de ação **com alvo**: um adversário vivo (`bad_target` sem alvo, em si mesmo ou em quem saiu).
+  **(decisão)** Diferente do Favor, o alvo pode estar sem carta (fica cego de mão vazia; o que receber chega
+  escondido). Aceita Nem vem!; se o alvo sair antes de resolver, cancela.
+- Ao resolver, o alvo fica **cego**: a mão dele é **embaralhada no estado** (`ctx.rng`) e ele entra na lista pública
+  `blind`. **(decisão)** Em vez de guardar um mapa separado ficha → carta, a própria ordem da mão no estado é o mapa:
+  a ficha `?i` é `hands[p][i]`. Toda carta que chega na mão vai pro fim (Favor, Preguiça, trio, Capivara, 5
+  diferentes), então chega "desconhecida"; carta que sai só desloca as fichas (ele não sabe qual era mesmo).
+  Já cego de novo: embaralha outra vez e continua uma vez só na lista.
+- **Visão do cego:** `hand` = `['?0', '?1', …]`; nenhum id da própria mão aparece pra ele, nem no diário (qualquer
+  evento cuja carta esteja hoje na mão dele chega com `card: null`, inclusive o que ele mesmo comprou antes e o que
+  acabou de receber). Os outros veem quem está cego (`blind`), mas não a ordem.
+- **Jogar às cegas:** quem está cego manda **fichas** em tudo que aponta carta da própria mão: `play.cards`,
+  `nope.card`, `choose.card` (Favor, descarte do Mico, Desarme). O servidor troca a ficha pela carta de verdade e
+  valida como sempre (combo que não forma → `bad_combo`, sem alvo → `bad_target` etc.). Cego mandando id de verdade
+  (ou nada onde precisa de carta) → erro novo **`blind_pick`** ("Mau-olhado: escolha uma das suas cartas
+  viradas."); ficha que não existe → `not_in_hand`. Quem vê não pode mandar ficha (`not_in_hand`).
+- **Nem vem! às cegas:** a ação `nope` ganhou `card?` (opcional pra quem vê: sem ela o servidor escolhe um Nem vem!
+  como antes; com ela, tem que ser um Nem vem! da mão, senão `no_nope`/`not_in_hand`). O cego **tem que** mandar
+  uma ficha; se não for Nem vem!, `no_nope`. **(decisão)** A recusa ensina ao cego que aquela ficha não era o que
+  ele queria (como no par/trio às cegas), o que é aceitável: errar não muda nada no jogo.
+- **Escolhas que não usam a mão** (onde esconder o tatu, 5 diferentes, Quati, Feitiço) funcionam normal; no 5
+  diferentes ele escolhe pelo id do descarte (que é público).
+- **Voltar a ver:** quando ele **compra** — compra normal (inclusive um Tatubum: vê a mão pra jogar o Desarme), as
+  2 do par de Tamanduá, ou ficar com a carta do Feitiço. Evento público `{ t: 'cured', by }` antes do `draw`. Mandar
+  a carta do Feitiço pro topo não é comprar.
+- Quem sai do jogo deixa de estar cego; no fim de jogo ninguém fica cego.
+- Eventos públicos: `{ t: 'cursed', by, target }` e `{ t: 'cured', by }`.
+
+#### Feitiço (`feitico`; do "Raising Heck"; arte: tatu feiticeiro com caldeirão puxando uma carta de baixo do monte)
+
+- 2 por pacote. Carta de ação sem alvo; aceita Nem vem! (cancelado: nada acontece e a vez continua).
+- Ao resolver: escolha `{ kind: 'feitico', who, deadline }` (30 s). Na visão, só `who` recebe `card` = a **carta de
+  baixo** do monte (`draw[0]`); os outros veem `card: null`.
+- `choose { keep: true }`: fica com ela, **como se comprasse** (cura o Mau-olhado; evento `draw` só pra ele). Se for
+  **Tatubum**: com Desarme, o fluxo de sempre (escolha `tatu`, Desarme à mão, esconder); sem Desarme, explode.
+- `choose { keep: false }`: ela vai pro **topo** do monte (a espiada some).
+- **Nos dois casos acaba o turno** (gasta 1 turno, como comprar; sob ataque, gasta um dos devidos). O Tatubum guardado
+  gasta o turno quando o tatu volta pro monte.
+- Prazo vencido (ou quem escolhe cai de vez): fica com a carta, **a não ser que seja Tatubum** (aí vai pro topo, e a
+  escolha do Desarme nunca abre pra quem já saiu).
+- Eventos: `{ t: 'conjured', by, kept }` (público, sem a carta) e, quando fica, `{ t: 'draw', by, card }` só pra ele.
+
+#### Boto (`boto`; o bicho coringa — Rafa: "animal coringa, ele pode ser usado pra ser qualquer animal, não tem muitas no baralho"; arte: boto-cor-de-rosa)
+
+- 2 por pacote. Sozinho não faz nada; com carta de ação não forma par (`bad_combo`).
+- **Par:** Boto + bicho X = par de X (o efeito é o do X). Boto + Boto = par do bicho declarado no campo novo
+  **`as`** da jogada (um dos 5 bichos; faltando ou inválido → erro novo **`bad_as`**, "Escolha qual bicho o Boto
+  vira."). Par de Preguiça com Boto continua pedindo `ask`.
+- **Trio:** 3 iguais de qualquer tipo, como antes; o Boto completa **bichos** iguais (Capivara + Capivara + Boto,
+  Boto + Boto + Mico); 3 Botos também é trio. Com carta que não é bicho (Ataque + Ataque + Boto) não vale.
+- **5 diferentes:** o Boto conta como o próprio nome (Boto + 4 bichos diferentes vale; 2 Botos repetem o nome).
+- **(decisão)** O pedido da Preguiça (`ask`) continua sendo um dos 5 bichos (Boto não), e um Boto na mão de alguém
+  **não conta** como o bicho pedido.
+- `KittensPlay` ganhou `as: KittensCardKind | null`: no par, o bicho que o par vale (sempre, com ou sem Boto); no
+  trio, o tipo das iguais (`boto` em 3 Botos); `null` no resto. O evento `play` também leva `as`, pra a tela mostrar
+  "par de Quati (com Boto)". `KITTENS_BICHOS` continua sendo os 5 bichos (o Boto é `KITTENS_WILD`).
+
+#### Motor e segredo
+
+- Estado novo: `front` e `blind` (zerados no começar/jogar de novo). Visão nova: `front` (todos os jogadores, `[]`
+  sem nada) e `blind` (lista pública).
+- Ações: `play.as?`, `nope.card?`; fichas `?i` são ids de até 32 caracteres, então o schema não muda pra elas.
+- `takeCard` (`choices.ts`) junta "comprar" (compra normal e Feitiço): cura o cego, Tatubum abre o Desarme ou
+  explode, outra carta vai pra mão e gasta o turno.
+- `eliminate` manda pra fora também as cartas na frente e tira da lista de cegos; `checkWin` zera os cegos.
+- A simulação aleatória (`kittens-fuzz.test.ts`) joga as cartas novas, responde as escolhas novas e põe cegos jogando
+  por ficha; confere a cada passo: cartas conservadas (contando as da frente), só Latidor na frente de vivos,
+  `vivos − 1` tatus, a carta de baixo do Feitiço só pra quem escolhe e **nenhum id da mão do cego na visão dele**.
+  Rodada pesada de 900 partidas (SEEDS = 225) passou.
+
 ### Fim
 
 - Quem explode sai: o Tatubum e a mão dele ficam **fora do jogo** (não vão pro descarte). Os turnos
@@ -150,37 +261,47 @@ O monte nunca acaba enquanto há 2+ vivos, porque sempre tem `vivos − 1 ≥ 1`
 
 ## 3. Baralho
 
-Um **pacote** tem 46 cartas: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar e 20
-bichos (5 tipos × 4).
+Um **pacote** tem **52 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 20
+bichos (5 tipos × 4) e, desde 2026-10-20, 2 Mau-olhado, 2 Feitiço e 2 Boto. Os **2 Tatus Latidores** entram
+**uma vez só por partida**, fora dos pacotes (como no original, que tem só 2), qualquer que seja o número de
+jogadores.
 
-| Jogadores | Pacotes | Cartas no baralho antes de distribuir | Cafunés | Tatubuns |
-|---|---|---|---|---|
-| 2–5 | 1 | 46 | n + 2 | n − 1 |
-| 6–8 | 2 | 92 | n + 2 | n − 1 |
+| Jogadores | Pacotes | Cartas no baralho antes de distribuir (pacotes + 2 Latidores) | Monte depois de distribuir | Cafunés | Tatubuns |
+|---|---|---|---|---|---|
+| 2 | 1 | 52 + 2 = 54 | 54 − 14 + 2 + 1 = 43 | n + 2 | n − 1 |
+| 3 | 1 | 54 | 54 − 21 + 2 + 2 = 37 | n + 2 | n − 1 |
+| 4 | 1 | 54 | 54 − 28 + 2 + 3 = 31 | n + 2 | n − 1 |
+| 5 | 1 | 54 | 54 − 35 + 2 + 4 = 25 | n + 2 | n − 1 |
+| 6 | 2 | 104 + 2 = 106 | 106 − 42 + 2 + 5 = 71 | n + 2 | n − 1 |
+| 7 | 2 | 106 | 106 − 49 + 2 + 6 = 65 | n + 2 | n − 1 |
+| 8 | 2 | 106 | 106 − 56 + 2 + 7 = 59 | n + 2 | n − 1 |
 
-Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Com 2 a 5 o
-baralho é o do jogo original.
+Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Antes das cartas novas, com 2
+a 5 o baralho era o do jogo original (46).
 
 ## 4. Arquitetura
 
 ### 4.1 Módulo do Tatubum (`shared/src/games/kittens/`)
 
 - `cards.ts`: tipos de carta (`tatubum`, `cafune`, `nemvem`, `ataque`, `pular`, `favor`,
-  `embaralhar`, `espiar`, `capivara`, `mico`, `quati`, `tamandua`, `preguica`), nomes em PT-BR,
-  quem aceita Nem vem!. Cada carta física tem id próprio `<tipo>-<n>` (ex.: `ataque-3`) pra animar.
+  `embaralhar`, `espiar`, `latido`, `olhado`, `feitico`, `capivara`, `mico`, `quati`, `tamandua`, `preguica`,
+  `boto`), nomes em PT-BR, quem aceita Nem vem! (`KITTENS_ACTION_KINDS`, com as 3 cartas de ação novas), os 5
+  bichos (`KITTENS_BICHOS`, sem o Boto) e o coringa (`KITTENS_WILD`), e as fichas do Mau-olhado (`?i`). Cada carta
+  física tem id próprio `<tipo>-<n>` (ex.: `ataque-3`) pra animar.
 - `deck.ts`: `kittensBaseDeck(n)` e `kittensDeal(...)` (§3). Os números dos Cafunés são sorteados, pra
   um Cafuné roubado não entregar de quem era.
 - `types.ts`: fases `lobby → playing → gameover`. Estado: `players` (ordem dos assentos), `alive`,
-  `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `current`, `owed`,
-  `pending`, `choice`, `peek`, `log`, `winner`.
-  - `pending`: `{ by, play: { kind, cards, target, ask }, nopes: { by, card }[], resolvesAt }`.
-  - `choice`: `{ kind: 'cafune' | 'favor' | 'cinco' | 'quati', who, deadline, ... }` (o par de Preguiça
-    não precisa de escolha: o bicho vai junto da jogada).
+  `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `front` (cartas na frente: Tatu
+  Latidor), `blind` (cegos pelo Mau-olhado), `current`, `owed`, `pending`, `choice`, `peek`, `log`, `winner`.
+  - `pending`: `{ by, play: { kind, cards, target, ask, as }, nopes: { by, card }[], resolvesAt }`.
+  - `choice`: `{ kind: 'tatu' | 'cafune' | 'favor' | 'cinco' | 'mico' | 'quati' | 'latido' | 'feitico', who, deadline, ... }`
+    (o Mico tem `by` e `waiting` no lugar de `who`; o par de Preguiça não precisa de escolha: o bicho vai junto da jogada).
   - `peek`: `{ who, cards }`, apagado quando quem espiou compra ou gasta um turno, quando o monte
     muda (Embaralhar, Cafuné, tatu tirado de quem caiu) ou quando a vez passa.
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
-- Ações (`schema.ts`, zod): `start`, `play { cards: id[], target?, ask? }`, `nope`, `draw`,
-  `choose { … }` (posição do tatu, carta do Favor, carta do descarte), `again`, `lobby`.
+- Ações (`schema.ts`, zod): `start`, `play { cards: id[], target?, ask?, as? }`, `nope { card? }`, `draw`,
+  `choose { … }` (posição do tatu, carta do Favor/Mico/Desarme, carta do descarte, `keep` do Quati/Feitiço),
+  `again`, `lobby`. Quem está cego manda fichas `?i` no lugar dos ids da mão.
 - `rules.ts`: `applyKittensAction` (valida turno, posse das cartas, combo, alvo); `settle.ts`:
   `settleKittens`, que é o `onPresenceChange` (presença e prazos) e roda antes de cada ação.
 - `turn.ts` (diário, vez, eliminação, vitória), `play.ts` (lê a jogada), `choices.ts` (escolhas e
@@ -214,7 +335,10 @@ A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o 
 - Cafuné: a posição do tatu só quem escondeu sabe; os outros leem "Ana escondeu o tatu".
 - `choice`: quem escolhe vê as opções; os outros veem quem está escolhendo e o relógio. No Cafuné, a
   visão não leva o id do tatu (junto com o tatu tirado do monte quando alguém cai, ele entregaria a
-  posição).
+  posição). A carta de cima do Quati e a de baixo do Feitiço só pra quem escolhe; a escolha do Latidor é pública.
+- Cartas na frente (`front`, o Tatu Latidor): públicas.
+- Mau-olhado: todos sabem quem está cego (`blind`); o cego vê fichas `?0…` no lugar da mão e nenhum id da própria mão
+  (nem no diário: evento com carta que está na mão dele chega com `card: null`).
 
 ### 4.4 Registro, servidor e histórico
 
@@ -339,7 +463,10 @@ Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca 
 
 ## 6. Arte das cartas
 
-- **14 ilustrações**: as 13 cartas + o verso. **Pixel art** (sprite de bicho/objeto com contorno
+- **18 ilustrações**: as 17 cartas + o verso (as 4 cartas novas de 2026-10-20 ainda sem arte: Tatu Latidor =
+  tatu numa casinha de cachorro latindo "AU AU"; Mau-olhado = tatu botando mau-olhado; Feitiço = tatu feiticeiro
+  com caldeirão puxando uma carta de baixo do monte; Boto = boto-cor-de-rosa. Até lá, sprite de reserva "?" e
+  textos provisórios na mesa). **Pixel art** (sprite de bicho/objeto com contorno
   escuro, poucas cores, fundo liso, como a referência do tatu), sem texto na imagem (o nome da carta
   é desenhado pelo site).
 - Geradas no **Google Flow** (mesmo processo do Diquisti, ver `CLAUDE.md`), prompts em
@@ -414,6 +541,7 @@ mergear depois resolve o conflito (normalmente só somar as duas entradas).
 ## 10. Fora de escopo (esta versão)
 
 - Celular.
-- Expansões (Imploding Kittens, Streaking Kittens etc.) e cartas novas.
+- Expansões (Imploding Kittens, Streaking Kittens etc.) e outras cartas novas além das 4 de 2026-10-20 (Tatu
+  Latidor, Mau-olhado, Feitiço e Boto, em §2 "Cartas novas").
 - Arte diferente por cópia da mesma carta.
 - Tempo de turno.
