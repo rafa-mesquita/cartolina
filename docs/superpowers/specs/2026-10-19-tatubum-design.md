@@ -84,11 +84,37 @@ Caio joga 4. Caio, no último turno devido (`owed = 1`), ataca → Duda joga 2.
 Jogados como **uma jogada só** (várias cartas de uma vez); valem com quaisquer cartas, não só os
 bichos, e o efeito próprio das cartas é ignorado. Aceitam Nem vem! (que cancela o combo todo).
 
-- **Par** (2 cartas iguais) + alvo com carta na mão: você rouba **uma carta ao acaso** do alvo.
+- **Par** (2 cartas iguais): o efeito depende da carta (ver "Par de cada bicho" abaixo). Par de cartas
+  de ação (ex.: 2 Ataques) + alvo com carta na mão: você rouba **uma carta ao acaso** do alvo.
 - **Trio** (3 iguais) + alvo + **nome de uma carta** (qualquer tipo menos Tatubum): se o alvo
   tiver, entrega uma; se não, nada.
 - **5 diferentes** (5 nomes diferentes): você escolhe (30 s) uma carta do **descarte como estava
   antes desta jogada**. Descarte vazio = nada.
+
+### Par de cada bicho (pedido do Rafa, 2026-10-20)
+
+Sozinho o bicho continua não fazendo nada; trio e 5 diferentes não mudam. Cada **par de bicho** tem
+efeito próprio (todos aceitam Nem vem!, como qualquer combo):
+
+| Par de… | Nome | Alvo | Efeito |
+|---|---|---|---|
+| Mico-leão | Afana | sim | Rouba **uma carta ao acaso** do alvo (o par clássico). |
+| Quati | Fuça | sim | Quem jogou **vê a mão do alvo** e escolhe a carta que leva (30 s; depois, ao acaso). Só os dois sabem qual foi. |
+| Tamanduá | Língua comprida | não | Termina a vez **comprando a carta do fundo** do monte. Tatubum do fundo segue o fluxo normal (Desarme ou explode). Gasta 1 turno, como a compra normal (sob ataque, só um dos turnos). |
+| Preguiça | Deixa pra depois | não | Só quem jogou vê a **carta de cima** e escolhe **Fica** ou **Fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. Se a carta mudou de lugar, as espiadas dos outros somem. |
+| Capivara | Roda de capivara | não | Todos os vivos passam **ao mesmo tempo** uma carta **ao acaso** pro próximo na ordem da vez (contando a partir das mãos de antes da roda). Quem está sem carta só recebe. Cada um vê só o que deu e o que recebeu. |
+
+Regras de motor:
+- A jogada continua sendo `par`; o efeito sai do tipo da carta (`kittensKindOf(cards[0])`).
+- Alvo exigido só pra Mico, Quati e pares de ação (`bad_target` como hoje); Tamanduá, Preguiça e Capivara
+  ignoram o alvo.
+- Escolhas novas em `KittensChoice`: `{ kind: 'quati', who, from, deadline }` (na view, só `who` recebe
+  `options` = mão do `from`) e `{ kind: 'preguica', who, deadline }` (na view, só `who` recebe a carta de
+  cima). Ação: `choose` com `card` (Quati) ou `keep: boolean` (Preguiça).
+- Diário: Quati usa `stole` com `seenBy` [alvo, quem jogou]; Tamanduá usa `draw` com `from: 'bottom'`;
+  Preguiça gera `{ t: 'delayed', by, moved }` (público, sem carta); Capivara gera um `{ t: 'passed', from,
+  to, card }` por jogador, com `seenBy` [from, to].
+- Espiar: comprar do fundo só mexe na espiada se a carta comprada estava nela (monte com ≤ 3 cartas).
 
 ### Fim
 
