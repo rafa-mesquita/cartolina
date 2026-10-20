@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { CoupLogEntry, CoupView } from '@cartolina/shared';
-import { actionLabel, declaration, logLine, lossTitle, nameFrom, phraseText } from '../src/games/coup/texts';
+import { actionLabel, declaration, joinNames, logLine, lossTitle, nameFrom, phraseText } from '../src/games/coup/texts';
 import { coupRoom, viewOf } from './coup-fixtures';
 
 // Sala de 3 (Ana p0, Beto p1, Caio p2); quem vê é a Ana ("você").
 const view = viewOf(coupRoom(3), 'p0');
-const nameOf = nameFrom(view);
+const names = nameFrom(view);
 
 function game(over: Partial<CoupView>): CoupView {
   return { ...view.game, ...over };
@@ -14,15 +14,38 @@ const win = (kind: 'action' | 'block' | 'blockOnly', eligible: string[]) => ({ i
 
 describe('nameFrom', () => {
   it('traduz assento em nome, você em "você" e desconhecido em "alguém"', () => {
-    expect(nameOf('p0')).toBe('você');
-    expect(nameOf('p1')).toBe('Beto');
-    expect(nameOf('p2')).toBe('Caio');
-    expect(nameOf('p9')).toBe('alguém');
+    expect(names.nameOf('p0')).toBe('você');
+    expect(names.nameOf('p1')).toBe('Beto');
+    expect(names.nameOf('p2')).toBe('Caio');
+    expect(names.nameOf('p9')).toBe('alguém');
   });
 
   it('quem assiste vê todos pelo nome', () => {
-    const n = nameFrom(viewOf(coupRoom(3), null));
+    const n = nameFrom(viewOf(coupRoom(3), null)).nameOf;
     expect(n('p0')).toBe('Ana');
+  });
+
+  it('isYou olha o id, não o nome', () => {
+    expect(names.isYou('p0')).toBe(true);
+    expect(names.isYou('p1')).toBe(false);
+    expect(nameFrom(viewOf(coupRoom(3), null)).isYou('p0')).toBe(false);
+  });
+
+  it('alguém chamado "você" não engana a frase de ação bloqueada', () => {
+    const fake = { ...view, seats: view.seats.map((s) => (s.id === 'p1' ? { ...s, name: 'você' } : s)) };
+    const n = nameFrom(fake);
+    const p = logLine({ t: 'blocked', actor: 'p1', kind: 'steal', by: 'p2', as: 'captain' }, n);
+    expect(phraseText(p!)).toBe('a ação de você foi bloqueada');
+  });
+});
+
+describe('joinNames', () => {
+  it('um, dois e três ou mais nomes', () => {
+    expect(joinNames([])).toBe('');
+    expect(joinNames(['Ana'])).toBe('Ana');
+    expect(joinNames(['Ana', 'Beto'])).toBe('Ana e Beto');
+    expect(joinNames(['Ana', 'Beto', 'Caio'])).toBe('Ana, Beto e Caio');
+    expect(joinNames(['você', 'Beto', 'Caio', 'Duda'])).toBe('você, Beto, Caio e Duda');
   });
 });
 
@@ -40,28 +63,28 @@ describe('actionLabel', () => {
 
 describe('declaration', () => {
   it('sem janela ou sem ação declarada: nada', () => {
-    expect(declaration(game({ window: null, declared: null }), nameOf)).toBeNull();
-    expect(declaration(game({ window: win('action', ['p0']), declared: null }), nameOf)).toBeNull();
+    expect(declaration(game({ window: null, declared: null }), names)).toBeNull();
+    expect(declaration(game({ window: win('action', ['p0']), declared: null }), names)).toBeNull();
   });
 
   it('janela de ação com personagem: "diz: sou X e …"', () => {
     const g = game({ window: win('action', ['p0', 'p2']), declared: { actor: 'p1', kind: 'tax', target: null } });
-    expect(declaration(g, nameOf)).toEqual({ main: ['Beto diz: sou ', { char: 'duke' }, ' e pega 3'], sub: null });
+    expect(declaration(g, names)).toEqual({ main: ['Beto diz: sou ', { char: 'duke' }, ' e pega 3'], sub: null });
   });
 
   it('quando é você, "você diz: sou …"', () => {
     const g = game({ window: win('action', ['p1']), declared: { actor: 'p0', kind: 'tax', target: null } });
-    expect(declaration(g, nameOf)?.main).toEqual(['você diz: sou ', { char: 'duke' }, ' e pega 3']);
+    expect(declaration(g, names)?.main).toEqual(['você diz: sou ', { char: 'duke' }, ' e pega 3']);
   });
 
   it('ajuda externa: sem personagem', () => {
     const g = game({ window: win('action', ['p0']), declared: { actor: 'p1', kind: 'foreignAid', target: null } });
-    expect(declaration(g, nameOf)).toEqual({ main: ['Beto pede ajuda externa (+2)'], sub: null });
+    expect(declaration(g, names)).toEqual({ main: ['Beto pede ajuda externa (+2)'], sub: null });
   });
 
   it('extorquir tem alvo', () => {
     const g = game({ window: win('action', ['p0']), declared: { actor: 'p1', kind: 'steal', target: 'p2' } });
-    expect(declaration(g, nameOf)?.main).toEqual(['Beto diz: sou ', { char: 'captain' }, ' e extorque Caio']);
+    expect(declaration(g, names)?.main).toEqual(['Beto diz: sou ', { char: 'captain' }, ' e extorque Caio']);
   });
 
   it('janela de bloqueio: quem bloqueia e a ação bloqueada', () => {
@@ -70,7 +93,7 @@ describe('declaration', () => {
       declared: { actor: 'p1', kind: 'steal', target: 'p2' },
       block: { by: 'p2', as: 'captain' },
     });
-    expect(declaration(g, nameOf)).toEqual({
+    expect(declaration(g, names)).toEqual({
       main: ['Caio bloqueia como ', { char: 'captain' }],
       sub: ['contra a ação: Beto extorque Caio'],
     });
@@ -78,7 +101,7 @@ describe('declaration', () => {
 
   it('janela só de bloqueio: o alvo pode bloquear', () => {
     const g = game({ window: win('blockOnly', ['p2']), declared: { actor: 'p1', kind: 'assassinate', target: 'p2' } });
-    expect(declaration(g, nameOf)).toEqual({
+    expect(declaration(g, names)).toEqual({
       main: ['Caio pode bloquear o Assassino com a ', { char: 'contessa' }],
       sub: null,
     });
@@ -86,7 +109,7 @@ describe('declaration', () => {
 
   it('janela só de bloqueio com dois jeitos de bloquear (extorquir)', () => {
     const g = game({ window: win('blockOnly', ['p0']), declared: { actor: 'p1', kind: 'steal', target: 'p0' } });
-    expect(declaration(g, nameOf)?.main).toEqual([
+    expect(declaration(g, names)?.main).toEqual([
       'você pode bloquear o Capitão com o ',
       { char: 'captain' },
       ' ou o ',
@@ -96,13 +119,13 @@ describe('declaration', () => {
 
   it('janela de bloqueio sem bloqueio na visão: nada', () => {
     const g = game({ window: win('block', ['p0']), declared: { actor: 'p1', kind: 'steal', target: 'p2' }, block: null });
-    expect(declaration(g, nameOf)).toBeNull();
+    expect(declaration(g, names)).toBeNull();
   });
 });
 
 describe('logLine', () => {
   const line = (e: CoupLogEntry) => {
-    const p = logLine(e, nameOf);
+    const p = logLine(e, names);
     return p === null ? null : phraseText(p);
   };
 
@@ -112,8 +135,8 @@ describe('logLine', () => {
   });
 
   it('ação: com personagem (e alvo), renda, ajuda externa e golpe', () => {
-    expect(logLine({ t: 'act', actor: 'p1', kind: 'tax', target: null }, nameOf)).toEqual(['Beto disse ', { char: 'duke' }]);
-    expect(logLine({ t: 'act', actor: 'p1', kind: 'steal', target: 'p2' }, nameOf)).toEqual([
+    expect(logLine({ t: 'act', actor: 'p1', kind: 'tax', target: null }, names)).toEqual(['Beto disse ', { char: 'duke' }]);
+    expect(logLine({ t: 'act', actor: 'p1', kind: 'steal', target: 'p2' }, names)).toEqual([
       'Beto disse ',
       { char: 'captain' },
       ' contra Caio',
@@ -125,6 +148,8 @@ describe('logLine', () => {
 
   it('dúvida: tinha ou não tinha', () => {
     const base = { t: 'challenge', by: 'p2', of: 'p1', claim: 'duke' } as const;
+    expect(logLine({ ...base, had: true }, names)).toEqual(['Caio duvidou de Beto: ', { em: 'tinha' }, ' o Duque']);
+    expect(logLine({ ...base, had: false }, names)).toEqual(['Caio duvidou de Beto: ', { em: 'não tinha' }, ' o Duque']);
     expect(line({ ...base, had: true })).toBe('Caio duvidou de Beto: tinha o Duque');
     expect(line({ ...base, had: false })).toBe('Caio duvidou de Beto: não tinha o Duque');
     expect(line({ ...base, claim: 'contessa', had: false })).toBe('Caio duvidou de Beto: não tinha a Condessa');
@@ -168,6 +193,7 @@ describe('lossTitle', () => {
 describe('phraseText', () => {
   it('junta as partes em texto corrido, com o nome do personagem', () => {
     expect(phraseText(['Beto diz: sou ', { char: 'duke' }, ' e pega 3'])).toBe('Beto diz: sou Duque e pega 3');
+    expect(phraseText(['Caio: ', { em: 'tinha' }, ' o Duque'])).toBe('Caio: tinha o Duque');
     expect(phraseText([])).toBe('');
   });
 });
