@@ -118,7 +118,7 @@ describe('decisão do bot do Tatubum', () => {
   });
 
   describe('par de Mico: descarta uma carta quando está na espera', () => {
-    const mico = (waiting: string[]) => ({ kind: 'mico' as const, by: 'p0', waiting, deadline: 9000 });
+    const mico = (waiting: string[]) => ({ kind: 'mico' as const, by: 'p0', waiting, discarded: [], deadline: 9000 });
 
     it('prefere bicho (sozinho antes do que está em par); nunca o Desarme se tiver outra', () => {
       const hand = ['cafune-1', 'ataque-2', 'capivara-3', 'capivara-4', 'quati-5', 'nemvem-6'];
@@ -144,6 +144,23 @@ describe('decisão do bot do Tatubum', () => {
       expect(decideKittens(p1View(['quati-1'], { choice: mico(['p2']) }), newKittensMemory(), () => 0)).toBeNull();
       const by = withGame(viewOf(started(3), 'p0'), { hand: ['quati-1'], choice: mico(['p1', 'p2']) });
       expect(decideKittens(by, newKittensMemory(), () => 0)).toBeNull();
+    });
+
+    it('quem jogou pega uma das descartadas no fim (prefere Desarme, Nem vem!, Ataque), com chave própria', () => {
+      const pick = (options: string[]) => ({ kind: 'cinco' as const, who: 'p0', options, left: 1, deadline: 9000, from: 'mico' as const });
+      const mine = (options: string[]) => withGame(viewOf(started(3), 'p0'), { hand: ['quati-1'], pending: null, choice: pick(options) });
+      const d = decideKittens(mine(['pular-4', 'nemvem-5', 'quati-6']), newKittensMemory(), () => 0.5)!;
+      expect(d.action).toEqual({ type: 'choose', card: 'nemvem-5' });
+      expect(decideKittens(mine(['ataque-4', 'cafune-5']), newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', card: 'cafune-5' });
+      expect(decideKittens(mine(['capivara-4', 'ataque-5']), newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', card: 'ataque-5' });
+      // Sem preferida: uma delas.
+      expect(['capivara-4', 'quati-6']).toContain((decideKittens(mine(['capivara-4', 'quati-6']), newKittensMemory(), () => 0.5)!.action as { card: string }).card);
+      // A chave não se confunde com a de uma pegada anterior (5 diferentes no mesmo prazo e com o mesmo `left`).
+      const cinco = withGame(viewOf(started(3), 'p0'), { choice: { kind: 'cinco', who: 'p0', options: ['pular-4', 'nemvem-5', 'quati-6'], left: 1, deadline: 9000 } });
+      expect(decideKittens(cinco, newKittensMemory(), () => 0.5)!.key).not.toBe(d.key);
+      expect(decideKittens(mine(['pular-4']), newKittensMemory(), () => 0.5)!.key).not.toBe(d.key);
+      // Os outros esperam.
+      expect(decideKittens(p1View(['quati-1'], { choice: pick(['pular-4']) }), newKittensMemory(), () => 0)).toBeNull();
     });
   });
 

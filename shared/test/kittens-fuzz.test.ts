@@ -178,6 +178,9 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const olhado = hand.find((x) => kittensKindOf(x) === 'olhado');
   const seeing = barking.filter((x) => !s.blind.includes(x));
   if (olhado && seeing.length > 0 && r() < 0.6) return { type: 'play', cards: [olhado], target: pick(r, seeing)! };
+  // Outro com espiada à mostra (público): espia também (senão duas espiadas ao mesmo tempo quase nunca aparecem).
+  const espiar = hand.find((x) => kittensKindOf(x) === 'espiar');
+  if (espiar && Object.keys(s.peeks).some((x) => x !== p) && r() < 0.7) return { type: 'play', cards: [espiar] };
   const hold = latido !== undefined && seeing.length > 0 && r() < 0.9;
   const playable = hold ? hand.filter((x) => x !== latido) : hand;
   if (a < 0.45 && playable.length > 0) return { type: 'play', cards: cardsToPlay(r, playable), ...extra };
@@ -276,6 +279,17 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     // Trio de Favor: o alvo dá até 3 cartas, uma de cada vez (a escolha continua aberta entre uma e outra).
     if (air?.kind === 'trio' && air.as === 'favor') seen.add('trio:favor');
     if (s.choice?.kind === 'favor' && c?.kind === 'favor' && s.choice.left < c.left) seen.add('favor:again');
+    // Par de Mico (pedido do Rafa, 2026-10-20): quando todos descartam, quem jogou pega uma das descartadas.
+    if (s.choice?.kind === 'cinco' && s.choice.from === 'mico') {
+      seen.add('mico:pick');
+      const pick = s.choice;
+      if (pick.left !== 1 || pick.options.some((x) => !s.discard.includes(x)) || !s.alive.includes(pick.who)) {
+        throw new Error(`pegada do Mico inválida: ${JSON.stringify(pick)}\n  ${where()}`);
+      }
+    }
+    if (c?.kind === 'cinco' && c.from === 'mico' && s.choice !== c && s.log.some((e) => e.ev.t === 'picked' && e.ev.by === c.who)) {
+      seen.add('mico:picked');
+    }
     // Espiada que fica à mostra fora da vez de quem espiou, e mais de uma ao mesmo tempo.
     const peekers = Object.keys(s.peeks);
     if (peekers.some((p) => p !== s.current)) seen.add('peek:kept');
@@ -321,6 +335,8 @@ describe('simulação aleatória do Tatubum', () => {
       'favor:again',
       'peek:kept',
       'peek:many',
+      'mico:pick',
+      'mico:picked',
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

@@ -22,6 +22,8 @@ function peeksOf(old: SavedKittensState): Record<string, string[]> {
  * estava cego). Também a escolha do Favor de antes do trio de Favor (2026-10-20) não tem `left`: era sempre 1 carta.
  * E o Espiar de antes de ficar à mostra (2026-10-20) era um só, `peek: { who, cards } | null`: vira `peeks`
  * (`{ [who]: cards }` ou `{}`), e `peek` sai do estado.
+ * O par de Mico de antes da pegada no fim (2026-10-20) não tem `discarded`: entra vazio (o que já tinha sido
+ * descartado antes do deploy não conta; quem jogou pega uma das que forem descartadas daqui pra frente).
  * Devolve o MESMO objeto quando o estado já está completo. Aplicado nas portas de entrada do motor
  * (`applyKittensAction`, `settleKittens`, `kittensViewFor`).
  */
@@ -29,9 +31,10 @@ export function kittensWithNewFields(state: KittensState): KittensState {
   const old = state as SavedKittensState;
   const c = old.choice;
   const oldFavor = c?.kind === 'favor' && (c as Partial<typeof c>).left === undefined;
+  const oldMico = c?.kind === 'mico' && (c as Partial<typeof c>).discarded === undefined;
   const oldPeek = old.peeks === undefined || 'peek' in old;
-  if (old.front !== undefined && old.blind !== undefined && !oldFavor && !oldPeek) return state;
-  const choice = oldFavor ? { ...c, left: 1 } : c;
+  if (old.front !== undefined && old.blind !== undefined && !oldFavor && !oldMico && !oldPeek) return state;
+  const choice = oldFavor ? { ...c, left: 1 } : oldMico ? { ...c, discarded: [] } : c;
   const { peek: _peek, ...rest } = old;
   void _peek;
   const peeks = old.peeks ?? peeksOf(old);

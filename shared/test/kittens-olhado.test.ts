@@ -98,7 +98,7 @@ describe('Mau-olhado: jogar às cegas', () => {
     const favor = act(air, 'p0', { type: 'play', cards: ['favor-0'], target: 'p2' }, at(6000));
     const nope = tokenOf(favor, 'p1', 'nemvem-1');
     expect(refuse(favor, 'p1', { type: 'nope', card: `?0${nope.slice(1)}` }, at(6100))).toBe('blind_pick');
-    const mico2: KittensState = { ...s, choice: { kind: 'mico', by: 'p0', waiting: ['p1'], deadline: T0 + 40_000 } };
+    const mico2: KittensState = { ...s, choice: { kind: 'mico', by: 'p0', waiting: ['p1'], discarded: [], deadline: T0 + 40_000 } };
     expect(refuse(mico2, 'p1', { type: 'choose', card: alias }, at(6000))).toBe('blind_pick');
   });
 
@@ -152,7 +152,7 @@ describe('Mau-olhado: jogar às cegas', () => {
     const gave = act(favor, 'p1', { type: 'choose', card: t }, at(11_000));
     expect(gave.hands.p0).toContain('espiar-1');
     expect(gave.hands.p1).not.toContain('espiar-1');
-    const mico: KittensState = { ...s, choice: { kind: 'mico', by: 'p0', waiting: ['p1'], deadline: T0 + 40_000 } };
+    const mico: KittensState = { ...s, choice: { kind: 'mico', by: 'p0', waiting: ['p1'], discarded: [], deadline: T0 + 40_000 } };
     const discarded = act(mico, 'p1', { type: 'choose', card: tokenOf(mico, 'p1', 'ataque-1') }, at(6000));
     expect(discarded.discard).toContain('ataque-1');
   });
