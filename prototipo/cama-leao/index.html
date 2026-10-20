@@ -88,20 +88,21 @@ button{font:inherit;color:inherit;cursor:pointer}
 .seat.hover{outline-style:solid;transform:scale(1.03)}
 
 /* pilhas por cor: as cartas cobertas mostram só a faixa de cima (com as esferas em fila), a de baixo aparece inteira */
-.stacks{display:flex;justify-content:center;align-items:flex-start;gap:6px;margin-top:10px;min-height:86px}
-.stacks.tight{gap:3px}
+.stacks{display:flex;justify-content:center;align-items:flex-start;gap:var(--gap,6px);margin-top:10px;min-height:86px}
 .stacks.empty{align-items:center;font-size:12px;color:var(--navy-soft);border:1.5px dashed var(--line);border-radius:10px;opacity:.75}
 .stack{display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px;border-radius:9px}
+/* nos assentos dos outros a largura da pilha vem do seatFit() (carta + padding), pra caber nos 230px */
+.stacks[style] .stack{width:var(--sw);padding:4px var(--spad)}
 .stack.scored{outline:2px dashed var(--gold);background:rgba(232,178,58,.1)}
 .pile{display:flex;flex-direction:column;align-items:center}
-.seat .pile .card+.card{margin-top:-50px}
-.stacks.tight .pile .card+.card{margin-top:-34px}
-#mine .pile .card+.card{margin-top:-70px}
+/* a carta de cima cobre a de baixo deixando a faixa das esferas: 50px com cartas de 46, 70px com 64 */
+.pile .card+.card{margin-top:calc(var(--w) * -1.087)}
 .pile .card:not(:last-child){place-items:start start;padding:calc(var(--w) * .07) 0 0 calc(var(--w) * .08)}
 .pile .card:not(:last-child) .sphs{grid-template-columns:none;grid-auto-flow:column;gap:calc(var(--w) * .045)}
 .pile .card:not(:last-child) .sph{width:calc(var(--w) * .16);height:calc(var(--w) * .16)}
 .pile .card:not(:last-child) .sph:last-child{grid-column:auto}
 .sum{font:600 13px/1 var(--ui);color:var(--navy-soft);padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.6);white-space:nowrap}
+.stacks.small .sum{font-size:11px;padding:2px;letter-spacing:-.2px}
 .stack.scored .sum{color:#9a6d10}
 .sum.hot{color:var(--red);font-weight:700;background:rgba(200,55,45,.13);animation:hot 1.8s ease-in-out infinite}
 @keyframes hot{50%{transform:scale(1.16)}}
@@ -229,6 +230,8 @@ let prevTurn = null;
 /** Mesa sob o mouse com a carta levantada (destaque `.hover`). */
 let hoverPid = null;
 let soundOn = true;
+/** Sobe a cada newGame(): o fim de uma animação da partida anterior não mexe na nova. */
+let gameEpoch = 0;
 
 const nameOf = (p) => NAMES[Number(p.slice(1))];
 const critter = (p) => window.CRITTERS[CRITTER_COLORS[Number(p.slice(1)) % CRITTER_COLORS.length]];
@@ -245,7 +248,7 @@ function fit() {
   APPW = Math.round(w); app.style.width = APPW + 'px';
   app.style.transform = `translate(-50%,-50%) scale(${sc})`;
 }
-addEventListener('resize', () => { fit(); render(shown); });
+addEventListener('resize', () => { fit(); if (!animating) render(shown); });
 
 /* ---------- laço do jogo ---------- */
 /** Igual ao servidor: o schema das ações valida antes das regras. */
@@ -265,8 +268,17 @@ function changed() {
   const v = view();
   const fresh = shown && v.last && v.match === shown.match && v.playCount === shown.playCount + 1;
   if (fresh) {
-    animating = true; picked = null;
-    Anim.play(shown, v).then(() => { animating = false; shown = null; changed(); });
+    animating = true; picked = null; hoverPid = null;
+    const epoch = gameEpoch;
+    // nada levantado nem marcado como alvo durante a virada; o letreiro fica com a Anim
+    render(shown, { keepBanner: true });
+    Promise.resolve()
+      .then(() => Anim.play(shown, v))
+      .catch((err) => console.error('animação falhou (o jogo segue)', err))
+      .finally(() => {
+        if (epoch !== gameEpoch) return; // partida nova no meio: não mexe no que é dela
+        animating = false; shown = null; changed();
+      });
     return;
   }
   // carta levantada não sobrevive a perder a vez (pausa, partida nova)
@@ -292,6 +304,7 @@ function scheduleBot(v) {
 }
 
 function newGame() {
+  gameEpoch++;
   cancelBot(); picked = null; animating = false; shown = null; prevTurn = null; hoverPid = null;
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
   online = new Set(ids);
@@ -323,9 +336,9 @@ function stacksHTML(v, p, w) {
   const done = scoredColors(v.scored[p] || []);
   const colors = CAMELIO_COLORS.filter((color) => table.some((c) => c.color === color));
   if (!colors.length) return '<div class="stacks empty"><span>mesa vazia</span></div>';
-  // 5 ou 6 cores não cabem num assento de 230px com cartas de 46: encolhe só ali
-  const tight = p !== ME && colors.length >= 5;
-  const cw = tight ? 32 : w;
+  // nos assentos dos outros a largura da carta sai da quantidade de cores, pra tudo caber nos 230px
+  const lay = p === ME ? null : seatFit(colors.length);
+  const cw = lay ? lay.w : w;
   const stacks = colors.map((color) => {
     const cards = table.filter((c) => c.color === color);
     const sum = sumOf(cards, color), sc = done.includes(color);
@@ -335,7 +348,21 @@ function stacksHTML(v, p, w) {
       + `<div class="pile">${cards.map((c) => CardArt.front(c, cw)).join('')}</div>`
       + `<span class="sum${hot ? ' hot' : ''}">${sum}/${CAMELIO_EXACT}${sc ? ' ⚑' : ''}</span></div>`;
   }).join('');
-  return `<div class="stacks${tight ? ' tight' : ''}">${stacks}</div>`;
+  if (!lay) return `<div class="stacks">${stacks}</div>`;
+  return `<div class="stacks${lay.w < 40 ? ' small' : ''}" style="--gap:${lay.gap}px;--spad:${lay.pad / 2}px;--sw:${lay.w + lay.pad}px">${stacks}</div>`;
+}
+/** Espaço das pilhas num assento: 230 − bordas (2 × 1,5) − padding (2 × 10). */
+const SEAT_INNER = SEAT_W - 3 - 20;
+/**
+ * Maior carta (de 46 até 30) que deixa `n` pilhas lado a lado dentro do assento.
+ * Primeiro com o espaçamento normal (gap 6, 4px de cada lado da pilha); se não der 30, aperta (gap 3, 1px).
+ */
+function seatFit(n) {
+  for (const [gap, pad] of [[6, 8], [3, 2]]) {
+    const w = Math.min(46, Math.floor((SEAT_INNER - (n - 1) * gap) / n - pad));
+    if (w >= 30) return { w, gap, pad };
+  }
+  return { w: 30, gap: 3, pad: 2 }; // não acontece com 6 cores (dá 30 exato)
 }
 
 function renderTop(v) {
@@ -415,9 +442,11 @@ function hint(v) {
   return `vez de <b>${nameOf(v.turn)}</b>`;
 }
 
-function render(v) {
+/** `keepBanner`: redesenha a mesa sem trocar o texto do letreiro (durante a animação ele é da Anim). */
+function render(v, { keepBanner = false } = {}) {
   if (!v) return;
-  renderTop(v); renderSeats(v); renderRing(v); renderMine(v); setBanner(hint(v));
+  renderTop(v); renderSeats(v); renderRing(v); renderMine(v);
+  if (!keepBanner) setBanner(hint(v));
 }
 
 /* ---------- o clique (gesto mínimo; o arrasto chega na Task 4) ---------- */
@@ -425,6 +454,7 @@ function canPlay() { return !animating && state && state.phase === 'playing' && 
 function canReceive(p) { return state.players.includes(p) && online.has(p); }
 /** Clica na aberta ou no monte: levanta a carta (clicar de novo solta). */
 function pick(from) {
+  if (animating) return; // clique durante a virada: só ignora
   if (!canPlay()) { if (state.phase === 'playing') toast(state.paused ? 'Pausado: esperando a galera voltar.' : ERR.not_your_turn); return; }
   if (from === 'deck' && !shown.top) return;
   picked = picked === from ? null : from; play('pick'); render(shown);
@@ -477,8 +507,13 @@ function renderDev() {
 /** Derruba ou traz de volta um bot e deixa o "servidor" reavaliar a presença. */
 function toggleOnline(p) {
   if (online.has(p)) online.delete(p); else online.add(p);
-  presence();
-  if (shown && !animating) { render(shown); scheduleBot(shown); }
+  const before = state;
+  presence(); // se o estado mudou (vez pulou, pausa), o changed() já redesenhou e reagendou o bot
+  if (state === before && shown && !animating) {
+    render(shown); // só o "caiu" / volta do assento
+    // o relógio do bot da vez só reinicia se foi ele que caiu ou voltou
+    if (p === state.turn) scheduleBot(shown);
+  }
   renderDev();
 }
 $('#newBtn').onclick = () => newGame();
