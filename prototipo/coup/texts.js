@@ -78,7 +78,7 @@
       case 'challenge':
         return `${name(e.by)} duvidou de ${name(e.of)}: <b>${e.had ? 'tinha' : 'não tinha'}</b> ${the(e.claim)}`;
       case 'block': return `${name(e.by)} bloqueou como ${b(e.as)}`;
-      case 'blocked': return `a ação de ${name(e.actor)} foi bloqueada`;
+      case 'blocked': return e.actor === 'p0' ? 'sua ação foi bloqueada' : `a ação de ${name(e.actor)} foi bloqueada`;
       case 'resolved': {
         const a = name(e.actor);
         switch (e.kind) {
