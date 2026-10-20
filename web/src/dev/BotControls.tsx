@@ -1,12 +1,12 @@
 /** Controles de bots (modo teste). No DITU aparecem também no site no ar; no Diquisti, só em dev. */
-import { MAX_PLAYERS } from '@cartolina/shared';
+import { GAMES, type GameId } from '@cartolina/shared';
 import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
+import { addCoupBot, coupBotsIn, coupBotsVersion, removeAllCoupBots, subscribeCoupBots } from './coupBots';
 import { addDixitBot, dixitBotsIn, dixitBotsVersion, removeAllDixitBots, subscribeDixitBots } from './dixitBots';
 import { addPicturesBot, picturesBotsIn, picturesBotsVersion, removeAllPicturesBots, subscribePicturesBots } from './picturesBots';
 
-/** `coup` ainda não tem entrada em `API` (vem na Task 6 do Plano C2): até lá o componente não mostra nada. */
-type GameKey = 'ito' | 'dixit' | 'pictures' | 'coup';
+type GameKey = GameId;
 interface Api {
   subscribe: (fn: () => void) => () => void;
   version: () => number;
@@ -15,20 +15,25 @@ interface Api {
   removeAll: () => void;
 }
 
+const NO_BOTS: Api = { subscribe: () => () => {}, version: () => 0, count: () => 0, add: () => {}, removeAll: () => {} };
+
 /** Cada jogo tem o seu registro de bots; o componente só escolhe qual usar. */
-const API: Partial<Record<GameKey, Api>> = {
+const API: Record<GameKey, Api> = {
   ito: { subscribe: subscribeBots, version: botsVersion, count: (code: string) => botsIn(code).length, add: (code: string) => void addBot(code), removeAll: removeAllBots },
   dixit: { subscribe: subscribeDixitBots, version: dixitBotsVersion, count: dixitBotsIn, add: addDixitBot, removeAll: removeAllDixitBots },
   pictures: { subscribe: subscribePicturesBots, version: picturesBotsVersion, count: picturesBotsIn, add: addPicturesBot, removeAll: removeAllPicturesBots },
+  // os bots do Cúpi só existem em dev: no build de produção este ramo some e leva o módulo junto (o lobby do Cúpi nem renderiza isto)
+  coup: import.meta.env.DEV
+    ? { subscribe: subscribeCoupBots, version: coupBotsVersion, count: coupBotsIn, add: addCoupBot, removeAll: removeAllCoupBots }
+    : NO_BOTS,
 };
 
-/** Jogo sem entrada em `API` não mostra nada. */
+/** O teto de bots vem do jogo (`GAMES[game].maxPlayers`): o Cúpi lota com 6, o DITU com 10. */
 export default function BotControls({ code, seats, game = 'ito' }: { code: string; seats: number; game?: GameKey }) {
-  const api = API[game];
-  return api ? <Controls api={api} code={code} seats={seats} /> : null;
+  return <Controls api={API[game]} code={code} seats={seats} max={GAMES[game].maxPlayers} />;
 }
 
-function Controls({ api, code, seats }: { api: Api; code: string; seats: number }) {
+function Controls({ api, code, seats, max }: { api: Api; code: string; seats: number; max: number }) {
   useSyncExternalStore(api.subscribe, api.version);
   const count = api.count(code);
   // estilo inline de propósito: nada disso entra no CSS de produção
@@ -48,7 +53,7 @@ function Controls({ api, code, seats }: { api: Api; code: string; seats: number 
     >
       <p className="hint">modo teste: os bots jogam daqui do seu aparelho e a rodada não entra no histórico</p>
       <div className="row-inline">
-        <button className="sbtn" type="button" disabled={seats >= MAX_PLAYERS} onClick={() => api.add(code)}>
+        <button className="sbtn" type="button" disabled={seats >= max} onClick={() => api.add(code)}>
           🤖 adicionar bot
         </button>
         {count > 0 && (
