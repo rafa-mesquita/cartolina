@@ -102,6 +102,15 @@
   #bar i.on.last { animation: blink .3s steps(2) infinite; }
   #discard { left: auto; right: 90px; }
   #discard .card { position: absolute; }
+  #discard { cursor: zoom-in; }
+  /* Olho do descarte: abre o quadro com todas as cartas da pilha */
+  #eye { position: absolute; right: 22px; top: 62px; width: 56px; padding: 8px 0 6px; border: none; background: #141f42; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    box-shadow: 0 -3px 0 var(--night), 0 3px 0 var(--night), -3px 0 0 var(--night), 3px 0 0 var(--night), 4px 6px 0 rgba(0,0,0,.35); }
+  #eye svg { width: 36px; height: 24px; shape-rendering: crispEdges; display: block; }
+  #eye b { font-family: var(--px); font-size: 9px; font-weight: normal; color: var(--yellow); text-shadow: 2px 2px 0 #050510; }
+  #eye:hover { background: #2c3a66; }
+  #eye.pick { animation: eyepulse .5s steps(2) infinite; }
+  @keyframes eyepulse { 50% { background: #3b2412; box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow), 4px 6px 0 rgba(0,0,0,.35); } }
   #future { position: absolute; left: 230px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
   #future .tag { font-family: var(--px); font-size: 8px; color: var(--yellow); margin-bottom: 2px; }
   #future .card { transform: scale(.38); transform-origin: left top; margin-bottom: -96px; }
@@ -141,6 +150,14 @@
   #table.drop { background-color: #3b7349; }
   .seat.drop { background: rgba(228,87,46,.3); box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
   #hand.giving .card:hover { bottom: 30px; box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red); }
+  /* Comprou o Tatubum: só o Desarme acende (e pulsa); o resto da mão apaga */
+  #hand.defusing .card:not(.cafune) { filter: grayscale(.75) brightness(.55); cursor: not-allowed; }
+  #hand.defusing .card.cafune { bottom: 22px; animation: defusepulse .45s steps(2) infinite; }
+  #hand.defusing .card.cafune:hover { bottom: 36px; }
+  @keyframes defusepulse {
+    0% { box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 0 0 0 8px rgba(242,193,78,.35), 5px 8px 0 rgba(0,0,0,.35); }
+    50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 0 0 0 14px rgba(242,193,78,.55), 5px 8px 0 rgba(0,0,0,.35); }
+  }
   #hand.myturn::before { content: 'SUA VEZ'; position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-family: var(--px); font-size: 11px; color: var(--yellow); text-shadow: 2px 2px 0 #050510; animation: blink 1s steps(2) infinite; }
   #hand .dead { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); font-family: var(--px); font-size: 14px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
   @keyframes selblink { 50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 5px 8px 0 rgba(0,0,0,.35); } }
@@ -177,7 +194,29 @@
   #menu, #over { position: absolute; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
   #menu[hidden], #over[hidden] { display: none; }
   #stage.menu-open :is(#table, #log, #hand, #actions, #seats, #caption, #panel) { display: none; }
-  #over { background: rgba(14,14,28,.55); }
+  /* Fim: primeiro só o nome (com os fogos aparecendo), depois o fundo escurece e os botões vêm */
+  #over { background: transparent; pointer-events: none; }
+  #over.dim { background: rgba(14,14,28,.55); pointer-events: auto; }
+  #over .popin { animation: popin .3s steps(6, end) both; }
+  @keyframes popin { 0% { transform: scale(.2) rotate(-8deg); } 70% { transform: scale(1.25) rotate(-5deg); } 100% { transform: scale(1) rotate(-3deg); } }
+
+  /* Quadro do descarte (olho) e escolha dos 5 diferentes */
+  #pile { position: absolute; inset: 0; z-index: 55; background: rgba(5,5,16,.72); display: flex; align-items: center; justify-content: center; }
+  #pile[hidden] { display: none; }
+  #pile .box { width: min(1180px, calc(100% - 80px)); max-height: 790px; display: flex; flex-direction: column; padding: 22px 26px 18px; background: #141f42;
+    box-shadow: 0 -5px 0 var(--yellow), 0 5px 0 var(--yellow), -5px 0 0 var(--yellow), 5px 0 0 var(--yellow), 10px 14px 0 rgba(0,0,0,.5); }
+  #pile h2 { margin: 0 0 6px; font-family: var(--px); font-size: 18px; color: var(--yellow); font-weight: normal; }
+  #pile h2 .timer { float: right; font-size: 14px; color: var(--red); }
+  #pile .psub { margin: 0; font-family: var(--vt); font-size: 26px; color: var(--txt); }
+  #pile .grid { display: flex; flex-wrap: wrap; gap: 26px 20px; overflow-y: auto; padding: 34px 16px 34px; margin: 6px 0 10px; min-height: 230px; scrollbar-color: var(--yellow) #0e0e1c; }
+  #pile .grid .card { flex: none; }
+  #pile .grid .card:hover { transform: scale(1.35); z-index: 2; }
+  #pile .grid .card.pickable { cursor: pointer; animation: selblink .5s steps(2) infinite;
+    box-shadow: 0 -4px 0 var(--yellow), 0 4px 0 var(--yellow), -4px 0 0 var(--yellow), 4px 0 0 var(--yellow), 5px 8px 0 rgba(0,0,0,.35); }
+  #pile .grid .card.off { filter: grayscale(.8) brightness(.5); }
+  #pile .grid .none { font-size: 28px; color: var(--dim); margin: auto; }
+  #pile .foot { display: flex; justify-content: space-between; align-items: center; }
+  #pile .foot .note { font-size: 22px; color: var(--dim); }
   .biglogo { font-family: var(--px); font-size: 64px; color: var(--yellow); text-shadow: 5px 0 0 #3b2412, -5px 0 0 #3b2412, 0 5px 0 #3b2412, 0 -5px 0 #3b2412, 9px 9px 0 #050510; margin-bottom: 8px; }
   .sub { font-family: var(--px); font-size: 13px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
   .picker { display: flex; align-items: center; gap: 16px; }
@@ -241,6 +280,9 @@
   @keyframes snip { 50% { translate: 6px 0; } }
   .bigcard { position: absolute; z-index: 32; transform: translate(-50%, -50%) scale(2); }
   .bigcard.shaking { animation: shake .09s steps(2) infinite; }
+  /* O tatu de quem tem que jogar o Desarme: dá pra soltar o Desarme nele (ou clicar) */
+  .bigcard.live { pointer-events: auto; cursor: pointer; }
+  .bigcard.drop { filter: drop-shadow(0 0 0 #f2c14e) drop-shadow(0 0 10px #f2c14e); }
   @keyframes shake { 50% { translate: 4px -3px; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
 </style>
@@ -265,6 +307,7 @@
     <div class="slot" id="air"></div>
     <div id="bar"></div>
     <div class="slot" id="discard"><div class="label">descarte</div></div>
+    <button id="eye" title="Ver todas as cartas do descarte"></button>
   </div>
   <div id="log"></div>
   <div id="hand"></div>
@@ -290,6 +333,7 @@
     <button class="btn" id="cards"><span>AS CARTAS</span></button>
   </div>
   <div id="gallery" hidden></div>
+  <div id="pile" hidden></div>
   <div id="over" hidden></div>
   <div id="fxlayer"></div>
   <canvas id="particles"></canvas>
@@ -395,6 +439,10 @@ async function runQueue() {
   }
   running = false;
   if (arriving.size || airHidden) { arriving.clear(); airHidden = false; render(); }
+  // Rede de segurança: o tatu grande só fica na mesa enquanto alguém tem que jogar o Desarme.
+  if (tatuFx && view?.choice?.kind !== 'tatu') clearTatu();
+  // Fim sem festa (ninguém sobrou): os botões aparecem quando a fila esvazia.
+  if (view?.phase === 'gameover' && overStage !== 'full') { overStage = 'full'; renderOver(); }
 }
 
 // ---------------------------------------------------------------- estado da tela
@@ -405,11 +453,23 @@ const arriving = new Set();
 let airHidden = false;
 let captionText = '';
 let lastTic = 0;
+/** O Tatubum grande tremendo no meio da mesa enquanto quem comprou não joga o Desarme. */
+let tatuFx = null;
+/** Fim de jogo: 'hidden' → 'title' (só o nome, durante os fogos) → 'full' (fundo escuro e botões). */
+let overStage = 'hidden';
+/** Quadro do descarte: aberto? aberto pra escolher dos 5 diferentes? */
+let pileOpen = false;
+let pileForPick = false;
+let pileKey = '';
+/** Quantas o 5 diferentes mandou pegar no começo (pra dizer "mais uma" só na segunda). */
+let cincoFirst = 2;
 
 function onState() {
   const prev = view;
   const rects = handRects();
   view = T.kittensViewFor(state, ME);
+  // JOGAR DE NOVO: o diário recomeça do zero (senão as jogadas novas ficariam sem animação).
+  if (prev?.phase === 'gameover' && view.phase === 'playing') { lastN = -1; logLines.length = 0; clearTatu(); closePile(true); }
   const fresh = view.log.filter((e) => e.n > lastN);
   if (view.log.length) lastN = view.log[view.log.length - 1].n;
   for (const id of view.hand) if (!prev || !prev.hand.includes(id)) arriving.add(id);
@@ -420,6 +480,11 @@ function onState() {
   render();
   if (!prev || (prev.phase !== 'playing' && view.phase === 'playing')) enqueue(() => dealAnim());
   for (const e of fresh) enqueue(() => animate(e.ev, prev, rects));
+  // 5 diferentes: o quadro do descarte abre sozinho pra você escolher (depois que a jogada chega no descarte).
+  if (myCinco(view) && !myCinco(prev)) {
+    cincoFirst = view.choice.left;
+    enqueue(async () => { if (myCinco(view)) openPile(); });
+  }
   // Carta que apareceu sem efeito nenhum pra trazê-la não pode ficar escondida.
   if (!running && !queue.length && (arriving.size || airHidden)) { arriving.clear(); airHidden = false; render(); }
 }
@@ -477,7 +542,41 @@ function render() {
   renderPanel();
   renderLog();
   renderOver();
+  renderPile();
+  syncTatu();
   $('#caption').innerHTML = captionText;
+  tickTimers();
+}
+
+/** A escolha aberta é sua? (no par de Mico, "sua" = você ainda tem que descartar) */
+function choiceIsMine(c) {
+  if (!c) return false;
+  return c.kind === 'mico' ? c.waiting.includes(ME) : c.who === ME;
+}
+const myCinco = (v) => v?.choice?.kind === 'cinco' && v.choice.who === ME;
+const TIMER = '<span class="timer" data-timer></span>';
+
+/** A legenda de cada escolha aberta (com o relógio quando é você quem escolhe), ou null. */
+function choicePrompt() {
+  const c = view?.choice;
+  if (!c || view.phase !== 'playing') return null;
+  switch (c.kind) {
+    case 'tatu':
+      return c.who === ME ? `JOGUE O DESARME! ${TIMER}` : `${nameOf(c.who)} está desarmando…`;
+    case 'cafune':
+      return c.who === ME ? null : `${nameOf(c.who)} está escondendo o tatu no monte…`;
+    case 'mico':
+      if (c.waiting.includes(ME)) return `DESCARTE UMA CARTA (o efeito não vale) ${TIMER}`;
+      return c.by === ME ? 'Todo mundo descartando…' : `Descartando pro par de Mico de ${nameOf(c.by)}…`;
+    case 'cinco':
+      if (c.who === ME) return `${c.left === 2 ? 'Pegue DUAS do descarte' : cincoFirst === 2 ? 'Pegue MAIS UMA do descarte' : 'Pegue UMA do descarte'} ${TIMER}`;
+      return `${nameOf(c.who)} vai pegar ${c.left === 2 ? 'duas' : cincoFirst === 2 ? 'mais uma' : 'uma'} do descarte…`;
+  }
+  return null;
+}
+function sayChoice() {
+  const p = choicePrompt();
+  if (p) say(p);
 }
 
 function renderTop() {
@@ -523,7 +622,10 @@ function renderSeats() {
     if (k === 1) el.classList.add('next');
     const n = v.handCounts[p] ?? 0;
     const thinking = v.phase === 'playing' && v.current === p && !dead && !v.pending && !v.choice;
-    const chip = v.choice?.who === p ? '<div class="chip">escolhendo…</div>'
+    const c = v.choice;
+    const choosing = c && !dead && (c.kind === 'mico' ? c.waiting.includes(p) : c.who === p);
+    const chipText = c?.kind === 'mico' ? 'descartando…' : c?.kind === 'tatu' ? 'desarmando…' : 'escolhendo…';
+    const chip = choosing ? `<div class="chip">${chipText}</div>`
       : !active.includes(p) && !dead ? '<div class="chip">caiu…</div>'
       : thinking ? '<div class="chip think">pensando…</div>' : '';
     // Leque de versinhos (até 9) + o número grande: dá pra ver de longe quantas cartas cada um tem.
@@ -611,8 +713,32 @@ function renderTable() {
     c.style.transform = `rotate(${(i - arr.length + 1) * 7 + 3}deg)`;
     disc.appendChild(c);
   });
+  disc.onclick = () => openPile();
+  const eye = $('#eye');
+  if (!eye.firstChild) eye.innerHTML = EYE_SVG + '<b></b>';
+  eye.querySelector('b').textContent = v.discard.length;
+  eye.classList.toggle('pick', myCinco(v) && !pileOpen);
+  eye.onclick = () => openPile();
   renderBar();
 }
+
+/** Olho em pixel art (12×8), desenhado com retângulos. */
+const EYE_SVG = (() => {
+  const rows = [
+    '....kkkk....',
+    '..kkwwwwkk..',
+    '.kwwwppwwwk.',
+    'kwwwpppwwwwk',
+    'kwwwppppwwwk',
+    '.kwwwppwwwk.',
+    '..kkwwwwkk..',
+    '....kkkk....',
+  ];
+  const pal = { k: '#050510', w: '#fff3e0', p: '#2b6fd6' };
+  let r = '';
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (pal[ch]) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${pal[ch]}"/>`; }));
+  return `<svg viewBox="0 0 12 8" xmlns="http://www.w3.org/2000/svg">${r}<rect x="5" y="3" width="1" height="1" fill="#ffffff"/></svg>`;
+})();
 
 function renderBar() {
   const bar = $('#bar');
@@ -626,8 +752,9 @@ function renderBar() {
 function tickTimers() {
   if (!view) return;
   renderBar();
-  const t = document.querySelector('[data-timer]');
-  if (t && view.choice) t.textContent = Math.max(0, Math.ceil((view.choice.deadline - Date.now()) / 1000)) + 's';
+  const c = view.choice;
+  const left = c ? Math.max(0, Math.ceil((c.deadline - Date.now()) / 1000)) + 's' : '';
+  document.querySelectorAll('[data-timer]').forEach((t) => { t.textContent = left; });
 }
 
 function renderHand() {
@@ -635,7 +762,10 @@ function renderHand() {
   const hand = $('#hand');
   hand.innerHTML = '';
   hand.classList.toggle('myturn', v.phase === 'playing' && v.current === ME && !v.pending && !v.choice);
-  hand.classList.toggle('giving', v.choice?.kind === 'favor' && v.choice.who === ME);
+  const c = v.choice;
+  // Favor e descarte do Mico: a carta clicada sai da mão (contorno vermelho); Tatubum: só o Desarme acende.
+  hand.classList.toggle('giving', (c?.kind === 'favor' && c.who === ME) || (c?.kind === 'mico' && c.waiting.includes(ME)));
+  hand.classList.toggle('defusing', c?.kind === 'tatu' && c.who === ME);
   if (v.phase === 'playing' && !v.alive.includes(ME)) {
     hand.innerHTML = '<div class="dead">VOCÊ EXPLODIU · AGORA SÓ ASSISTE</div>';
     return;
@@ -652,7 +782,7 @@ function renderHand() {
     if (selected.has(id)) c.classList.add('sel');
     if (arriving.has(id)) c.classList.add('arriving');
     c.onpointerdown = (e) => startDrag(e, id);
-    c.ondblclick = () => { selected = new Set([id]); playSelected(); };
+    c.ondblclick = () => { if (!canDraw()) return; selected = new Set([id]); playSelected(); };
     c.onmouseleave = () => zoom(null);
     hand.appendChild(c);
   });
@@ -668,8 +798,8 @@ function orderedHand() {
 }
 
 let drag = null;
-/** Favor e par de Mico pedem um adversário; par de Preguiça pede um bicho. */
-const needsTarget = (kind, ids) => kind === 'favor' || (kind === 'par' && kindOf(ids[0]) === 'mico');
+/** Só o Favor pede um adversário (o par de Mico faz todo mundo descartar); par de Preguiça pede um bicho. */
+const needsTarget = (kind) => kind === 'favor';
 const needsAsk = (kind, ids) => kind === 'par' && kindOf(ids[0]) === 'preguica';
 
 function stagePoint(e) {
@@ -680,6 +810,7 @@ function stagePoint(e) {
 /** Onde o ponteiro está: um assento, a mesa ou a mão (ou nada). */
 function dropTarget(e) {
   for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+    if (el.classList?.contains('bigcard') && el.classList.contains('live')) return { type: 'tatu', el };
     const seat = el.closest?.('.seat');
     if (seat) return { type: 'seat', p: seat.dataset.p, el: seat };
     if (el.closest?.('#table')) return { type: 'table', el: $('#table') };
@@ -757,8 +888,23 @@ function reorder(ids, e) {
 /** Solta na mesa ou num adversário: joga (ou dá o Favor, ou dá Nem vem!). */
 function dropPlay(ids, t) {
   const v = view;
-  if (v.choice?.kind === 'favor' && v.choice.who === ME) {
+  const c = v.choice;
+  if (c?.kind === 'favor' && c.who === ME) {
     if (ids.length === 1) dispatch(ME, { type: 'choose', card: ids[0] });
+    render();
+    return;
+  }
+  // Comprou o Tatubum: só o Desarme, solto no tatu (ou na mesa).
+  if (c?.kind === 'tatu' && c.who === ME) {
+    if (ids.length === 1 && kindOf(ids[0]) === 'cafune') playDefuse(ids[0]);
+    else { toast('Agora só o Desarme!'); Sound.play('error'); }
+    render();
+    return;
+  }
+  // Par de Mico: a carta solta na mesa vai pro descarte (o efeito não vale).
+  if (c?.kind === 'mico' && c.waiting.includes(ME)) {
+    if (ids.length === 1) dispatch(ME, { type: 'choose', card: ids[0] });
+    else { toast('Descarte uma carta só.'); Sound.play('error'); }
     render();
     return;
   }
@@ -790,8 +936,14 @@ function canDraw() {
 
 function clickCard(id) {
   const v = view;
-  if (v.choice?.kind === 'favor' && v.choice.who === ME) {
+  const c = v.choice;
+  if ((c?.kind === 'favor' && c.who === ME) || (c?.kind === 'mico' && c.waiting.includes(ME))) {
     dispatch(ME, { type: 'choose', card: id });
+    return;
+  }
+  if (c?.kind === 'tatu' && c.who === ME) {
+    if (kindOf(id) === 'cafune') playDefuse(id);
+    else { toast('Agora só o Desarme!'); Sound.play('error'); }
     return;
   }
   if (selected.has(id)) selected.delete(id);
@@ -851,6 +1003,14 @@ function draw() {
   dispatch(ME, { type: 'draw' });
 }
 
+/** Joga o Desarme (o pedido, ou o primeiro da mão) no Tatubum que você comprou. */
+function playDefuse(id) {
+  const c = view?.choice;
+  if (c?.kind !== 'tatu' || c.who !== ME) return;
+  const card = id ?? view.hand.find((x) => kindOf(x) === 'cafune');
+  if (card) dispatch(ME, { type: 'choose', card });
+}
+
 function nope() {
   dispatch(ME, { type: 'nope' });
 }
@@ -865,6 +1025,16 @@ function renderActions() {
     const b = button(`NEM VEM! (${myNopes})`, nope);
     b.id = 'nope';
     box.appendChild(b);
+  }
+  const c = v.choice;
+  if (c?.kind === 'tatu' && c.who === ME) {
+    box.appendChild(hint('arraste o Desarme pro tatu (ou clique nele)'));
+    box.appendChild(button('JOGAR DESARME', () => playDefuse(), 'yellow'));
+  } else if (c?.kind === 'mico' && c.waiting.includes(ME)) {
+    box.appendChild(hint('clique numa carta (ou arraste pra mesa) pra descartar'));
+  } else if (myCinco(v) && !pileOpen) {
+    box.appendChild(hint('escolha no quadro do descarte'));
+    box.appendChild(button('VER O DESCARTE', () => openPile(), 'yellow'));
   }
   if (v.current === ME && !v.pending && !v.choice) {
     const kind = selectedPlay();
@@ -917,7 +1087,8 @@ function renderPanel() {
     row.appendChild(button('CANCELAR', () => { mode = null; render(); }, 'small ghost'));
     return;
   }
-  if (!c || c.who !== ME) { panel.innerHTML = ''; return; }
+  // Desarme e descarte do Mico usam a legenda (a mesa fica livre pra soltar a carta); 5 diferentes usa o quadro do descarte.
+  if (!choiceIsMine(c)) { panel.innerHTML = ''; return; }
   if (c.kind === 'cafune') {
     const max = v.drawCount;
     cafunePos = Math.min(cafunePos, max);
@@ -936,23 +1107,76 @@ function renderPanel() {
   } else if (c.kind === 'favor') {
     panel.innerHTML = `<h2>FAVOR PRA ${nameOf(c.to).toUpperCase()} ${timer}</h2><p>Clique numa carta da sua mão pra dar.</p>`;
     panel.style.top = '300px';
-  } else if (c.kind === 'cinco') {
-    panel.innerHTML = `<h2>PEGUE UMA DO DESCARTE ${timer}</h2><div class="cards"></div>`;
-    const row = panel.querySelector('.cards');
-    c.options.filter((id) => v.discard.includes(id)).slice(-8).forEach((id) => {
-      const el = cardEl(id);
-      el.onclick = () => dispatch(ME, { type: 'choose', card: id });
-      row.appendChild(el);
-    });
   } else if (c.kind === 'quati') {
     panel.innerHTML = `<h2>A CARTA DE CIMA ${timer}</h2><p>Só você vê. Fica em cima ou vai pro fundo?</p><div class="cards"></div><div class="row"></div>`;
     if (c.card) panel.querySelector('.cards').appendChild(cardEl(c.card));
     const row = panel.querySelector('.row');
     row.appendChild(button('FICA EM CIMA', () => dispatch(ME, { type: 'choose', keep: true }), 'small'));
     row.appendChild(button('PRO FUNDO', () => dispatch(ME, { type: 'choose', keep: false }), 'yellow'));
+  } else {
+    panel.innerHTML = '';
   }
   tickTimers();
 }
+
+// ---------------------------------------------------------------- quadro do descarte (olho) e 5 diferentes
+function openPile() {
+  if (!view || view.phase === 'lobby') return;
+  pileOpen = true;
+  pileForPick = myCinco(view);
+  pileKey = '';
+  Sound.play('select');
+  render();
+}
+function closePile(silent = false) {
+  pileOpen = false;
+  pileForPick = false;
+  pileKey = '';
+  $('#pile').hidden = true;
+  $('#pile').innerHTML = '';
+  if (!silent && view) render();
+}
+/**
+ * Todas as cartas do descarte, da mais nova pra mais velha. Na escolha dos 5 diferentes, só as que estavam no
+ * descarte antes da jogada (e continuam lá) acendem; um clique pega a carta.
+ */
+function renderPile() {
+  const pile = $('#pile');
+  if (!pileOpen || !view || view.phase === 'lobby') { if (pileOpen) closePile(true); return; }
+  const pick = myCinco(view);
+  // Aberto pra escolher: fecha sozinho quando a escolha acaba.
+  if (!pick && pileForPick) { closePile(true); return; }
+  if (pick) pileForPick = true;
+  const c = view.choice;
+  const key = JSON.stringify([view.discard, pick && c.options, pick && c.left]);
+  if (key === pileKey && !pile.hidden) return;
+  pileKey = key;
+  const scroll = pile.querySelector('.grid')?.scrollTop ?? 0;
+  const cards = [...view.discard].reverse();
+  const title = !pick ? 'O DESCARTE'
+    : c.left === 2 ? 'PEGUE DUAS DO DESCARTE' : cincoFirst === 2 ? 'PEGUE MAIS UMA' : 'PEGUE UMA DO DESCARTE';
+  const sub = pick
+    ? 'Clique numa carta acesa. As apagadas foram pro descarte depois da sua jogada.'
+    : `${cards.length} carta${cards.length === 1 ? '' : 's'}, da mais nova pra mais velha.`;
+  pile.innerHTML = `<div class="box"><h2>${title}${pick ? ' ' + TIMER : ''}</h2><p class="psub">${sub}</p><div class="grid"></div><div class="foot"><div class="note">ESC ou clique fora pra fechar</div></div></div>`;
+  const grid = pile.querySelector('.grid');
+  cards.forEach((id) => {
+    const el = cardEl(id);
+    if (pick) {
+      if (c.options.includes(id)) {
+        el.classList.add('pickable');
+        el.onclick = () => dispatch(ME, { type: 'choose', card: id });
+      } else el.classList.add('off');
+    }
+    grid.appendChild(el);
+  });
+  if (!cards.length) grid.innerHTML = '<div class="none">O descarte está vazio.</div>';
+  pile.querySelector('.foot').appendChild(button('FECHAR', () => closePile(), 'small ghost'));
+  grid.scrollTop = scroll;
+  pile.hidden = false;
+  tickTimers();
+}
+$('#pile').addEventListener('click', (e) => { if (e.target === $('#pile')) closePile(); });
 
 // ---------------------------------------------------------------- diário
 const logLines = [];
@@ -977,11 +1201,13 @@ function rawText(ev, prevPending) {
         favor: `${prevPending?.play.target ? n(prevPending.play.target) : 'alguém'} vai dar uma carta pra ${n(ev.by)}`,
         par: `${whose(PAIR_LABEL[kindOf(prevPending?.play.cards[0] ?? '')] ?? 'PAR')} valeu!`,
         trio: `${whose('TRIO')} valeu!`,
-        cinco: `${n(ev.by)} vai pegar uma do descarte`,
+        cinco: `${n(ev.by)} vai pegar duas do descarte`,
       }[ev.play];
     }
     case 'draw': return ev.card ? `Você comprou ${cardName(kindOf(ev.card))}` : `${n(ev.by)} comprou uma carta`;
-    case 'cafune': return `${n(ev.by)} comprou o TATUBUM… e o DESARME salvou!`;
+    case 'tatu': return `${n(ev.by)} comprou o TATUBUM!`;
+    case 'cafune': return `${n(ev.by)} jogou o DESARME!`;
+    case 'discarded': return `${n(ev.by)} descartou ${cardName(kindOf(ev.card))}`;
     case 'hid': return `${n(ev.by)} escondeu o tatu no monte`;
     case 'boom': return `${n(ev.by)} EXPLODIU!`;
     case 'left': return `${n(ev.by)} caiu e saiu do jogo`;
@@ -1096,6 +1322,8 @@ async function animate(ev, prev, rects) {
       }
       await Promise.all(cards.map((id) => Fx.fly({ node: cardEl(id), from: air, to: $('#discard'), dur: 320 })));
       await Fx.wait(250);
+      // A jogada abriu uma escolha (Mico, 5 diferentes…): a legenda diz quem faz o quê.
+      sayChoice();
       break;
     }
     case 'draw': {
@@ -1112,8 +1340,42 @@ async function animate(ev, prev, rects) {
       if (view.current === ME && !view.pending && !view.choice) say('Sua vez! Jogue cartas ou compre.');
       break;
     }
-    case 'cafune':
+    case 'tatu': {
+      // Comprou o Tatubum e tem Desarme: o tatu fica tremendo no meio da mesa até o Desarme ser jogado (à mão).
+      say(`${nameOf(ev.by)} comprou o… TATUBUM!`);
+      showTatu();
+      // Se o Desarme já foi (prazo vencido, bot rápido), a pausa é curta.
+      await Fx.wait(view.choice?.kind === 'tatu' ? 1000 : 450);
+      sayChoice();
+      break;
+    }
+    case 'cafune': {
+      // O Desarme foi jogado: voa até o tatu, o tatu soldado entra andando, corta o fio e o pavio apaga.
+      const t = showTatu();
+      const cx = t.cx;
+      holdPanel = true;
+      renderPanel();
+      say(text);
+      const used = ev.by === ME ? prev?.hand.find((x) => kindOf(x) === 'cafune' && !view.hand.includes(x)) : null;
+      const from = used && rects[used] ? rects[used] : anchorOf(ev.by);
+      Sound.play('card');
+      await Fx.fly({ node: cardEl(used ?? 'cafune-0'), from, to: { x: cx, y: 470 }, dur: 420, rot: -6, trail: '#f2c14e' });
+      await defuseWalk(cx);
+      clearInterval(t.sp);
+      t.big.classList.remove('shaking', 'live');
+      Sound.play('cafune');
+      Fx.hearts({ x: cx, y: 470 });
+      // Já escondido (o prazo venceu e foi tudo sozinho)? O UFA! é rápido.
+      const quick = !(view.choice?.kind === 'cafune' && view.choice.who === ev.by);
+      await Fx.pop('UFA!', { x: cx, y: 260 }, { size: 60, hold: quick ? 300 : 700, color: '#ff8fab' });
+      clearTatu();
+      holdPanel = false;
+      renderPanel();
+      sayChoice();
+      break;
+    }
     case 'boom': {
+      clearTatu();
       say(`${nameOf(ev.by)} comprou o… TATUBUM!`);
       const cx = stageW / 2;
       const big = cardEl('tatubum-0');
@@ -1123,31 +1385,25 @@ async function animate(ev, prev, rects) {
       $('#fxlayer').appendChild(big);
       Sound.play('fuse');
       const sp = setInterval(() => Fx.sparks({ x: cx + 15, y: 340 }), 120);
-      if (ev.t === 'cafune') {
-        holdPanel = true;
-        renderPanel();
-        // O tatu soldado entra andando pela mesa, corta o fio e o pavio apaga.
-        await defuseWalk(cx);
-        clearInterval(sp);
-        big.classList.remove('shaking');
-        Sound.play('cafune');
-        Fx.hearts({ x: cx, y: 470 });
-        say(text);
-        await Fx.pop('UFA!', { x: cx, y: 260 }, { size: 60, hold: 700, color: '#ff8fab' });
-        big.remove();
-        holdPanel = false;
-        renderPanel();
-      } else {
-        await Fx.wait(1100);
-        clearInterval(sp);
-        big.remove();
-        Sound.play('boom');
-        Fx.flash('#fff3c4', 220);
-        Fx.shake(600, 14);
-        Fx.boom({ x: cx, y: 470 });
-        say(text);
-        await Fx.pop('BUM!', { x: cx, y: 450 }, { size: 150, hold: 900, color: '#e4572e' });
-      }
+      await Fx.wait(1100);
+      clearInterval(sp);
+      big.remove();
+      Sound.play('boom');
+      Fx.flash('#fff3c4', 220);
+      Fx.shake(600, 14);
+      Fx.boom({ x: cx, y: 470 });
+      say(text);
+      await Fx.pop('BUM!', { x: cx, y: 450 }, { size: 150, hold: 900, color: '#e4572e' });
+      break;
+    }
+    case 'discarded': {
+      // Par de Mico: a carta vai à mostra de quem descartou pro descarte.
+      say(text);
+      Sound.play('card');
+      const from = ev.by === ME && rects[ev.card] ? rects[ev.card] : anchorOf(ev.by);
+      await Fx.fly({ node: cardEl(ev.card), from, to: $('#discard'), dur: 440, rot: 8, scaleFrom: ev.by === ME ? 1 : 0.5, trail: '#f4a259' });
+      await Fx.wait(120);
+      sayChoice();
       break;
     }
     case 'hid': {
@@ -1177,6 +1433,7 @@ async function animate(ev, prev, rects) {
       const target = toP === ME && card ? document.querySelector(`#hand .card[data-id="${card}"]`) ?? $('#hand') : anchorOf(toP);
       await Fx.fly({ node: cardEl(card, { back: !card }), from, to: target, dur: ev.t === 'passed' ? 360 : 520, trail: '#ff8fab' });
       if (card) { arriving.delete(card); document.querySelector(`#hand .card[data-id="${card}"]`)?.classList.remove('arriving'); }
+      if (ev.t === 'picked') sayChoice();
       break;
     }
     case 'delayed':
@@ -1193,11 +1450,16 @@ async function animate(ev, prev, rects) {
       break;
     }
     case 'win': {
+      // Um texto grande só (o do quadro do fim, que entra pulando); os botões vêm depois dos fogos.
       say(text);
       Sound.play('win');
+      clearTatu();
+      overStage = 'title';
+      renderOver();
       Fx.fireworks({ x: stageW / 2, y: 420 });
-      await Fx.pop(ev.by === ME ? 'VOCÊ VENCEU!' : `${nameOf(ev.by).toUpperCase()} VENCEU!`, { x: stageW / 2, y: 420 }, { size: 52, hold: 1400 });
-      renderOver(true);
+      await Fx.wait(2400);
+      overStage = 'full';
+      renderOver();
       break;
     }
   }
@@ -1239,14 +1501,60 @@ async function defuseWalk(cx) {
   })();
 }
 
+/** O Tatubum grande no meio da mesa (cria uma vez; o Desarme e o soldado usam o mesmo). */
+function showTatu() {
+  if (tatuFx) return tatuFx;
+  const cx = stageW / 2;
+  const big = cardEl('tatubum-0');
+  big.classList.add('bigcard', 'shaking');
+  big.style.left = cx + 'px';
+  big.style.top = '470px';
+  big.onclick = () => playDefuse();
+  $('#fxlayer').appendChild(big);
+  Sound.play('fuse');
+  let k = 0;
+  // Faíscas do pavio sem parar e o chiado de novo de tempos em tempos, enquanto o Desarme não vem.
+  const sp = setInterval(() => {
+    Fx.sparks({ x: cx + 15, y: 340 });
+    if (++k % 14 === 0 && view?.choice?.kind === 'tatu') Sound.play('fuse');
+  }, 120);
+  tatuFx = { big, sp, cx };
+  syncTatu();
+  return tatuFx;
+}
+/** O tatu aceita o Desarme (soltar ou clicar) só de quem comprou, enquanto a escolha está aberta. */
+function syncTatu() {
+  if (tatuFx) tatuFx.big.classList.toggle('live', view?.choice?.kind === 'tatu' && view.choice.who === ME);
+}
+function clearTatu() {
+  if (!tatuFx) return;
+  clearInterval(tatuFx.sp);
+  tatuFx.big.remove();
+  tatuFx = null;
+}
+
 // ---------------------------------------------------------------- fim e menu
-function renderOver(force = false) {
+/** Quadro do fim: só aparece pela festa da vitória (fila de efeitos), nunca direto do render. */
+function renderOver() {
   const over = $('#over');
-  if (view?.phase !== 'gameover' || (running && !force)) { over.hidden = true; return; }
+  if (view?.phase !== 'gameover') {
+    overStage = 'hidden';
+    over.hidden = true;
+    over.innerHTML = '';
+    over.classList.remove('dim');
+    return;
+  }
+  if (overStage === 'hidden') { over.hidden = true; return; }
+  if (!over.querySelector('.biglogo')) {
+    const title = view.winner === ME ? 'VOCÊ SOBREVIVEU!' : view.winner ? nameOf(view.winner).toUpperCase() + ' SOBREVIVEU!' : 'FIM';
+    over.innerHTML = `<div class="biglogo popin" style="font-size:44px">${title}</div>`;
+  }
   over.hidden = false;
-  over.innerHTML = `<div class="biglogo" style="font-size:44px">${view.winner === ME ? 'VOCÊ SOBREVIVEU!' : (view.winner ? nameOf(view.winner).toUpperCase() + ' SOBREVIVEU!' : 'FIM')}</div>`;
-  over.appendChild(button('JOGAR DE NOVO', () => { dispatch(ME, { type: 'again' }); }, 'yellow'));
-  over.appendChild(button('MENU', toMenu));
+  over.classList.toggle('dim', overStage === 'full');
+  if (overStage === 'full' && !over.querySelector('.btn')) {
+    over.appendChild(button('JOGAR DE NOVO', () => { dispatch(ME, { type: 'again' }); }, 'yellow'));
+    over.appendChild(button('MENU', toMenu));
+  }
 }
 
 let nbots = 3;
@@ -1267,7 +1575,12 @@ $('#play').onclick = () => {
 function toMenu() {
   state = T.initialKittensState();
   view = null;
+  clearTatu();
+  closePile(true);
+  overStage = 'hidden';
   $('#over').hidden = true;
+  $('#over').innerHTML = '';
+  $('#over').classList.remove('dim');
   $('#menu').hidden = false;
   stage.classList.add('menu-open');
   ['#seats', '#hand', '#actions', '#panel', '#log', '#turn', '#caption', '#air', '#future', '#bar'].forEach((s) => { $(s).innerHTML = ''; });
@@ -1287,6 +1600,7 @@ $('#speed').onclick = () => {
   $('#speed span').textContent = botSpeed === 1 ? 'BOTS: NORMAIS' : 'BOTS: RÁPIDOS';
 };
 addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pileOpen) { closePile(); return; }
   if (!view || view.phase !== 'playing') return;
   if (e.key === 'n' || e.key === 'N') nope();
   if (e.key === ' ' && canDraw()) { e.preventDefault(); draw(); }
@@ -1306,17 +1620,17 @@ function toast(text) {
  * Explicação completa de cada carta, que aparece no zoom (pedido do Rafa: na mão fica só o básico).
  * Cada bicho explica o próprio par; o trio e os 5 diferentes valem pra qualquer carta.
  */
-const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha.<br><b>5 DIFERENTES</b>: você pega a carta que quiser do descarte.<br>Combos podem levar Nem vem!.';
+const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha.<br><b>5 DIFERENTES</b>: você pega <b>duas cartas</b> que quiser do descarte (do jeito que ele estava antes da jogada), uma de cada vez, no quadro do descarte.<br>Combos podem levar Nem vem!.';
 const PAIR_DETAIL = {
-  mico: '<b>PAR DE MICO</b>: escolha um adversário; ele escolhe uma carta da mão dele pra te dar. Só vocês dois sabem qual foi.',
+  mico: '<b>PAR DE MICO</b>: <b>todo mundo, menos você, descarta uma carta</b> à escolha, todos ao mesmo tempo (30 segundos; depois vai uma ao acaso). O efeito da carta descartada não vale, e todos veem o que foi pro descarte.',
   quati: '<b>PAR DE QUATI</b>: só você vê a carta de cima do monte e decide se ela fica em cima ou vai pro fundo. Todo mundo sabe se foi pro fundo, ninguém sabe qual era.',
   tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
 };
 const DETAIL = {
-  tatubum: 'O tatu-bola com o pavio aceso. Comprou esta carta e não tem Desarme? <b>Explodiu</b> e saiu do jogo.<br>Com Desarme, o tatu soldado corta o fio e você esconde o Tatubum de volta no monte, onde quiser.<br>O monte tem sempre um Tatubum a menos que o número de jogadores vivos.',
-  cafune: 'Usado sozinho, na hora em que você compra um Tatubum: o tatu soldado corta o fio e você não explode.<br>Você escolhe <b>em segredo</b> onde o Tatubum volta no monte (no topo, no fundo, em qualquer posição ou ao acaso) e gasta um turno.<br>Não dá pra jogar Desarme fora dessa hora, nem cancelar com Nem vem!.',
+  tatubum: 'O tatu-bola com o pavio aceso. Comprou esta carta e não tem Desarme? <b>Explodiu</b> e saiu do jogo.<br>Com Desarme, <b>você joga o Desarme</b> (30 segundos, senão ele vai sozinho), o tatu soldado corta o fio e você esconde o Tatubum de volta no monte, onde quiser.<br>O monte tem sempre um Tatubum a menos que o número de jogadores vivos.',
+  cafune: 'Você joga na hora em que compra um Tatubum: <b>arraste o Desarme pro tatu</b> (ou clique nele). Tem 30 segundos; se não jogar, ele vai sozinho e o tatu volta pra um lugar sorteado.<br>O tatu soldado corta o fio e você não explode. Aí você escolhe <b>em segredo</b> onde o Tatubum volta no monte (no topo, no fundo, em qualquer posição ou ao acaso) e gasta um turno.<br>Não dá pra jogar Desarme fora dessa hora, nem cancelar com Nem vem!.',
   nemvem: 'Cancela a carta que está no ar, <b>mesmo fora da sua vez</b>.<br>Toda carta jogada fica 5 segundos no ar esperando um Nem vem!, e cada Nem vem! recomeça os 5 segundos.<br>Dá pra dar Nem vem! no Nem vem!: conta quantos foram, número ímpar cancela e par deixa valer.<br>Não cancela o Tatubum nem o Desarme.',
   ataque: 'Termina a sua vez <b>sem comprar</b>, e o próximo joga <b>2 turnos</b> seguidos.<br>Se você estava sob ataque, passa os turnos que você ainda devia + 2 (2 → 4 → 6…).<br>Pode levar Nem vem!.',
   pular: 'Termina um turno seu <b>sem comprar</b> carta.<br>Se você estava sob ataque (devendo 2 turnos), gasta só um deles e continua na vez.<br>Pode levar Nem vem!.',
@@ -1344,6 +1658,8 @@ function zoom(id) {
   Sound.play('zoom');
 }
 stage.addEventListener('wheel', (e) => {
+  // No quadro do descarte a rodinha rola a lista (o zoom lá é passar o mouse).
+  if (e.target.closest('#pile')) return;
   const card = e.target.closest('.card[data-id]');
   if (!card) { zoom(null); return; }
   e.preventDefault();
@@ -1353,7 +1669,7 @@ stage.addEventListener('wheel', (e) => {
 // ---------------------------------------------------------------- galeria das cartas
 const ABOUT = {
   tatubum: 'Comprou e não tem Desarme? Explodiu, tá fora. Tem sempre um a menos que o número de jogadores.',
-  cafune: 'O tatu soldado corta o fio na hora em que você compra o Tatubum: o tatu volta pro monte onde você quiser, em segredo.',
+  cafune: 'Jogue quando comprar o Tatubum (30 s, senão vai sozinho): o tatu soldado corta o fio e o tatu volta pro monte onde você quiser, em segredo.',
   nemvem: 'Cancela a carta no ar, mesmo fora da sua vez. Dá pra dar Nem vem! no Nem vem!.',
   ataque: 'Termina sua vez sem comprar. O próximo joga 2 turnos (ou os seus + 2, se você estava sob ataque).',
   pular: 'Termina um turno seu sem comprar.',
@@ -1361,7 +1677,7 @@ const ABOUT = {
   embaralhar: 'Embaralha o monte. Bom quando você sabe que tem tatu em cima.',
   espiar: 'Você vê as 3 cartas de cima do monte. Só você.',
   capivara: 'Par: todo mundo, menos você, passa uma carta pro próximo.',
-  mico: 'Par: um adversário escolhe uma carta pra te dar.',
+  mico: 'Par: todo mundo, menos você, descarta uma carta (o efeito não vale).',
   quati: 'Par: vê a de cima e decide se vai pro fundo.',
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir.',
@@ -1369,7 +1685,7 @@ const ABOUT = {
 $('#cards').onclick = () => {
   const g = $('#gallery');
   const kinds = ['tatubum', 'cafune', 'nemvem', 'ataque', 'pular', 'favor', 'embaralhar', 'espiar', 'capivara', 'mico', 'quati', 'tamandua', 'preguica'];
-  g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa) · TRIO de qualquer carta rouba um Desarme · 5 DIFERENTES pega uma do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!.</p></div>';
+  g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa) · TRIO de qualquer carta rouba um Desarme · 5 DIFERENTES pega DUAS do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!. O olho ao lado do descarte mostra todas as cartas da pilha.</p></div>';
   const grid = g.querySelector('.grid');
   kinds.forEach((k, i) => {
     const item = document.createElement('div');

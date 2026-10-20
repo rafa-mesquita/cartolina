@@ -131,6 +131,9 @@ var Tatubum = (() => {
     if (state.owed > 1) return { ...state, owed: state.owed - 1, peek: null };
     return passTo(state, nextAlive(state, state.current), 1);
   }
+  function heldTatu(choice) {
+    return choice?.kind === "tatu" || choice?.kind === "cafune" ? choice.tatu : null;
+  }
   function tatusIn(cards) {
     return cards.filter((c) => kittensKindOf(c) === "tatubum").length;
   }
@@ -138,6 +141,7 @@ var Tatubum = (() => {
     if (state.alive.length > 1) return state;
     const winner = state.alive[0] ?? null;
     const { pending, choice } = state;
+    const held = heldTatu(choice);
     const ended = {
       ...state,
       phase: "gameover",
@@ -145,7 +149,7 @@ var Tatubum = (() => {
       current: null,
       owed: 0,
       discard: pending ? [...state.discard, ...pending.play.cards, ...pending.nopes.map((n) => n.card)] : state.discard,
-      out: choice?.kind === "cafune" ? [...state.out, choice.tatu] : state.out,
+      out: held !== null ? [...state.out, held] : state.out,
       pending: null,
       choice: null,
       peek: null
@@ -157,7 +161,7 @@ var Tatubum = (() => {
     let draw = state.draw;
     let peek = state.peek;
     let out = [...state.out, ...extraOut, ...state.hands[p] ?? []];
-    const held = state.choice?.kind === "cafune" ? 1 : 0;
+    const held = heldTatu(state.choice) !== null ? 1 : 0;
     if (tatusIn(draw) > 0 && tatusIn(draw) + held > alive.length - 1) {
       const i = draw.findIndex((c) => kittensKindOf(c) === "tatubum");
       out = [...out, draw[i]];
@@ -179,6 +183,11 @@ var Tatubum = (() => {
     const draw = [...s.draw.slice(0, at), c.tatu, ...s.draw.slice(at)];
     return spendTurn(logged({ ...s, draw, choice: null }, { t: "hid", by: c.who }));
   }
+  function useCafune(s, c, card, deadline) {
+    const hands = { ...s.hands, [c.who]: s.hands[c.who].filter((x) => x !== card) };
+    const choice = { kind: "cafune", who: c.who, tatu: c.tatu, deadline };
+    return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: "cafune", by: c.who });
+  }
   function giveFavor(s, c, card) {
     const hands = {
       ...s.hands,
@@ -189,7 +198,17 @@ var Tatubum = (() => {
   }
   function pickFromDiscard(s, c, card) {
     const hands = { ...s.hands, [c.who]: [...s.hands[c.who], card] };
-    return logged({ ...s, discard: s.discard.filter((x) => x !== card), hands, choice: null }, { t: "picked", by: c.who, card });
+    const discard = s.discard.filter((x) => x !== card);
+    const options = c.options.filter((x) => x !== card && discard.includes(x));
+    const left = c.left - 1;
+    const choice = left > 0 && options.length > 0 ? { ...c, options, left } : null;
+    return logged({ ...s, discard, hands, choice }, { t: "picked", by: c.who, card });
+  }
+  function discardForMico(s, c, p, card) {
+    const hands = { ...s.hands, [p]: s.hands[p].filter((x) => x !== card) };
+    const waiting = c.waiting.filter((x) => x !== p);
+    const choice = waiting.length > 0 ? { ...c, waiting } : null;
+    return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: "discarded", by: p, card });
   }
   function delayTop(s, c, keep) {
     const draw = keep ? s.draw : [s.draw.at(-1), ...s.draw.slice(0, -1)];
@@ -198,6 +217,12 @@ var Tatubum = (() => {
   function chooseAtRandom(s, rng) {
     const c = s.choice;
     switch (c.kind) {
+      case "tatu": {
+        const card = s.hands[c.who].find((x) => kittensKindOf(x) === "cafune");
+        if (card === void 0) return eliminate(logged({ ...s, choice: null }, { t: "boom", by: c.who }), c.who, [c.tatu]);
+        const used = useCafune(s, c, card, c.deadline);
+        return hideTatu(used, used.choice, "random", rng);
+      }
       case "cafune":
         return hideTatu(s, c, "random", rng);
       case "favor": {
@@ -205,8 +230,21 @@ var Tatubum = (() => {
         return hand.length === 0 ? { ...s, choice: null } : giveFavor(s, c, hand[randomInt(rng, hand.length)]);
       }
       case "cinco": {
-        const options = c.options.filter((x) => s.discard.includes(x));
-        return options.length === 0 ? { ...s, choice: null } : pickFromDiscard(s, c, options[randomInt(rng, options.length)]);
+        let next = s;
+        while (next.choice?.kind === "cinco") {
+          const cur = next.choice;
+          const options = cur.options.filter((x) => next.discard.includes(x));
+          next = options.length === 0 ? { ...next, choice: null } : pickFromDiscard(next, cur, options[randomInt(rng, options.length)]);
+        }
+        return next;
+      }
+      case "mico": {
+        let next = s;
+        for (const p of c.waiting) {
+          const hand = next.hands[p];
+          if (hand.length > 0) next = discardForMico(next, next.choice, p, hand[randomInt(rng, hand.length)]);
+        }
+        return { ...next, choice: null };
       }
       case "quati":
         return delayTop(s, c, true);
@@ -278,7 +316,7 @@ var Tatubum = (() => {
     const kind = playKindOf(kinds);
     if (kind === null) return "bad_combo";
     let target = null;
-    if (kind === "favor" || kind === "par" && kinds[0] === "mico") {
+    if (kind === "favor") {
       const t = action.target;
       if (t === void 0 || t === p || !s.alive.includes(t) || (s.hands[t]?.length ?? 0) === 0) return "bad_target";
       target = t;
@@ -333,8 +371,10 @@ var Tatubum = (() => {
   function applyPair(s, by, play, ctx) {
     const deadline = ctx.now + KITTENS_CHOICE_MS;
     switch (kittensKindOf(play.cards[0])) {
-      case "mico":
-        return { ...s, choice: { kind: "favor", who: play.target, to: by, deadline } };
+      case "mico": {
+        const waiting = s.alive.filter((p) => p !== by && s.hands[p].length > 0);
+        return waiting.length === 0 ? s : { ...s, choice: { kind: "mico", by, waiting, deadline } };
+      }
       case "quati":
         return { ...s, choice: { kind: "quati", who: by, deadline } };
       case "tamandua":
@@ -373,7 +413,7 @@ var Tatubum = (() => {
       case "trio":
         return applyTrio(s, by, ctx);
       case "cinco":
-        return before.length === 0 ? s : { ...s, choice: { kind: "cinco", who: by, options: before, deadline: ctx.now + KITTENS_CHOICE_MS } };
+        return before.length === 0 ? s : { ...s, choice: { kind: "cinco", who: by, options: before, left: Math.min(2, before.length), deadline: ctx.now + KITTENS_CHOICE_MS } };
     }
   }
   function resolvePending(s, ctx) {
@@ -389,8 +429,12 @@ var Tatubum = (() => {
   // shared/src/games/kittens/settle.ts
   function leave(state, p, ctx) {
     let s = state;
-    if (s.choice?.who === p) s = chooseAtRandom(s, ctx.rng);
-    else if (s.choice?.kind === "favor" && s.choice.to === p) s = { ...s, choice: null };
+    const c = s.choice;
+    if (c?.kind === "mico") {
+      const waiting = c.waiting.filter((x) => x !== p);
+      if (waiting.length !== c.waiting.length) s = { ...s, choice: waiting.length > 0 ? { ...c, waiting } : null };
+    } else if (c?.who === p) s = chooseAtRandom(s, ctx.rng);
+    else if (c?.kind === "favor" && c.to === p) s = { ...s, choice: null };
     return eliminate(logged(s, { t: "left", by: p }), p);
   }
   function settleKittens(state, ctx) {
@@ -449,18 +493,10 @@ var Tatubum = (() => {
     if (kittensKindOf(card) !== "tatubum") {
       return spendTurn(logged({ ...s, draw, hands: { ...s.hands, [p]: [...hand, card] } }, { t: "draw", by: p, card }, [p]));
     }
-    const cafune = hand.find((c) => kittensKindOf(c) === "cafune");
-    if (cafune === void 0) return eliminate(logged({ ...s, draw }, { t: "boom", by: p }), p, [card]);
+    if (!hand.some((c) => kittensKindOf(c) === "cafune")) return eliminate(logged({ ...s, draw }, { t: "boom", by: p }), p, [card]);
     return logged(
-      {
-        ...s,
-        draw,
-        peek: null,
-        hands: { ...s.hands, [p]: hand.filter((c) => c !== cafune) },
-        discard: [...s.discard, cafune],
-        choice: { kind: "cafune", who: p, tatu: card, deadline: ctx.now + KITTENS_CHOICE_MS }
-      },
-      { t: "cafune", by: p }
+      { ...s, draw, peek: null, choice: { kind: "tatu", who: p, tatu: card, deadline: ctx.now + KITTENS_CHOICE_MS } },
+      { t: "tatu", by: p }
     );
   }
   function applyKittensAction(state, playerId, action, ctx) {
@@ -487,8 +523,19 @@ var Tatubum = (() => {
       case "choose": {
         if (s.phase !== "playing") return fail("bad_phase");
         const c = s.choice;
-        if (!c || c.who !== playerId) return fail("not_your_choice");
+        if (!c) return fail("not_your_choice");
+        if (c.kind === "mico") {
+          if (!c.waiting.includes(playerId)) return fail("not_your_choice");
+          if (action.card === void 0 || !s.hands[playerId].includes(action.card)) return fail("bad_choice");
+          return ok(discardForMico(s, c, playerId, action.card));
+        }
+        if (c.who !== playerId) return fail("not_your_choice");
         switch (c.kind) {
+          case "tatu":
+            if (action.card === void 0 || !s.hands[playerId].includes(action.card) || kittensKindOf(action.card) !== "cafune") {
+              return fail("bad_choice");
+            }
+            return ok(useCafune(s, c, action.card, ctx.now + KITTENS_CHOICE_MS));
           case "cafune": {
             const { position } = action;
             if (position === void 0) return fail("bad_choice");
@@ -558,6 +605,7 @@ var Tatubum = (() => {
     const c = state.choice;
     if (c === null) return null;
     switch (c.kind) {
+      case "tatu":
       case "cafune": {
         const { kind, who, deadline } = c;
         return { kind, who, deadline };

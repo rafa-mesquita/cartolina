@@ -264,7 +264,7 @@
     embaralhar: { band: '#8e5cc4', hint: 'mistura o monte' },
     espiar: { band: '#2f8f8f', hint: 'vê as 3 de cima' },
     capivara: { band: '#3b8a4a', hint: 'par: roda' },
-    mico: { band: '#3b8a4a', hint: 'par: me dá uma' },
+    mico: { band: '#3b8a4a', hint: 'par: todos descartam' },
     quati: { band: '#3b8a4a', hint: 'par: vê a de cima' },
     tamandua: { band: '#3b8a4a', hint: 'par: compra 2' },
     preguica: { band: '#3b8a4a', hint: 'par: puxa um bicho' },
