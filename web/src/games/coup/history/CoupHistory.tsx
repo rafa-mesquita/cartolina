@@ -5,7 +5,13 @@ import { CHARACTER_NAMES } from '../names';
 import { useCoupHistory } from './useCoupHistory';
 import './coup-history.css';
 
-const dateFmt = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+const dateFmt = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 /** "Ana", "Ana e Beto", "Ana, Beto e Caio". */
 function joinNames(names: readonly string[]): string {
@@ -18,7 +24,8 @@ function matchLabel(m: CoupMatchRecord, date: string): string {
   const cards = m.winnerCards.map((c) => CHARACTER_NAMES[c]);
   const parts = [date, `${m.winner.name} tomou o poder${cards.length ? ` com ${joinNames(cards)}` : ''}`];
   parts.push(`jogaram ${joinNames(m.players.map((p) => p.name))}`);
-  if (m.out.length) parts.push(`saíram ${joinNames(m.out.map((p) => p.name))}`);
+  // em ordem: "saíram Caio, depois Ana"
+  if (m.out.length) parts.push(`saíram ${m.out.map((p) => p.name).join(', depois ')}`);
   return parts.join(' · ');
 }
 

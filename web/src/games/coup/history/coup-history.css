@@ -47,7 +47,11 @@
 .cph-out { margin: 0; font-size: 13px; color: var(--faded); }
 
 .cph-more { display: block; margin: 18px auto 0; }
-.cph-error { margin: 10px 0 0; text-align: center; color: var(--red); font-size: 14px; }
+/* texto em tinta (vermelho no creme não chega a AA); o vermelho fica no marcador à esquerda */
+.cph-error {
+  width: fit-content; max-width: 100%; box-sizing: border-box; margin: 10px auto 0; padding: 4px 10px;
+  border-left: 4px solid var(--red); background: var(--paper); color: var(--ink); font-size: 14px;
+}
 
 .cph-empty, .cph-fail { padding: 18px 0 6px; text-align: center; }
 .cph-empty p { margin: 0; color: var(--faded); }

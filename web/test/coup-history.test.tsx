@@ -52,7 +52,9 @@ function coupResponse(matches: CoupMatchRecord[], nextBefore: number | null = nu
 }
 
 const dateText = (ms: number) =>
-  new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
+  new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(
+    new Date(ms),
+  );
 
 const items = (container: HTMLElement) => [...container.querySelectorAll<HTMLElement>('li.cph-match')];
 
@@ -91,7 +93,7 @@ describe('aba histórico do Cúpi', () => {
     expect(first!.querySelector('.cph-out')!.textContent).toBe('saíram: Caio → Ana');
     // a frase inteira pra leitor de tela
     expect(first!.getAttribute('aria-label')).toBe(
-      `${dateText(AT_NEW)} · Beto tomou o poder com Assassino · jogaram Ana, Beto e Caio · saíram Caio e Ana`,
+      `${dateText(AT_NEW)} · Beto tomou o poder com Assassino · jogaram Ana, Beto e Caio · saíram Caio, depois Ana`,
     );
     // a segunda: duas cartas do vencedor
     const s = within(second!);
@@ -102,6 +104,33 @@ describe('aba histórico do Cúpi', () => {
     expect(second!.getAttribute('aria-label')).toBe(
       `${dateText(AT_OLD)} · Ana tomou o poder com Duque e Condessa · jogaram Ana e Beto · saíram Beto`,
     );
+  });
+
+  it('com 3 ou mais saídas, o leitor de tela ouve a ordem: "saíram Beto, depois Duda, depois Caio"', async () => {
+    const DUDA: CoupPerson = { name: 'Duda', color: PLAYER_COLORS[3] };
+    const four: CoupMatchRecord = {
+      ...NEWER,
+      id: 'c3',
+      players: [ANA, BETO, CAIO, DUDA],
+      out: [BETO, DUDA, CAIO],
+      winner: ANA,
+      winnerCards: ['captain'],
+    };
+    vi.mocked(api.getHistory).mockResolvedValue(coupResponse([four]));
+    const { container } = render(<CoupHistory />);
+    await screen.findByText('4 jogadores');
+    const [li] = items(container);
+    expect(li!.querySelector('.cph-out')!.textContent).toBe('saíram: Beto → Duda → Caio');
+    expect(li!.getAttribute('aria-label')).toBe(
+      `${dateText(AT_NEW)} · Ana tomou o poder com Capitão · jogaram Ana, Beto, Caio e Duda · saíram Beto, depois Duda, depois Caio`,
+    );
+  });
+
+  it('a data mostra o ano', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(coupResponse([NEWER]));
+    const { container } = render(<CoupHistory />);
+    await screen.findByText('3 jogadores');
+    expect(container.querySelector('.cph-meta')!.textContent).toContain('2026');
   });
 
   it('sem partidas: convite curto', async () => {
