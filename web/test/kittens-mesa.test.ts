@@ -450,6 +450,8 @@ describe('mesa do Tatubum', () => {
     expect(root.querySelector('#viewer h3')?.textContent).toBe('CARTA VIRADA');
     clickCard(root, '?1');
     buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    expect(sent).toEqual([]);
+    buttonByText(root, 'SEM ALVO')!.click();
     expect(sent).toEqual([{ type: 'play', cards: ['?1'] }]);
     mesa.destroy();
 
@@ -523,6 +525,191 @@ describe('mesa do Tatubum', () => {
     expect(errors).not.toHaveBeenCalled();
     mesa.destroy();
     errors.mockRestore();
+  });
+
+  it('Boto + Preguiça é par de Preguiça: pede o bicho puxado (`ask`)', () => {
+    const v = midGame('p1');
+    const pair = ['boto-90', 'preguica-91'];
+    v.game.hand = [...pair, ...v.game.hand];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    for (const id of pair) clickCard(root, id);
+    buttonByText(root, 'JOGAR PAR')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#panel h2')?.textContent).toBe('QUE BICHO VOCÊ PUXA?');
+    buttonByText(root, KITTENS_CARD_NAMES.quati.toUpperCase())!.click();
+    expect(sent).toEqual([{ type: 'play', cards: pair, ask: 'quati' }]);
+    mesa.destroy();
+  });
+
+  it('cego com 1 ficha: JOGAR ÀS CEGAS pergunta o alvo (adversário ou SEM ALVO); solta num assento vai com o alvo', () => {
+    const v = midGame('p1');
+    v.game.blind = ['p1'];
+    v.game.hand = ['?0', '?1', '?2'];
+    v.game.handCounts = { ...v.game.handCounts, p2: 0 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, '?1');
+    buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('SE PRECISAR DE ALVO, EM QUEM?');
+    // Não dá pra saber se é Favor ou Mau-olhado: qualquer adversário vivo (até sem carta) vale.
+    const p2 = root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!;
+    expect(p2.classList.contains('targetable')).toBe(true);
+    p2.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['?1'], target: 'p2' }]);
+    // Recusou: tenta de novo sem alvo.
+    mesa.error('Assim não forma jogada.');
+    expect(root.querySelector('#caption')?.textContent).toBe('');
+    buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    buttonByText(root, 'SEM ALVO')!.click();
+    expect(sent[1]).toEqual({ type: 'play', cards: ['?1'] });
+    mesa.error('Assim não forma jogada.');
+    // Ficha solta num adversário: vai direto com ele de alvo.
+    dragCard(root, '?2', root.querySelector('.kt-seat[data-p="p0"]')!);
+    expect(sent[2]).toEqual({ type: 'play', cards: ['?2'], target: 'p0' });
+    mesa.destroy();
+  });
+
+  it('cego com 2 fichas: JOGAR ÀS CEGAS pergunta o bicho (vai em `ask` e `as`) ou PULAR', () => {
+    const v = midGame('p1');
+    v.game.blind = ['p1'];
+    v.game.hand = ['?0', '?1', '?2'];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, '?0');
+    clickCard(root, '?2');
+    buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
+    expect(root.querySelector('#panel h2')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
+    const names = [...root.querySelectorAll('#panel .kt-row button')].map((b) => b.textContent?.trim());
+    expect(names).toEqual([...KITTENS_BICHOS.map((k) => KITTENS_CARD_NAMES[k].toUpperCase()), 'PULAR', 'CANCELAR']);
+    buttonByText(root, KITTENS_CARD_NAMES.mico.toUpperCase())!.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['?0', '?2'], ask: 'mico', as: 'mico' }]);
+    mesa.error('Assim não forma jogada.');
+    expect(root.querySelector('#panel')?.innerHTML).toBe('');
+    buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    buttonByText(root, 'PULAR')!.click();
+    expect(sent[1]).toEqual({ type: 'play', cards: ['?0', '?2'] });
+    mesa.destroy();
+  });
+
+  it('cego: o Mau-olhado de novo (mesmo tamanho de mão) desfaz a seleção das fichas', () => {
+    const v = midGame('p1');
+    v.game.blind = ['p1'];
+    v.game.hand = ['?0', '?1', '?2'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, '?1');
+    expect(root.querySelectorAll('#hand .kt-card.sel')).toHaveLength(1);
+    const n = v.game.log.at(-1)!.n;
+    mesa.update(toMesa({ ...v, game: { ...v.game, log: [...v.game.log, { n: n + 1, ev: { t: 'cursed', by: 'p0', target: 'p1' } }] } }));
+    expect(root.querySelectorAll('#hand .kt-card.sel')).toHaveLength(0);
+    expect(buttonByText(root, 'JOGAR ÀS CEGAS')).toBeUndefined();
+    mesa.destroy();
+  });
+
+  it('cego se defendendo do Latidor: qualquer ficha (clique, arrasto ou o botão) vai como o Desarme', () => {
+    const v = midGame('p1');
+    v.game.blind = ['p1'];
+    v.game.hand = ['?0', '?1', '?2'];
+    v.game.choice = { kind: 'latido', who: 'p1', deadline: Date.now() + 30_000 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#hand')?.classList.contains('giving')).toBe(true);
+    expect(root.querySelector('#hand')?.classList.contains('defusing')).toBe(false);
+    expect(root.querySelector('#caption')?.textContent).toContain('Solte uma carta virada no Latidor');
+    clickCard(root, '?2');
+    expect(sent).toEqual([{ type: 'choose', card: '?2' }]);
+    dragCard(root, '?1', root.querySelector('.bigcard')!);
+    expect(sent[1]).toEqual({ type: 'choose', card: '?1' });
+    buttonByText(root, 'JOGAR DESARME')!.click();
+    expect(sent[2]).toEqual({ type: 'choose', card: '?0' });
+    mesa.destroy();
+  });
+
+  it('sem Desarme pro Latidor: a explosão diz que foi o Latidor (não um Tatubum comprado)', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const n = v.game.log.at(-1)!.n;
+    const log = [...v.game.log, { n: n + 1, ev: { t: 'barked', by: 'p1', target: 'p2' } as KittensEvent }, { n: n + 2, ev: { t: 'boom', by: 'p2' } as KittensEvent }];
+    mesa.update(toMesa({ ...v, game: { ...v.game, alive: ['p0', 'p1'], log } }));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(root.querySelector('#caption')?.textContent).toBe('P2 não tinha Desarme pro Latidor…');
+    expect(root.querySelector<HTMLElement>('.bigcard')?.dataset.id).toBe('latido-0');
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(root.querySelector('#log')?.textContent).toContain('P2 EXPLODIU!');
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+    errors.mockRestore();
+  });
+
+  it('pulou a fila depois de um latido: o Desarme de um Tatubum comprado depois não vira o do Latidor', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    let n = v.game.log.at(-1)!.n;
+    const next = (patch: Partial<KittensRoomView['game']>, ev: KittensEvent, skip = 1) => {
+      n += skip;
+      v.game = { ...v.game, ...patch, log: [...v.game.log, { n, ev }] };
+      mesa.update(toMesa(v));
+    };
+    const deadline = Date.now() + 30_000;
+    next({ current: 'p0', choice: { kind: 'latido', who: 'p2', deadline } }, { t: 'barked', by: 'p0', target: 'p2' });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(root.querySelector<HTMLElement>('.bigcard')?.dataset.id).toBe('latido-0');
+    // Reconectou e perdeu entradas: o Desarme do P2 contra o Latidor chega pulado.
+    next({ choice: null }, { t: 'cafune', by: 'p2' }, 5);
+    expect(root.querySelector('.bigcard')).toBeNull();
+    // Depois o P2 compra um Tatubum e joga o Desarme: é o tatu de sempre (com o soldado), sem Latidor.
+    next({ current: 'p2', choice: { kind: 'tatu', who: 'p2', deadline } }, { t: 'tatu', by: 'p2' });
+    await vi.advanceTimersByTimeAsync(1500);
+    next({ choice: { kind: 'cafune', who: 'p2', deadline } }, { t: 'cafune', by: 'p2' });
+    await vi.advanceTimersByTimeAsync(50);
+    expect(root.querySelector('.bigcard[data-id^="latido"]')).toBeNull();
+    expect(root.querySelector('.bigcard[data-id^="tatubum"]')).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(root.querySelector('.soldier')).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+    errors.mockRestore();
+  });
+
+  it('cego: puxou da Preguiça ou roubou o Desarme sem ver a carta, o diário diz de quem', async () => {
+    const v = midGame('p1');
+    v.game.blind = ['p1'];
+    v.game.hand = ['?0', '?1'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const n = v.game.log.at(-1)!.n;
+    const log = [
+      ...v.game.log,
+      { n: n + 1, ev: { t: 'called', by: 'p1', ask: 'mico', from: 'p2', card: null } as KittensEvent },
+      { n: n + 2, ev: { t: 'grabbed', by: 'p1', from: 'p0', card: null } as KittensEvent },
+    ];
+    mesa.update(toMesa({ ...v, game: { ...v.game, hand: ['?0', '?1', '?2', '?3'], log } }));
+    await vi.advanceTimersByTimeAsync(3000);
+    const text = root.querySelector('#log')?.textContent ?? '';
+    expect(text).toContain('Você puxou um bicho de P2');
+    expect(text).not.toContain('Ninguém tinha');
+    expect(text).toContain('Você roubou o DESARME de P0');
+    mesa.destroy();
+  });
+
+  it('a dica do Latidor na frente de alguém usa o nome sem escapar', () => {
+    const v = midGame('p1');
+    v.game.front = { p0: ['latido-0'], p1: [], p2: [] };
+    const s = toMesa(v);
+    const seats = s.seats.map((x) => (x.id === 'p0' ? { ...x, name: 'Ana & <Bia>' } : x));
+    const { root, mesa } = mount();
+    mesa.update({ ...s, seats });
+    expect(root.querySelector<HTMLElement>('.kt-seat[data-p="p0"] .kt-front')?.title).toBe('Na frente de Ana & <Bia>');
+    mesa.destroy();
   });
 
   it('nenhuma regra sem escopo do CSS do site pega classe da mesa', async () => {

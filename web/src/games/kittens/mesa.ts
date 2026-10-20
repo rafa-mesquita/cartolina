@@ -168,7 +168,10 @@ const TIMER = '<span class="timer" data-timer></span>';
 const ASK_CAPTION = 'Que bicho você quer puxar?';
 const AS_CAPTION = 'Que bicho o Boto vira?';
 const TARGET_CAPTION = 'Escolha um adversário <span class="timer">↑</span>';
-const MODE_CAPTIONS: readonly string[] = [ASK_CAPTION, AS_CAPTION, TARGET_CAPTION];
+/** Cego: depois de JOGAR ÀS CEGAS, o que uma carta escondida poderia pedir (1 ficha: alvo; 2 fichas: o bicho). */
+const BLIND_TARGET_CAPTION = 'SE PRECISAR DE ALVO, EM QUEM? <span class="timer">↑</span>';
+const BLIND_BICHO_CAPTION = 'SE FOR PREGUIÇA OU BOTO, QUAL BICHO?';
+const MODE_CAPTIONS: readonly string[] = [ASK_CAPTION, AS_CAPTION, TARGET_CAPTION, BLIND_TARGET_CAPTION, BLIND_BICHO_CAPTION];
 
 /** O que uma jogada forma e o bicho que ela vale (par/trio). */
 interface PlayGuess {
@@ -273,7 +276,11 @@ type Mode =
   | { type: 'target'; play: PlayReq; kind: KittensPlayKind }
   | { type: 'ask'; play: PlayReq }
   /** Par de 2 Botos: falta dizer que bicho ele vira. */
-  | { type: 'as'; play: PlayReq };
+  | { type: 'as'; play: PlayReq }
+  /** Cego com 1 ficha: se a carta pedir alvo (Favor, Mau-olhado), em quem (ou sem alvo). */
+  | { type: 'blindTarget'; play: PlayReq }
+  /** Cego com 2 fichas: se forem par de Preguiça ou 2 Botos, o bicho (vai em `ask` e `as`; ou pula). */
+  | { type: 'blindBicho'; play: PlayReq };
 type DropTarget =
   | { type: 'tatu'; el: Element }
   | { type: 'seat'; p: string; el: Element }
@@ -361,6 +368,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   const seatOf = (p: string): SeatView | undefined => seats.find((s) => s.id === p);
   /** Nome pra pôr no HTML (escapado); "Você" pra quem está nesta tela. */
   const nameOf = (p: string): string => (p === ME ? 'Você' : esc(seatOf(p)?.name ?? p));
+  /** Nome sem escapar (pra propriedades do DOM, como `title`). */
+  const rawName = (p: string): string => (p === ME ? 'Você' : seatOf(p)?.name ?? p);
   const upName = (p: string): string => (p === ME ? 'VOCÊ' : esc((seatOf(p)?.name ?? p).toUpperCase()));
   const colorOf = (p: string): string => seatOf(p)?.color ?? '#9fb0d8';
   /** Quem só assiste (entrou depois ou não tem lugar): mesa só de leitura. */
@@ -438,6 +447,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     else if (tatuFx) clearTatu();
     if (view.choice?.kind === 'latido') showBark();
     else if (barkFx) clearBark();
+    // Sem defesa do Latidor nem Feitiço abertos, as marcas não valem mais (senão uma animação de depois as herdaria).
+    if (view.choice?.kind !== 'latido') barkAt = null;
+    if (view.choice?.kind !== 'feitico') conjureFrom = null;
     if (view.phase === 'gameover' && overStage !== 'full') overStage = 'full';
     render();
   }
@@ -451,6 +463,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       try { it.skip?.(); } catch (e) { console.error(e); }
     }
     holdPanel = running && holdPanel;
+    // Os efeitos pulados (o Desarme contra o Latidor, a compra do Feitiço) não vão limpar essas marcas.
+    barkAt = null;
+    conjureFrom = null;
     settle();
     sayState();
   }
@@ -496,7 +511,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
 
   function onState(next: KittensView): void {
     const prev = view;
-    const rects = handRects();
+    const rects = cardRects();
     view = next;
     const v = next;
     // A resposta da jogada chegou (ou a vez andou): o pedido não está mais no ar.
@@ -535,8 +550,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     for (const p of v.players) for (const id of v.front[p] ?? []) if (prev && !(prev.front[p] ?? []).includes(id)) frontHidden.add(id);
     if (fresh.some((e) => e.ev.t === 'play' || e.ev.t === 'nope')) airHidden = true;
     for (const id of [...selected]) if (!v.hand.includes(id)) selected.delete(id);
-    // Cego: as fichas andam quando uma carta sai ou chega (a ficha ?2 pode ser outra carta agora); a seleção não vale mais.
-    if (flipped || (v.blind.includes(ME) && prev && prev.hand.length !== v.hand.length)) selected.clear();
+    // Cego: as fichas andam quando uma carta sai ou chega, ou quando o Mau-olhado embaralha de novo (a ficha ?2 pode ser
+    // outra carta agora, mesmo com a mão do mesmo tamanho): a seleção, a ordem da mão e a jogada pela metade não valem mais.
+    const handMoved = !!prev && (prev.hand.length !== v.hand.length || prev.hand.some((id, i) => v.hand[i] !== id));
+    if (flipped || (v.blind.includes(ME) && prev && (handMoved || fresh.some((e) => involves(e.ev, ME))))) {
+      selected.clear();
+      handOrder = [];
+      if (mode) dropMode();
+    }
     if (v.phase !== 'playing' || v.current !== ME || v.pending || v.choice) mode = null;
     if (prev && prev.current !== ME && v.current === ME && v.phase === 'playing') Sound.play('turn');
     render();
@@ -571,9 +592,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     for (const e of log) if ((e.ev.t === 'boom' || e.ev.t === 'left') && e.ev.by === ME) outBy = e.ev.t;
   }
 
-  function handRects(): Record<string, Box> {
+  /** Onde está cada carta da mão e as da frente de cada um (de onde as animações saem, antes do redesenho). */
+  function cardRects(): Record<string, Box> {
     const out: Record<string, Box> = {};
-    wrap.querySelectorAll<HTMLElement>('#hand .kt-card').forEach((el) => { if (el.dataset.id) out[el.dataset.id] = Fx.box(el); });
+    wrap.querySelectorAll<HTMLElement>('#hand .kt-card, #front .kt-card, .kt-seat .kt-front .kt-card').forEach((el) => { if (el.dataset.id) out[el.dataset.id] = Fx.box(el); });
     return out;
   }
 
@@ -603,10 +625,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     el.style.backgroundImage = 'url(' + sceneUrl(k) + ')';
     // A faixa do topo é sempre um tom mais escuro do fundo da carta (pedido do Rafa).
     const band = Sprites.shade(CARD_COLOR[k], -0.25);
-    // Todas as cartas têm arte do Flow com o fundo recortado; os sprites ficam só de reserva.
-    const flow = ART[k];
-    const art = flow ? `<img class="art flow" src="${flow}" alt="">` : `<img class="art" src="${Sprites.card(k).url}" alt="">`;
-    el.innerHTML = `<div class="band" style="background:${band}"></div>${art}<div class="kt-name">${cardName(k)}</div><div class="kt-hint">${st.hint}</div>`;
+    // Todas as cartas têm arte do Flow com o fundo recortado (o que não é carta, como a ficha do cego, é verso, acima).
+    el.innerHTML = `<div class="band" style="background:${band}"></div><img class="art flow" src="${ART[k]}" alt=""><div class="kt-name">${cardName(k)}</div><div class="kt-hint">${st.hint}</div>`;
     return el;
   }
 
@@ -707,7 +727,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       if (dead) el.classList.add('dead');
       if (v.winner === p) el.classList.add('winner');
       if (v.current === p) el.classList.add('turn');
-      if (mode?.type === 'target' && validTarget(p)) {
+      if ((mode?.type === 'target' || mode?.type === 'blindTarget') && validTarget(p)) {
         el.classList.add('targetable');
         el.onclick = () => chooseTarget(p);
       }
@@ -737,7 +757,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       if (front.length && !dead) {
         const f = document.createElement('div');
         f.className = 'kt-front';
-        f.title = `Na frente de ${nameOf(p)}`;
+        f.title = `Na frente de ${rawName(p)}`;
         front.forEach((id, j) => {
           const card = cardEl(id);
           card.style.left = j * 10 + 'px';
@@ -1084,8 +1104,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     selected = new Set(ids);
     const seat = t.type === 'seat' && t.p !== ME ? t.p : undefined;
     if (blind) {
-      // Às cegas: vai do jeito que está (solta num adversário = alvo, se a carta pedir um); o servidor decide.
-      send({ cards: ids, ...(seat ? { target: seat } : {}) });
+      // Às cegas: solta num adversário = alvo (se a carta pedir um); na mesa, pergunta o que ela poderia pedir.
+      blindStep({ cards: ids, ...(seat ? { target: seat } : {}) });
       return;
     }
     const guess = guessPlay(ids);
@@ -1119,11 +1139,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     render();
   }
 
-  /** Alvo que vale pra jogada que pede um: o Favor precisa de alguém com carta; o Mau-olhado vale em qualquer adversário vivo. */
+  /**
+   * Alvo que vale pra jogada que pede um: o Favor precisa de alguém com carta; o Mau-olhado vale em qualquer adversário
+   * vivo. Às cegas não dá pra saber qual das duas é: qualquer adversário vivo.
+   */
   function validTarget(p: string): boolean {
     const v = view;
     if (!v || p === ME || !v.alive.includes(p)) return false;
-    const kind = mode?.type === 'target' ? mode.kind : 'favor';
+    const kind = mode?.type === 'target' ? mode.kind : mode?.type === 'blindTarget' ? 'olhado' : 'favor';
     return kind === 'olhado' || (v.handCounts[p] ?? 0) > 0;
   }
 
@@ -1132,6 +1155,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     mode = m;
     captionText = caption;
     render();
+  }
+  /** Desiste do modo (e da legenda dele). */
+  function dropMode(): void {
+    mode = null;
+    if (MODE_CAPTIONS.includes(captionText)) captionText = '';
   }
 
   /**
@@ -1155,15 +1183,25 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   function playSelected(): void {
     if (!selected.size || !canDraw()) return;
     const play: PlayReq = { cards: [...selected] };
-    // Às cegas não dá pra saber o que forma: vai como está e o servidor decide.
-    if (blindMe()) { send(play); return; }
+    // Às cegas não dá pra saber o que forma: o servidor decide (antes, pergunta o que as cartas escondidas poderiam pedir).
+    if (blindMe()) { blindStep(play); return; }
     const guess = guessPlay(play.cards);
     if (guess) proceed(play, guess);
   }
 
   function chooseTarget(p: string): void {
-    if (mode?.type !== 'target') return;
+    if (mode?.type !== 'target' && mode?.type !== 'blindTarget') return;
     send({ ...mode.play, target: p });
+  }
+
+  /**
+   * Jogada às cegas: com 1 ficha, pergunta em quem (se a carta pedir alvo); com 2, que bicho (se forem par de Preguiça
+   * ou 2 Botos, vai como `ask` e `as`). Dá pra pular as duas; o servidor ignora o que a jogada não usa.
+   */
+  function blindStep(play: PlayReq): void {
+    if (play.cards.length === 1 && !play.target) { setMode({ type: 'blindTarget', play }, BLIND_TARGET_CAPTION); return; }
+    if (play.cards.length === 2 && !play.ask) { setMode({ type: 'blindBicho', play }, BLIND_BICHO_CAPTION); return; }
+    send(play);
   }
 
   /**
@@ -1227,8 +1265,13 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       box.appendChild(button('VER O DESCARTE', () => openPile(), 'yellow'));
     }
     if (v.current === ME && !v.pending && !v.choice) {
-      if (mode?.type === 'ask' || mode?.type === 'as') {
-        box.appendChild(hint('escolha o bicho no painel'));
+      if (mode?.type === 'ask' || mode?.type === 'as' || mode?.type === 'blindBicho') {
+        box.appendChild(hint(mode.type === 'blindBicho' ? 'escolha o bicho no painel (ou pule)' : 'escolha o bicho no painel'));
+      } else if (mode?.type === 'blindTarget') {
+        const m = mode;
+        box.appendChild(hint('clique num adversário ou jogue sem alvo'));
+        box.appendChild(button('SEM ALVO', () => send(m.play)));
+        box.appendChild(button('CANCELAR', () => { dropMode(); render(); }, 'ghost'));
       } else if (mode?.type === 'target') {
         box.appendChild(hint('clique num adversário'));
         box.appendChild(button('CANCELAR', () => { mode = null; captionText = ''; render(); }, 'ghost'));
@@ -1272,6 +1315,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const m = mode;
     if (m?.type === 'ask') return `ask:${m.play.cards.join(',')}:${m.play.as ?? ''}`;
     if (m?.type === 'as') return `as:${m.play.cards.join(',')}`;
+    if (m?.type === 'blindBicho') return `blind:${m.play.cards.join(',')}`;
     const c = v.choice;
     // Desarme (Tatubum e Latidor) e descarte do Mico usam a legenda (a mesa fica livre pra soltar a carta); 5 diferentes
     // usa o quadro do descarte.
@@ -1282,13 +1326,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (c.kind === 'feitico') return `feitico:${c.card ?? ''}:${c.deadline}`;
     return '';
   }
-  /** Painel com os 5 bichos (par de Preguiça: o pedido; 2 Botos: o que eles viram). */
-  function bichoPanel(title: string, sub: string, pick: (k: KittensCardKind) => void): void {
+  /** Painel com os 5 bichos (par de Preguiça: o pedido; 2 Botos: o que eles viram; cego: os dois, ou PULAR). */
+  function bichoPanel(title: string, sub: string, pick: (k: KittensCardKind) => void, skip?: () => void): void {
     const panel = $('#panel');
     panel.innerHTML = `<h2>${title}</h2><p>${sub}</p><div class="kt-row"></div>`;
     const row = $('#panel .kt-row');
     KITTENS_BICHOS.forEach((k) => row.appendChild(button(cardName(k), () => pick(k), 'small')));
-    row.appendChild(button('CANCELAR', () => { mode = null; captionText = ''; render(); }, 'small ghost'));
+    if (skip) row.appendChild(button('PULAR', skip, 'small'));
+    row.appendChild(button('CANCELAR', () => { dropMode(); render(); }, 'small ghost'));
   }
   function renderPanel(): void {
     const v = view;
@@ -1301,6 +1346,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!key) return;
     const c = v.choice;
     const m = mode;
+    if (m?.type === 'blindBicho') {
+      const sub = 'Se as cartas viradas forem um par de Preguiça, é o bicho que você puxa; se forem dois Botos, é o par que eles viram. Senão, não muda nada.';
+      bichoPanel(BLIND_BICHO_CAPTION, sub, (k) => send({ ...m.play, ask: k, as: k }), () => send(m.play));
+      return;
+    }
     if (m?.type === 'ask' || m?.type === 'as') {
       const guess = guessPlay(m.play.cards);
       if (!guess) { mode = null; return; }
@@ -1460,8 +1510,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'delayed': return ev.moved ? `${n(ev.by)} mandou a carta de cima pro fundo` : `${n(ev.by)} deixou a carta de cima onde estava`;
       case 'buried': return `${n(ev.by)} mandou ${ev.tatus === 1 ? 'um TATUBUM' : 'dois TATUBUNS'} pro fundo!`;
       case 'called':
-        if (!ev.card) return `Ninguém tinha ${cardName(ev.ask)}, nem o monte`;
-        return ev.from ? `${n(ev.by)} puxou ${cardName(ev.ask)} de ${n(ev.from)}` : `${n(ev.by)} puxou ${cardName(ev.ask)} do monte`;
+        // Quem está cego não vê a carta que chegou (`card` null), mas ela veio de alguém.
+        if (ev.from) return ev.card ? `${n(ev.by)} puxou ${cardName(ev.ask)} de ${n(ev.from)}` : `${n(ev.by)} puxou um bicho de ${n(ev.from)}`;
+        return ev.card ? `${n(ev.by)} puxou ${cardName(ev.ask)} do monte` : `Ninguém tinha ${cardName(ev.ask)}, nem o monte`;
       case 'passed': return ev.card ? `${n(ev.from)} passou ${cardNameOf(ev.card)} pra ${n(ev.to)}` : `${n(ev.from)} passou uma carta pra ${n(ev.to)}`;
       case 'grabbed': return ev.from ? `${n(ev.by)} roubou o DESARME de ${n(ev.from)}!` : 'Ninguém tinha Desarme pra roubar';
       case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
@@ -1695,9 +1746,18 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           Fx.hearts({ x: b.cx, y: 470 });
           await Fx.pop('UFA!', { x: b.cx, y: 260 }, { size: 60, hold: 500, color: '#ff8fab' });
           clearBark();
+          // O Latidor de quem se defendeu sai de onde estava: da frente dele, da sua mão ou do bichinho do assento.
+          const isLatido = (x: string) => kindOf(x) === 'latido';
+          const before = prev?.discard ?? [];
+          const inFront = (prev?.front[ev.by] ?? []).find(isLatido);
+          const inHand = ev.by === ME ? prev?.hand.find(isLatido) : undefined;
+          const his = inFront ?? inHand ?? evView.discard.filter(isLatido).find((x) => !before.includes(x)) ?? 'latido-1';
+          const played = [...before, ...evView.discard].filter(isLatido).find((x) => x !== his) ?? 'latido-0';
+          const hisFrom: At = rects[his] ?? (inFront ? frontAnchor(ev.by) : anchorOf(ev.by));
+          const hisScale = inFront ? (ev.by === ME ? 0.78 : 0.36) : ev.by === ME ? 1 : 0.5;
           await Promise.all([
-            Fx.fly({ node: cardEl('latido-0'), from: { x: b.cx, y: 470 }, to: $('#discard'), dur: 420, rot: 8 }),
-            Fx.fly({ node: cardEl('latido-1'), from: anchorOf(ev.by), to: $('#discard'), dur: 460, rot: -8, scaleFrom: ev.by === ME ? 1 : 0.5 }),
+            Fx.fly({ node: cardEl(played), from: { x: b.cx, y: 470 }, to: $('#discard'), dur: 420, rot: 8 }),
+            Fx.fly({ node: cardEl(his), from: hisFrom, to: $('#discard'), dur: 460, rot: -8, scaleFrom: hisScale }),
           ]);
           sayChoice();
           break;
@@ -1784,7 +1844,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         say(text);
         Sound.play('give');
         const card = ev.card;
-        if ((ev.t === 'called' || ev.t === 'grabbed') && !ev.card) { await wait(700); break; }
+        // Ninguém tinha. (Cego: a carta que ele ganhou não aparece, mas o verso voa de quem deu.)
+        if ((ev.t === 'called' || ev.t === 'grabbed') && !ev.card && !ev.from) { await wait(700); break; }
         let from: At;
         if (ev.t === 'picked') from = $('#discard');
         else if (ev.t === 'called' && !ev.from) from = $('#deck .stack');
