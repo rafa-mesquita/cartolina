@@ -101,8 +101,14 @@ describe('cerrado: ciclo do dia', () => {
 });
 
 describe('artes', () => {
-  it('toda carta tem arte', () => {
+  it('toda carta tem arte (menos as cartas novas de 2026-10-20, que ainda usam o sprite de reserva)', () => {
+    // Provisório: quando a arte delas chegar, tirar daqui.
+    const pending: readonly string[] = ['latido', 'olhado', 'feitico', 'boto'];
     for (const k of KITTENS_CARD_KINDS) {
+      if (pending.includes(k)) {
+        expect(ART[k], k).toBeUndefined();
+        continue;
+      }
       expect(ART[k], k).toEqual(expect.any(String));
       expect(ART[k]!.length, k).toBeGreaterThan(0);
     }

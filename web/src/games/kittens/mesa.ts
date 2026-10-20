@@ -71,6 +71,10 @@ const PLAY_LABEL: Record<KittensPlayKind, string> = {
   favor: 'FAVOR',
   embaralhar: 'EMBARALHAR',
   espiar: 'ESPIAR',
+  // Provisório (cartas novas de 2026-10-20; a tela delas vem em outra tarefa).
+  latido: 'TATU LATIDOR',
+  olhado: 'MAU-OLHADO',
+  feitico: 'FEITIÇO',
   par: 'PAR',
   trio: 'TRIO',
   cinco: '5 DIFERENTES',
@@ -85,6 +89,8 @@ const BICHOS: readonly string[] = KITTENS_BICHOS;
 const CARD_COLOR: Record<KittensCardKind, string> = {
   tatubum: '#e4572e', cafune: '#f2c14e', nemvem: '#c86fd4', ataque: '#9aa7bd', pular: '#5aa0e6', favor: '#f29bc0',
   embaralhar: '#8d7ae6', espiar: '#3fa7c9', capivara: '#5cc8b8', mico: '#f4a259', quati: '#c79a6a', tamandua: '#b0b8c8', preguica: '#a8bf6a',
+  // Provisório (cartas novas de 2026-10-20).
+  latido: '#d98c3a', olhado: '#7a4fb8', feitico: '#4fb88a', boto: '#f08fb8',
 };
 
 /** Olho em pixel art (12×8), desenhado com retângulos. */
@@ -116,6 +122,8 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
+  // Provisório (carta nova de 2026-10-20).
+  boto: '<b>BOTO</b> é o bicho coringa: com qualquer bicho forma o par daquele bicho; dois Botos formam o par do bicho que você disser. No trio ele completa os bichos iguais; nos 5 diferentes conta como Boto.',
 };
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
   tatubum: 'O tatu-bola com o pavio aceso. Comprou esta carta e não tem Desarme? <b>Explodiu</b> e saiu do jogo.<br>Com Desarme, <b>você joga o Desarme</b> (30 segundos, senão ele vai sozinho), o tatu soldado corta o fio e você esconde o Tatubum de volta no monte, onde quiser.<br>O monte tem sempre um Tatubum a menos que o número de jogadores vivos.',
@@ -126,6 +134,10 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br>Pode levar Nem vem!.',
   embaralhar: 'Embaralha o monte inteiro.<br>Bom quando você (ou alguém) espiou e sabe que tem Tatubum em cima, ou quando alguém acabou de esconder um tatu num lugar que você não sabe.<br>Pode levar Nem vem!.',
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, na ordem, só você.<br>Elas ficam à mostra ao lado do monte até você comprar, a vez passar ou o monte mudar.<br>Pode levar Nem vem!.',
+  // Provisório (cartas novas de 2026-10-20; textos finais vêm com a tela delas).
+  latido: 'Só tem 2 na partida. Se outro jogador tiver o outro Tatu Latidor (na mão ou na frente dele), ele <b>joga um Desarme ou explode</b>, e os dois Latidores vão pro descarte.<br>Se ninguém tiver, o seu fica <b>na sua frente</b>, à vista: quando o outro for jogado, quem se defende é você.<br>Pode levar Nem vem!.',
+  olhado: 'Escolha um adversário: a mão dele é embaralhada e ele <b>fica cego</b> até comprar uma carta (joga às cegas, escolhendo cartas viradas).<br>Pode levar Nem vem!.',
+  feitico: 'Você vê a <b>carta de baixo</b> do monte, só você, e escolhe: <b>fica com ela</b> (como se comprasse; se for Tatubum, é como comprar o Tatubum) ou ela vai pro <b>topo</b> do monte. Nos dois casos acaba o seu turno.<br>Pode levar Nem vem!.',
 };
 const detailOf = (k: KittensCardKind): string => DETAIL[k] ?? `Sozinho não faz nada.<br>${PAIR_DETAIL[k] ?? ''}${COMBO_TEXT}`;
 
@@ -144,6 +156,11 @@ const ABOUT: Record<KittensCardKind, string> = {
   quati: 'Par: vê a de cima e decide se vai pro fundo.',
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir.',
+  // Provisório (cartas novas de 2026-10-20).
+  latido: 'Quem tiver o outro Latidor joga um Desarme ou explode. Ninguém tem: fica na sua frente.',
+  olhado: 'Um adversário fica cego até comprar: joga com as cartas viradas.',
+  feitico: 'Vê a carta de baixo do monte: fica com ela ou manda pro topo. Acaba o turno.',
+  boto: 'Bicho coringa: vale por qualquer bicho no par e no trio.',
 };
 
 const TIMER = '<span class="timer" data-timer></span>';
@@ -1112,13 +1129,18 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         // "Sua RODA", "Seu PAR": a roda de capivara é a única feminina.
         const whose = (label: string) => (ev.by === ME ? `${label.startsWith('RODA') ? 'Sua' : 'Seu'} ${label}` : `${label} de ${n(ev.by)}`);
         if (ev.canceled) return `${whose(PLAY_LABEL[ev.play])} foi cancelado`;
-        const pairKind = kindOf(prevPending?.play.cards[0] ?? '');
+        // Com Boto, o par vale o bicho em `play.as`.
+        const pairKind = prevPending?.play.as ?? kindOf(prevPending?.play.cards[0] ?? '');
         const texts: Record<KittensPlayKind, string> = {
           ataque: `${whose(PLAY_LABEL.ataque)} valeu!`,
           pular: `${n(ev.by)} pulou`,
           embaralhar: `${n(ev.by)} embaralhou o monte`,
           espiar: `${n(ev.by)} espiou o futuro`,
           favor: `${prevPending?.play.target ? n(prevPending.play.target) : 'alguém'} vai dar uma carta pra ${n(ev.by)}`,
+          // Provisório (cartas novas de 2026-10-20).
+          latido: `${n(ev.by)} soltou o TATU LATIDOR`,
+          olhado: `${n(ev.by)} jogou MAU-OLHADO${prevPending?.play.target ? ' em ' + n(prevPending.play.target) : ''}`,
+          feitico: `${n(ev.by)} fez um FEITIÇO`,
           par: `${whose((pairKind && PAIR_LABEL[pairKind]) ?? 'PAR')} valeu!`,
           trio: `${whose('TRIO')} valeu!`,
           cinco: `${n(ev.by)} vai pegar duas do descarte`,
@@ -1142,6 +1164,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'passed': return ev.card ? `${n(ev.from)} passou ${cardNameOf(ev.card)} pra ${n(ev.to)}` : `${n(ev.from)} passou uma carta pra ${n(ev.to)}`;
       case 'grabbed': return ev.from ? `${n(ev.by)} roubou o DESARME de ${n(ev.from)}!` : 'Ninguém tinha Desarme pra roubar';
       case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
+      // Provisório (cartas novas de 2026-10-20; animação e textos finais vêm com a tela delas).
+      case 'barked': return ev.target ? `AU AU! ${n(ev.target)} tinha o outro TATU LATIDOR!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
+      case 'cursed': return `${n(ev.target)} pegou MAU-OLHADO e está jogando às cegas`;
+      case 'cured': return `${n(ev.by)} voltou a ver as cartas`;
+      case 'conjured': return ev.kept ? `${n(ev.by)} ficou com a carta de baixo do monte` : `${n(ev.by)} mandou a carta de baixo pro topo`;
     }
     return '';
   }
