@@ -177,13 +177,17 @@ button{font:inherit;color:inherit;cursor:pointer}
 .leaf>span{position:absolute;bottom:0;transform-origin:50% 100%}
 .fans .none{font-size:13px;line-height:1.4;color:var(--navy-soft);opacity:.8;max-width:240px}
 
-/* ---------- fim da partida (cartaz de circo sobre o picadeiro: não cobre os personagens dos assentos nem a sua mesa inteira) ---------- */
-#end{position:absolute;left:50%;top:478px;width:520px;transform:translate(-50%,-50%);z-index:20;padding:18px 26px 20px;text-align:center;
-  background:var(--cream);border:6px double var(--red);border-radius:18px;
+/* ---------- fim da partida ----------
+ * Cartaz de circo na faixa livre entre os assentos e a sua mesa (o placeEnd() calcula o top): não cobre os personagens,
+ * as pilhas dos assentos nem a sua mesa. A partir de 4 jogadores as linhas ficam compactas (.compact).
+ * "ver a mesa" recolhe numa faixa estreita (.mini) por cima do letreiro; clicar na faixa abre de novo. */
+#end{position:absolute;left:50%;top:400px;width:520px;transform:translateX(-50%) scale(var(--s,1));transform-origin:50% 0;z-index:20;
+  padding:16px 24px;text-align:center;background:var(--cream);border:6px double var(--red);border-radius:18px;
   box-shadow:0 0 0 3px var(--cream),0 0 0 5px var(--gold),0 18px 40px rgba(31,42,74,.34);animation:end-in .38s cubic-bezier(.3,1.4,.5,1) both}
-@keyframes end-in{from{opacity:0;transform:translate(-50%,-50%) scale(.86)}}
-#end h2{margin:0;font:34px/1.1 var(--logo);color:var(--red);text-shadow:0 2px 0 rgba(158,42,34,.16)}
-#end .why{margin:6px 0 12px;font:500 15px/1.2 var(--ui);color:var(--navy-soft)}
+@keyframes end-in{from{opacity:0;translate:0 12px}}
+#end .hd{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:12px}
+#end h2{margin:0;font:34px/1.05 var(--logo);color:var(--red);text-shadow:0 2px 0 rgba(158,42,34,.16)}
+#end .why{font:500 15px/1.2 var(--ui);color:var(--navy-soft)}
 #end ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;text-align:left}
 #end li{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:10px;border:1.5px solid transparent}
 #end li.win{background:rgba(232,178,58,.18);border-color:var(--gold)}
@@ -194,11 +198,38 @@ button{font:inherit;color:inherit;cursor:pointer}
 #end .flags{flex:1}
 #end .flags .none{font-size:12px;color:var(--navy-soft);opacity:.8}
 #end .sph{font:500 13px/1 var(--ui);color:var(--navy-soft);white-space:nowrap}
-#end .acts{display:flex;justify-content:center;gap:12px;margin-top:16px}
-#end .acts button{padding:9px 20px;border-radius:999px;border:1.5px solid var(--red);background:none;color:var(--red);font-weight:600;font-size:15px}
+#end .acts{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:14px}
+#end .acts button{padding:8px 18px;border-radius:999px;border:1.5px solid var(--red);background:none;color:var(--red);font-weight:600;font-size:15px}
 #end .acts button:hover{background:rgba(200,55,45,.08)}
 #end .acts .main{background:var(--red);color:var(--cream)}
 #end .acts .main:hover{background:var(--red-dark);border-color:var(--red-dark)}
+#end .acts .ghost{padding:6px 12px;border-color:var(--line);color:var(--navy-soft);font-size:13px;font-weight:500}
+#end .acts .ghost:hover{border-color:var(--navy-soft);background:none;color:var(--navy)}
+#end .acts .ghost i,#end .reopen i{font-size:15px;vertical-align:-2px;margin-right:3px}
+#end .reopen{display:none}
+/* compacto (4 a 6 jogadores): título e motivo na mesma linha, linhas de 28px, personagem de 24 */
+#end.compact{padding:10px 20px 12px}
+#end.compact .hd{flex-direction:row;justify-content:center;align-items:baseline;gap:10px;margin-bottom:6px}
+#end.compact h2{font-size:28px}
+#end.compact .why{font-size:14px}
+#end.compact ol{gap:2px}
+#end.compact li{height:28px;gap:9px;border-radius:8px}
+#end.compact .cr{width:24px;height:24px}
+#end.compact .nm{font-size:14px}
+#end.compact .rk{font-size:13px}
+#end.compact .flag{width:12px;height:14px}
+#end.compact .acts{margin-top:8px}
+#end.compact .acts button{padding:6px 16px;font-size:14px}
+#end.compact .acts .ghost{padding:5px 12px;font-size:13px}
+/* recolhido: só o título e os botões, numa faixa por cima do letreiro (clicar nela abre de novo) */
+#end.mini{width:auto;padding:7px 10px 7px 22px;border-radius:999px;display:flex;align-items:center;gap:16px;cursor:pointer;white-space:nowrap}
+#end.mini .hd{flex-direction:row;align-items:baseline;gap:10px;margin:0}
+#end.mini h2{font-size:24px}
+#end.mini .why,#end.mini ol,#end.mini .acts .ghost{display:none}
+#end.mini .acts{margin:0;gap:8px}
+#end.mini .acts button{padding:6px 14px;font-size:14px}
+#end.mini .reopen{display:inline;font:500 13px/1 var(--ui);color:var(--navy-soft)}
+#end.mini:hover .reopen{color:var(--red)}
 
 /* ---------- aviso ---------- */
 #toast{position:absolute;left:50%;top:590px;transform:translateX(-50%);padding:9px 18px;border-radius:999px;background:var(--red-dark);color:var(--cream);
@@ -271,7 +302,7 @@ let soundOn = true;
 try { soundOn = localStorage.getItem(SOUND_KEY) !== 'off'; } catch (err) { /* sem localStorage: som ligado */ }
 /** Sobe a cada newGame(): o fim de uma animação da partida anterior não mexe na nova. */
 let gameEpoch = 0;
-/** `gameEpoch:match` da partida cujo som de fim já tocou (o match recomeça em 1 a cada newGame). */
+/** `match` da partida cujo som de fim já tocou (zera no newGame, onde o match recomeça em 1). */
 let endSounded = null;
 
 const nameOf = (p) => NAMES[Number(p.slice(1))];
@@ -336,8 +367,7 @@ function changed() {
   if (v.phase === 'playing' && v.turn === ME && prevTurn !== ME) play('turn');
   prevTurn = v.turn;
   // o fim chega aqui depois da animação da última jogada: o som toca uma vez por partida
-  const endKey = `${gameEpoch}:${v.match}`;
-  if (v.phase === 'over' && endSounded !== endKey) { endSounded = endKey; play(v.winners.includes(ME) ? 'win' : 'lose'); }
+  if (v.phase === 'over' && endSounded !== v.match) { endSounded = v.match; play(v.winners.includes(ME) ? 'win' : 'lose'); }
   shown = v; render(v); scheduleBot(v);
   // na sua vez (ou no fim) a dica entra depois de a frase da jogada ficar um pouco no letreiro
   if (hold && !holdTimer && (v.phase === 'over' || (v.phase === 'playing' && v.turn === ME))) {
@@ -379,6 +409,7 @@ function playAgain() {
 }
 
 function newGame() {
+  endSounded = null; // o match recomeça em 1: o som do fim da partida 1 pode tocar de novo
   clearTable();
   ids = Array.from({ length: N }, (_, i) => `p${i}`);
   online = new Set(ids);
@@ -522,7 +553,7 @@ function bannerFor(v) {
 function hint(v) {
   if (v.phase === 'over') {
     const w = v.winners.map(nameOf);
-    if (v.endReason === 'target') return w[0] === 'você' ? `fim: <b>você ganhou!</b> fechou ${v.target} cores` : `fim: <b>${w[0]} ganhou!</b> fechou ${v.target} cores`;
+    if (v.endReason === 'target') return `fim: <b>${w[0]} ganhou!</b> ${endWhy(v)}`;
     if (w.length > 1) return `o monte acabou: <b>empate entre ${winnersTxt(v)}</b>`;
     return w[0] === 'você' ? 'o monte acabou: <b>você ganhou!</b>' : `o monte acabou: <b>${w[0]} ganhou!</b>`;
   }
@@ -530,7 +561,7 @@ function hint(v) {
   if (v.paused) return 'pausado: esperando a galera voltar';
   if (v.turn === ME) {
     if (dragging()) return 'solte na mesa de alguém (a sua também vale) · <b>Esc</b> desfaz';
-    if (picked) return 'agora a mesa de alguém (a sua também vale) · <b>Esc</b> desfaz';
+    if (picked) return 'agora clique na mesa de alguém (a sua também vale) · <b>Esc</b> desfaz';
     return '<b>sua vez:</b> arraste uma carta até a mesa de alguém (ou clique nela e depois na mesa)';
   }
   return `vez de <b>${nameOf(v.turn)}</b>`;
@@ -546,15 +577,19 @@ function winnersTxt(v) {
   const w = [...v.winners].sort((a, b) => (a === ME) - (b === ME)).map(nameOf);
   return list(w);
 }
+/** Por que acabou: o mesmo texto no letreiro e no cartaz. */
+const endWhy = (v) => (v.endReason === 'target' ? `chegou a ${v.target} cores` : 'o monte acabou');
+/** Cartaz recolhido ("ver a mesa"); volta a abrir a cada partida nova. */
+let endMini = false;
 /** O cartaz do fim: só com a partida acabada (e já depois da animação da última jogada, que é quando o changed() desenha). */
 function renderEnd(v) {
   const el = $('#end');
-  if (v.phase !== 'over') { el.hidden = true; el.innerHTML = ''; delete el.dataset.t; return; }
+  if (v.phase !== 'over') { el.hidden = true; el.innerHTML = ''; delete el.dataset.t; endMini = false; el.classList.remove('mini'); return; }
   const key = (p) => [v.points[p] || 0, spheresInPlay(v, p)];
   // mais pontos; empate → mais esferas em jogo (o sort é estável: empate total fica na ordem dos assentos)
   const rows = v.players.map((p) => ({ p, k: key(p) })).sort((a, b) => b.k[0] - a.k[0] || b.k[1] - a.k[1]);
   const title = v.winners.length > 1 ? `empate: ${winnersTxt(v)}` : `${winnersTxt(v)} ganhou!`;
-  const why = v.endReason === 'target' ? `chegou a ${v.target} cores` : 'o monte acabou';
+  const why = endWhy(v);
   let rank = 0;
   const lines = rows.map((r, i) => {
     if (i === 0 || r.k[0] !== rows[i - 1].k[0] || r.k[1] !== rows[i - 1].k[1]) rank = i + 1; // empate divide a posição
@@ -565,14 +600,52 @@ function renderEnd(v) {
       + `<span class="rk">${rank}º</span><span class="cr">${critter(r.p)}</span><span class="nm">${nameOf(r.p)}</span>`
       + `<span class="flags">${flags}</span><span class="sph">${n} ${n === 1 ? 'esfera' : 'esferas'} em jogo</span></li>`;
   }).join('');
-  const html = `<h2>${title}</h2><div class="why">${why}</div><ol>${lines}</ol>`
-    + '<div class="acts"><button class="main" data-act="again">jogar de novo</button><button data-act="new">nova mesa</button></div>';
+  const html = `<div class="hd"><h2>${title}</h2><span class="why">${why}</span></div><ol>${lines}</ol>`
+    + '<span class="reopen"><i class="ti ti-list-numbers"></i>ver o placar</span>'
+    + '<div class="acts"><button class="main" data-act="again">jogar de novo</button><button data-act="new">nova mesa</button>'
+    + '<button class="ghost" data-act="fold" title="recolhe o placar pra ver a mesa"><i class="ti ti-eye"></i>ver a mesa</button></div>';
   if (el.dataset.t !== html) { el.dataset.t = html; el.innerHTML = html; } // redesenho igual não mexe nos botões
+  el.classList.toggle('compact', v.players.length >= 4);
+  el.classList.toggle('mini', endMini);
   el.hidden = false;
+  placeEnd();
 }
+/**
+ * Põe o cartaz na faixa livre entre os assentos (embaixo das pilhas) e a sua mesa, centrado nela.
+ * Se não couber (pilhas muito altas), encosta embaixo e cobre só a parte de baixo das pilhas; se nem assim,
+ * encolhe. Nunca cobre os personagens nem passa do topo da sua mesa. Recolhido, fica por cima do letreiro.
+ */
+function placeEnd() {
+  const el = $('#end');
+  if (el.hidden) return;
+  el.style.setProperty('--s', 1);
+  const H = el.offsetHeight; // sem o scale (offset ignora transform)
+  const GAP = 12; // folga, contando o contorno dourado (5px)
+  let top, s = 1;
+  if (endMini) {
+    const b = $('#banner');
+    top = b.offsetTop + (b.offsetHeight - H) / 2;
+  } else {
+    const seats = $('#seats');
+    let low = 0, heads = 0;
+    for (const seat of seats.querySelectorAll('.seat')) {
+      const y = seats.offsetTop + seat.offsetTop, head = seat.querySelector('.head');
+      low = Math.max(low, y + seat.offsetHeight);
+      heads = Math.max(heads, y + head.offsetTop + head.offsetHeight);
+    }
+    const hi = $('#mine').offsetTop - GAP, lo = low + GAP, hard = heads + GAP;
+    if (H <= hi - lo) top = lo + (hi - lo - H) / 2;
+    else if (H <= hi - hard) top = hi - H;
+    else { s = (hi - hard) / H; top = hard; }
+  }
+  el.style.top = `${Math.round(top)}px`;
+  el.style.setProperty('--s', s);
+}
+document.fonts?.ready.then(() => placeEnd()); // a Rye chegando muda a altura do título
 $('#end').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-act]');
-  if (!b) return;
+  if (!b) { if (endMini) { endMini = false; $('#end').classList.remove('mini'); placeEnd(); } return; } // clicar na faixa abre de novo
+  if (b.dataset.act === 'fold') { endMini = true; $('#end').classList.add('mini'); placeEnd(); return; }
   if (b.dataset.act === 'again') playAgain(); else newGame();
 });
 
