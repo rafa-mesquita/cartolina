@@ -1,6 +1,7 @@
 import type { GameId } from '@cartolina/shared';
 import { useState } from 'react';
 import { catalogEntry } from '../games/catalog';
+import { CoupHistory } from '../games/coup/history/CoupHistory';
 import { DixitHistory } from '../games/dixit/history/DixitHistory';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goToRoom, type GameTab } from '../lib/router';
@@ -78,12 +79,7 @@ function HistoryTab({ game }: { game: GameId }) {
         </section>
       );
     case 'coup':
-      // o histórico do Cúpi vem no Plano C4
-      return (
-        <section className="panel">
-          <p>O histórico do Cúpi vem em breve.</p>
-        </section>
-      );
+      return <CoupHistory />;
     default: {
       const _never: never = game;
       throw new Error(`jogo sem histórico: ${String(_never)}`);

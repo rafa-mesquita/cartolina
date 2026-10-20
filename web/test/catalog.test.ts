@@ -36,7 +36,7 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.name).toBe('Cúpi');
     expect(entry?.players).toBe('2 a 6 pessoas');
     expect(entry?.playable).toBe(false);
-    expect(entry?.hasHistory).toBe(false);
+    expect(entry?.hasHistory).toBe(true);
   });
 
   it('DITU funciona no celular; Diquisti e Retratim ainda não', () => {
