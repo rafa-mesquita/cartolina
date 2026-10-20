@@ -110,8 +110,16 @@
   .card.back { background: #1f3a6b; background-image: radial-gradient(#2c5a8c 1.5px, transparent 1.6px); background-size: 10px 10px; justify-content: center; }
   .card.back .art { width: 74px; margin-top: 0; }
   .card.back .name { color: var(--yellow); margin: 10px 0 0; font-size: 9px; text-shadow: 2px 2px 0 var(--ink); }
-  .card.tatubum { background: #3b2412; color: var(--cream); }
-  .card.tatubum .hint { color: var(--yellow); }
+  /* Categorias (pedido do Rafa): bomba vermelha, desarme amarelo, pares verde-água, efeitos no creme */
+  .card.cat-bomb { background: #e4572e; color: var(--cream); }
+  .card.cat-bomb .hint { color: #fff3c4; }
+  .card.cat-defuse { background: #f2c14e; }
+  .card.cat-defuse .hint { color: #5a3a10; }
+  .card.cat-pair { background: #5cc8b8; }
+  .card.cat-pair .hint { color: #1d4f48; }
+  .card .art.flow { width: 96px; height: 96px; margin-top: 8px; image-rendering: auto; }
+  .card.flow-back { padding: 0; overflow: hidden; }
+  .card.flow-back .back-art { width: 100%; height: 100%; object-fit: cover; }
   .flying { position: absolute; left: 0; top: 0; z-index: 30; pointer-events: none; }
 
   /* Mão */
@@ -216,6 +224,12 @@
   #gallery .item b { font-family: var(--px); font-size: 10px; color: var(--yellow); font-weight: normal; display: block; margin-bottom: 6px; }
   #gallery .foot { display: flex; justify-content: space-between; align-items: center; }
   #gallery .foot p { margin: 0; font-size: 22px; color: var(--dim); max-width: 1000px; }
+  /* Tatu soldado do desarme: anda com o corpo balançando em 2 quadros e dá um tranco ao cortar o fio */
+  .soldier { position: absolute; left: 0; top: 0; z-index: 33; width: 190px; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(6px 6px 0 rgba(5,5,16,.45)); }
+  .soldier.walking { animation: march .24s steps(2) infinite; }
+  .soldier.snip { animation: snip .15s steps(2) 3; }
+  @keyframes march { 50% { translate: 0 -6px; } }
+  @keyframes snip { 50% { translate: 6px 0; } }
   .bigcard { position: absolute; z-index: 32; transform: translate(-50%, -50%) scale(2); }
   .bigcard.shaking { animation: shake .09s steps(2) infinite; }
   @keyframes shake { 50% { translate: 4px -3px; } }
@@ -406,18 +420,24 @@ function handRects() {
 }
 
 // ---------------------------------------------------------------- desenho das cartas
+/** Cartas que já têm arte do Flow escolhida pelo Rafa (o resto continua com o sprite provisório). */
+const FLOW_ART = new Set(['tatubum', 'cafune', 'nemvem', 'capivara']);
+/** Cor de fundo por categoria (pedido do Rafa): bomba e desarme chamativos, pares com cor própria, efeitos no creme. */
+const CATEGORY = { tatubum: 'cat-bomb', cafune: 'cat-defuse', capivara: 'cat-pair', mico: 'cat-pair', quati: 'cat-pair', tamandua: 'cat-pair', preguica: 'cat-pair' };
+
 function cardEl(id, { back = false } = {}) {
   const el = document.createElement('div');
   if (back || !id) {
-    el.className = 'card back';
-    el.innerHTML = `<img class="art" src="${Sprites.tatu('#a0703f').url}" alt=""><div class="name">TATUBUM</div>`;
+    el.className = 'card back flow-back';
+    el.innerHTML = `<img class="back-art" src="art/verso.webp" alt="">`;
     return el;
   }
   const k = kindOf(id);
   const st = Sprites.style[k];
-  el.className = 'card ' + k;
+  el.className = `card ${k} ${CATEGORY[k] ?? 'cat-effect'}`;
   el.dataset.id = id;
-  el.innerHTML = `<div class="band" style="background:${st.band}"></div><img class="art" src="${Sprites.card(k).url}" alt=""><div class="name">${cardName(k)}</div><div class="hint">${st.hint}</div>`;
+  const art = FLOW_ART.has(k) ? `<img class="art flow" src="art/${k}.webp" alt="">` : `<img class="art" src="${Sprites.card(k).url}" alt="">`;
+  el.innerHTML = `<div class="band" style="background:${st.band}"></div>${art}<div class="name">${cardName(k)}</div><div class="hint">${st.hint}</div>`;
   return el;
 }
 
@@ -817,9 +837,12 @@ function hint(text) {
 
 // ---------------------------------------------------------------- painéis de escolha
 let cafunePos = 0;
+/** Enquanto o tatu soldado desarma a bomba, o painel de esconder o tatu espera. */
+let holdPanel = false;
 function renderPanel() {
   const v = view;
   const panel = $('#panel');
+  if (holdPanel) { panel.innerHTML = ''; return; }
   const c = v.choice;
   const timer = '<span class="timer" data-timer></span>';
   if (mode?.type === 'ask') {
@@ -1017,30 +1040,38 @@ async function animate(ev, prev, rects) {
     case 'cafune':
     case 'boom': {
       say(`${nameOf(ev.by)} comprou o… TATUBUM!`);
+      const cx = stageW / 2;
       const big = cardEl('tatubum-0');
       big.classList.add('bigcard', 'shaking');
-      big.style.left = '720px';
+      big.style.left = cx + 'px';
       big.style.top = '470px';
       $('#fxlayer').appendChild(big);
       Sound.play('fuse');
-      const sp = setInterval(() => Fx.sparks({ x: 735, y: 340 }), 120);
-      await Fx.wait(1100);
-      clearInterval(sp);
+      const sp = setInterval(() => Fx.sparks({ x: cx + 15, y: 340 }), 120);
       if (ev.t === 'cafune') {
+        holdPanel = true;
+        renderPanel();
+        // O tatu soldado entra andando pela mesa, corta o fio e o pavio apaga.
+        await defuseWalk(cx);
+        clearInterval(sp);
         big.classList.remove('shaking');
         Sound.play('cafune');
-        Fx.hearts({ x: 720, y: 470 });
+        Fx.hearts({ x: cx, y: 470 });
         say(text);
-        await Fx.pop('UFA!', { x: 720, y: 260 }, { size: 60, hold: 700, color: '#ff8fab' });
+        await Fx.pop('UFA!', { x: cx, y: 260 }, { size: 60, hold: 700, color: '#ff8fab' });
         big.remove();
+        holdPanel = false;
+        renderPanel();
       } else {
+        await Fx.wait(1100);
+        clearInterval(sp);
         big.remove();
         Sound.play('boom');
         Fx.flash('#fff3c4', 220);
         Fx.shake(600, 14);
-        Fx.boom({ x: 720, y: 470 });
+        Fx.boom({ x: cx, y: 470 });
         say(text);
-        await Fx.pop('BUM!', { x: 720, y: 450 }, { size: 150, hold: 900, color: '#e4572e' });
+        await Fx.pop('BUM!', { x: cx, y: 450 }, { size: 150, hold: 900, color: '#e4572e' });
       }
       break;
     }
@@ -1074,12 +1105,48 @@ async function animate(ev, prev, rects) {
     case 'win': {
       say(text);
       Sound.play('win');
-      Fx.fireworks({ x: 720, y: 420 });
-      await Fx.pop(ev.by === ME ? 'VOCÊ VENCEU!' : `${nameOf(ev.by).toUpperCase()} VENCEU!`, { x: 720, y: 420 }, { size: 52, hold: 1400 });
+      Fx.fireworks({ x: stageW / 2, y: 420 });
+      await Fx.pop(ev.by === ME ? 'VOCÊ VENCEU!' : `${nameOf(ev.by).toUpperCase()} VENCEU!`, { x: stageW / 2, y: 420 }, { size: 52, hold: 1400 });
       renderOver(true);
       break;
     }
   }
+}
+
+/**
+ * Desarme (pedido do Rafa): o tatu soldado (arte do Flow, fundo recortado) entra andando pela esquerda até a carta
+ * do Tatubum no centro, corta o fio com o alicate (faísca + "clic") e sai andando de volta.
+ */
+async function defuseWalk(cx) {
+  const s = document.createElement('img');
+  s.src = 'art/soldado.png';
+  s.className = 'soldier walking';
+  $('#fxlayer').appendChild(s);
+  const y = 500; // pés na altura da base da carta grande
+  const stop = cx - 205; // o alicate (lado direito do soldado) encosta na carta
+  const at = (x, flip = 1) => `translate(${x}px, ${y}px) translate(-50%, -100%) scaleX(${flip})`;
+  const walk = (from, to, flip, ms) =>
+    Fx.REDUCED || document.hidden
+      ? Promise.resolve()
+      : s.animate([{ transform: at(from, flip) }, { transform: at(to, flip) }], { duration: ms, easing: 'steps(14, end)', fill: 'forwards' }).finished.catch(() => {});
+  s.style.transform = at(-140);
+  await Promise.race([walk(-140, stop, 1, 1300), Fx.wait(1500)]);
+  s.classList.remove('walking');
+  s.style.transform = at(stop);
+  // corta o fio
+  await Fx.wait(250);
+  s.classList.add('snip');
+  Sound.play('snip');
+  Fx.glitter({ x: stop + 80, y: 430 }, '#ffffff');
+  Fx.sparks({ x: stop + 80, y: 430 });
+  await Fx.wait(450);
+  s.classList.remove('snip');
+  // missão cumprida: vira e volta
+  (async () => {
+    s.classList.add('walking');
+    await Promise.race([walk(stop, -160, -1, 1100), Fx.wait(1300)]);
+    s.remove();
+  })();
 }
 
 // ---------------------------------------------------------------- fim e menu
