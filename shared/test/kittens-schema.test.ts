@@ -14,6 +14,7 @@ describe('schema das ações do Tatubum', () => {
       { type: 'choose', position: 'random' },
       { type: 'choose', position: 3 },
       { type: 'choose', card: 'mico-0' },
+      { type: 'choose', keep: true },
       { type: 'again' },
       { type: 'lobby' },
     ]) {
@@ -28,6 +29,7 @@ describe('schema das ações do Tatubum', () => {
       { type: 'play', cards: ['ataque-0'], ask: 'xadrez' },
       { type: 'choose', position: -1 },
       { type: 'choose', position: 1.5 },
+      { type: 'choose', keep: 'yes' },
       { type: 'boom' },
     ]) {
       expect(valid(a)).toBe(false);

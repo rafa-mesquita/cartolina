@@ -121,6 +121,7 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
       const cheap = g.hand.filter((x) => BICHOS.includes(kittensKindOf(x) as KittensCardKind));
       return { key, delay: between(rng, 1000, 2000), action: { type: 'choose', card: pickOne(rng, cheap.length ? cheap : g.hand) } };
     }
+    if (c.kind === 'quati') return { key, delay: between(rng, 900, 1600), action: { type: 'choose', keep: true } };
     if (!c.options.length) return null;
     const pref: KittensCardKind[] = ['cafune', 'nemvem', 'ataque', 'pular', 'espiar'];
     const best = pref.map((k) => c.options.find((x) => kittensKindOf(x) === k)).find(Boolean) ?? pickOne(rng, c.options);
