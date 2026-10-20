@@ -380,7 +380,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   /** Você está cego pelo Mau-olhado: a mão chega como fichas `?i` e você joga às cegas. */
   const blindMe = (): boolean => !!view && view.blind.includes(ME);
   /** "Sua vez" da legenda (cego: lembra que dá pra comprar pra voltar a ver). */
-  const yourTurn = (): string => (blindMe() ? 'Sua vez! Você está CEGO: jogue às cegas ou compre pra voltar a ver.' : 'Sua vez! Jogue cartas ou compre.');
+  /** Quantos turnos você ainda deve (Ataque acumula), na legenda da sua vez. */
+  const owedText = (): string => ((view?.owed ?? 1) > 1 ? ` Faltam ${view!.owed} turnos seus (contando este).` : '');
+  const yourTurn = (): string => (blindMe() ? `Sua vez!${owedText()} Você está CEGO: jogue às cegas ou compre pra voltar a ver.` : `Sua vez!${owedText()} Jogue cartas ou compre.`);
   /** Os outros jogadores na ordem da vez a partir de você (você → assentos da esquerda pra direita → você). */
   function others(): string[] {
     const i = players.indexOf(ME);
@@ -772,7 +774,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       const cursed = !dead && v.blind.includes(p) ? `<div class="kt-cursed" title="${nameOf(p)} está cego (Mau-olhado) até comprar">${CURSE_SVG}</div>` : '';
       // Espiar: o olhinho no canto de quem tem espiada à mostra (as cartas, só ele vê).
       const peeked = !dead && v.peekers.includes(p) ? `<div class="kt-peeked" title="${nameOf(p)} espiou o topo do monte">${EYE_SVG}</div>` : '';
-      el.innerHTML = `${order}${cursed}${peeked}<img class="tatu kt-critter" alt="">
+      // Ataque acumulado: quantos turnos quem está na vez ainda joga, grande no assento.
+      const owed = !dead && v.phase === 'playing' && v.current === p && v.owed > 1 ? `<div class="kt-owed">${v.owed} TURNOS</div>` : '';
+      el.innerHTML = `${order}${cursed}${peeked}${owed}<img class="tatu kt-critter" alt="">
         <div class="who">${nameOf(p)}</div>
         ${dead ? '<div class="count out">FORA</div>' : `<div class="count"><span class="fan">${fan}</span><b>${n}</b></div>`}${chip}`;
       // Tatu Latidor na frente dele (à vista de todos), pequenininho ao lado do bichinho.
@@ -977,6 +981,13 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       el.onmouseleave = () => zoom(null);
       hand.appendChild(el);
     });
+    // Ataque acumulado: faixa grande com quantos turnos você ainda joga (contando este).
+    if (v.phase === 'playing' && v.current === ME && v.owed > 1) {
+      const tag = document.createElement('div');
+      tag.className = `kt-owedtag${blind ? ' high' : ''}`;
+      tag.innerHTML = `<b>FALTAM ${v.owed} TURNOS</b><span>contando este</span>`;
+      hand.appendChild(tag);
+    }
     // Mau-olhado: a faixa grande fica até você comprar.
     if (blind) {
       const tag = document.createElement('div');

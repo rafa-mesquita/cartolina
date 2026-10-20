@@ -145,6 +145,14 @@
 .kittens .kt-mesa .kt-seat .kt-cursed { position: absolute; left: 2px; top: 20px; width: 34px; height: 25px; animation: kt-cursebob 1.2s steps(2) infinite; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
 .kittens .kt-mesa .kt-cursed svg, .kittens .kt-mesa .kt-blindtag svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
 @keyframes kt-cursebob { 50% { translate: 0 -3px; } }
+/* Ataque acumulado: quantos turnos quem está na vez ainda joga (no assento e na faixa da sua mão) */
+.kittens .kt-mesa .kt-seat .kt-owed { position: absolute; right: -6px; top: 34px; z-index: 3; padding: 4px 6px; background: var(--red); color: #fff3e0; font-family: var(--px); font-size: 9px; white-space: nowrap;
+  box-shadow: 0 -2px 0 #2b1a10, 0 2px 0 #2b1a10, -2px 0 0 #2b1a10, 2px 0 0 #2b1a10, 3px 4px 0 rgba(0,0,0,.4); animation: kt-blink 0.9s steps(2) infinite; }
+.kittens .kt-mesa .kt-owedtag { position: absolute; left: 50%; top: -52px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #5a1c12; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 -4px 0 var(--red), 0 4px 0 var(--red), -4px 0 0 var(--red), 4px 0 0 var(--red), 6px 8px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa .kt-owedtag.high { top: -104px; }
+.kittens .kt-mesa .kt-owedtag b { font-family: var(--px); font-size: 15px; font-weight: normal; color: #fff3e0; text-shadow: 2px 2px 0 #2b1a10; animation: kt-blink 1s steps(2) infinite; }
+.kittens .kt-mesa .kt-owedtag span { font-size: 22px; color: #ffd0c0; }
 .kittens .kt-mesa .kt-seat .kt-peeked { position: absolute; left: 6px; top: 50px; width: 27px; height: 18px; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
 .kittens .kt-mesa .kt-peeked svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
 @keyframes kt-pulse { 50% { box-shadow: 0 -3px 0 var(--red), 0 3px 0 var(--red), -3px 0 0 var(--red), 3px 0 0 var(--red); } }
