@@ -1,31 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { CoupRoomView } from '@cartolina/shared';
+import type { ConnStatus } from '../../net/connection';
+import type { WindowClock } from './clock';
 import { playCoupSound, type CoupSound } from './sounds';
-
-/**
- * Sons pelo que mudou na mesa do Cúpi (porte de "sons pelo que mudou" do protótipo).
- *
- * Uso (a `CoupTable` chama uma vez):
- *
- *     const clock = useWindowClock(view.game.window?.endsAt ?? null, snap.serverOffset);
- *     useCoupSounds(view, clock);
- *
- * `view` é a visão da sala (de lá sai quem é você: `view.you`; quem assiste ouve só `declare`, `challenge`/`reveal`/`bluff`,
- * `end` e o tique) e `clock` é o relógio da janela (`useWindowClock`, `null` sem janela). O hook não devolve nada.
- *
- * Compara cada visão nova com a anterior (guardada em refs) e toca, espaçando 260 ms os sons que saem juntos:
- * - `declare`: entrada nova `act` ou `block` de outro jogador (a sua você já ouve no clique);
- * - `challenge` + `reveal` (tinha a carta) ou `bluff` (blefe pego): dúvida nova, de qualquer um;
- * - `lose`: você perdeu uma carta;
- * - `turn`: a vez passou a ser sua; `coin`: suas moedas subiram;
- * - `win`: você venceu; `end`: outro venceu.
- * - `tick`: uma vez por segundo nos 3 últimos da janela, só se você ainda pode reagir (`can.pass`) e o prazo não passou.
- *
- * Nada toca na primeira visão (montagem da mesa ou reconexão): ela só vira a base de comparação. Partida nova
- * (`game.match` mudou) recomeça a conta: o diário zera, a vez conta como nova e as moedas não geram `coin`.
- * O áudio em si só nasce depois de um gesto (`installAudioUnlock` de `sounds.ts`, que a mesa instala ao montar).
- */
-export type CoupClock = { msLeft: number; expired: boolean } | null;
 
 /** Espaço entre sons que saem da mesma mudança. */
 const GAP_MS = 260;
@@ -40,12 +17,48 @@ interface Seen {
   coins: number | null;
 }
 
-export function useCoupSounds(view: CoupRoomView, clock: CoupClock): void {
+/**
+ * Sons pelo que mudou na mesa do Cúpi (porte de "sons pelo que mudou" do protótipo).
+ *
+ * Uso (a `CoupTable` chama uma vez):
+ *
+ *     const clock = useWindowClock(view.game.window?.endsAt ?? null, snap.serverOffset);
+ *     useCoupSounds(view, clock, snap.status);
+ *
+ * `view` é a visão da sala (de lá sai quem é você: `view.you`), `clock` é o relógio da janela (`useWindowClock`, `null`
+ * sem janela) e `status` é o da conexão. O hook não devolve nada.
+ *
+ * Compara cada visão nova com a anterior (guardada em refs) e toca, espaçando 260 ms os sons que saem juntos:
+ * - `declare`: entrada nova `act` ou `block` de outro jogador (a sua você já ouve no clique);
+ * - `challenge` + `reveal` (tinha a carta) ou `bluff` (blefe pego): dúvida nova, de qualquer um;
+ * - `lose`: você perdeu uma carta;
+ * - `turn`: a vez passou a ser sua; `coin`: suas moedas subiram;
+ * - `win`: você venceu; `end`: outro venceu;
+ * - `tick`: uma vez por segundo nos 3 últimos da janela, só se você ainda pode reagir (`can.pass`) e o prazo não passou.
+ *
+ * Quem assiste (`you` null ou fora da partida) ouve só `declare`, a dúvida (`challenge`/`reveal`/`bluff`) e `end`:
+ * nunca `tick` (não tem `can.pass`), `turn`, `coin`, `lose` nem `win`.
+ *
+ * Nada toca na primeira visão (montagem da mesa): ela só vira a base de comparação. O mesmo vale pra reconexão: quando
+ * o `status` sai de 'reconnecting', a próxima visão vira só a base (o que aconteceu durante a queda não toca atrasado).
+ * ("Próxima visão" = a próxima vez que `view.game` muda de identidade, ou seja, a próxima mensagem `state` do servidor.)
+ * Partida nova (`game.match` mudou) recomeça a conta: o diário zera, a vez conta como nova e as moedas não geram `coin`.
+ * O áudio em si só nasce depois de um gesto (`installAudioUnlock` de `sounds.ts`, que a mesa instala ao montar).
+ */
+export function useCoupSounds(view: CoupRoomView, clock: WindowClock, status: ConnStatus): void {
   const seen = useRef<Seen | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const lastTick = useRef<string | null | undefined>(undefined);
 
   const { game, you } = view;
+
+  // saiu de 'reconnecting': a próxima visão (que chega depois do status) é só a base
+  const lastStatus = useRef(status);
+  const rebase = useRef(false);
+  useEffect(() => {
+    if (lastStatus.current === 'reconnecting' && status !== 'reconnecting') rebase.current = true;
+    lastStatus.current = status;
+  }, [status]);
 
   // o que mudou entre a visão anterior e esta
   useEffect(() => {
@@ -55,6 +68,10 @@ export function useCoupSounds(view: CoupRoomView, clock: CoupClock): void {
     const prev = seen.current;
     seen.current = { match: game.match, log: game.log.length, myTurn, coins };
     if (prev === null) return; // primeira visão: só vira base
+    if (rebase.current) {
+      rebase.current = false; // primeira visão depois da queda: idem
+      return;
+    }
 
     const before: Seen = prev.match === game.match ? prev : { match: game.match, log: 0, myTurn: false, coins: null };
     const names: CoupSound[] = [];

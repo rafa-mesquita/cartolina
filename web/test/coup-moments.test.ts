@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CoupLogEntry } from '@cartolina/shared';
+import type { ConnStatus } from '../src/net/connection';
 import { MOMENT_MS, momentsFrom, useMoments, type Moment } from '../src/games/coup/moments';
 
 const ACT: CoupLogEntry = { t: 'act', actor: 'p0', kind: 'tax', target: null };
@@ -45,8 +46,8 @@ describe('useMoments', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  type Props = { log: readonly CoupLogEntry[]; match: number; over: boolean };
-  const hook = (initial: Props) => renderHook((p: Props) => useMoments(p.log, p.match, p.over), { initialProps: initial });
+  type Props = { log: readonly CoupLogEntry[]; match: number; over: boolean; status?: ConnStatus };
+  const hook = (initial: Props) => renderHook((p: Props) => useMoments(p.log, p.match, p.over, p.status ?? 'joined'), { initialProps: initial });
 
   it('o tempo de cada momento é 2,2 s', () => {
     expect(MOMENT_MS).toBe(2200);
@@ -108,6 +109,39 @@ describe('useMoments', () => {
     rerender({ log: [CHALLENGE, OUT, { t: 'win', player: 'p1' }], match: 1, over: true });
     expect(result.current).toBeNull();
     act(() => void vi.advanceTimersByTime(MOMENT_MS * 3));
+    expect(result.current).toBeNull();
+  });
+
+  it('reconexão: o que aconteceu durante a queda não vira momento, nem a fila antiga fica na tela', () => {
+    const dbl: CoupLogEntry[] = [CHALLENGE, CHALLENGE_TEVE, OUT];
+    const antiga = [ACT, CHALLENGE]; // a visão velha é o mesmo objeto até chegar mensagem nova
+    const { result, rerender } = hook({ log: [ACT], match: 1, over: false });
+    rerender({ log: antiga, match: 1, over: false });
+    expect(result.current).toMatchObject({ kind: 'challenge' });
+    rerender({ log: antiga, match: 1, over: false, status: 'reconnecting' });
+    act(() => void vi.advanceTimersByTime(30_000));
+    expect(result.current).toBeNull();
+    // volta: primeiro o status muda (joining, joined) com a visão velha, depois chega a visão nova
+    rerender({ log: antiga, match: 1, over: false, status: 'joining' });
+    rerender({ log: antiga, match: 1, over: false, status: 'joined' });
+    expect(result.current).toBeNull();
+    rerender({ log: [ACT, CHALLENGE, ...dbl], match: 1, over: false, status: 'joined' });
+    expect(result.current).toBeNull();
+    act(() => void vi.advanceTimersByTime(MOMENT_MS * 4));
+    expect(result.current).toBeNull();
+    // a visão seguinte já é normal: o que for novo aparece
+    rerender({ log: [ACT, CHALLENGE, ...dbl, BLOCKED], match: 1, over: false, status: 'joined' });
+    expect(result.current).toMatchObject({ kind: 'blocked' });
+  });
+
+  it('reconexão: momento que estava na fila antes da queda some quando a visão nova chega', () => {
+    const antiga = [CHALLENGE, OUT];
+    const { result, rerender } = hook({ log: [], match: 1, over: false });
+    rerender({ log: antiga, match: 1, over: false });
+    expect(result.current).toMatchObject({ kind: 'challenge' });
+    rerender({ log: antiga, match: 1, over: false, status: 'reconnecting' });
+    rerender({ log: antiga, match: 1, over: false, status: 'joined' });
+    rerender({ log: [CHALLENGE, OUT, ACT], match: 1, over: false, status: 'joined' });
     expect(result.current).toBeNull();
   });
 });

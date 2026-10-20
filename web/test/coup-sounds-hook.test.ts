@@ -1,8 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CoupLogEntry, CoupRoomView, CoupView } from '@cartolina/shared';
+import type { WindowClock } from '../src/games/coup/clock';
 import { playCoupSound } from '../src/games/coup/sounds';
-import { useCoupSounds, type CoupClock } from '../src/games/coup/useCoupSounds';
+import { useCoupSounds } from '../src/games/coup/useCoupSounds';
+import type { ConnStatus } from '../src/net/connection';
 import { coupRoom, viewOf } from './coup-fixtures';
 
 vi.mock('../src/games/coup/sounds', () => ({ playCoupSound: vi.fn() }));
@@ -25,9 +27,9 @@ const diario = (v: CoupRoomView, ...novas: CoupLogEntry[]) => com(v, { log: [...
 
 const tocados = () => vi.mocked(playCoupSound).mock.calls.map((c) => c[0]);
 
-type Props = { view: CoupRoomView; clock: CoupClock | null };
-function monta(view: CoupRoomView, clock: CoupClock | null = null) {
-  return renderHook((p: Props) => useCoupSounds(p.view, p.clock), { initialProps: { view, clock } });
+type Props = { view: CoupRoomView; clock: WindowClock; status?: ConnStatus };
+function monta(view: CoupRoomView, clock: WindowClock = null) {
+  return renderHook((p: Props) => useCoupSounds(p.view, p.clock, p.status ?? 'joined'), { initialProps: { view, clock } as Props });
 }
 
 describe('useCoupSounds', () => {
@@ -191,10 +193,40 @@ describe('useCoupSounds', () => {
     expect(tocados()).toEqual(['turn']);
   });
 
+  it('reconexão: o que aconteceu durante a queda não toca nada quando a visão nova chega', () => {
+    const v0 = vezDe(base, 'p1');
+    const { rerender } = monta(v0);
+    rerender({ view: v0, clock: null, status: 'reconnecting' });
+    act(() => void vi.advanceTimersByTime(30_000));
+    // volta: o status muda com a visão velha; depois chega a nova, com 2 dúvidas, uma saída, a vez e moedas
+    rerender({ view: v0, clock: null, status: 'joining' });
+    rerender({ view: v0, clock: null, status: 'joined' });
+    const nova = moedas(
+      vezDe(
+        diario(
+          v0,
+          { t: 'challenge', by: 'p1', of: 'p2', claim: 'duke', had: true },
+          { t: 'challenge', by: 'p2', of: 'p1', claim: 'captain', had: false },
+          { t: 'lose', player: 'p0', card: 'duke' },
+          { t: 'out', player: 'p2' },
+        ),
+        'p0',
+      ),
+      'p0',
+      9,
+    );
+    rerender({ view: nova, clock: null, status: 'joined' });
+    act(() => void vi.advanceTimersByTime(5_000));
+    expect(tocados()).toEqual([]);
+    // a visão seguinte já é normal
+    rerender({ view: diario(nova, { t: 'act', actor: 'p1', kind: 'tax', target: null }), clock: null, status: 'joined' });
+    expect(tocados()).toEqual(['declare']);
+  });
+
   describe('tique da janela', () => {
     const reacao = (v: CoupRoomView, pass: boolean, id = 1) =>
       com(v, { phase: 'reaction', turn: 'p1', window: win(id), can: { ...v.game.can, pass } });
-    const relogio = (ms: number, expired = false): CoupClock => ({ msLeft: ms, expired });
+    const relogio = (ms: number, expired = false): WindowClock => ({ msLeft: ms, expired });
 
     it('tick uma vez por segundo nos 3 últimos, só com can.pass', () => {
       const v = reacao(base, true);

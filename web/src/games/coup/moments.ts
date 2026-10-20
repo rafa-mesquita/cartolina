@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CoupCharacter, CoupLogEntry } from '@cartolina/shared';
+import type { ConnStatus } from '../../net/connection';
 
 /** Um momento narrado sobre o palco: o que o diário conta, mas com destaque. */
 export type Moment =
@@ -41,14 +42,30 @@ interface Queue {
  * Só entram entradas que chegam depois da primeira visão (ao abrir a mesa, o diário antigo não vira momento).
  * Zera quando `match` muda (o diário recomeça) ou quando a partida acaba (`over`: o painel do fim já conta tudo,
  * então o "fora" do último não aparece por cima).
+ * Reconexão: quando o `status` sai de 'reconnecting', a próxima visão vira só a base (como o `usePlays` do Diquisti):
+ * o que aconteceu durante a queda não vira momento atrasado, e a fila de antes da queda é descartada.
+ * ("Próxima visão" = a próxima vez que `log` muda de identidade, ou seja, a próxima mensagem `state` do servidor.)
  */
-export function useMoments(log: readonly CoupLogEntry[], match: number, over: boolean): Moment | null {
+export function useMoments(log: readonly CoupLogEntry[], match: number, over: boolean, status: ConnStatus): Moment | null {
   const [queue, setQueue] = useState<Queue>({ match, items: [] });
   const seen = useRef<{ match: number; len: number } | null>(null);
+
+  // saiu de 'reconnecting': a próxima visão (que chega depois do status) é só a base
+  const lastStatus = useRef(status);
+  const rebase = useRef(false);
+  useEffect(() => {
+    if (lastStatus.current === 'reconnecting' && status !== 'reconnecting') rebase.current = true;
+    lastStatus.current = status;
+  }, [status]);
 
   useEffect(() => {
     const prev = seen.current;
     seen.current = { match, len: log.length };
+    if (rebase.current) {
+      rebase.current = false;
+      setQueue((q) => (q.items.length === 0 && q.match === match ? q : { match, items: [] }));
+      return;
+    }
     if (over) {
       setQueue((q) => (q.items.length === 0 && q.match === match ? q : { match, items: [] }));
       return;

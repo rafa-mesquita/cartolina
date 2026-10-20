@@ -64,6 +64,18 @@ describe('useWindowClock', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('uma correção do serverOffset rearma o relógio (até depois de expirar)', () => {
+    const { result, rerender } = renderHook(({ o }) => useWindowClock(1_001_000, o), { initialProps: { o: 0 } });
+    act(() => void vi.advanceTimersByTime(1_500));
+    expect(result.current).toEqual({ msLeft: 0, expired: true });
+    expect(vi.getTimerCount()).toBe(0);
+    // o servidor estava 5 s atrás do que se pensava: a janela ainda tem 4,5 s
+    rerender({ o: -5_000 });
+    expect(result.current).toEqual({ msLeft: 4_500, expired: false });
+    act(() => void vi.advanceTimersByTime(1_000));
+    expect(result.current).toEqual({ msLeft: 3_500, expired: false });
+  });
+
   it('janela nova (outro endsAt) rearma o relógio', () => {
     const { result, rerender } = renderHook(({ e }) => useWindowClock(e, 0), { initialProps: { e: 1_001_000 as number | null } });
     act(() => void vi.advanceTimersByTime(1_500));
