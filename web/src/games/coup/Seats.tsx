@@ -11,6 +11,8 @@ export function opponents(game: CoupView, you: string | null): CoupSeat[] {
   return order.flatMap((id) => game.seats.find((s) => s.id === id) ?? []);
 }
 
+const coinsText = (n: number) => `${n} moeda${n === 1 ? '' : 's'}`;
+
 interface Props {
   game: CoupView;
   /** Assentos da sala (nome, cor, conectado). */
@@ -22,7 +24,7 @@ interface Props {
   onTarget: (id: string) => void;
 }
 
-/** Os oponentes em linha: nome, bichinho, 2 cartinhas e moedas; da vez em vermelho, fora apagado, desconectado "saiu". */
+/** Os oponentes em linha (por dentro, só `<span>`: o assento-alvo é um `<button>`): nome, bichinho, 2 cartinhas e moedas; da vez em vermelho, fora apagado, desconectado "saiu". */
 export const Seats = memo(function Seats({ game, roomSeats, you, nameOf, aiming, onTarget }: Props) {
   const targets = aiming ? game.can.targets : [];
   return (
@@ -34,31 +36,31 @@ export const Seats = memo(function Seats({ game, roomSeats, you, nameOf, aiming,
         const cls = ['cp-opp', turn ? 'turn' : '', s.out ? 'out' : '', aim ? 'aim' : ''].filter(Boolean).join(' ');
         const body = (
           <>
-            <div className="cp-nm">
+            <span className="cp-nm">
               {nameOf(s.id)}
               {room && !room.connected && !s.out && <span className="cp-tag">saiu</span>}
-            </div>
+            </span>
             {room && <Critter color={room.color} />}
-            <div className="cp-hand">
+            <span className="cp-hand">
               {Array.from({ length: s.hidden }, (_, i) => (
                 <CardBack key={`h${i}`} size="s" />
               ))}
               {s.revealed.map((c, i) => (
                 <CardFace key={`r${i}`} card={c} size="s" dead />
               ))}
-            </div>
+            </span>
             {s.out ? (
-              <div className="cp-coins gone">fora</div>
+              <span className="cp-coins gone">fora</span>
             ) : (
-              <div className="cp-coins" title={`${s.coins} moeda${s.coins === 1 ? '' : 's'}`}>
+              <span className="cp-coins" title={coinsText(s.coins)}>
                 <i className="ti ti-coin" aria-hidden="true" />
                 {s.coins}
-              </div>
+              </span>
             )}
           </>
         );
         return aim ? (
-          <button key={s.id} type="button" className={cls} aria-label={`mirar em ${nameOf(s.id)}`} onClick={() => onTarget(s.id)}>
+          <button key={s.id} type="button" className={cls} aria-label={`mirar em ${nameOf(s.id)}, ${coinsText(s.coins)}, ${s.hidden} carta${s.hidden === 1 ? '' : 's'}`} onClick={() => onTarget(s.id)}>
             {body}
           </button>
         ) : (

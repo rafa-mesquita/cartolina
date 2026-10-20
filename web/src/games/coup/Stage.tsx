@@ -43,7 +43,10 @@ export function Stage({ game, names, clock, aiming, onCancelAim, onReact, moment
         <i className="ti ti-cards" aria-hidden="true" />
       </div>
       <StageMain game={game} names={names} clock={clock} aiming={aiming} onCancelAim={onCancelAim} onReact={onReact} />
-      {moment && <MomentView moment={moment} band={band} nameOf={names.nameOf} />}
+      {/* a região de aviso fica sempre na tela; só o conteúdo troca (como o toast) */}
+      <div className="cp-moment-slot" role="status" aria-live="polite">
+        {moment && <MomentView moment={moment} band={band} nameOf={names.nameOf} />}
+      </div>
     </div>
   );
 }

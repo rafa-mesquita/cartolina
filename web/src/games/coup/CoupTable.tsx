@@ -4,7 +4,7 @@ import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import { JOIN_ERRORS, type ConnStatus, type GameConn } from '../../net/connection';
 import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
-import { useWindowClock } from './clock';
+import { useWindowClock, windowLeft } from './clock';
 import { Diary } from './Diary';
 import { useMoments } from './moments';
 import { MyArea } from './MyArea';
@@ -19,6 +19,8 @@ import { useCoupSounds } from './useCoupSounds';
 import './coup.css';
 
 const TOAST_MS = 2400;
+/** Trava contra envio duplo: solta sozinha depois disso (ms), se nem visão nova nem recusa chegarem. */
+const UNLOCK_MS = 4000;
 
 interface Props {
   view: CoupRoomView;
@@ -30,18 +32,20 @@ interface Props {
 }
 
 /**
- * O que é só da interface: ação esperando o alvo, carta escolhida pra perder e cartas marcadas na troca.
- * Vale só pra situação em que foi escolhido (`key`): visão nova com outra situação = tudo zerado.
+ * O que é só da interface: ação esperando o alvo, carta escolhida pra perder, cartas marcadas na troca e a trava
+ * contra envio duplo (`sent`: já mandou uma ação nesta situação). Vale só pra situação em que foi escolhido (`key`):
+ * visão nova com outra situação = tudo zerado (inclusive a trava).
  */
 interface Ui {
   key: string;
   aiming: CoupActionKind | null;
   lose: number;
   keep: number[];
+  sent: boolean;
 }
 /** Nada marcado (o mesmo array sempre: o painel memorizado não redesenha a cada tique do relógio). */
 const NO_KEEP: number[] = [];
-const freshUi = (key: string): Ui => ({ key, aiming: null, lose: -1, keep: NO_KEEP });
+const freshUi = (key: string): Ui => ({ key, aiming: null, lose: -1, keep: NO_KEEP, sent: false });
 
 /**
  * A mesa do Cúpi no computador: palco 1440×900 escalado com o topo, os oponentes, o palco (feltro), a sua área e o diário.
@@ -61,17 +65,6 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   useCoupSounds(view, clock, status);
   useCoupButtonSounds(rootRef);
 
-  // Recusas do servidor (que não são de entrada na sala) viram aviso no palco.
-  useEffect(
-    () =>
-      conn.onError((code, message) => {
-        if (JOIN_ERRORS.has(code)) return;
-        say(message);
-        playCoupSound('error');
-      }),
-    [conn, say],
-  );
-
   // estado da interface, preso à situação da visão
   const key = `${g.match}:${g.log.length}:${g.phase}:${g.window?.id ?? '-'}`;
   const [uiState, setUi] = useState<Ui>(() => freshUi(key));
@@ -84,10 +77,39 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
       }),
     [key],
   );
+  // Recusas do servidor (que não são de entrada na sala) viram aviso no palco.
+  useEffect(
+    () =>
+      conn.onError((code, message) => {
+        if (JOIN_ERRORS.has(code)) return;
+        // recusou: quem errou pode tentar de novo
+        setUi((u) => (u.sent ? { ...u, sent: false } : u));
+        say(message);
+        playCoupSound('error');
+      }),
+    [conn, say],
+  );
+
   const aiming = ui.aiming !== null && g.can.act.includes(ui.aiming) && COUP_TARGETED[ui.aiming] ? ui.aiming : null;
 
-  const send = useCallback((a: Parameters<GameConn['sendAction']>[0]) => conn.sendAction(a), [conn]);
+  // Trava contra envio duplo (molde: `sentFor` do Retratim): uma ação por situação; solta com visão nova,
+  // recusa do servidor ou, por garantia, depois de alguns segundos.
+  const sent = ui.sent;
+  const send = useCallback(
+    (a: Parameters<GameConn['sendAction']>[0]) => {
+      if (sent) return;
+      patch(() => ({ sent: true }));
+      conn.sendAction(a);
+    },
+    [conn, patch, sent],
+  );
+  useEffect(() => {
+    if (!sent) return undefined;
+    const t = setTimeout(() => setUi((u) => (u.key === key && u.sent ? { ...u, sent: false } : u)), UNLOCK_MS);
+    return () => clearTimeout(t);
+  }, [sent, key]);
   const windowId = g.window?.id;
+  const endsAt = g.window?.endsAt;
 
   const onAct = useCallback(
     (kind: CoupActionKind) => {
@@ -112,10 +134,12 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
   const onCancelAim = useCallback(() => patch(() => ({ aiming: null })), [patch]);
   const onReact = useCallback(
     (r: Reaction) => {
-      if (windowId === undefined) return;
+      if (windowId === undefined || endsAt === undefined) return;
+      // nos 100 ms entre o prazo e o próximo tique do relógio os botões ainda aparecem: o clique não sai
+      if (windowLeft(endsAt, Date.now() + serverOffset) <= 0) return;
       send({ ...r, windowId });
     },
-    [send, windowId],
+    [send, windowId, endsAt, serverOffset],
   );
   const onLoseSel = useCallback((i: number) => patch(() => ({ lose: i })), [patch]);
   const onLose = useCallback((card: CoupCharacter) => send({ type: 'lose', card }), [send]);
@@ -141,6 +165,17 @@ export function CoupTable({ view, conn, serverOffset, status }: Props) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [hasAim]);
+
+  // Modo alvo: o foco vai pro primeiro assento-alvo; ao mirar ou cancelar, volta pro botão da ação.
+  const prevAim = useRef<CoupActionKind | null>(null);
+  useEffect(() => {
+    const prev = prevAim.current;
+    prevAim.current = aiming;
+    const root = rootRef.current;
+    if (!root) return;
+    if (aiming !== null && prev === null) root.querySelector<HTMLElement>('.cp-opp.aim')?.focus();
+    else if (aiming === null && prev !== null) root.querySelector<HTMLElement>(`.cp-act[data-kind="${prev}"]`)?.focus();
+  }, [aiming]);
 
   const stage = { width, transform: `translate(-50%, -50%) scale(${scale})` } as CSSProperties;
   return (

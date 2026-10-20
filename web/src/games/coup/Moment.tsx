@@ -36,7 +36,7 @@ function MomentBody({ moment, band, nameOf }: { moment: Moment; band: boolean; n
   }, []);
   const cls = ['cp-moment', band ? 'band' : '', bye ? 'bye' : ''].filter(Boolean).join(' ');
   return (
-    <div className={cls} role="status" aria-live="polite">
+    <div className={cls}>
       <MomentContent moment={moment} nameOf={nameOf} />
     </div>
   );

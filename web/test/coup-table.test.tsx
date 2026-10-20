@@ -93,23 +93,23 @@ describe('mesa do Cúpi: sua vez', () => {
   it('"extorquir" entra no modo alvo; o assento do Beto manda o alvo; Esc e "cancelar" saem sem mandar', () => {
     const c = conn();
     mesa(viewOf(startedBy(3, 'p0'), 'p0'), c);
-    expect(screen.queryByRole('button', { name: 'mirar em Beto' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^mirar em Beto/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /^extorquir/ }));
     expect(c.sendAction).not.toHaveBeenCalled();
     expect(screen.getByText(/escolha o alvo lá em cima/)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'mirar em Caio' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^mirar em Caio/ })).toBeTruthy();
     // Esc sai do modo
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.queryByRole('button', { name: 'mirar em Beto' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^mirar em Beto/ })).toBeNull();
     expect(screen.getByText('sua vez')).toBeTruthy();
     // "cancelar" também
     fireEvent.click(screen.getByRole('button', { name: /^extorquir/ }));
     fireEvent.click(screen.getByRole('button', { name: 'cancelar' }));
-    expect(screen.queryByRole('button', { name: 'mirar em Beto' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^mirar em Beto/ })).toBeNull();
     expect(c.sendAction).not.toHaveBeenCalled();
     // e mirando de verdade
     fireEvent.click(screen.getByRole('button', { name: /^extorquir/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'mirar em Beto' }));
+    fireEvent.click(screen.getByRole('button', { name: /^mirar em Beto/ }));
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'act', kind: 'steal', target: 'p1' });
     expect(c.sendAction).toHaveBeenCalledTimes(1);
   });
@@ -362,5 +362,101 @@ describe('mesa do Cúpi: momentos, avisos e quem assiste', () => {
     expect(screen.getByText('você está assistindo — joga a próxima')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^renda/ })).toBeNull();
     expect([...container.querySelectorAll('.cp-opp .cp-nm')].map((n) => n.firstChild?.textContent)).toEqual(['Ana', 'Beto', 'Caio']);
+  });
+});
+
+describe('mesa do Cúpi: trava, prazo, foco e estado que zera', () => {
+  it('dois cliques seguidos em "deixa" mandam uma ação só; uma recusa libera de novo', () => {
+    const c = conn();
+    mesa(viewOf(betoTaxa(), 'p0'), c);
+    fireEvent.click(screen.getByRole('button', { name: 'deixa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'deixa' }));
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    fail(c, 'window_closed', 'Essa janela já fechou.');
+    fireEvent.click(screen.getByRole('button', { name: 'deixa' }));
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('a trava solta sozinha se nada chegar em alguns segundos', () => {
+    const c = conn();
+    mesa(viewOf(startedBy(3, 'p0'), 'p0'), c);
+    fireEvent.click(screen.getByRole('button', { name: /^renda/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^renda/ }));
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    rtlAct(() => vi.advanceTimersByTime(4100));
+    fireEvent.click(screen.getByRole('button', { name: /^renda/ }));
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('visão nova solta a trava (outra situação)', () => {
+    const c = conn();
+    const view = viewOf(startedBy(3, 'p0'), 'p0');
+    const { rerender } = mesa(view, c);
+    fireEvent.click(screen.getByRole('button', { name: /^renda/ }));
+    rerender(<CoupTable view={com(view, { log: [...view.game.log, { t: 'out', player: 'p2' }] })} conn={c} serverOffset={0} status="joined" />);
+    fireEvent.click(screen.getByRole('button', { name: /^taxar/ }));
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('no fim do prazo (antes do próximo tique do relógio) a reação não sai', () => {
+    const c = conn();
+    const view = viewOf(betoTaxa(), 'p0');
+    mesa(view, c);
+    vi.setSystemTime(view.game.window!.endsAt); // o relógio ainda não acordou: os botões estão na tela
+    fireEvent.click(screen.getByRole('button', { name: 'deixa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'duvidar' }));
+    expect(c.sendAction).not.toHaveBeenCalled();
+  });
+
+  it('modo alvo: o foco vai pro primeiro alvo e volta pra ação; o rótulo diz moedas e cartas', () => {
+    mesa(viewOf(startedBy(3, 'p0'), 'p0'));
+    const steal = screen.getByRole('button', { name: /^extorquir/ });
+    expect(steal.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: /^renda/ }).getAttribute('aria-pressed')).toBeNull();
+    fireEvent.click(steal);
+    expect(steal.getAttribute('aria-pressed')).toBe('true');
+    const beto = screen.getByRole('button', { name: 'mirar em Beto, 2 moedas, 2 cartas' });
+    expect(document.activeElement).toBe(beto);
+    expect(beto.querySelector('div')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(document.activeElement).toBe(steal);
+    fireEvent.click(steal);
+    fireEvent.click(screen.getByRole('button', { name: 'cancelar' }));
+    expect(document.activeElement).toBe(steal);
+  });
+
+  it('o momento troca dentro de uma região de aviso que fica na tela', () => {
+    const view = viewOf(betoTaxa(), 'p1');
+    const { container, rerender } = mesa(view);
+    const live = container.querySelector('.cp-felt [role="status"]');
+    expect(live).toBeTruthy();
+    expect(live!.textContent).toBe('');
+    rerender(<CoupTable view={com(view, { log: [...view.game.log, { t: 'out', player: 'p2' }] })} conn={conn()} serverOffset={0} status="joined" />);
+    expect(container.querySelector('.cp-felt [role="status"]')).toBe(live);
+    expect(live!.textContent).toBe('Caio está fora');
+  });
+
+  it('o modo alvo zera com uma visão de outra situação', () => {
+    const view = viewOf(startedBy(3, 'p0'), 'p0');
+    const c = conn();
+    const { rerender } = mesa(view, c);
+    fireEvent.click(screen.getByRole('button', { name: /^extorquir/ }));
+    expect(screen.getByRole('button', { name: /^mirar em Beto/ })).toBeTruthy();
+    rerender(<CoupTable view={com(view, { log: [...view.game.log, { t: 'out', player: 'p2' }] })} conn={c} serverOffset={0} status="joined" />);
+    expect(screen.queryByRole('button', { name: /^mirar em/ })).toBeNull();
+    expect(screen.getByText('sua vez')).toBeTruthy();
+  });
+
+  it('a carta marcada pra perder zera com uma visão de outra situação', () => {
+    const tax = betoTaxa();
+    const room = step(tax, 'p0', { type: 'challenge', windowId: viewOf(tax, null).game.window!.id });
+    const view = viewOf(room, viewOf(room, null).game.loss!.player);
+    const c = conn();
+    const { container, rerender } = mesa(view, c);
+    fireEvent.click(container.querySelectorAll<HTMLButtonElement>('.cp-pickc')[0]!);
+    expect(container.querySelectorAll('.cp-pickc.on')).toHaveLength(1);
+    rerender(<CoupTable view={com(view, { log: [...view.game.log, { t: 'out', player: 'p2' }] })} conn={c} serverOffset={0} status="joined" />);
+    expect(container.querySelectorAll('.cp-pickc.on')).toHaveLength(0);
+    expect((screen.getByRole('button', { name: 'revelar' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

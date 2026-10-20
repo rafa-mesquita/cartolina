@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { COUP_ACTION_KINDS, COUP_CLAIM, type CoupActionKind, type CoupView } from '@cartolina/shared';
+import { COUP_ACTION_KINDS, COUP_CLAIM, COUP_TARGETED, type CoupActionKind, type CoupView } from '@cartolina/shared';
 import { CardFace } from './CardFace';
 import { actionLabel } from './texts';
 
@@ -50,7 +50,8 @@ export const MyArea = memo(function MyArea({ game, me, aiming, onAct }: Props) {
                 type="button"
                 className={`cp-act${aiming === k ? ' sel' : ''}`}
                 disabled={!game.can.act.includes(k)}
-                aria-pressed={aiming === k ? true : undefined}
+                data-kind={k}
+                aria-pressed={COUP_TARGETED[k] ? aiming === k : undefined}
                 onClick={() => onAct(k)}
               >
                 <span className="cp-an">{name}</span>
