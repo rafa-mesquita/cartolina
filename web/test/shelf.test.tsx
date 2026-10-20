@@ -22,7 +22,7 @@ describe('estante de jogos', () => {
     expect(screen.getByRole('link', { name: /Tatubum/ }).getAttribute('href')).toBe('#/kittens');
     const camelioLink = screen.getByRole('link', { name: /Cama-Leão/ });
     expect(camelioLink.getAttribute('href')).toBe('#/camelio');
-    expect(within(camelioLink).getByText('em breve')).toBeTruthy(); // a mesa do Cama-Leão vem no C3
+    expect(within(camelioLink).queryByText('em breve')).toBeNull(); // a mesa do Cama-Leão já existe
     // o selo "em breve" aparece só nos jogos que ainda não dá pra jogar
     const soon = CATALOG.filter((g) => !g.playable);
     expect(screen.queryAllByText('em breve')).toHaveLength(soon.length);

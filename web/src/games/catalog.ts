@@ -76,8 +76,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Exatamente 5 esferas de uma cor valem 1 ponto. Passou de 5, perde as cartas da cor. Numa cor que já pontuou, chegar a 5 de novo também tira o ponto.',
       'Ganha quem pontuar 3 cores (4 com 2 jogadores).',
     ],
-    // A mesa vem no Plano C3.
-    playable: false,
+    playable: true,
     mobile: false,
   },
 };

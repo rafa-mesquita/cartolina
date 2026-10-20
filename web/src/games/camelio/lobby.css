@@ -1,0 +1,37 @@
+/* Lobby do Cama-Leão: lona listrada do circo, folhas de cartaz. Escopo próprio (não mexe no .camelio da mesa). */
+.camelio-lobby{
+  --cream:#f7efe0; --canvas:#f3dcd2; --red:#c8372d; --red-dark:#9e2a22; --navy:#1f2a4a; --navy-soft:#5a6382;
+  --gold:#e8b23a; --line:#e2c9b8;
+  position:fixed;inset:0;overflow:auto;color:var(--navy);font-family:'Fredoka',system-ui,sans-serif;font-weight:500;
+  background:
+    radial-gradient(ellipse 78% 72% at 50% 54%,transparent 58%,rgba(158,42,34,.16) 100%),
+    repeating-linear-gradient(90deg,var(--cream) 0 44px,var(--canvas) 44px 88px)}
+.camelio-lobby *,.camelio-lobby *::before,.camelio-lobby *::after{box-sizing:border-box}
+.camelio-lobby button{font:inherit;color:inherit;cursor:pointer}
+.camelio-lobby .cl-lobby{display:flex;flex-direction:column;align-items:center;gap:26px;padding:44px 16px 56px}
+.camelio-lobby .cl-lobby-logo{margin:0;text-align:center;font:400 64px/1 'Rye',Georgia,serif;color:var(--red);letter-spacing:1px;
+  text-shadow:3px 3px 0 var(--gold)}
+.camelio-lobby .cl-lobby-logo small{display:block;margin-top:10px;font:500 13px/1.4 'Fredoka',system-ui,sans-serif;letter-spacing:1px;
+  color:var(--navy-soft);text-shadow:none}
+.camelio-lobby .cl-lobby-sheet{width:min(520px,100%);flex:none;display:flex;flex-direction:column;gap:12px;padding:22px 26px;
+  background:var(--cream);border:2px dashed var(--line);border-radius:18px;box-shadow:0 6px 18px rgba(31,42,74,.18)}
+.camelio-lobby .cl-lobby-sheet h2{margin:0;font:600 22px/1 'Fredoka',system-ui,sans-serif;color:var(--red-dark)}
+.camelio-lobby .cl-lobby-sheet p{margin:0;font-size:14px;line-height:1.4;color:var(--navy-soft)}
+.camelio-lobby .cl-lobby-sheet p b{color:var(--navy)}
+.camelio-lobby .cl-lobby-people{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:10px 18px}
+.camelio-lobby .cl-lobby-people li{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.camelio-lobby .cl-lobby-people li.off{opacity:.45}
+.camelio-lobby .cl-lobby-people .critter{width:36px;height:36px}
+.camelio-lobby .cl-lobby-btn{align-self:flex-start;border:0;border-radius:999px;padding:12px 26px;background:var(--red);color:var(--cream);
+  font-weight:600;font-size:16px;box-shadow:0 3px 0 var(--red-dark)}
+.camelio-lobby .cl-lobby-btn:hover{filter:brightness(1.08)}
+.camelio-lobby .cl-lobby-btn.ghost{background:none;color:var(--red-dark);box-shadow:none;font-size:14px;padding:10px 18px;border:2px solid var(--line)}
+.camelio-lobby .cl-lobby-btn.ghost:hover{background:rgba(200,55,45,.08);filter:none}
+.camelio-lobby .cl-lobby-home{width:min(520px,100%);flex:none;align-self:center;text-align:center}
+.camelio-lobby .cl-lobby-link{width:100%;padding:8px 10px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--navy)}
+.camelio-lobby .cl-lobby-sheet p.cl-lobby-warn{color:var(--red);font-weight:600}
+.camelio-lobby .dx-pill{align-self:flex-start;border:2px solid var(--line);border-radius:999px;background:none;color:var(--navy);
+  padding:8px 14px;font:500 13px/1 'Fredoka',system-ui,sans-serif}
+.camelio-lobby .dx-pill:hover{border-color:var(--red);color:var(--red-dark)}
+.camelio-lobby .cl-lobby-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);padding:10px 18px;border-radius:999px;
+  background:var(--navy);color:var(--cream);font:600 13px/1 'Fredoka',system-ui,sans-serif;z-index:40;pointer-events:none}
