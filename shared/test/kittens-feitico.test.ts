@@ -86,15 +86,20 @@ describe('Feitiço: a carta de baixo do monte', () => {
     expect(everyCard(s)).toEqual(everyCard(start));
   });
 
-  it('prazo vencido: fica com a carta, a não ser que seja um Tatubum (aí vai pro topo)', () => {
+  it('prazo vencido: a carta de baixo vai pro topo, seja qual for (quem assiste não aprende nada)', () => {
     const late = (s: KittensState) => settleKittens(s, at(5000 + KITTENS_CHOICE_MS));
-    const kept = late(conjuring());
-    expect(kept.hands.p0).toEqual(['mico-0', 'quati-9']);
-    expect(kept).toMatchObject({ choice: null, current: 'p1' });
+    const plain = late(conjuring());
+    expect(plain.draw).toEqual(['pular-9', 'tatubum-0', 'espiar-9', 'quati-9']);
+    expect(plain.hands.p0).toEqual(['mico-0']);
+    expect(plain).toMatchObject({ choice: null, current: 'p1', owed: 1 });
     const tatu = late(conjuring({ draw: ['tatubum-0', 'pular-9'] }));
     expect(tatu.draw).toEqual(['pular-9', 'tatubum-0']);
     expect(tatu.hands.p0).toEqual(['mico-0']);
-    expect(tatu.log.at(-1)!.ev).toEqual({ t: 'conjured', by: 'p0', kept: false });
+    // O que todo mundo vê é igual nos dois casos: o mesmo evento, a mesma mão de quem jogou, a vez passando.
+    for (const s of [plain, tatu]) {
+      expect(s.log.at(-1)!.ev).toEqual({ t: 'conjured', by: 'p0', kept: false });
+      expect(kittensViewFor(s, 'p1').handCounts.p0).toBe(1);
+    }
   });
 
   it('Nem vem! cancela: nada acontece e a vez continua', () => {
@@ -105,14 +110,16 @@ describe('Feitiço: a carta de baixo do monte', () => {
     expect(done.discard).toEqual(['feitico-0', 'nemvem-1']);
   });
 
-  it('quem está escolhendo cai de vez: a escolha é feita ao acaso e ele sai; o monte fica com vivos − 1 tatus', () => {
+  it('quem está escolhendo cai de vez: a carta de baixo vai pro topo e ele sai; o monte fica com vivos − 1 tatus', () => {
     const s = conjuring({ draw: ['mico-9', 'tatubum-0', 'tatubum-1'] });
     const after = settleKittens(s, ctxOf(['p1', 'p2'], { now: T0 + 6000 }));
     expect(after.alive).toEqual(['p1', 'p2']);
     expect(after.choice).toBeNull();
-    expect(after.draw.filter((c) => c.startsWith('tatubum'))).toHaveLength(1);
-    expect(after.out).toEqual(expect.arrayContaining(['mico-0', 'mico-9']));
+    expect(after.draw).toEqual(['tatubum-1', 'mico-9']);
+    expect(after.out).toEqual(['mico-0', 'tatubum-0']);
+    expect(after.log.map((e) => e.ev.t).slice(-2)).toEqual(['conjured', 'left']);
     expect(after.current).toBe('p1');
+    expect(everyCard(after)).toEqual(everyCard(s));
   });
 
   it('ficar com a carta conta como comprar: o Mau-olhado passa', () => {

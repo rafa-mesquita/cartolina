@@ -1,5 +1,6 @@
 import type { GameContext } from '../../game';
 import { chooseAtRandom } from './choices';
+import { kittensWithNewFields } from './compat';
 import { resolvePending } from './resolve';
 import { eliminate, logged } from './turn';
 import type { KittensState } from './types';
@@ -24,9 +25,11 @@ function leave(state: KittensState, p: string, ctx: GameContext): KittensState {
 
 /**
  * Presença e prazos. Roda antes de cada ação, a cada `tick` da sala e no alarme. Ordem: quem caiu de vez sai;
- * escolha vencida é feita ao acaso; carta no ar vencida resolve. Devolve o MESMO objeto quando nada muda.
+ * escolha vencida é feita ao acaso; carta no ar vencida resolve. Devolve o MESMO objeto quando nada muda (estado
+ * salvo antes das cartas novas ganha `front`/`blind` vazios, e aí volta um objeto novo).
  */
-export function settleKittens(state: KittensState, ctx: GameContext): KittensState {
+export function settleKittens(saved: KittensState, ctx: GameContext): KittensState {
+  const state = kittensWithNewFields(saved);
   if (state.phase !== 'playing') return state;
   let s = state;
   for (const p of state.alive.filter((x) => !ctx.active.includes(x))) {

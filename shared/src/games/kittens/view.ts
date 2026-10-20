@@ -1,5 +1,6 @@
 import type { GameModule } from '../../game';
 import { kittensToken } from './cards';
+import { kittensWithNewFields } from './compat';
 import { applyKittensAction, initialKittensState } from './rules';
 import { settleKittens } from './settle';
 import { tatusIn } from './turn';
@@ -43,7 +44,8 @@ function choiceView(state: KittensState, viewerId: string | null): KittensChoice
  * Quem está cego pelo Mau-olhado vê fichas no lugar da mão, e nenhuma carta que esteja na mão dele aparece no diário.
  * A visão compartilha arrays/objetos com o estado (é serializada no socket); quem consome não deve mutar.
  */
-export function kittensViewFor(state: KittensState, viewerId: string | null): KittensView {
+export function kittensViewFor(saved: KittensState, viewerId: string | null): KittensView {
+  const state = kittensWithNewFields(saved);
   const peek = state.peek;
   const hand = own(state.hands, viewerId) ?? [];
   const blind = viewerId !== null && state.blind.includes(viewerId);

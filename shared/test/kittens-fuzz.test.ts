@@ -20,6 +20,8 @@ import { T0, deepFreeze, everyCard, ids, must } from './kittens-helpers';
 /** Passos no máximo por partida: toda partida tem que acabar antes disso (nada trava). */
 const STEP_CAP = 3000;
 const SEEDS = 15;
+/** Teto de sementes da conferência de cobertura (ela para assim que viu tudo). */
+const COVERAGE_SEEDS = 40;
 
 /** Todas as cartas de uma partida com `n` jogadores, em ordem alfabética. */
 function fullDeck(n: number): string[] {
@@ -27,9 +29,6 @@ function fullDeck(n: number): string[] {
   const tatus = Array.from({ length: n - 1 }, (_, i) => kittensCardId('tatubum', i));
   return [...kittensBaseDeck(n), ...cafunes, ...tatus].sort();
 }
-
-/** O que cada simulação exercitou (pra conferir que as cartas novas apareceram de verdade). */
-const seen = new Set<string>();
 
 /**
  * Confere as invariantes depois de um passo; `where` descreve a partida e os últimos passos (vai na mensagem de erro).
@@ -102,7 +101,16 @@ function cardsToPlay(r: Rng, hand: string[]): string[] {
   return [pick(r, hand)!];
 }
 
-/** Fichas `?i` ao acaso (1, 2, 3 ou 5, sem repetir) da mão de quem está cego. */
+/** Outro nome pra mesma ficha (`?3` → `?03`, `?003`): nunca pode valer. */
+const aliasOf = (r: Rng, token: string): string => `?${r() < 0.5 ? '0' : '00'}${token.slice(1)}`;
+
+/** Ficha fora da escrita canônica (`?00`, `?01`…). */
+const isAlias = (card: string | undefined): boolean => card !== undefined && /^\?0\d/.test(card);
+
+/**
+ * Fichas `?i` ao acaso (1, 2, 3 ou 5, sem repetir) da mão de quem está cego. Às vezes uma delas vai com outro nome,
+ * ou repetida por outro nome (tentativa de jogar a mesma carta duas vezes): tem que ser recusado.
+ */
 function tokensToPlay(r: Rng, size: number): string[] {
   const n = Math.min(size, pick(r, [1, 1, 1, 2, 2, 3, 5])!);
   const all = Array.from({ length: size }, (_, i) => `?${i}`);
@@ -110,15 +118,26 @@ function tokensToPlay(r: Rng, size: number): string[] {
     const j = Math.floor(r() * (i + 1));
     [all[i], all[j]] = [all[j]!, all[i]!];
   }
-  return all.slice(0, n);
+  const tokens = all.slice(0, n);
+  const roll = r();
+  if (roll < 0.15) return [...tokens, aliasOf(r, tokens[0]!)];
+  if (roll < 0.25) return [aliasOf(r, tokens[0]!), ...tokens.slice(1)];
+  return tokens;
 }
 
 /** Uma ação ao acaso de `p` (pode ser inválida: aí é recusada e nada muda). */
 function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const hand = s.hands[p] ?? [];
   const blind = s.blind.includes(p);
-  /** Uma carta da própria mão: id, ou ficha pra quem está cego (às vezes o id mesmo assim: tem que ser recusado). */
-  const own = (): string => (blind && r() < 0.9 ? `?${Math.floor(r() * (hand.length + 1))}` : (pick(r, hand) ?? 'ataque-0'));
+  /**
+   * Uma carta da própria mão: id, ou ficha pra quem está cego (às vezes o id mesmo assim, ou a ficha com outro nome
+   * tipo `?00`: tem que ser recusado).
+   */
+  const own = (): string => {
+    if (!blind || r() >= 0.9) return pick(r, hand) ?? 'ataque-0';
+    const token = `?${Math.floor(r() * (hand.length + 1))}`;
+    return r() < 0.15 ? aliasOf(r, token) : token;
+  };
   const c = s.choice;
   // Par de Mico: qualquer um da espera descarta uma carta da própria mão.
   if (c?.kind === 'mico' && c.waiting.includes(p) && r() < 0.8) return { type: 'choose', card: own() };
@@ -137,14 +156,48 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const a = r();
   if (s.pending && a < 0.5) return blind || r() < 0.2 ? { type: 'nope', card: own() } : { type: 'nope' };
   const extra = { target: pick(r, s.players), ask: pick(r, KITTENS_BICHOS), as: pick(r, KITTENS_BICHOS) };
-  // Quem está cego joga às cegas de vez em quando; quase sempre compra (e volta a ver).
-  if (blind) return a < 0.15 && hand.length > 0 ? { type: 'play', cards: tokensToPlay(r, hand.length), ...extra } : { type: 'draw' };
-  if (a < 0.45 && hand.length > 0) return { type: 'play', cards: cardsToPlay(r, hand), ...extra };
+  // Quem está cego joga às cegas de vez em quando; na maioria das vezes compra (e volta a ver).
+  if (blind) return a < 0.3 && hand.length > 0 ? { type: 'play', cards: tokensToPlay(r, hand.length), ...extra } : { type: 'draw' };
+  // Jogadas com o que é público (senão o cego que tem que se defender do Latidor quase nunca aparece): com alguém com
+  // Latidor na frente, segura o outro Latidor até ele ficar cego, bota mau-olhado nele e aí late.
+  const others = s.alive.filter((x) => x !== p);
+  const barking = others.filter((x) => (s.front[x]?.length ?? 0) > 0);
+  const latido = hand.find((x) => kittensKindOf(x) === 'latido');
+  if (latido && barking.some((x) => s.blind.includes(x)) && r() < 0.8) return { type: 'play', cards: [latido] };
+  const olhado = hand.find((x) => kittensKindOf(x) === 'olhado');
+  const seeing = barking.filter((x) => !s.blind.includes(x));
+  if (olhado && seeing.length > 0 && r() < 0.6) return { type: 'play', cards: [olhado], target: pick(r, seeing)! };
+  const hold = latido !== undefined && seeing.length > 0 && r() < 0.9;
+  const playable = hold ? hand.filter((x) => x !== latido) : hand;
+  if (a < 0.45 && playable.length > 0) return { type: 'play', cards: cardsToPlay(r, playable), ...extra };
   return { type: 'draw' };
 }
 
-/** Joga uma partida inteira com `n` jogadores, conferindo as invariantes a cada passo. `false` = não acabou (travou). */
-function playGame(n: number, seed: number): boolean {
+/** As cartas que a ação aponta na própria mão (pra ver se alguma ficha foi com outro nome). */
+function cardsOf(action: KittensAction): (string | undefined)[] {
+  if (action.type === 'play') return action.cards;
+  if (action.type === 'nope' || action.type === 'choose') return [action.card];
+  return [];
+}
+
+/**
+ * Começo arranjado (só move cartas, não cria nem some com nenhuma): p1 está cego com um Latidor na frente, e o outro
+ * está na mão de p0, que joga primeiro. Ao acaso, um cego ter que se defender do Latidor é raríssimo; daqui as
+ * partidas seguem ao acaso como as outras.
+ */
+function blindBark(s: KittensState): KittensState {
+  const [a, b] = ['latido-0', 'latido-1'];
+  const without = (cs: string[]) => cs.filter((c) => c !== a && c !== b);
+  const hands = Object.fromEntries(Object.entries(s.hands).map(([p, cs]) => [p, without(cs)]));
+  return { ...s, hands: { ...hands, p0: [...hands.p0!, a] }, draw: without(s.draw), front: { p1: [b] }, blind: ['p1'] };
+}
+
+/**
+ * Joga uma partida inteira com `n` jogadores, conferindo as invariantes a cada passo. `false` = não acabou (travou).
+ * `seen` junta o que a partida exercitou (pra conferir que as cartas novas apareceram de verdade). `rig` arranja o
+ * começo (ex.: `blindBark`).
+ */
+function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: (s: KittensState) => KittensState): boolean {
   const r = mulberry32(seed * 7919 + n);
   const players = ids(n);
   const deck = fullDeck(n);
@@ -158,29 +211,49 @@ function playGame(n: number, seed: number): boolean {
   const someViewer = (s: KittensState) => (s.blind.length > 0 && r() < 0.5 ? pick(r, s.blind)! : (pick(r, [...players, null]) ?? null));
 
   let s = must(applyKittensAction(initialKittensState(), 'p0', { type: 'start' }, ctx()));
+  if (rig) s = rig(s);
   checkInvariants(s, deck, someViewer(s), where);
   for (let step = 0; s.phase !== 'gameover'; step++) {
     if (step === STEP_CAP) return false;
     const roll = r();
+    const c = s.choice;
+    if (c?.kind === 'latido' && s.blind.includes(c.who)) seen.add('latido:blind');
+    /** Prazo ou queda: o servidor resolve; o Feitiço sem resposta sempre manda a carta de baixo pro topo. */
+    const settle = () => {
+      const seq = s.seq;
+      s = settleKittens(deepFreeze(s), ctx());
+      if (c?.kind !== 'feitico' || s.choice === c) return;
+      const conjured = s.log.find((e) => e.n >= seq && e.ev.t === 'conjured')?.ev;
+      // Sem `conjured`, só se a partida acabou (o outro caiu e sobrou quem escolhia).
+      if (conjured === undefined && s.phase === 'gameover') return;
+      if (conjured?.t !== 'conjured' || conjured.kept) throw new Error(`Feitiço sem resposta ficou com a carta\n  ${where()}`);
+      seen.add('feitico:timeout');
+    };
     if (roll < 0.12) {
       // Só o tempo passa (às vezes além do prazo do Nem vem! ou da escolha).
       now += pick(r, [100, 1000, 4999, 5000, 6000, 30_000, 31_000])!;
       trace.push(`+tempo ${now - T0}`);
-      s = settleKittens(deepFreeze(s), ctx());
+      settle();
     } else if (roll < 0.135 && active.length > 1) {
       // Alguém cai e não volta: some dos ativos (a tolerância de 30 s já passou).
       const who = pick(r, active)!;
       active = active.filter((x) => x !== who);
       now += 31_000;
       trace.push(`${who} caiu`);
-      s = settleKittens(deepFreeze(s), ctx());
+      settle();
     } else {
-      // Ação: quase sempre de quem está na vez, às vezes de qualquer um (inclusive quem assiste).
-      const p = r() < 0.9 ? (s.current !== null && r() < 0.7 ? s.current : pick(r, players)!) : 'espectador';
+      // Ação: quase sempre de quem está na vez (ou de quem a escolha aberta espera), às vezes de qualquer um (inclusive
+      // quem assiste).
+      const owner = c === null ? s.current : c.kind === 'mico' ? (pick(r, c.waiting) ?? null) : c.who;
+      const p = r() < 0.9 ? (owner !== null && r() < 0.7 ? owner : pick(r, players)!) : 'espectador';
       const action = randomAction(r, s, p);
       if (r() < 0.3) now += Math.floor(r() * 3000);
       const res = applyKittensAction(deepFreeze(s), p, action, ctx());
+      const alias = cardsOf(action).some(isAlias);
+      if (alias) seen.add('alias');
+      if (res.ok && alias) throw new Error(`ficha com outro nome aceita: ${p} ${JSON.stringify(action)}\n  ${where()}`);
       if (!res.ok) continue;
+      if (c?.kind === 'latido' && c.who === p && s.blind.includes(p) && res.state.choice === null) seen.add('latido:blind-defended');
       trace.push(`${p} ${JSON.stringify(action)}`);
       s = res.state;
     }
@@ -201,9 +274,15 @@ describe('simulação aleatória do Tatubum', () => {
     }
   });
 
-  it('as cartas novas apareceram nas simulações', () => {
+  it.each([2, 3, 5, 8])('%i jogadores, começando com um cego com Latidor na frente: idem', (n) => {
+    for (let seed = 1; seed <= SEEDS; seed++) {
+      expect(playGame(n, seed, undefined, blindBark), `partida não acabou (n=${n}, semente ${seed})`).toBe(true);
+    }
+  });
+
+  it('as cartas novas aparecem nas simulações (com as próprias partidas, sem depender da ordem dos testes)', () => {
     expect(KITTENS_LATIDOS).toBe(2);
-    for (const what of [
+    const wanted = [
       'barked',
       'cursed',
       'cured',
@@ -216,8 +295,19 @@ describe('simulação aleatória do Tatubum', () => {
       'choice:feitico',
       'boto:par',
       'boto:trio',
-    ]) {
-      expect(seen, what).toContain(what);
+      'alias',
+      'latido:blind',
+      'latido:blind-defended',
+      'feitico:timeout',
+    ];
+    const seen = new Set<string>();
+    // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.
+    for (let seed = 1; seed <= COVERAGE_SEEDS && wanted.some((w) => !seen.has(w)); seed++) {
+      for (const n of [2, 3, 5, 8]) {
+        playGame(n, seed, seen);
+        playGame(n, seed, seen, blindBark);
+      }
     }
+    for (const what of wanted) expect(seen, what).toContain(what);
   });
 });

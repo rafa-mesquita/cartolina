@@ -12,7 +12,7 @@ import type { KittensPlay, KittensPlayKind, KittensState } from './types';
 /**
  * A carta de verdade que `p` está apontando: quem está cego pelo Mau-olhado só aponta por ficha (`?i` = i-ésima carta
  * da mão no estado); quem vê, pelo id. Devolve o código de erro quando não vale: `blind_pick` (cego mandou id de
- * verdade, ou nada) ou `not_in_hand`.
+ * verdade, ou nada) ou `not_in_hand`. Cada carta tem uma ficha só (`kittensTokenIndex` recusa `?00`, `?01`…).
  */
 export function realCard(s: KittensState, p: string, card: string | undefined): string | { error: string } {
   const hand = s.hands[p] ?? [];
@@ -46,15 +46,18 @@ function playKindOf(kinds: KittensCardKind[], as: KittensCardKind | undefined): 
   return 'bad_combo';
 }
 
+type PlayAction = { cards: string[]; target?: string; ask?: KittensCardKind; as?: KittensCardKind };
+
 /**
  * Lê a jogada de `p`. Devolve o código de erro se não vale. Alvo, pedido e `as` que a jogada não usa são ignorados.
  * Quem está cego manda fichas; a jogada guardada leva os ids de verdade.
+ *
+ * Quem está cego só ouve erros que não dependem do que as fichas escondem (`blind_pick`, `not_in_hand`, ficha
+ * repetida): depois que as fichas viram cartas, qualquer recusa (`bad_target`, `bad_ask`, `bad_as`) chega como
+ * `bad_combo`. Assim uma tentativa recusada só ensina "assim não forma jogada", e não "é um Favor sem alvo" ou "são
+ * dois Botos".
  */
-export function parsePlay(
-  s: KittensState,
-  p: string,
-  action: { cards: string[]; target?: string; ask?: KittensCardKind; as?: KittensCardKind },
-): KittensPlay | string {
+export function parsePlay(s: KittensState, p: string, action: PlayAction): KittensPlay | string {
   if (action.cards.length === 0 || new Set(action.cards).size !== action.cards.length) return 'bad_combo';
   const cards: string[] = [];
   for (const c of action.cards) {
@@ -62,6 +65,14 @@ export function parsePlay(
     if (typeof real !== 'string') return real.error;
     cards.push(real);
   }
+  // A mesma carta por dois nomes (a checagem de cima olha os nomes mandados): nunca passa duas vezes.
+  if (new Set(cards).size !== cards.length) return 'bad_combo';
+  const play = readPlay(s, p, cards, action);
+  return typeof play === 'string' && s.blind.includes(p) ? 'bad_combo' : play;
+}
+
+/** O que as cartas de verdade `cards` formam, com alvo, pedido e `as` conferidos; ou o código de erro. */
+function readPlay(s: KittensState, p: string, cards: string[], action: PlayAction): KittensPlay | string {
   const kinds = cards.map((c) => kittensKindOf(c)!);
   const parsed = playKindOf(kinds, action.as);
   if (typeof parsed === 'string') return parsed;

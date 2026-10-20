@@ -144,7 +144,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_your_turn: 'Não é a sua vez.',
   not_in_hand: 'Essa carta não está na sua mão.',
   bad_combo: 'Essas cartas não formam jogada.',
-  bad_target: 'Escolha um adversário vivo com carta na mão.',
+  bad_target: 'Escolha um adversário vivo (no Favor, um que tenha carta).',
   bad_ask: 'Escolha qual bicho puxar.',
   bad_as: 'Escolha qual bicho o Boto vira.',
   blind_pick: 'Mau-olhado: escolha uma das suas cartas viradas.',

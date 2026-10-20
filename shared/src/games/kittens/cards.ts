@@ -75,10 +75,11 @@ export function kittensKindOf(id: string): KittensCardKind | null {
 
 /**
  * Mau-olhado: quem está "cego" vê, no lugar da mão, fichas `?0`, `?1`, … — a ficha `?i` é a i-ésima carta da mão no
- * estado (que foi embaralhada quando o olhado pegou). `null` se não é ficha.
+ * estado (que foi embaralhada quando o olhado pegou). `null` se não é ficha. Só vale a escrita canônica, sem zero à
+ * esquerda (`?00`, `?01` não são fichas): senão a mesma carta teria vários nomes e passaria duas vezes num combo.
  */
 export function kittensTokenIndex(token: string): number | null {
-  const m = /^\?(\d{1,3})$/.exec(token);
+  const m = /^\?(0|[1-9]\d{0,2})$/.exec(token);
   return m ? Number(m[1]) : null;
 }
 

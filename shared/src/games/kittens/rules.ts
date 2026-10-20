@@ -78,7 +78,8 @@ export function applyKittensAction(
   action: KittensAction,
   ctx: GameContext,
 ): ActionResult<KittensState> {
-  // Prazo vencido resolve antes: Nem vem! que chega depois do fim da janela não vale (spec §7).
+  // Prazo vencido resolve antes: Nem vem! que chega depois do fim da janela não vale (spec §7). O settle também
+  // completa estado salvo antes das cartas novas (`front`/`blind`, ver `compat.ts`).
   const s = settleKittens(state, ctx);
   const isHost = ctx.hostId === playerId;
   switch (action.type) {

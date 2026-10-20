@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { kittensTokenIndex } from '../src/games/kittens/cards';
 import { settleKittens } from '../src/games/kittens/settle';
 import { KITTENS_CHOICE_MS, type KittensState } from '../src/games/kittens/types';
 import { kittensViewFor } from '../src/games/kittens/view';
@@ -80,6 +81,48 @@ describe('Mau-olhado: jogar às cegas', () => {
     // Par por sorte.
     const pair = act(s, 'p1', { type: 'play', cards: [tokenOf(s, 'p1', 'mico-1'), tokenOf(s, 'p1', 'mico-2')] }, at(6000));
     expect(pair.pending!.play).toMatchObject({ kind: 'par', cards: ['mico-1', 'mico-2'], as: 'mico' });
+  });
+
+  it('cada carta tem uma ficha só: `?00`, `?01`… não valem (nem pra jogar a mesma carta duas vezes)', () => {
+    expect(['?0', '?7', '?10', '?999'].map(kittensTokenIndex)).toEqual([0, 7, 10, 999]);
+    for (const alias of ['?00', '?000', '?01', '?007', '?1000', '?-1', '?', '?a']) expect(kittensTokenIndex(alias), alias).toBeNull();
+    // Um Mico só na mão: não vira par por dois nomes da mesma ficha.
+    const s = p1Turn(cursed(['mico-1', 'ataque-1', 'nemvem-1', 'cafune-1']));
+    const mico = tokenOf(s, 'p1', 'mico-1');
+    const alias = `?0${mico.slice(1)}`;
+    expect(refuse(s, 'p1', { type: 'play', cards: [mico, alias] }, at(6000))).toBe('blind_pick');
+    expect(refuse(s, 'p1', { type: 'play', cards: [mico, `?00${mico.slice(1)}`, alias] }, at(6000))).toBe('blind_pick');
+    expect(refuse(s, 'p1', { type: 'play', cards: [alias] }, at(6000))).toBe('blind_pick');
+    // Nem vem! e escolhas também só aceitam a ficha canônica.
+    const air: KittensState = { ...s, current: 'p0', hands: { ...s.hands, p0: ['favor-0'] } };
+    const favor = act(air, 'p0', { type: 'play', cards: ['favor-0'], target: 'p2' }, at(6000));
+    const nope = tokenOf(favor, 'p1', 'nemvem-1');
+    expect(refuse(favor, 'p1', { type: 'nope', card: `?0${nope.slice(1)}` }, at(6100))).toBe('blind_pick');
+    const mico2: KittensState = { ...s, choice: { kind: 'mico', by: 'p0', waiting: ['p1'], deadline: T0 + 40_000 } };
+    expect(refuse(mico2, 'p1', { type: 'choose', card: alias }, at(6000))).toBe('blind_pick');
+  });
+
+  it('quem está cego não descobre o tipo de uma ficha pelo código do erro: tudo que depende dela vira bad_combo', () => {
+    const s = p1Turn(cursed(['favor-1', 'olhado-1', 'boto-1', 'boto-2', 'preguica-1', 'preguica-2']));
+    const t = (card: string) => tokenOf(s, 'p1', card);
+    // Sem alvo, alvo em si mesmo ou em quem não está: quem vê ouviria bad_target.
+    expect(refuse(s, 'p1', { type: 'play', cards: [t('favor-1')] }, at(6000))).toBe('bad_combo');
+    expect(refuse(s, 'p1', { type: 'play', cards: [t('olhado-1')], target: 'p1' }, at(6000))).toBe('bad_combo');
+    expect(refuse(s, 'p1', { type: 'play', cards: [t('olhado-1')], target: 'p9' }, at(6000))).toBe('bad_combo');
+    // Favor em quem não tem carta (o Mau-olhado ali valeria): também bad_combo.
+    const empty: KittensState = { ...s, hands: { ...s.hands, p2: [] } };
+    expect(refuse(empty, 'p1', { type: 'play', cards: [t('favor-1')], target: 'p2' }, at(6000))).toBe('bad_combo');
+    // Dois Botos sem `as` (bad_as) e par de Preguiça sem pedido (bad_ask).
+    expect(refuse(s, 'p1', { type: 'play', cards: [t('boto-1'), t('boto-2')] }, at(6000))).toBe('bad_combo');
+    expect(refuse(s, 'p1', { type: 'play', cards: [t('preguica-1'), t('preguica-2')] }, at(6000))).toBe('bad_combo');
+    // Com o que falta, vale.
+    expect(act(s, 'p1', { type: 'play', cards: [t('favor-1')], target: 'p2' }, at(6000)).pending!.play.kind).toBe('favor');
+    expect(act(s, 'p1', { type: 'play', cards: [t('boto-1'), t('boto-2')], as: 'quati' }, at(6000)).pending!.play.as).toBe('quati');
+    // Quem vê continua ouvindo o erro certo.
+    const seeing: KittensState = { ...s, blind: [] };
+    expect(refuse(seeing, 'p1', { type: 'play', cards: ['favor-1'] }, at(6000))).toBe('bad_target');
+    expect(refuse(seeing, 'p1', { type: 'play', cards: ['boto-1', 'boto-2'] }, at(6000))).toBe('bad_as');
+    expect(refuse(seeing, 'p1', { type: 'play', cards: ['preguica-1', 'preguica-2'] }, at(6000))).toBe('bad_ask');
   });
 
   it('quem não está cego não joga ficha', () => {

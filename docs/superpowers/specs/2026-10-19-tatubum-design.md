@@ -22,7 +22,7 @@ Decisões do usuário (2026-10-19):
 - **Janela do Nem vem! de 5 s**, fixa, sempre corre, mesmo que ninguém tenha Nem vem! (assim a
   demora não entrega quem tem).
 - **Escolhas pessoais com 30 s** (Favor e par de Mico, Desarme, 5 diferentes, par de Quati, defesa do Tatu Latidor, Feitiço; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
-  escolhe ao acaso. **O turno em si não tem tempo.**
+  escolhe ao acaso (no Quati e no Feitiço, sem acaso: a carta fica / vai pro topo). **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
 - Identidade **pixel art, paleta "noite no cerrado"** (§5.4). Primeiro foi escolhido o "gibi"
@@ -113,8 +113,9 @@ Sozinho o bicho continua não fazendo nada.
 
 Regras de motor:
 - `playKindOf`: 2 iguais só vira `par` se for bicho; 3 iguais de qualquer tipo é `trio`.
-- `parsePlay`: alvo exigido só no Favor (`bad_target`); pedido (`ask`) exigido só no par
-  de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Trio ignora alvo e pedido.
+- `parsePlay`: alvo exigido só no Favor e no Mau-olhado (`bad_target`); pedido (`ask`) exigido só no par
+  de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Trio ignora alvo e pedido. (Quem está cego ouve
+  `bad_combo` no lugar desses: ver "Jogar às cegas".)
 - Par de Mico: escolha `{ kind: 'mico', by, waiting, deadline }` (`waiting` = quem ainda tem que descartar; pública).
   Cada um em `waiting` manda `choose { card }` com uma carta da própria mão; evento público `{ t: 'discarded', by, card }`.
   Prazo vencido: cada um que falta descarta uma ao acaso. Quem sai do jogo sai do `waiting`. `waiting` vazio fecha a escolha.
@@ -174,16 +175,41 @@ bicho.
 - Ao resolver, o alvo fica **cego**: a mão dele é **embaralhada no estado** (`ctx.rng`) e ele entra na lista pública
   `blind`. **(decisão)** Em vez de guardar um mapa separado ficha → carta, a própria ordem da mão no estado é o mapa:
   a ficha `?i` é `hands[p][i]`. Toda carta que chega na mão vai pro fim (Favor, Preguiça, trio, Capivara, 5
-  diferentes), então chega "desconhecida"; carta que sai só desloca as fichas (ele não sabe qual era mesmo).
-  Já cego de novo: embaralha outra vez e continua uma vez só na lista.
+  diferentes); carta que sai só desloca as fichas. Já cego de novo: embaralha outra vez e continua uma vez só na
+  lista.
+- **(decisão) O que o cego pode saber das fichas.** O id nunca aparece pra ele, mas às vezes o **tipo** de uma ficha
+  dá pra deduzir, e tudo bem (é o que ele saberia na mesa de verdade, e não ajuda a achar as cartas de antes do
+  olhado, que foram embaralhadas):
+  - a última ficha é a carta que acabou de chegar quando ele mesmo pediu ou escolheu: **par de Preguiça** (o bicho
+    pedido, se veio), **trio** (um Desarme, se alguém tinha; o `grabbed` é público), **5 diferentes** (a carta que
+    ele pegou do descarte, que é público);
+  - o diário mostra o que **saiu** da mão dele (a carta já não está lá, então não é apagada): **Capivara** (o que
+    ele passou ao acaso, só pra ele e pra quem recebeu), **Favor** (o que deu), **par de Mico** e Desarme (público).
+    Isso diz quais cartas sobraram, não onde estão;
+  - o que chega **sem ele escolher** (Favor que recebe, Capivara que recebe) fica desconhecido: o evento chega com
+    `card: null` pra ele.
 - **Visão do cego:** `hand` = `['?0', '?1', …]`; nenhum id da própria mão aparece pra ele, nem no diário (qualquer
   evento cuja carta esteja hoje na mão dele chega com `card: null`, inclusive o que ele mesmo comprou antes e o que
   acabou de receber). Os outros veem quem está cego (`blind`), mas não a ordem.
 - **Jogar às cegas:** quem está cego manda **fichas** em tudo que aponta carta da própria mão: `play.cards`,
   `nope.card`, `choose.card` (Favor, descarte do Mico, Desarme). O servidor troca a ficha pela carta de verdade e
-  valida como sempre (combo que não forma → `bad_combo`, sem alvo → `bad_target` etc.). Cego mandando id de verdade
-  (ou nada onde precisa de carta) → erro novo **`blind_pick`** ("Mau-olhado: escolha uma das suas cartas
-  viradas."); ficha que não existe → `not_in_hand`. Quem vê não pode mandar ficha (`not_in_hand`).
+  valida como sempre. Cego mandando id de verdade (ou nada onde precisa de carta) → erro novo **`blind_pick`**
+  ("Mau-olhado: escolha uma das suas cartas viradas."). Ficha que não existe (índice ≥ tamanho da mão) →
+  `not_in_hand` no `play` e no `nope`; no `choose`, `bad_choice`, como qualquer carta que não vale ali. Quem vê não
+  pode mandar ficha (`not_in_hand` no `play`/`nope`, `bad_choice` no `choose`).
+- **Uma ficha por carta (correção da revisão):** só vale a escrita canônica `?0`, `?1`, …, `?999` (sem zero à
+  esquerda). `?00`, `?01`, `?007` não são fichas (→ `blind_pick`): antes eram "outro nome" da mesma carta, e como
+  a checagem de carta repetida olhava os nomes mandados, `['?0', '?00']` jogava **uma carta como par** (e ela ia
+  duas vezes pro descarte). Agora, além disso, o `parsePlay` confere repetição **depois** de trocar as fichas pelas
+  cartas (`bad_combo`). `nope` e `choose` apontam uma carta só, então não têm como repetir.
+- **(decisão) Erro às cegas não entrega o tipo da ficha:** depois que as fichas viram cartas, qualquer recusa da
+  jogada de quem está cego chega como **`bad_combo`** (no lugar de `bad_target`, `bad_ask` e `bad_as`). Senão,
+  mandar `?3` sem alvo e ouvir `bad_target` diria "é Favor ou Mau-olhado" sem gastar nada, e dois Botos se
+  denunciariam por `bad_as`. Os erros que ele ainda ouve só dependem do que ele já sabe (`blind_pick`,
+  `not_in_hand` pelo tamanho da mão, ficha repetida, e os da vez: `not_your_turn`, `card_in_air`…). O que uma
+  tentativa às cegas ainda ensina é só "isso, mandado assim, forma jogada ou não", e quando forma a carta vai pro
+  ar (não é de graça). Ex.: `?3` sozinho recusado = não é uma carta de ação sem alvo; `?3` com alvo aceito = era
+  de ação. Quem vê continua ouvindo o erro exato.
 - **Nem vem! às cegas:** a ação `nope` ganhou `card?` (opcional pra quem vê: sem ela o servidor escolhe um Nem vem!
   como antes; com ela, tem que ser um Nem vem! da mão, senão `no_nope`/`not_in_hand`). O cego **tem que** mandar
   uma ficha; se não for Nem vem!, `no_nope`. **(decisão)** A recusa ensina ao cego que aquela ficha não era o que
@@ -206,8 +232,10 @@ bicho.
 - `choose { keep: false }`: ela vai pro **topo** do monte (a espiada some).
 - **Nos dois casos acaba o turno** (gasta 1 turno, como comprar; sob ataque, gasta um dos devidos). O Tatubum guardado
   gasta o turno quando o tatu volta pro monte.
-- Prazo vencido (ou quem escolhe cai de vez): fica com a carta, **a não ser que seja Tatubum** (aí vai pro topo, e a
-  escolha do Desarme nunca abre pra quem já saiu).
+- Prazo vencido (ou quem escolhe cai de vez): a carta **sempre vai pro topo**, seja qual for (gasta o turno como no
+  `keep: false`). **(correção da revisão)** Antes ficava com a carta "a não ser que fosse Tatubum": aí quem
+  assistia via a mão dele não crescer e sabia que tinha um Tatubum no topo. Indo sempre pro topo, ninguém aprende
+  nada, e a escolha do Desarme nunca abre pra quem já saiu.
 - Eventos: `{ t: 'conjured', by, kept }` (público, sem a carta) e, quando fica, `{ t: 'draw', by, card }` só pra ele.
 
 #### Boto (`boto`; o bicho coringa — Rafa: "animal coringa, ele pode ser usado pra ser qualquer animal, não tem muitas no baralho"; arte: boto-cor-de-rosa)
@@ -229,6 +257,11 @@ bicho.
 
 - Estado novo: `front` e `blind` (zerados no começar/jogar de novo). Visão nova: `front` (todos os jogadores, `[]`
   sem nada) e `blind` (lista pública).
+- **Estado salvo antes das cartas novas (deploy com partida no meio):** o Tatubum já estava no ar sem `front`/`blind`,
+  então uma sala guardada no Durable Object pode voltar sem eles. `kittensWithNewFields` (`compat.ts`) completa os
+  dois vazios (`{}`/`[]`) na entrada do motor: `settleKittens` (e por ele `applyKittensAction`, que sempre começa
+  pelo settle) e `kittensViewFor`; `kittensNextDeadline` não lê os campos. Estado completo passa pelo mesmo objeto.
+  Testado em `kittens-compat.test.ts` (lobby, partida, carta no ar, pelo módulo).
 - Ações: `play.as?`, `nope.card?`; fichas `?i` são ids de até 32 caracteres, então o schema não muda pra elas.
 - `takeCard` (`choices.ts`) junta "comprar" (compra normal e Feitiço): cura o cego, Tatubum abre o Desarme ou
   explode, outra carta vai pra mão e gasta o turno.
@@ -236,7 +269,13 @@ bicho.
 - A simulação aleatória (`kittens-fuzz.test.ts`) joga as cartas novas, responde as escolhas novas e põe cegos jogando
   por ficha; confere a cada passo: cartas conservadas (contando as da frente), só Latidor na frente de vivos,
   `vivos − 1` tatus, a carta de baixo do Feitiço só pra quem escolhe e **nenhum id da mão do cego na visão dele**.
-  Rodada pesada de 900 partidas (SEEDS = 225) passou.
+  Depois da revisão: o cego às vezes manda a ficha com outro nome (`?00`, `?03`, inclusive repetindo uma ficha
+  por outro nome) e isso **tem que ser recusado**; o Feitiço sem resposta tem que mandar a carta pro topo; os bots
+  usam o que é público (seguram o Latidor até quem tem o outro na frente ficar cego, botam mau-olhado nele, latem),
+  e há partidas que começam arranjadas com um cego com Latidor na frente (só move cartas). A conferência de
+  cobertura joga as próprias partidas (não depende da ordem dos testes) e exige, além das cartas novas, ficha com
+  outro nome, cego se defendendo do Latidor e Feitiço sem resposta. Rodada pesada (SEEDS = 225: 900 partidas
+  normais + 900 arranjadas) passou.
 
 ### Fim
 
@@ -501,6 +540,7 @@ Tatubum.
 - Nem vem! chegando junto com o fim do prazo: vale o que o servidor recebeu antes de resolver
   (ordem do Durable Object).
 - Reconexão: a view traz tudo pra redesenhar, inclusive `peek` e `choice` ainda abertos.
+- Estado salvo por uma versão anterior (sem `front`/`blind`): completado na entrada do motor (§2 "Motor e segredo").
 - Deploy derruba a sala por alguns segundos → reconecta como nos outros jogos (não fazer deploy em
   noite de jogo).
 

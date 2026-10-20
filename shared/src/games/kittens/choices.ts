@@ -109,8 +109,8 @@ export function conjure(s: KittensState, c: Choice<'feitico'>, keep: boolean, de
 
 /**
  * Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica; no Mico, cada um
- * que falta descarta uma; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, fica
- * com a carta, a não ser que seja um Tatubum: aí ela vai pro topo).
+ * que falta descarta uma; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta
+ * de baixo vai pro topo, seja qual for).
  */
 export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
   const c = s.choice!;
@@ -158,7 +158,8 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
       return defendLatido(s, c, card);
     }
     case 'feitico':
-      // Fica com a carta, a não ser que seja Tatubum. (Nunca abre a escolha do Desarme: ninguém fica preso nela.)
-      return conjure(s, c, kittensKindOf(s.draw[0]!) !== 'tatubum', c.deadline);
+      // A carta SEMPRE vai pro topo: decidir pelo tipo dela (ex.: "fica, a não ser que seja Tatubum") contaria pra quem
+      // assiste o que estava embaixo. Também nunca abre a escolha do Desarme pra quem já saiu.
+      return conjure(s, c, false, c.deadline);
   }
 }
