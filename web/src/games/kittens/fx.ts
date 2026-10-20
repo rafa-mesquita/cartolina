@@ -56,6 +56,10 @@ let g: CanvasRenderingContext2D | null = null;
 let scaleOf: () => number = () => 1;
 const parts: Particle[] = [];
 let raf = 0;
+/** Depois de `dispose()` (a mesa fechou) os efeitos que ainda estavam no ar viram no-ops, em vez de quebrar. */
+let disposed = false;
+/** Rastros de partículas ativos (setInterval do voo), pra `dispose()` poder parar todos. */
+const trails = new Set<ReturnType<typeof setInterval>>();
 
 const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
@@ -66,6 +70,7 @@ function need<T>(v: T | null, what: string): T {
 
 /** Centro e tamanho de um elemento, em coordenadas do palco. */
 function box(el: Element): Box {
+  if (disposed) return { x: 0, y: 0, w: 0, h: 0 };
   const s = scaleOf();
   const r = el.getBoundingClientRect();
   const st = need(stage, 'palco').getBoundingClientRect();
@@ -137,6 +142,7 @@ export interface FlyOpts {
 
 /** Carimbo por cima de `el` (Nem vem!): cai grande, bate e fica. */
 async function stamp(el: Element, text: string, color = '#e4572e'): Promise<void> {
+  if (disposed) return;
   const c = box(el);
   const s = document.createElement('div');
   s.className = 'stamp';
@@ -154,6 +160,7 @@ async function stamp(el: Element, text: string, color = '#e4572e'): Promise<void
 }
 
 function shake(ms = 300, px = 8): void {
+  if (disposed) return;
   const st = need(stage, 'palco');
   if (reduced() || typeof st.animate !== 'function') return;
   st.animate(
@@ -171,6 +178,7 @@ export const Fx = {
   box,
   /** Liga os efeitos ao palco: `getScale` devolve a escala atual do palco (palco 1440×900 → tela). */
   init(stageEl: HTMLElement, layerEl: HTMLElement, particleCanvas: HTMLCanvasElement, getScale: () => number): void {
+    disposed = false;
     stage = stageEl;
     layer = layerEl;
     canvas = particleCanvas;
@@ -181,6 +189,9 @@ export const Fx = {
   },
   /** Desliga (ao desmontar a mesa): para as partículas e solta o palco. */
   dispose(): void {
+    disposed = true;
+    for (const iv of trails) clearInterval(iv);
+    trails.clear();
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     parts.length = 0;
@@ -193,6 +204,7 @@ export const Fx = {
    * `flipTo` (opcional) troca o conteúdo no meio do voo, virando a carta.
    */
   async fly({ node, from, to, dur = 520, rot = 0, scaleFrom = 1, scaleTo = 1, flipTo = null, trail = null }: FlyOpts): Promise<void> {
+    if (disposed) return;
     const a = pointOf(from), b = pointOf(to);
     node.classList.add('flying');
     need(layer, 'camada').appendChild(node);
@@ -204,7 +216,11 @@ export const Fx = {
         const c = box(node);
         spawn([{ x: c.x, y: c.y, vx: 0, vy: 0, grav: 0, drag: 1, life: 14, max: 14, size: 2, shrink: true, color: trail }]);
       }, 30);
-      setTimeout(() => clearInterval(iv), dur);
+      trails.add(iv);
+      setTimeout(() => {
+        clearInterval(iv);
+        trails.delete(iv);
+      }, dur);
     }
     if (flipTo) {
       await animate(node, [{ transform: tf(a, 0, scaleFrom) }, { transform: tf(mid, rot / 2, (scaleFrom + scaleTo) / 2, 0.02) }], { duration: dur / 2, easing: steps });
@@ -221,6 +237,7 @@ export const Fx = {
 
   /** Texto grande que pula (BUM!, UFA!, VENCEU!). */
   async pop(text: string, at: At, { color = '#f2c14e', size = 120, hold = 900 }: { color?: string; size?: number; hold?: number } = {}): Promise<void> {
+    if (disposed) return;
     const c = pointOf(at);
     const t = document.createElement('div');
     t.className = 'pop';
@@ -238,6 +255,7 @@ export const Fx = {
 
   /** Um sprite que pula e some (ex.: o olho do Espiar em cima do monte). */
   async icon(url: string, at: At, { size = 96, hold = 700 }: { size?: number; hold?: number } = {}): Promise<void> {
+    if (disposed) return;
     const c = pointOf(at);
     const img = document.createElement('img');
     img.src = url;
@@ -255,6 +273,7 @@ export const Fx = {
 
   /** Um X vermelho em cima de `el` (jogada cancelada). */
   async cross(el: Element): Promise<void> {
+    if (disposed) return;
     const c = box(el);
     const x = document.createElement('div');
     x.className = 'cross';
@@ -269,7 +288,7 @@ export const Fx = {
   shake,
 
   flash(color = '#ffffff', ms = 160): void {
-    if (reduced()) return;
+    if (reduced() || disposed) return;
     const f = document.createElement('div');
     f.className = 'flash';
     f.style.background = color;
@@ -280,7 +299,7 @@ export const Fx = {
   /** Golpe de espada (Ataque): um risco diagonal de pixels. */
   slash(at: At): void {
     const c = pointOf(at);
-    if (reduced()) return;
+    if (reduced() || disposed) return;
     const list: Particle[] = [];
     for (let i = 0; i < 26; i++) {
       list.push({ x: c.x - 90 + i * 7, y: c.y - 70 + i * 5.5, vx: 0.4, vy: 0.3, grav: 0, drag: 1, life: 10 + i * 0.6, max: 26, size: 3, shrink: true, color: i % 3 ? '#d9e2ec' : '#ffffff' });

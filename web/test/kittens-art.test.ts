@@ -231,6 +231,40 @@ describe('efeitos', () => {
   }, 10_000);
 
   it('sem Fx.init avisa com uma mensagem clara', async () => {
-    await expect(Fx.cross(document.createElement('div'))).rejects.toThrow(/Fx\.init/);
+    vi.resetModules();
+    const { Fx: novo } = await import('../src/games/kittens/fx');
+    await expect(novo.cross(document.createElement('div'))).rejects.toThrow(/Fx.init/);
+  });
+
+  it('depois do dispose os efeitos no ar viram no-ops (rastro, carimbo, flash, tremor)', async () => {
+    vi.useFakeTimers();
+    const stage = document.createElement('div');
+    const layer = document.createElement('div');
+    const particles = document.createElement('canvas');
+    stage.append(layer, particles);
+    document.body.append(stage);
+    Fx.init(stage, layer, particles, () => 1);
+
+    const node = document.createElement('div');
+    const voo = Fx.fly({ node, from: { x: 0, y: 0 }, to: { x: 100, y: 100 }, trail: '#fff' });
+    const carimbo = Fx.stamp(node, 'NEM VEM!');
+    Fx.dispose();
+    // o rastro (setInterval de 30 ms) foi parado e nada lança depois do dispose
+    expect(vi.getTimerCount()).toBe(1); // só o tempo-limite do rastro; o setInterval foi limpo
+    expect(() => {
+      Fx.shake();
+      Fx.flash();
+      Fx.sparks({ x: 1, y: 1 });
+      Fx.fireworks({ x: 1, y: 1 });
+      expect(Fx.box(node)).toEqual({ x: 0, y: 0, w: 0, h: 0 });
+    }).not.toThrow();
+    await vi.advanceTimersByTimeAsync(5000);
+    await expect(voo).resolves.toBeUndefined();
+    await expect(carimbo).resolves.toBeUndefined();
+    await expect(Fx.pop('BUM!', { x: 0, y: 0 })).resolves.toBeUndefined();
+    await expect(Fx.cross(node)).resolves.toBeUndefined();
+    await expect(Fx.fly({ node, from: { x: 0, y: 0 }, to: { x: 1, y: 1 } })).resolves.toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1000);
+    stage.remove();
   });
 });

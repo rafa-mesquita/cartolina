@@ -1,7 +1,7 @@
 /*
  * Sprites em pixel art do Tatubum, desenhados a partir de mapas de caracteres.
  * Cada letra é uma cor da paleta do sprite; 'k' é sempre o contorno escuro e '.' é transparente.
- * Arte provisória: a arte final das cartas vem do Flow (Plano T3).
+ * As cartas já têm a arte final do Flow (art.ts); estes sprites são só a reserva (carta sem arte) e o tatu dos assentos.
  */
 import type { KittensCardKind } from '@cartolina/shared';
 import { critterSvg } from '../../brand/critters';

@@ -14,7 +14,6 @@ import nemvem from './art/nemvem.png';
 import preguica from './art/preguica.png';
 import pular from './art/pular.png';
 import quati from './art/quati.png';
-import soldado from './art/soldado.png';
 import tamandua from './art/tamandua.png';
 import tatubum from './art/tatubum.png';
 import verso from './art/verso.webp';
@@ -39,5 +38,5 @@ export const ART: Partial<Record<KittensCardKind, string>> = {
 /** Verso das cartas (o monte, as cartas dos outros jogadores). */
 export const VERSO: string = verso;
 
-/** O tatu soldado do Desarme (entra andando pela mesa e corta o fio). */
-export const SOLDADO: string = soldado;
+/** O tatu soldado do Desarme (entra andando pela mesa e corta o fio): é a mesma imagem da carta Desarme (cafune). */
+export const SOLDADO: string = cafune;
