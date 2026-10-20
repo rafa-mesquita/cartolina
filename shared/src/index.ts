@@ -65,9 +65,11 @@ export {
   camelioPoints,
   camelioScoredColors,
   camelioSphereSum,
+  camelioStandings,
   camelioSpheresInPlay,
   resolveCamelioPlay,
   type CamelioPlayResolution,
+  type CamelioStanding,
 } from './games/camelio/scoring';
 export { applyCamelioAction, camelioOnPresenceChange, camelioTarget, initialCamelioState } from './games/camelio/rules';
 export { camelio, camelioViewFor } from './games/camelio/view';

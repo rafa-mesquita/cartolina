@@ -83,3 +83,30 @@ export function camelioDeckEndWinners(
   }
   return best;
 }
+
+export interface CamelioStanding {
+  player: string;
+  points: number;
+  /** Esferas na área de jogo, sem as cores já pontuadas. */
+  spheres: number;
+  /** 1 = primeiro; empatados (pontos e esferas) dividem a posição. */
+  place: number;
+}
+
+/** Placar do fim (spec §2.4): mais pontos, depois mais esferas em jogo; a ordem dos assentos desempata só a exibição. */
+export function camelioStandings(
+  players: readonly string[],
+  table: Readonly<Record<string, readonly number[]>>,
+  scored: Readonly<Record<string, readonly number[]>>,
+): CamelioStanding[] {
+  const rows = players.map((player) => {
+    const s = scored[player] ?? [];
+    return { player, points: camelioPoints(s), spheres: camelioSpheresInPlay(table[player] ?? [], s), place: 0 };
+  });
+  rows.sort((a, b) => b.points - a.points || b.spheres - a.spheres);
+  rows.forEach((r, i) => {
+    const prev = rows[i - 1];
+    r.place = prev && prev.points === r.points && prev.spheres === r.spheres ? prev.place : i + 1;
+  });
+  return rows;
+}

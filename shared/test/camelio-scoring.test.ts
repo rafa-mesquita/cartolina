@@ -3,6 +3,7 @@ import {
   camelioDeckEndWinners,
   camelioPoints,
   camelioScoredColors,
+  camelioStandings,
   camelioSpheresInPlay,
   camelioSphereSum,
   resolveCamelioPlay,
@@ -115,5 +116,32 @@ describe('vencedores no fim do monte', () => {
     const scored = { p0: [C.vermelho3, C.vermelho2], p1: [C.azul2, C.azul3], p2: [] };
     const table = { p0: [C.verde3], p1: [C.amarelo3], p2: [] };
     expect(camelioDeckEndWinners(players, table, scored)).toEqual(['p0', 'p1']);
+  });
+});
+
+describe('placar do fim', () => {
+  const players = ['p0', 'p1', 'p2', 'p3'];
+
+  it('ordena por pontos, depois por esferas em jogo; empate divide a posição', () => {
+    const scored = { p0: [C.vermelho3, C.vermelho2], p1: [], p2: [C.azul2, C.azul3], p3: [] };
+    const table = { p0: [C.verde1], p1: [C.verde3], p2: [C.verde1], p3: [] };
+    expect(camelioStandings(players, table, scored)).toEqual([
+      { player: 'p0', points: 1, spheres: 1, place: 1 },
+      { player: 'p2', points: 1, spheres: 1, place: 1 },
+      { player: 'p1', points: 0, spheres: 3, place: 3 },
+      { player: 'p3', points: 0, spheres: 0, place: 4 },
+    ]);
+  });
+
+  it('esferas de cor já pontuada não contam', () => {
+    const rows = camelioStandings(['p0'], { p0: [C.vermelho2b] }, { p0: [C.vermelho3, C.vermelho2] });
+    expect(rows[0]).toMatchObject({ points: 1, spheres: 0 });
+  });
+
+  it('os primeiros são os mesmos vencedores do fim pelo monte', () => {
+    const scored = { p0: [], p1: [C.azul2, C.azul3], p2: [C.vermelho3, C.vermelho2], p3: [] };
+    const table = { p0: [C.verde3], p1: [C.amarelo3], p2: [C.amarelo2], p3: [] };
+    const first = camelioStandings(players, table, scored).filter((r) => r.place === 1).map((r) => r.player);
+    expect(first).toEqual(camelioDeckEndWinners(players, table, scored));
   });
 });
