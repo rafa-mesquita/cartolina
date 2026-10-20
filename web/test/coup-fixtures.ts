@@ -13,15 +13,20 @@ import {
 export const NAMES = ['Ana', 'Beto', 'Caio', 'Duda', 'Eva', 'Fabi'];
 export const T0 = 1_000_000;
 
-/** Sala de Cúpi com `n` pessoas (p0 é o anfitrião), começada com a semente dada. */
-export function coupRoom(n: number, seed = 1): Room {
+/** Sala de Cúpi no lobby com `n` pessoas (p0 é o anfitrião), ainda sem começar. */
+export function coupLobbyRoom(n: number): Room {
   let room = createRoom('CUPI', 0, 'coup');
   for (let i = 0; i < n; i++) {
     const res = joinRoom(room, { token: `t${i}`, name: NAMES[i]!, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
     if (!res.ok) throw new Error(res.error);
     room = res.room;
   }
-  return step(room, 'p0', { type: 'start' }, T0, seed);
+  return room;
+}
+
+/** Sala de Cúpi com `n` pessoas (p0 é o anfitrião), começada com a semente dada. */
+export function coupRoom(n: number, seed = 1): Room {
+  return step(coupLobbyRoom(n), 'p0', { type: 'start' }, T0, seed);
 }
 
 /** Aplica uma ação pela sala (schema + regras, como o servidor). */

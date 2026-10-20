@@ -1,4 +1,4 @@
-import { isDixitRoomView, isItoRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
+import { isCoupRoomView, isDixitRoomView, isItoRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
@@ -12,6 +12,10 @@ import { Toasts } from './Toasts';
 // Retratim (kits de fotos, ícones do Tabler, sons) vira um chunk à parte: quem só joga ITO/Diquisti não baixa nada disso.
 const PicturesLobby = lazy(() => import('../games/pictures/PicturesLobby').then((m) => ({ default: m.PicturesLobby })));
 const PicturesTable = lazy(() => import('../games/pictures/PicturesTable').then((m) => ({ default: m.PicturesTable })));
+
+// O Cúpi também fica num chunk à parte (CSS, sons e a mesa só baixam pra quem entra numa sala dele).
+const CoupLobby = lazy(() => import('../games/coup/CoupLobby').then((m) => ({ default: m.CoupLobby })));
+const CoupTable = lazy(() => import('../games/coup/CoupTable').then((m) => ({ default: m.CoupTable })));
 
 export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot; view: RoomView }) {
   // Fase do Diquisti no último render: a mesa monta já na 1ª rodada (o lobby é outra tela) e precisa saber
@@ -44,6 +48,17 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
         {reconnecting}
         <Suspense fallback={null}>
           {view.game.phase === 'lobby' ? <PicturesLobby view={view} conn={conn} /> : <PicturesTable view={view} conn={conn} serverOffset={snap.serverOffset} />}
+        </Suspense>
+      </>
+    );
+  }
+  if (isCoupRoomView(view)) {
+    // Sala de Cúpi (id interno `coup`): mesa com os próprios avisos; serve computador e celular.
+    return (
+      <>
+        {reconnecting}
+        <Suspense fallback={null}>
+          {view.game.phase === 'lobby' ? <CoupLobby view={view} conn={conn} /> : <CoupTable view={view} conn={conn} serverOffset={snap.serverOffset} />}
         </Suspense>
       </>
     );

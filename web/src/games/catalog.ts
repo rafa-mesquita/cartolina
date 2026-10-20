@@ -63,8 +63,8 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Os outros têm 10 segundos pra duvidar, ou pra bloquear dizendo ter outro personagem (a Condessa barra o Assassino). Quem erra a dúvida, ou é pego blefando, perde uma carta.',
       'Com 7 moedas dá pra dar o golpe: o alvo perde uma carta, sem bloqueio. Com 10, é obrigatório. Quem perde as 2 cartas sai; o último com carta vence.',
     ],
-    // A mesa (computador e celular) vem no Plano C2.
-    playable: false,
+    playable: true,
+    mobile: true,
   },
 };
 
