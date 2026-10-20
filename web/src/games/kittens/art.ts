@@ -1,0 +1,43 @@
+/*
+ * Artes do Tatubum (geradas no Google Flow, fundo recortado). Vite empacota cada arquivo e devolve a URL final.
+ * No protótipo eram `art/<tipo>.png`; aqui entram por `import`, pra o build pôr o hash no nome.
+ */
+import type { KittensCardKind } from '@cartolina/shared';
+import ataque from './art/ataque.png';
+import cafune from './art/cafune.png';
+import capivara from './art/capivara.png';
+import embaralhar from './art/embaralhar.png';
+import espiar from './art/espiar.png';
+import favor from './art/favor.png';
+import mico from './art/mico.png';
+import nemvem from './art/nemvem.png';
+import preguica from './art/preguica.png';
+import pular from './art/pular.png';
+import quati from './art/quati.png';
+import soldado from './art/soldado.png';
+import tamandua from './art/tamandua.png';
+import tatubum from './art/tatubum.png';
+import verso from './art/verso.webp';
+
+/** Arte de cada carta, por tipo. (`Partial` pra uma carta nova poder cair no sprite de reserva até ganhar arte.) */
+export const ART: Partial<Record<KittensCardKind, string>> = {
+  tatubum,
+  cafune,
+  nemvem,
+  ataque,
+  pular,
+  favor,
+  embaralhar,
+  espiar,
+  capivara,
+  mico,
+  quati,
+  tamandua,
+  preguica,
+};
+
+/** Verso das cartas (o monte, as cartas dos outros jogadores). */
+export const VERSO: string = verso;
+
+/** O tatu soldado do Desarme (entra andando pela mesa e corta o fio). */
+export const SOLDADO: string = soldado;

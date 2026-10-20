@@ -266,7 +266,7 @@ const SEAT_TATU = [
   '....kk.kk...kk.kk...',
 ];
 
-/** Cor de destaque e frase curta de cada carta (provisórias, como a arte). */
+/** Cor de destaque e frase curta de cada carta (a frase é a dica do fundo da carta e do painel de regras). */
 export const CARD_STYLE: Record<KittensCardKind, { band: string; hint: string }> = {
   tatubum: { band: '#e4572e', hint: 'BUM!' },
   cafune: { band: '#ff8fab', hint: 'desarma o tatu' },
@@ -276,11 +276,11 @@ export const CARD_STYLE: Record<KittensCardKind, { band: string; hint: string }>
   favor: { band: '#d9a52c', hint: 'pede uma carta' },
   embaralhar: { band: '#8e5cc4', hint: 'mistura o monte' },
   espiar: { band: '#2f8f8f', hint: 'vê as 3 de cima' },
-  capivara: { band: '#3b8a4a', hint: 'junte pares' },
-  mico: { band: '#3b8a4a', hint: 'junte pares' },
-  quati: { band: '#3b8a4a', hint: 'junte pares' },
-  tamandua: { band: '#3b8a4a', hint: 'junte pares' },
-  preguica: { band: '#3b8a4a', hint: 'junte pares' },
+  capivara: { band: '#3b8a4a', hint: 'par: roda' },
+  mico: { band: '#3b8a4a', hint: 'par: me dá uma' },
+  quati: { band: '#3b8a4a', hint: 'par: vê a de cima' },
+  tamandua: { band: '#3b8a4a', hint: 'par: compra 2' },
+  preguica: { band: '#3b8a4a', hint: 'par: puxa um bicho' },
 };
 
 function render(rows: readonly string[], pal: Record<string, string>): SpriteImage {
@@ -394,4 +394,5 @@ export const Sprites = {
       render(SEAT_TATU, { b: color, l: shade(color, 0.35), p: '#e8a0a0', e: '#111' }),
     );
   },
+  shade,
 };

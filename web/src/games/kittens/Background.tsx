@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Cerrado } from './cerrado';
 
-/** Noite no cerrado atrás de tudo: a largura do desenho acompanha a proporção da janela (altura fixa de 180). */
+/** Cerrado com ciclo do dia atrás de tudo: a largura do desenho acompanha a proporção da janela (altura fixa de 180). */
 export function Background({ seed }: { seed: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
