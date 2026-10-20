@@ -20,7 +20,13 @@ export interface SpriteImage {
 
 const K = '#2b1a10';
 
-const SPRITES: Record<KittensCardKind, SpriteMap> = {
+/** Sprite de reserva das cartas sem desenho próprio (as cartas novas de 2026-10-20 só têm a arte do Flow): um "?". */
+const UNKNOWN: SpriteMap = {
+  pal: { y: '#f2c14e' },
+  rows: ['..kkkkkk..', '.kyyyyyyk.', 'kyykkkkyyk', '.kk...kyyk', '.....kyyk.', '....kyyk..', '....kyyk..', '.....kk...', '....kyyk..', '.....kk...'],
+};
+
+const SPRITES: Partial<Record<KittensCardKind, SpriteMap>> = {
   tatubum: {
     pal: { b: '#a0703f', l: '#c8955a', y: '#f2c14e', o: '#e4572e', w: '#fff3c4' },
     rows: [
@@ -281,6 +287,10 @@ export const CARD_STYLE: Record<KittensCardKind, { band: string; hint: string }>
   quati: { band: '#3b8a4a', hint: 'par: vê a de cima' },
   tamandua: { band: '#3b8a4a', hint: 'par: compra 2' },
   preguica: { band: '#3b8a4a', hint: 'par: puxa um bicho' },
+  latido: { band: '#b5653a', hint: 'late pro outro' },
+  olhado: { band: '#5b3f9e', hint: 'deixa alguém cego' },
+  feitico: { band: '#2f8f6b', hint: 'a de baixo do monte' },
+  boto: { band: '#3b8a4a', hint: 'vira qualquer bicho' },
 };
 
 function render(rows: readonly string[], pal: Record<string, string>): SpriteImage {
@@ -386,7 +396,8 @@ export const Sprites = {
   style: CARD_STYLE,
   /** Sprite da carta do tipo `kind`: { url, w, h }. */
   card(kind: KittensCardKind): SpriteImage {
-    return cached('card:' + kind, () => render(SPRITES[kind].rows, SPRITES[kind].pal));
+    const map = SPRITES[kind] ?? UNKNOWN;
+    return cached('card:' + kind, () => render(map.rows, map.pal));
   },
   /** Tatu do assento na cor do jogador (cinza pra quem explodiu). */
   tatu(color: string): SpriteImage {

@@ -1,10 +1,20 @@
 import type { ActionResult, GameContext } from '../../game';
 import { kittensKindOf } from './cards';
-import { delayTop, discardForMico, giveFavor, hideTatu, pickFromDiscard, useCafune } from './choices';
+import {
+  conjure,
+  defendLatido,
+  delayTop,
+  discardForMico,
+  giveFavor,
+  hideTatu,
+  pickFromDiscard,
+  takeCard,
+  useCafune,
+} from './choices';
 import { kittensDeal } from './deck';
-import { parsePlay } from './play';
+import { parsePlay, realCard } from './play';
 import { settleKittens } from './settle';
-import { eliminate, logged, spendTurn } from './turn';
+import { logged } from './turn';
 import { KITTENS_CHOICE_MS, KITTENS_MIN_PLAYERS, KITTENS_NOPE_MS, type KittensAction, type KittensState } from './types';
 
 const fail = (error: string): ActionResult<KittensState> => ({ ok: false, error });
@@ -19,6 +29,8 @@ export function initialKittensState(): KittensState {
     draw: [],
     discard: [],
     out: [],
+    front: {},
+    blind: [],
     current: null,
     owed: 0,
     pending: null,
@@ -48,19 +60,16 @@ function turnError(s: KittensState, p: string): string | null {
   return null;
 }
 
-/** Compra a de cima. Tatubum: com Desarme, abre a escolha de jogá-lo (a carta fica na mão até lá); sem, explode. */
-function drawCard(s: KittensState, p: string, ctx: GameContext): KittensState {
-  const card = s.draw.at(-1)!;
-  const draw = s.draw.slice(0, -1);
-  const hand = s.hands[p]!;
-  if (kittensKindOf(card) !== 'tatubum') {
-    return spendTurn(logged({ ...s, draw, hands: { ...s.hands, [p]: [...hand, card] } }, { t: 'draw', by: p, card }, [p]));
-  }
-  if (!hand.some((c) => kittensKindOf(c) === 'cafune')) return eliminate(logged({ ...s, draw }, { t: 'boom', by: p }), p, [card]);
-  return logged(
-    { ...s, draw, peek: null, choice: { kind: 'tatu', who: p, tatu: card, deadline: ctx.now + KITTENS_CHOICE_MS } },
-    { t: 'tatu', by: p },
-  );
+/** `choose` com uma carta da própria mão (ficha, pra quem está cego). */
+function ownCard(s: KittensState, p: string, card: string | undefined): string | null {
+  const real = realCard(s, p, card);
+  return typeof real === 'string' ? real : null;
+}
+
+/** O erro de `choose` com carta da mão que não vale: quem está cego e não mandou ficha ouve `blind_pick`. */
+function badOwnCard(s: KittensState, p: string, card: string | undefined): string {
+  const real = realCard(s, p, card);
+  return typeof real !== 'string' && real.error === 'blind_pick' ? 'blind_pick' : 'bad_choice';
 }
 
 export function applyKittensAction(
@@ -69,7 +78,8 @@ export function applyKittensAction(
   action: KittensAction,
   ctx: GameContext,
 ): ActionResult<KittensState> {
-  // Prazo vencido resolve antes: Nem vem! que chega depois do fim da janela não vale (spec §7).
+  // Prazo vencido resolve antes: Nem vem! que chega depois do fim da janela não vale (spec §7). O settle também
+  // completa estado salvo antes das cartas novas (`front`/`blind`, ver `compat.ts`).
   const s = settleKittens(state, ctx);
   const isHost = ctx.hostId === playerId;
   switch (action.type) {
@@ -88,7 +98,8 @@ export function applyKittensAction(
     case 'draw': {
       const e = turnError(s, playerId);
       if (e) return fail(e);
-      return ok(drawCard(s, playerId, ctx));
+      // Compra a de cima (cura o Mau-olhado). Tatubum: com Desarme, abre a escolha de jogá-lo; sem, explode.
+      return ok(takeCard(s, playerId, s.draw.at(-1)!, s.draw.slice(0, -1), ctx.now + KITTENS_CHOICE_MS));
     }
     case 'choose': {
       if (s.phase !== 'playing') return fail('bad_phase');
@@ -97,16 +108,18 @@ export function applyKittensAction(
       // Par de Mico: não há um dono só; descarta quem ainda está na espera.
       if (c.kind === 'mico') {
         if (!c.waiting.includes(playerId)) return fail('not_your_choice');
-        if (action.card === undefined || !s.hands[playerId]!.includes(action.card)) return fail('bad_choice');
-        return ok(discardForMico(s, c, playerId, action.card));
+        const card = ownCard(s, playerId, action.card);
+        if (card === null) return fail(badOwnCard(s, playerId, action.card));
+        return ok(discardForMico(s, c, playerId, card));
       }
       if (c.who !== playerId) return fail('not_your_choice');
       switch (c.kind) {
-        case 'tatu':
-          if (action.card === undefined || !s.hands[playerId]!.includes(action.card) || kittensKindOf(action.card) !== 'cafune') {
-            return fail('bad_choice');
-          }
-          return ok(useCafune(s, c, action.card, ctx.now + KITTENS_CHOICE_MS));
+        case 'tatu': {
+          const card = ownCard(s, playerId, action.card);
+          if (card === null) return fail(badOwnCard(s, playerId, action.card));
+          if (kittensKindOf(card) !== 'cafune') return fail('bad_choice');
+          return ok(useCafune(s, c, card, ctx.now + KITTENS_CHOICE_MS));
+        }
         case 'cafune': {
           const { position } = action;
           if (position === undefined) return fail('bad_choice');
@@ -115,9 +128,11 @@ export function applyKittensAction(
           }
           return ok(hideTatu(s, c, position, ctx.rng));
         }
-        case 'favor':
-          if (action.card === undefined || !s.hands[playerId]!.includes(action.card)) return fail('bad_choice');
-          return ok(giveFavor(s, c, action.card));
+        case 'favor': {
+          const card = ownCard(s, playerId, action.card);
+          if (card === null) return fail(badOwnCard(s, playerId, action.card));
+          return ok(giveFavor(s, c, card));
+        }
         case 'cinco':
           if (action.card === undefined || !c.options.includes(action.card) || !s.discard.includes(action.card)) {
             return fail('bad_choice');
@@ -126,6 +141,17 @@ export function applyKittensAction(
         case 'quati':
           if (action.keep === undefined) return fail('bad_choice');
           return ok(delayTop(s, c, action.keep));
+        case 'latido': {
+          // Quem está cego não sabe qual ficha é o Desarme: qualquer ficha da mão vale, e o servidor joga o Desarme dele.
+          const card = ownCard(s, playerId, action.card);
+          if (card === null) return fail(badOwnCard(s, playerId, action.card));
+          const desarme = s.blind.includes(playerId) ? s.hands[playerId]!.find((x) => kittensKindOf(x) === 'cafune') : card;
+          if (desarme === undefined || kittensKindOf(desarme) !== 'cafune') return fail('bad_choice');
+          return ok(defendLatido(s, c, desarme));
+        }
+        case 'feitico':
+          if (action.keep === undefined) return fail('bad_choice');
+          return ok(conjure(s, c, action.keep, ctx.now + KITTENS_CHOICE_MS));
         default: {
           const unhandled: never = c;
           void unhandled;
@@ -144,13 +170,22 @@ export function applyKittensAction(
         hands: { ...s.hands, [playerId]: hand },
         pending: { by: playerId, play, nopes: [], resolvesAt: ctx.now + KITTENS_NOPE_MS },
       };
-      return ok(logged(next, { t: 'play', by: playerId, play: play.kind, target: play.target, ask: play.ask }));
+      return ok(logged(next, { t: 'play', by: playerId, play: play.kind, target: play.target, ask: play.ask, as: play.as }));
     }
     case 'nope': {
       if (s.phase !== 'playing') return fail('bad_phase');
       if (!s.alive.includes(playerId)) return fail('not_alive');
       if (!s.pending) return fail('nothing_to_nope');
-      const card = s.hands[playerId]!.find((c) => kittensKindOf(c) === 'nemvem');
+      const isNope = (c: string) => kittensKindOf(c) === 'nemvem';
+      let card: string | undefined;
+      if (action.card === undefined && !s.blind.includes(playerId)) {
+        card = s.hands[playerId]!.find(isNope);
+      } else {
+        // Carta escolhida (ou às cegas, por ficha): tem que ser um Nem vem! da mão.
+        const real = realCard(s, playerId, action.card);
+        if (typeof real !== 'string') return fail(real.error);
+        card = isNope(real) ? real : undefined;
+      }
       if (card === undefined) return fail('no_nope');
       const pending = {
         ...s.pending,

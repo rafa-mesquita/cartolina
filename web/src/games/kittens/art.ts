@@ -4,13 +4,17 @@
  */
 import type { KittensCardKind } from '@cartolina/shared';
 import ataque from './art/ataque.png';
+import boto from './art/boto.png';
 import cafune from './art/cafune.png';
 import capivara from './art/capivara.png';
 import embaralhar from './art/embaralhar.png';
 import espiar from './art/espiar.png';
 import favor from './art/favor.png';
+import feitico from './art/feitico.png';
+import latido from './art/latido.png';
 import mico from './art/mico.png';
 import nemvem from './art/nemvem.png';
+import olhado from './art/olhado.png';
 import preguica from './art/preguica.png';
 import pular from './art/pular.png';
 import quati from './art/quati.png';
@@ -18,8 +22,8 @@ import tamandua from './art/tamandua.png';
 import tatubum from './art/tatubum.png';
 import verso from './art/verso.webp';
 
-/** Arte de cada carta, por tipo. (`Partial` pra uma carta nova poder cair no sprite de reserva até ganhar arte.) */
-export const ART: Partial<Record<KittensCardKind, string>> = {
+/** Arte de cada carta, por tipo. */
+export const ART: Record<KittensCardKind, string> = {
   tatubum,
   cafune,
   nemvem,
@@ -28,11 +32,15 @@ export const ART: Partial<Record<KittensCardKind, string>> = {
   favor,
   embaralhar,
   espiar,
+  latido,
+  olhado,
+  feitico,
   capivara,
   mico,
   quati,
   tamandua,
   preguica,
+  boto,
 };
 
 /** Verso das cartas (o monte, as cartas dos outros jogadores). */

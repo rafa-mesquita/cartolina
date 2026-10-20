@@ -3,6 +3,7 @@ import {
   createRoom,
   isKittensRoomView,
   joinRoom,
+  kittensKindOf,
   mulberry32,
   roomAction,
   roomView,
@@ -49,7 +50,7 @@ function p1View(hand: string[], game: Partial<KittensView> = {}): KittensRoomVie
 
 const inAir = (by: string, target: string | null, kind: 'favor' | 'ataque' = 'favor', nopes = 0) => ({
   by,
-  play: { kind, cards: [`${kind}-1`], target, ask: null },
+  play: { kind, cards: [`${kind}-1`], target, ask: null, as: null },
   nopes: Array.from({ length: nopes }, (_, i) => ({ by: `p${i}`, card: `nemvem-${i + 9}` })),
   resolvesAt: 5000,
 });
@@ -234,27 +235,102 @@ describe('decisão do bot do Tatubum', () => {
     expect(play(['nemvem-0', 'nemvem-1', 'nemvem-2'])).toEqual({ type: 'play', cards: ['nemvem-0', 'nemvem-1', 'nemvem-2'] });
   });
 
+  describe('cartas novas', () => {
+    const myTurn = (hand: string[], game: Partial<KittensView> = {}) =>
+      withGame(viewOf(started(3), 'p0'), { hand, peek: null, owed: 1, pending: null, choice: null, ...game });
+
+    it('solta o Tatu Latidor sempre que pode', () => {
+      expect(decideKittens(myTurn(['latido-0', 'mico-1']), newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'play', cards: ['latido-0'] });
+    });
+
+    it('Mau-olhado vai num adversário vivo (mesmo sem carta), nunca nele mesmo', () => {
+      const v = myTurn(['olhado-0'], { handCounts: { p0: 1, p1: 0, p2: 0 } });
+      expect(decideKittens(v, newKittensMemory(), () => 0)!.action).toEqual({ type: 'play', cards: ['olhado-0'], target: 'p1' });
+      const dead = myTurn(['olhado-0'], { alive: ['p0', 'p2'] });
+      expect(decideKittens(dead, newKittensMemory(), () => 0)!.action).toEqual({ type: 'play', cards: ['olhado-0'], target: 'p2' });
+    });
+
+    it('Feitiço: fica com a carta de baixo, a não ser que seja Tatubum (aí vai pro topo)', () => {
+      const choice = (card: string) => ({ kind: 'feitico' as const, who: 'p0', deadline: 9000, card });
+      expect(decideKittens(myTurn([], { choice: choice('tatubum-0') }), newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', keep: false });
+      expect(decideKittens(myTurn([], { choice: choice('mico-0') }), newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', keep: true });
+      expect(decideKittens(myTurn(['feitico-0']), newKittensMemory(), () => 0)!.action).toEqual({ type: 'play', cards: ['feitico-0'] });
+    });
+
+    it('Latidor contra ele: joga o Desarme; cego, manda qualquer ficha', () => {
+      const choice = { kind: 'latido' as const, who: 'p1', deadline: 9000 };
+      const d = decideKittens(p1View(['mico-1', 'cafune-3'], { choice }), newKittensMemory(), () => 0.5)!;
+      expect(d.action).toEqual({ type: 'choose', card: 'cafune-3' });
+      expect(d.key).toBe('choice:latido:9000');
+      const blind = decideKittens(p1View(['?0', '?1'], { choice, blind: ['p1'] }), newKittensMemory(), () => 0.5)!;
+      expect(blind.action).toEqual({ type: 'choose', card: '?0' });
+      // a escolha de outro: espera
+      expect(decideKittens(p1View(['cafune-3'], { choice: { ...choice, who: 'p2' } }), newKittensMemory(), () => 0)).toBeNull();
+    });
+
+    it('Boto: completa o par de um bicho; dois Botos viram o par de um bicho declarado', () => {
+      const a = decideKittens(myTurn(['boto-0', 'quati-1']), newKittensMemory(), () => 0)!.action;
+      expect(a).toEqual({ type: 'play', cards: ['quati-1', 'boto-0'] });
+      const two = decideKittens(myTurn(['boto-0', 'boto-1']), newKittensMemory(), () => 0)!.action as { cards: string[]; as: string; ask?: string };
+      expect(two.cards).toEqual(['boto-0', 'boto-1']);
+      expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica']).toContain(two.as);
+      const lazy = decideKittens(myTurn(['boto-0', 'preguica-1']), newKittensMemory(), () => 0)!.action as { cards: string[]; ask: string };
+      expect(lazy.cards).toEqual(['preguica-1', 'boto-0']);
+      expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica']).toContain(lazy.ask);
+    });
+
+    it('cego: quase sempre compra; às vezes arrisca uma ficha', () => {
+      const v = myTurn(['?0', '?1', '?2'], { blind: ['p0'] });
+      expect(decideKittens(v, newKittensMemory(), () => 0.99)!.action).toEqual({ type: 'draw' });
+      const risky = decideKittens(v, newKittensMemory(), () => 0)!.action as { type: string; cards: string[] };
+      expect(risky.type).toBe('play');
+      for (const c of risky.cards) expect(['?0', '?1', '?2']).toContain(c);
+      // no Favor contra ele, dá uma ficha
+      const favor = decideKittens(p1View(['?0', '?1'], { choice: { kind: 'favor', who: 'p1', to: 'p0', deadline: 9000 }, blind: ['p1'] }), newKittensMemory(), () => 0.5)!;
+      expect(['?0', '?1']).toContain((favor.action as { card: string }).card);
+      // e não dá Nem vem! (não sabe se tem)
+      expect(decideKittens(p1View(['?0'], { pending: inAir('p0', 'p1'), blind: ['p1'] }), newKittensMemory(), () => 0)).toBeNull();
+    });
+  });
+
   it('numa partida inteira simulada, o que ele manda é aceito pelo servidor (jogar, Nem vem!, escolher, comprar) e nunca é ação de host', () => {
     const seen = new Set<string>();
+    /** Cartas novas que os bots jogaram ou escolhas novas que responderam. */
+    const news = new Set<string>();
+    let blindTries = 0;
     for (let seed = 1; seed <= 60; seed++) {
       let room = started(4);
       const rng = mulberry32(seed);
       let clock = 0;
-      for (let step = 0; step < 40; step++) {
+      for (let step = 0; step < 60; step++) {
         const g = viewOf(room, 'p0').game;
         if (g.phase !== 'playing') break;
         // quem precisa agir: o dono da escolha, o da vez (se nada no ar) ou todos (nope)
         const actors = g.choice ? (g.choice.kind === 'mico' ? g.choice.waiting : [g.choice.who]) : g.pending ? g.alive : g.current ? [g.current] : [];
         let acted = false;
         for (const who of actors) {
-          const d = decideKittens(viewOf(room, who), newKittensMemory(), rng);
+          const v = viewOf(room, who);
+          const d = decideKittens(v, newKittensMemory(), rng);
           if (!d) continue;
           const a = d.action as GameAction & { type: string };
           expect(HOST_ACTIONS).not.toContain(a.type);
           seen.add(a.type);
-          const res = roomAction(room, who, d.action, mulberry32(seed + step), (clock += 100));
+          if (v.game.choice?.kind === 'latido' || v.game.choice?.kind === 'feitico') news.add(`choice:${v.game.choice.kind}`);
+          let res = roomAction(room, who, d.action, mulberry32(seed + step), (clock += 100));
+          // Às cegas (Mau-olhado) o bot arrisca fichas que podem não formar jogada: o servidor recusa e ele compra.
+          if (!res.ok && a.type === 'play' && v.game.blind.includes(who)) {
+            blindTries += 1;
+            res = roomAction(room, who, { type: 'draw' }, mulberry32(seed + step), (clock += 100));
+          }
           expect(res.ok, `${who} ${JSON.stringify(a)}`).toBe(true);
-          if (res.ok) room = res.room;
+          if (res.ok) {
+            room = res.room;
+            const air = (room.game as KittensState).pending?.play;
+            for (const c of air && a.type === 'play' ? air.cards : []) {
+              const k = kittensKindOf(c);
+              if (k === 'latido' || k === 'olhado' || k === 'feitico' || k === 'boto') news.add(k);
+            }
+          }
           acted = true;
           break;
         }
@@ -267,5 +343,7 @@ describe('decisão do bot do Tatubum', () => {
       }
     }
     expect([...seen].sort()).toEqual(['choose', 'draw', 'nope', 'play']);
+    expect([...news].sort()).toEqual(['boto', 'choice:feitico', 'choice:latido', 'feitico', 'latido', 'olhado']);
+    void blindTries;
   });
 });

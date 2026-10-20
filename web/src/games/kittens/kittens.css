@@ -137,6 +137,14 @@
 .kittens .kt-mesa .kt-seat.targetable { cursor: pointer; animation: kt-pulse .6s steps(2) infinite; }
 .kittens .kt-mesa .kt-seat.targetable:hover { background: rgba(228,87,46,.25); }
 .kittens .kt-mesa .kt-seat.hit { animation: kt-hit .5s steps(4); }
+/* Tatu Latidor na frente do jogador: cartinha ao lado do bichinho (à vista de todos; a rodinha dá zoom) */
+.kittens .kt-mesa .kt-seat .kt-front { position: absolute; right: -4px; top: 18px; width: 52px; height: 58px; }
+.kittens .kt-mesa .kt-seat .kt-front .kt-card { position: absolute; top: 0; transform: scale(.36); transform-origin: left top; }
+.kittens .kt-mesa .kt-seat .kt-front .kt-card.arriving, .kittens .kt-mesa #front .kt-card.arriving { visibility: hidden; }
+/* Mau-olhado: olho roxo no canto de quem está cego */
+.kittens .kt-mesa .kt-seat .kt-cursed { position: absolute; left: 2px; top: 20px; width: 34px; height: 25px; animation: kt-cursebob 1.2s steps(2) infinite; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa .kt-cursed svg, .kittens .kt-mesa .kt-blindtag svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
+@keyframes kt-cursebob { 50% { translate: 0 -3px; } }
 @keyframes kt-pulse { 50% { box-shadow: 0 -3px 0 var(--red), 0 3px 0 var(--red), -3px 0 0 var(--red), 3px 0 0 var(--red); } }
 @keyframes kt-hit { 25% { transform: translateX(-50%) translateY(-8px); } 75% { transform: translateX(-50%) translateY(4px); } }
 @keyframes kt-blink { 50% { opacity: .35; } }
@@ -225,6 +233,19 @@
   50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 0 0 0 14px rgba(242,193,78,.55), 5px 8px 0 rgba(0,0,0,.35); }
 }
 .kittens .kt-mesa #hand.myturn::before { content: 'SUA VEZ'; position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-family: var(--px); font-size: 11px; color: var(--yellow); text-shadow: 2px 2px 0 #050510; animation: kt-blink 1s steps(2) infinite; }
+/* Mau-olhado: a mão vira (versos) e a faixa roxa fica até comprar; ao pegar o olhado, as cartas embaralham */
+.kittens .kt-mesa #hand.kt-blind::before { display: none; }
+.kittens .kt-mesa #hand.kt-shuffling .kt-card { animation: kt-shuffle .12s steps(2) 7; }
+.kittens .kt-mesa .kt-blindtag { position: absolute; left: 50%; top: -52px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 12px; padding: 7px 16px 7px 10px; background: #3a2266; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 -4px 0 #c86fd4, 0 4px 0 #c86fd4, -4px 0 0 #c86fd4, 4px 0 0 #c86fd4, 6px 8px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa .kt-blindtag svg { width: 40px; height: 29px; }
+.kittens .kt-mesa .kt-blindtag b { font-family: var(--px); font-size: 14px; font-weight: normal; color: #f3e6ff; text-shadow: 2px 2px 0 #1a0f2e; animation: kt-blink 1s steps(2) infinite; }
+.kittens .kt-mesa .kt-blindtag span { font-size: 22px; color: #e0c8ff; }
+/* Cartas na sua frente (Tatu Latidor), ao lado da mão */
+.kittens .kt-mesa #front { position: absolute; left: 34px; bottom: 34px; width: 120px; height: 150px; z-index: 6; }
+.kittens .kt-mesa #front:empty { display: none; }
+.kittens .kt-mesa #front .kt-ftag { position: absolute; left: 0; top: -18px; font-family: var(--px); font-size: 8px; color: var(--yellow); text-shadow: 2px 2px 0 #050510; white-space: nowrap; }
+.kittens .kt-mesa #front .kt-card { position: absolute; top: 4px; transform: scale(.78); transform-origin: left top; }
 .kittens .kt-mesa #hand .dead { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); font-family: var(--px); font-size: 14px; color: var(--cream); text-shadow: 2px 2px 0 #050510; }
 @keyframes kt-selblink { 50% { box-shadow: 0 -4px 0 #fff3c4, 0 4px 0 #fff3c4, -4px 0 0 #fff3c4, 4px 0 0 #fff3c4, 5px 8px 0 rgba(0,0,0,.35); } }
 
@@ -324,7 +345,8 @@
 .kittens .kt-mesa #gallery { position: absolute; inset: 0; z-index: 60; background: rgba(14,14,28,.94); padding: 30px 50px; display: flex; flex-direction: column; gap: 14px; }
 .kittens .kt-mesa #gallery[hidden] { display: none; }
 .kittens .kt-mesa #gallery h2 { margin: 0; font-family: var(--px); font-size: 20px; color: var(--yellow); font-weight: normal; }
-.kittens .kt-mesa #gallery .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px 30px; overflow: hidden; padding: 10px 6px; }
+/* 17 cartas: 4 colunas e rolagem (a rodinha rola a galeria) */
+.kittens .kt-mesa #gallery .grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px 26px; overflow-y: auto; padding: 10px 6px; scrollbar-color: var(--yellow) #0e0e1c; }
 .kittens .kt-mesa #gallery .item { display: flex; gap: 22px; align-items: center; }
 .kittens .kt-mesa #gallery .item .kt-card { flex: none; }
 .kittens .kt-mesa #gallery .item p { margin: 0; font-size: 23px; line-height: 1.05; }

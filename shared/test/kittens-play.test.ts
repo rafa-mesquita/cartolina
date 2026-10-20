@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { kittensKindOf } from '../src/games/kittens/cards';
 import { KITTENS_NOPE_MS, type KittensAction } from '../src/games/kittens/types';
 import { T0, act, ctxOf, ids, refuse, table } from './kittens-helpers';
 
@@ -31,12 +32,12 @@ describe('jogar', () => {
     const after = act(table({ hands: hands() }), 'p0', play({ cards: ['ataque-0'] }), ctx);
     expect(after.pending).toEqual({
       by: 'p0',
-      play: { kind: 'ataque', cards: ['ataque-0'], target: null, ask: null },
+      play: { kind: 'ataque', cards: ['ataque-0'], target: null, ask: null, as: null },
       nopes: [],
       resolvesAt: T0 + KITTENS_NOPE_MS,
     });
     expect(after.hands.p0).not.toContain('ataque-0');
-    expect(after.log.at(-1)!.ev).toEqual({ t: 'play', by: 'p0', play: 'ataque', target: null, ask: null });
+    expect(after.log.at(-1)!.ev).toEqual({ t: 'play', by: 'p0', play: 'ataque', target: null, ask: null, as: null });
   });
 
   it.each<[string[], string]>([
@@ -61,12 +62,13 @@ describe('jogar', () => {
         cards: ['mico-0', 'mico-1'],
         target: null,
         ask: null,
+        as: 'mico',
       });
     }
     // Trio não tem alvo nem pedido: o que vier é ignorado.
     expect(
       act(s, 'p0', play({ cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: 'p1', ask: 'favor' }), ctx).pending!.play,
-    ).toEqual({ kind: 'trio', cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: null, ask: null });
+    ).toEqual({ kind: 'trio', cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: null, ask: null, as: 'capivara' });
     expect(act(s, 'p0', play({ cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] }), ctx).pending!.play.kind).toBe(
       'cinco',
     );
@@ -99,9 +101,10 @@ describe('jogar', () => {
       cards: ['preguica-0', 'preguica-1'],
       target: null,
       ask: 'mico',
+      as: 'preguica',
     });
     for (const cards of [['quati-0', 'quati-1'], ['tamandua-0', 'tamandua-1'], ['capivara-0', 'capivara-1']]) {
-      expect(act(s, 'p0', play({ cards, target: 'p1', ask: 'mico' }), ctx).pending!.play).toEqual({ kind: 'par', cards, target: null, ask: null });
+      expect(act(s, 'p0', play({ cards, target: 'p1', ask: 'mico' }), ctx).pending!.play).toEqual({ kind: 'par', cards, target: null, ask: null, as: kittensKindOf(cards[0]!) });
     }
   });
 

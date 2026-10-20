@@ -1,4 +1,6 @@
 import type { GameModule } from '../../game';
+import { kittensToken } from './cards';
+import { kittensWithNewFields } from './compat';
 import { applyKittensAction, initialKittensState } from './rules';
 import { settleKittens } from './settle';
 import { tatusIn } from './turn';
@@ -16,11 +18,12 @@ function hideCard(ev: KittensEvent): KittensEvent {
 
 /**
  * A escolha como `viewerId` vê: sem o id do tatu que está sendo escondido (com ele, quem assiste poderia saber onde o
- * tatu foi parar); a carta de cima do Quati só pra quem escolhe.
+ * tatu foi parar); a carta de cima do Quati e a de baixo do Feitiço só pra quem escolhe.
  */
 function choiceView(state: KittensState, viewerId: string | null): KittensChoiceView | null {
   const c = state.choice;
   if (c === null) return null;
+  const mine = viewerId !== null && 'who' in c && viewerId === c.who;
   switch (c.kind) {
     case 'tatu':
     case 'cafune': {
@@ -28,7 +31,9 @@ function choiceView(state: KittensState, viewerId: string | null): KittensChoice
       return { kind, who, deadline };
     }
     case 'quati':
-      return { ...c, card: viewerId !== null && viewerId === c.who ? (state.draw.at(-1) ?? null) : null };
+      return { ...c, card: mine ? (state.draw.at(-1) ?? null) : null };
+    case 'feitico':
+      return { ...c, card: mine ? (state.draw[0] ?? null) : null };
     default:
       return c;
   }
@@ -36,30 +41,39 @@ function choiceView(state: KittensState, viewerId: string | null): KittensChoice
 
 /**
  * Única fronteira de segredo do Tatubum: mãos, monte, Espiar e cartas do diário só pra quem pode ver (spec §4.3).
+ * Quem está cego pelo Mau-olhado vê fichas no lugar da mão, e nenhuma carta que esteja na mão dele aparece no diário.
  * A visão compartilha arrays/objetos com o estado (é serializada no socket); quem consome não deve mutar.
  */
-export function kittensViewFor(state: KittensState, viewerId: string | null): KittensView {
+export function kittensViewFor(saved: KittensState, viewerId: string | null): KittensView {
+  const state = kittensWithNewFields(saved);
   const peek = state.peek;
+  const hand = own(state.hands, viewerId) ?? [];
+  const blind = viewerId !== null && state.blind.includes(viewerId);
+  const hidden = blind ? new Set(hand) : null;
   return {
     phase: state.phase,
     players: state.players,
     alive: state.alive,
     current: state.current,
     owed: state.owed,
-    hand: own(state.hands, viewerId) ?? [],
+    hand: blind ? hand.map((_, i) => kittensToken(i)) : hand,
     handCounts: Object.fromEntries(state.players.map((p) => [p, state.hands[p]?.length ?? 0])),
     drawCount: state.draw.length,
     tatusInDraw: tatusIn(state.draw),
     discard: state.discard,
     out: state.out,
+    front: Object.fromEntries(state.players.map((p) => [p, own(state.front, p) ?? []])),
+    blind: state.blind,
     pending: state.pending,
     choice: choiceView(state, viewerId),
     peek: peek !== null && peek.who === viewerId ? peek.cards : null,
     peekBy: peek?.who ?? null,
-    log: state.log.map(({ n, ev, seenBy }) => ({
-      n,
-      ev: seenBy === null || (viewerId !== null && seenBy.includes(viewerId)) ? ev : hideCard(ev),
-    })),
+    log: state.log.map(({ n, ev, seenBy }) => {
+      const sees = seenBy === null || (viewerId !== null && seenBy.includes(viewerId));
+      const card = 'card' in ev ? ev.card : null;
+      const scrub = !sees || (hidden !== null && card !== null && hidden.has(card));
+      return { n, ev: scrub ? hideCard(ev) : ev };
+    }),
     winner: state.winner,
   };
 }

@@ -47,6 +47,7 @@ export * from './games/kittens/cards';
 export {
   KITTENS_EXTRA_CAFUNES,
   KITTENS_HAND_START,
+  KITTENS_LATIDOS,
   KITTENS_PACK,
   KITTENS_PACK_SIZE,
   kittensBaseDeck,

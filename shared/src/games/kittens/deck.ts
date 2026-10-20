@@ -1,7 +1,7 @@
 import { shuffle, type Rng } from '../../rng';
 import { kittensCardId, type KittensCardKind } from './cards';
 
-/** Um pacote: tudo menos Tatubum e Cafuné, nas quantidades do jogo original. */
+/** Um pacote: tudo menos Tatubum, Desarme e Tatu Latidor; as cartas do original + as novas de 2026-10-20. */
 export const KITTENS_PACK: Partial<Record<KittensCardKind, number>> = {
   nemvem: 5,
   ataque: 4,
@@ -9,13 +9,18 @@ export const KITTENS_PACK: Partial<Record<KittensCardKind, number>> = {
   favor: 4,
   embaralhar: 4,
   espiar: 5,
+  olhado: 2,
+  feitico: 2,
   capivara: 4,
   mico: 4,
   quati: 4,
   tamandua: 4,
   preguica: 4,
+  boto: 2,
 };
-export const KITTENS_PACK_SIZE = 46;
+export const KITTENS_PACK_SIZE = 52;
+/** Tatu Latidor: sempre 2 na partida, qualquer que seja o número de jogadores (fora dos pacotes). */
+export const KITTENS_LATIDOS = 2;
 /** Cartas do baralho na mão inicial, além do Cafuné de cada um. */
 export const KITTENS_HAND_START = 7;
 /** Cafunés que vão pro monte além do de cada um (sempre 2: decisão de 2026-10-19). */
@@ -26,13 +31,14 @@ export function kittensPacksFor(players: number): number {
   return players >= 6 ? 2 : 1;
 }
 
-/** As cartas dos pacotes (sem Tatubum e Cafuné), numeradas por tipo. */
+/** As cartas dos pacotes mais os 2 Tatus Latidores (sem Tatubum e Cafuné), numeradas por tipo. */
 export function kittensBaseDeck(players: number): string[] {
   const packs = kittensPacksFor(players);
   const cards: string[] = [];
   for (const [kind, count] of Object.entries(KITTENS_PACK) as [KittensCardKind, number][]) {
     for (let i = 0; i < count * packs; i++) cards.push(kittensCardId(kind, i));
   }
+  for (let i = 0; i < KITTENS_LATIDOS; i++) cards.push(kittensCardId('latido', i));
   return cards;
 }
 
