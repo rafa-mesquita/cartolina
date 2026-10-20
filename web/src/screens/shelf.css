@@ -1,5 +1,5 @@
 /* Estante de jogos (início): cartas na mesa. Página do jogo: cabeçalho, abas e regras. */
-.shelf { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; width: min(760px, 100%); padding: 18px 0 8px; }
+.shelf { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; width: min(880px, 100%); padding: 18px 0 8px; }
 .cover {
   --rot: 0deg;
   position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px;
