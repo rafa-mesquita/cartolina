@@ -1,6 +1,6 @@
 # cartolina~
 
-Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), e **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável).
+Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável), **Retratim**, a nossa versão do Pictures (id `pictures`), e **Cama-Leão**, a nossa versão do Camelio (id `camelio`; jogável no computador).
 
 ## Estrutura
 
@@ -43,7 +43,7 @@ Os testes usam Vitest 4 e, no servidor, `@cloudflare/vitest-plugin` (sucessor do
 - O **DITU** joga no celular **em pé**. A fila fica na vertical (1 em cima, 100 embaixo). A carta vai pra fila tocando nela e depois no "colocar aqui", ou arrastando (segura um instante e arrasta). A dica se escreve numa folha que sobe de baixo.
 - Celular deitado mostra "vira o celular em pé".
 - Mesa mista funciona: quem está no computador vê o arrasto de quem está no celular no lugar certo.
-- O **Diquisti** vem na etapa 2 do Plano 5; até lá, no celular, ele mostra o aviso de jogar no computador. O **Pictures** fica só no computador por enquanto.
+- O **Diquisti** vem na etapa 2 do Plano 5; até lá, no celular, ele mostra o aviso de jogar no computador. O **Retratim** (`pictures`) e o **Cama-Leão** (`camelio`) ficam só no computador por enquanto.
 - No código:
   - `useLayout()` (`web/src/lib/device.ts`) retorna `'phone'` até 640px de largura;
   - o campo `mobile` em `web/src/games/catalog.ts` diz quais jogos abrem no celular;
