@@ -19,7 +19,7 @@ describe('estante de jogos', () => {
     expect(screen.getByRole('link', { name: /Diquisti/ }).getAttribute('href')).toBe('#/dixit');
     expect(screen.getByRole('link', { name: /Retratim/ }).getAttribute('href')).toBe('#/pictures');
     expect(screen.getByRole('link', { name: /Tatubum/ }).getAttribute('href')).toBe('#/kittens');
-    expect(screen.getAllByText('em breve')).toHaveLength(1); // só o Tatubum, que ainda não tem mesa
+    expect(screen.queryByText('em breve')).toBeNull(); // todos já dá pra jogar
     expect(screen.queryByText(/grupo/i)).toBeNull();
     expect(screen.queryByText(/Dixit/)).toBeNull();
   });

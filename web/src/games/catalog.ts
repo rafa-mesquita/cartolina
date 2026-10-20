@@ -64,7 +64,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Na sua vez, jogue quantas cartas quiser (Ataque, Pular, Espiar, Favor…) e termine comprando. Nem vem! cancela qualquer jogada.',
       'Quem sobrar vivo vence.',
     ],
-    playable: false,
+    playable: true,
     mobile: false,
   },
 };

@@ -31,11 +31,11 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.hasHistory).toBe(false);
   });
 
-  it('Tatubum (o Exploding Kittens) aparece na estante, ainda "em breve"', () => {
+  it('Tatubum (o Exploding Kittens) aparece na estante e dá pra jogar', () => {
     const entry = catalogEntry('kittens');
     expect(entry?.name).toBe('Tatubum');
     expect(entry?.players).toBe('2 a 8 pessoas');
-    expect(entry?.playable).toBe(false);
+    expect(entry?.playable).toBe(true);
     expect(entry?.hasHistory).toBe(false);
     expect(entry?.mobile).toBe(false);
   });

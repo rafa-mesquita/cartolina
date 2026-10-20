@@ -32,6 +32,22 @@
   content: ''; position: absolute; left: 50%; top: 12px; width: 62px; height: 18px; transform: translateX(-50%) rotate(3deg);
   background: rgba(242, 165, 65, 0.75); box-shadow: 0 1px 2px rgba(59, 47, 47, 0.25);
 }
+/* Tatubum: pixel art, noite no cerrado, o tatu-bola com o pavio aceso e o título em letra de videogame */
+.cover-kittens {
+  background-color: #17204a; color: #f4e9d0; border-radius: 0; image-rendering: pixelated;
+  background-image:
+    radial-gradient(#fff3c4 1.2px, transparent 1.4px),
+    linear-gradient(#0f1030, #1f3a6b 62%, #141f42 62%, #0b1028);
+  background-size: 23px 19px, 100% 100%;
+}
+.cover-kittens b { font: 400 21px/1.1 'Press Start 2P', monospace; color: #f2c14e; text-shadow: 3px 0 0 #3b2412, -3px 0 0 #3b2412, 0 3px 0 #3b2412, 0 -3px 0 #3b2412, 4px 4px 0 #050510; }
+.cover-kittens span { font: 20px/1 'VT323', monospace; color: #f4e9d0; }
+.cover-kittens::before {
+  content: ''; position: absolute; left: 50%; top: 34px; width: 112px; height: 98px; transform: translateX(-50%);
+  background: url('../games/kittens/tatu-capa.svg') center / contain no-repeat; image-rendering: pixelated;
+}
+.cover-kittens.mini { font: 400 9px/1.2 'Press Start 2P', monospace; color: #f2c14e; }
+.cover-kittens.mini::before { display: none; }
 /* número decorativo no canto, como o da carta da mão */
 .shelf .cover-ito::after {
   content: '87'; content: '87' / ''; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
@@ -55,6 +71,8 @@
 .game-dixit { --game: #2f5d50; --game-ink: #f4ecd8; }
 /* Retratim: o kraft da capa some no fundo da página; o botão vai na tinta azul do álbum */
 .game-pictures { --game: #2f5aa8; --game-ink: #f6eedd; }
+/* Tatubum: o "criar sala" no amarelo da logo */
+.game-kittens { --game: #f2c14e; --game-ink: #2b1a10; }
 .game-page .btn.play { background: var(--game, var(--pink)); color: var(--game-ink, var(--ink)); }
 .join-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
 .join-line > span { font: 21px/1 var(--font-hand); }

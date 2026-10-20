@@ -5,7 +5,7 @@ import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bot
 import { addDixitBot, dixitBotsIn, dixitBotsVersion, removeAllDixitBots, subscribeDixitBots } from './dixitBots';
 import { addPicturesBot, picturesBotsIn, picturesBotsVersion, removeAllPicturesBots, subscribePicturesBots } from './picturesBots';
 
-type GameKey = 'ito' | 'dixit' | 'pictures';
+type GameKey = 'ito' | 'dixit' | 'pictures' | 'kittens';
 interface Api {
   subscribe: (fn: () => void) => () => void;
   version: () => number;

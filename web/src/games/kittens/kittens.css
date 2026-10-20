@@ -1,0 +1,63 @@
+/* Tatubum (id interno `kittens`): pixel art, noite no cerrado. Tudo escopado em .kittens, classes kt-. */
+.kittens {
+  --kt-ink: #2b1a10;
+  --kt-night: #0e0e1c;
+  --kt-paper: #f4e9d0;
+  --kt-yellow: #f2c14e;
+  --kt-red: #e4572e;
+  --kt-btn: #e0605a;
+  --kt-btn-edge: #1a0f1f;
+  --kt-btn-hi: #f08a80;
+  --kt-btn-lo: #b8423e;
+  --kt-cream: #fff3e0;
+  --kt-dim: #9fb0d8;
+  --kt-px: 'Press Start 2P', monospace;
+  --kt-vt: 'VT323', monospace;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--kt-night);
+  color: var(--kt-paper);
+  font-family: var(--kt-vt);
+  image-rendering: pixelated;
+}
+.kittens img { image-rendering: pixelated; }
+
+/* Fundo do cerrado: canvas pequeno esticado na tela toda */
+.kt-bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+
+/* Botões chanfrados (aprovados no mockup) */
+.kt-btn { position: relative; display: inline-flex; height: 50px; min-width: 150px; padding: 4px; border: none; background: var(--kt-btn-edge); cursor: pointer;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%); }
+.kt-btn > span { flex: 1; height: 100%; background: var(--kt-btn); display: flex; align-items: center; justify-content: center; padding: 0 24px; white-space: nowrap;
+  clip-path: polygon(11px 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 11px 100%, 0 50%);
+  font-family: var(--kt-px); font-size: 13px; color: var(--kt-cream); text-shadow: 2px 2px 0 #8c2f2f; box-shadow: inset 0 4px 0 var(--kt-btn-hi), inset 0 -5px 0 var(--kt-btn-lo); }
+.kt-btn:hover > span { background: #ea736c; }
+.kt-btn:active > span { transform: translateY(2px); }
+.kt-btn.yellow > span { background: var(--kt-yellow); color: var(--kt-ink); text-shadow: 2px 2px 0 #c9962c; box-shadow: inset 0 4px 0 #f7d886, inset 0 -5px 0 #c9962c; }
+.kt-btn.yellow:hover > span { background: #f6cd6b; }
+.kt-btn.ghost > span { background: #2c3a66; text-shadow: 2px 2px 0 #141f42; box-shadow: inset 0 4px 0 #3f5590, inset 0 -5px 0 #1a2a50; }
+.kt-btn.small { height: 38px; min-width: 0; }
+.kt-btn.small > span { font-size: 10px; padding: 0 16px; }
+
+/* Lobby */
+.kt-lobby { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; }
+.kt-logo { margin: 0; font-family: var(--kt-px); font-weight: normal; font-size: clamp(36px, 6vw, 72px); color: var(--kt-yellow);
+  text-shadow: 5px 0 0 #3b2412, -5px 0 0 #3b2412, 0 5px 0 #3b2412, 0 -5px 0 #3b2412, 9px 9px 0 #050510; }
+.kt-sub { margin: -6px 0 4px; font-family: var(--kt-px); font-size: 12px; color: var(--kt-cream); text-shadow: 2px 2px 0 #050510; }
+.kt-panel { width: min(760px, 100%); padding: 22px 26px; background: rgba(20, 31, 66, .92);
+  box-shadow: 0 -5px 0 var(--kt-yellow), 0 5px 0 var(--kt-yellow), -5px 0 0 var(--kt-yellow), 5px 0 0 var(--kt-yellow), 10px 14px 0 rgba(0, 0, 0, .5); }
+.kt-panel h2 { margin: 0 0 14px; font-family: var(--kt-px); font-weight: normal; font-size: 14px; color: var(--kt-yellow); }
+.kt-panel p { margin: 0 0 12px; font-size: 24px; line-height: 1.1; }
+.kt-people { list-style: none; margin: 0 0 18px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.kt-people li { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; background: rgba(14, 14, 28, .6); }
+.kt-people li.off { opacity: .45; }
+.kt-people img { width: 64px; height: 64px; filter: drop-shadow(3px 3px 0 rgba(5, 5, 16, .6)); }
+.kt-people .who { font-family: var(--kt-px); font-size: 10px; color: var(--kt-cream); text-align: center; }
+.kt-people .kt-tag { font-size: 18px; color: var(--kt-dim); }
+.kt-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.kt-warn { color: #ff9b7a; font-size: 22px; }
+.kt-link { width: 100%; margin-top: 10px; padding: 6px 10px; font-family: var(--kt-vt); font-size: 20px; background: var(--kt-paper); color: var(--kt-ink); border: 3px solid var(--kt-ink); }
+.kt-pill { font-family: var(--kt-px); font-size: 9px; padding: 8px 10px; background: #2c3a66; color: var(--kt-cream); border: none; cursor: pointer; box-shadow: 0 0 0 3px #050510; }
+.kt-toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 50; padding: 10px 16px; background: var(--kt-red); color: var(--kt-cream); font-family: var(--kt-px); font-size: 11px;
+  box-shadow: 0 -4px 0 var(--kt-ink), 0 4px 0 var(--kt-ink), -4px 0 0 var(--kt-ink), 4px 0 0 var(--kt-ink); }
