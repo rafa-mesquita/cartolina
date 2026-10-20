@@ -21,7 +21,7 @@ Decisões do usuário (2026-10-19):
 - **2 a 8 jogadores**, com baralho que cresce com a mesa (§3).
 - **Janela do Nem vem! de 5 s**, fixa, sempre corre, mesmo que ninguém tenha Nem vem! (assim a
   demora não entrega quem tem).
-- **Escolhas pessoais com 30 s** (Favor, Cafuné, 5 diferentes; no trio o nome vai junto da jogada); acabou o tempo, o servidor
+- **Escolhas pessoais com 30 s** (Favor e par de Mico, Desarme, 5 diferentes, par de Quati; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
   escolhe ao acaso. **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
@@ -81,40 +81,44 @@ Caio joga 4. Caio, no último turno devido (`owed = 1`), ataca → Duda joga 2.
 
 ### Combos
 
-Jogados como **uma jogada só** (várias cartas de uma vez); valem com quaisquer cartas, não só os
-bichos, e o efeito próprio das cartas é ignorado. Aceitam Nem vem! (que cancela o combo todo).
+Jogados como **uma jogada só** (várias cartas de uma vez); o efeito próprio das cartas é ignorado.
+Aceitam Nem vem! (que cancela o combo todo). Regras dos combos redesenhadas pelo Rafa em 2026-10-20:
 
-- **Par** (2 cartas iguais): o efeito depende da carta (ver "Par de cada bicho" abaixo). Par de cartas
-  de ação (ex.: 2 Ataques) + alvo com carta na mão: você rouba **uma carta ao acaso** do alvo.
-- **Trio** (3 iguais) + alvo + **nome de uma carta** (qualquer tipo menos Tatubum): se o alvo
-  tiver, entrega uma; se não, nada.
-- **5 diferentes** (5 nomes diferentes): você escolhe (30 s) uma carta do **descarte como estava
-  antes desta jogada**. Descarte vazio = nada.
+- **Par** (2 cartas iguais) **só de bichos**: cada bicho tem o seu efeito (tabela abaixo). Duas cartas de
+  ação iguais (ex.: 2 Ataques) não formam par (`bad_combo`).
+- **Trio** (3 cartas iguais, **de qualquer tipo**), sem alvo nem pedido: você rouba **um Desarme** de um
+  adversário sorteado **entre os que têm Desarme**. Ninguém tem: não acontece nada. Todos veem quem
+  perdeu o Desarme.
+- **5 diferentes** (5 nomes diferentes, quaisquer cartas): você escolhe (30 s) uma carta do **descarte
+  como estava antes desta jogada**. Descarte vazio = nada.
 
 ### Par de cada bicho (pedido do Rafa, 2026-10-20)
 
-Sozinho o bicho continua não fazendo nada; trio e 5 diferentes não mudam. Cada **par de bicho** tem
-efeito próprio (todos aceitam Nem vem!, como qualquer combo):
+Sozinho o bicho continua não fazendo nada.
 
-| Par de… | Nome | Alvo | Efeito |
-|---|---|---|---|
-| Mico-leão | Afana | sim | Rouba **uma carta ao acaso** do alvo (o par clássico). |
-| Quati | Fuça | sim | Quem jogou **vê a mão do alvo** e escolhe a carta que leva (30 s; depois, ao acaso). Só os dois sabem qual foi. |
-| Tamanduá | Língua comprida | não | Termina a vez **comprando a carta do fundo** do monte. Tatubum do fundo segue o fluxo normal (Desarme ou explode). Gasta 1 turno, como a compra normal (sob ataque, só um dos turnos). |
-| Preguiça | Deixa pra depois | não | Só quem jogou vê a **carta de cima** e escolhe **Fica** ou **Fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. Se a carta mudou de lugar, as espiadas dos outros somem. |
-| Capivara | Roda de capivara | não | Todos os vivos passam **ao mesmo tempo** uma carta **ao acaso** pro próximo na ordem da vez (contando a partir das mãos de antes da roda). Quem está sem carta só recebe. Cada um vê só o que deu e o que recebeu. |
+| Par de… | Pede | Efeito |
+|---|---|---|
+| Mico-leão | um adversário com carta | O adversário **escolhe** uma carta da mão dele pra te dar (30 s; depois, ao acaso). Só vocês dois sabem qual foi. É o mesmo fluxo do Favor. |
+| Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
+| Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
+| Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: nada. Todos veem de onde veio. |
+| Capivara | — | **Todos os outros** vivos passam, ao mesmo tempo, uma carta **ao acaso** pro próximo na ordem da vez (o sentido em que a vez anda). **Você não passa**, mas recebe a do jogador antes de você. Quem está sem carta não passa. Cada um vê só o que deu e o que recebeu. |
 
 Regras de motor:
-- A jogada continua sendo `par`; o efeito sai do tipo da carta (`kittensKindOf(cards[0])`).
-- Alvo exigido só pra Mico, Quati e pares de ação (`bad_target` como hoje); Tamanduá, Preguiça e Capivara
-  ignoram o alvo.
-- Escolhas novas em `KittensChoice`: `{ kind: 'quati', who, from, deadline }` (na view, só `who` recebe
-  `options` = mão do `from`) e `{ kind: 'preguica', who, deadline }` (na view, só `who` recebe a carta de
-  cima). Ação: `choose` com `card` (Quati) ou `keep: boolean` (Preguiça).
-- Diário: Quati usa `stole` com `seenBy` [alvo, quem jogou]; Tamanduá usa `draw` com `from: 'bottom'`;
-  Preguiça gera `{ t: 'delayed', by, moved }` (público, sem carta); Capivara gera um `{ t: 'passed', from,
-  to, card }` por jogador, com `seenBy` [from, to].
-- Espiar: comprar do fundo só mexe na espiada se a carta comprada estava nela (monte com ≤ 3 cartas).
+- `playKindOf`: 2 iguais só vira `par` se for bicho; 3 iguais de qualquer tipo é `trio`.
+- `parsePlay`: alvo exigido só no Favor e no par de Mico (`bad_target`); pedido (`ask`) exigido só no par
+  de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Trio ignora alvo e pedido.
+- Par de Mico reaproveita a escolha `favor` (`who` = alvo, `to` = quem jogou) e o evento `gave`.
+- Escolha nova `{ kind: 'quati', who, deadline }`; na visão, só `who` recebe `card` = a carta de cima.
+  Ação: `choose` com `keep: boolean`. Evento `{ t: 'delayed', by, moved }` (público).
+- Tamanduá: eventos `{ t: 'draw', by, card }` (só quem comprou vê) pra cada carta que fica na mão e
+  `{ t: 'buried', by, tatus }` (público) quando algum Tatubum vai pro fundo. Comprar muda o topo: a
+  espiada some.
+- Preguiça: evento `{ t: 'called', by, ask, from, card }` (público): `from` = quem deu, ou `null` quando
+  veio do monte; `card` = `null` quando ninguém tinha nem estava no monte. Tirar do monte apaga a espiada.
+- Capivara: um `{ t: 'passed', from, to, card }` por passe, com `seenBy` [from, to].
+- Trio: evento `{ t: 'grabbed', by, from, card }` (público; `from`/`card` = `null` quando ninguém tinha
+  Desarme). O evento antigo `asked` (trio pelo nome) sai.
 
 ### Fim
 
@@ -163,8 +167,8 @@ baralho é o do jogo original.
   `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `current`, `owed`,
   `pending`, `choice`, `peek`, `log`, `winner`.
   - `pending`: `{ by, play: { kind, cards, target, ask }, nopes: { by, card }[], resolvesAt }`.
-  - `choice`: `{ kind: 'cafune' | 'favor' | 'cinco', who, deadline, ... }` (o trio não precisa de
-    escolha: o nome vai junto da jogada).
+  - `choice`: `{ kind: 'cafune' | 'favor' | 'cinco' | 'quati', who, deadline, ... }` (o par de Preguiça
+    não precisa de escolha: o bicho vai junto da jogada).
   - `peek`: `{ who, cards }`, apagado quando quem espiou compra ou gasta um turno, quando o monte
     muda (Embaralhar, Cafuné, tatu tirado de quem caiu) ou quando a vez passa.
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
@@ -219,7 +223,7 @@ A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o 
 - Peças: `Seats` (adversários com bichinho, nome, nº de cartas, vez, fantasminha de quem explodiu),
   `Pile` (monte, com nº de cartas e de tatus), `Discard`, `InTheAir` (carta no ar + Nem vem! +
   barrinha), `Hand`, `ComboBar` ("jogar par/trio/5"), painéis `CafunePanel`, `FavorPanel`,
-  `Pick5Panel`, `AskPicker` (nome da carta do trio), `PeekPanel`, `Boom` (quadro do BUM!), `Log`
+  `Pick5Panel`, `AskPicker` (bicho do par de Preguiça), `QuatiPanel` (fica/fundo), `PeekPanel`, `Boom` (quadro do BUM!), `Log`
   (diário lateral), `Caption` (legenda em quadrinho no topo).
 - Bots só em desenvolvimento (`web/src/dev/kittensBots.ts`): jogam cartas ao acaso, às vezes dão Nem
   vem!, sempre compram no fim e escolhem ao acaso.
@@ -244,12 +248,12 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
 
 - **Arrastar, como no Diquisti:** arrastar uma carta dentro da mão troca a ordem (a ordem é só do seu
   PC); arrastar pra mesa joga (se a carta faz parte da seleção, vai a seleção inteira: par, trio, 5);
-  arrastar Favor/par/trio até um adversário já joga nele; arrastar Nem vem! pra mesa com carta no ar dá
+  arrastar Favor/par de Mico até um adversário já joga nele; arrastar Nem vem! pra mesa com carta no ar dá
   Nem vem!; no Favor que você deve, arrastar a carta pra mesa entrega.
 - Clicar seleciona (a carta sobe); duplo clique joga uma carta sozinha; o botão "JOGAR …" também joga.
-- Favor e combos sem alvo pedem o alvo: os adversários válidos ganham contorno e você clica num deles.
-- Selecionar 2, 3 ou 5 cartas que formam combo mostra o botão "jogar par / trio / 5". No trio,
-  aparece a lista de nomes pra pedir.
+- Favor e par de Mico sem alvo pedem o alvo: os adversários válidos ganham contorno e você clica num deles.
+- Selecionar 2, 3 ou 5 cartas que formam combo mostra o botão "jogar par / trio / 5". No par de
+  Preguiça, aparece a lista dos 5 bichos pra pedir.
 - Botão **"comprar"** sempre à vista na sua vez.
 - Selo no topo: "vez da Ana · 2 turnos" quando há ataque acumulado.
 
@@ -370,8 +374,8 @@ Tatubum.
 
 - **`shared/`** (TDD): baralho por número de jogadores (2, 5, 6, 8); distribuição; comprar,
   Cafuné (todas as posições) e explodir; Ataque acumulando (exemplos da §2) e Pular sob ataque;
-  Nem vem! par/ímpar, cadeia reiniciando os 5 s, Nem vem! do próprio autor; cada combo (par ao
-  acaso, trio com e sem a carta, 5 diferentes com descarte vazio); prazos das escolhas (acaso no
+  Nem vem! par/ímpar, cadeia reiniciando os 5 s, Nem vem! do próprio autor; cada combo (os 5 pares,
+  trio com e sem Desarme na mesa, 5 diferentes com descarte vazio); prazos das escolhas (acaso no
   fim); segredos do `viewFor`; presença (queda < 30 s, eliminação, tatu removido, carta no ar de
   quem saiu); vitória por explosão e por queda; `nextDeadline`.
 - **`server/`**: `POST /rooms { game: 'kittens' }`, mão de cada um e erro em PT-BR. O alarme que
