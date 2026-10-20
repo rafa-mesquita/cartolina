@@ -41,7 +41,7 @@
 .kt-btn.small > span { font-size: 10px; padding: 0 16px; }
 
 /* Lobby */
-.kt-lobby { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; }
+.kt-lobby { position: relative; z-index: 1; height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 22px; padding: 24px; }
 .kt-logo { margin: 0; font-family: var(--kt-px); font-weight: normal; font-size: clamp(36px, 6vw, 72px); color: var(--kt-yellow);
   text-shadow: 5px 0 0 #3b2412, -5px 0 0 #3b2412, 0 5px 0 #3b2412, 0 -5px 0 #3b2412, 9px 9px 0 #050510; }
 .kt-sub { margin: -6px 0 4px; font-family: var(--kt-px); font-size: 12px; color: var(--kt-cream); text-shadow: 2px 2px 0 #050510; }
@@ -59,6 +59,9 @@
 .kt-warn { color: #ff9b7a; font-size: 22px; }
 .kt-link { width: 100%; margin-top: 10px; padding: 6px 10px; font-family: var(--kt-vt); font-size: 20px; background: var(--kt-paper); color: var(--kt-ink); border: 3px solid var(--kt-ink); }
 .kt-pill { font-family: var(--kt-px); font-size: 9px; padding: 8px 10px; background: #2c3a66; color: var(--kt-cream); border: none; cursor: pointer; box-shadow: 0 0 0 3px #050510; }
+/* Bots (modo teste, BotControls com estilo inline do site): borda clara e a largura dos painéis, pra ler na noite */
+.kt-lobby section[aria-label="modo teste"] { width: min(760px, 100%) !important; border-color: var(--kt-dim) !important; }
+.kt-lobby section[aria-label="modo teste"] .hint { color: var(--kt-cream); font-size: 20px; }
 .kt-toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 50; padding: 10px 16px; background: var(--kt-red); color: var(--kt-cream); font-family: var(--kt-px); font-size: 11px;
   box-shadow: 0 -4px 0 var(--kt-ink), 0 4px 0 var(--kt-ink), -4px 0 0 var(--kt-ink), 4px 0 0 var(--kt-ink); }
 

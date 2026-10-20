@@ -1,4 +1,4 @@
-/** Controles de bots (modo teste). No DITU aparecem também no site no ar; no Diquisti, só em dev. */
+/** Controles de bots (modo teste). No DITU e no Tatubum aparecem também no site no ar; no Diquisti e no Retratim, só em dev. */
 import { MAX_PLAYERS } from '@cartolina/shared';
 import { useSyncExternalStore } from 'react';
 import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bots';
@@ -23,13 +23,13 @@ const API: Partial<Record<GameKey, Api>> = {
   kittens: { subscribe: subscribeKittensBots, version: kittensBotsVersion, count: kittensBotsIn, add: addKittensBot, removeAll: removeAllKittensBots },
 };
 
-/** Jogo sem entrada em `API` não mostra nada. */
-export default function BotControls({ code, seats, game = 'ito' }: { code: string; seats: number; game?: GameKey }) {
+/** Jogo sem entrada em `API` não mostra nada. `max`: lotação da sala desse jogo (sala cheia, sem bot novo). */
+export default function BotControls({ code, seats, game = 'ito', max = MAX_PLAYERS }: { code: string; seats: number; game?: GameKey; max?: number }) {
   const api = API[game];
-  return api ? <Controls api={api} code={code} seats={seats} /> : null;
+  return api ? <Controls api={api} code={code} seats={seats} max={max} /> : null;
 }
 
-function Controls({ api, code, seats }: { api: Api; code: string; seats: number }) {
+function Controls({ api, code, seats, max }: { api: Api; code: string; seats: number; max: number }) {
   useSyncExternalStore(api.subscribe, api.version);
   const count = api.count(code);
   // estilo inline de propósito: nada disso entra no CSS de produção
@@ -49,7 +49,7 @@ function Controls({ api, code, seats }: { api: Api; code: string; seats: number 
     >
       <p className="hint">modo teste: os bots jogam daqui do seu aparelho e a rodada não entra no histórico</p>
       <div className="row-inline">
-        <button className="sbtn" type="button" disabled={seats >= MAX_PLAYERS} onClick={() => api.add(code)}>
+        <button className="sbtn" type="button" disabled={seats >= max} onClick={() => api.add(code)}>
           🤖 adicionar bot
         </button>
         {count > 0 && (

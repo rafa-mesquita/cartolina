@@ -8,8 +8,11 @@ import { Background } from './Background';
 import { PixelCritter } from './PixelCritter';
 import './kittens.css';
 
-/** Bots para testar sozinho: só existe em dev; em produção o import some e o código não vai pro bundle. */
-const BotControls = import.meta.env.DEV ? lazy(() => import('../../dev/BotControls')) : null;
+/**
+ * Bots (modo teste), também no site no ar: completam a mesa quando tem pouca gente. O código só baixa ao abrir o
+ * lobby; os bots rodam no navegador do host e entram pelo mesmo servidor do site.
+ */
+const BotControls = lazy(() => import('../../dev/BotControls'));
 
 const TOAST_MS = 3200;
 
@@ -132,9 +135,9 @@ export function KittensLobby({ view, conn }: { view: KittensRoomView; conn: Game
             </p>
           )}
         </section>
-        {BotControls && (
+        {host && (
           <Suspense fallback={null}>
-            <BotControls code={view.code} seats={view.seats.length} game="kittens" />
+            <BotControls code={view.code} seats={view.seats.length} game="kittens" max={KITTENS_MAX_PLAYERS} />
           </Suspense>
         )}
       </main>
