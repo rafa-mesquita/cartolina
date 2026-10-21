@@ -268,6 +268,38 @@ describe('par de Preguiça: puxa o bicho pedido', () => {
     expect(nothing.log.at(-1)!.ev).toEqual({ t: 'called', by: 'p0', ask: 'mico', from: null, card: null });
   });
 
+  /** Como `resolved`, com o sorteio fixo em `r` (abaixo de 0,3: puxa dois; `randomInt` dá sempre o primeiro). */
+  const lucky = (r: number, ask: KittensCardKind, opts: { hands?: Record<string, string[]>; draw?: string[]; discard?: string[] }) => {
+    const base = table({ hands: opts.hands ?? hands(), draw: opts.draw ?? DRAW, discard: opts.discard });
+    return settleKittens(act(base, 'p0', par(['preguica-0', 'preguica-1'], { ask }), ctx), { ...at(5000), rng: () => r });
+  };
+  const calls = (s: KittensState) => s.log.filter((e) => e.ev.t === 'called').map((e) => e.ev);
+
+  it('nem nas mãos, nem no monte: pega do descarte (sem contar as Preguiças do próprio par)', () => {
+    const s = lucky(0.5, 'mico', { discard: ['mico-7', 'pular-7'] });
+    expect(s.hands.p0).toContain('mico-7');
+    expect(s.discard).toEqual(['pular-7', 'preguica-0', 'preguica-1']);
+    expect(calls(s)).toEqual([{ t: 'called', by: 'p0', ask: 'mico', from: null, card: 'mico-7', pile: true }]);
+    const own = lucky(0.5, 'preguica', { hands: { ...hands(), p0: ['preguica-0', 'preguica-1'] } });
+    expect(calls(own)).toEqual([{ t: 'called', by: 'p0', ask: 'preguica', from: null, card: null }]);
+  });
+
+  it('30% das vezes puxa dois, cada um na ordem mão → monte → descarte', () => {
+    const s = lucky(0.1, 'quati', { hands: { ...hands(), p1: ['quati-7'] }, draw: ['quati-8', 'pular-9'], discard: ['quati-9'] });
+    expect(calls(s)).toEqual([
+      { t: 'called', by: 'p0', ask: 'quati', from: 'p1', card: 'quati-7' },
+      { t: 'called', by: 'p0', ask: 'quati', from: null, card: 'quati-8' },
+    ]);
+    expect(s.discard).toContain('quati-9');
+    const pile = lucky(0.1, 'quati', { hands: { ...hands(), p1: ['quati-7'] }, discard: ['quati-9'] });
+    expect(calls(pile).map((e) => e.t === 'called' && e.card)).toEqual(['quati-7', 'quati-9']);
+    // Só tinha um: o segundo puxão, vazio, não aparece.
+    const one = lucky(0.1, 'quati', { hands: { ...hands(), p1: ['quati-7'] } });
+    expect(calls(one)).toEqual([{ t: 'called', by: 'p0', ask: 'quati', from: 'p1', card: 'quati-7' }]);
+    // Acima de 0,3: um só.
+    expect(calls(lucky(0.5, 'quati', { hands: { ...hands(), p1: ['quati-7'] }, draw: ['quati-8'] }))).toHaveLength(1);
+  });
+
   it('não puxa de si mesmo', () => {
     const s = resolved(par(['preguica-0', 'preguica-1'], { ask: 'capivara' }));
     expect(s.log.at(-1)!.ev).toEqual({ t: 'called', by: 'p0', ask: 'capivara', from: null, card: null });

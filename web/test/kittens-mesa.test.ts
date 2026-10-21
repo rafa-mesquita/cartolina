@@ -379,6 +379,21 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('par de Latidores pede um adversário', () => {
+    const v = midGame('p1');
+    v.game.hand = ['latido-90', 'latido-91', ...v.game.hand];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, 'latido-90');
+    clickCard(root, 'latido-91');
+    buttonByText(root, 'JOGAR PAR')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('Escolha um adversário');
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['latido-90', 'latido-91'], target: 'p2' }]);
+    mesa.destroy();
+  });
+
   it('par de 2 Botos virando Tucano pede o adversário depois do bicho', () => {
     const v = midGame('p1');
     const pair = ['boto-90', 'boto-91'];

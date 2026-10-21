@@ -287,6 +287,13 @@ describe('decisão do bot do Tatubum', () => {
     expect(play(['nemvem-0', 'nemvem-1', 'nemvem-2'])).toEqual({ type: 'play', cards: ['nemvem-0', 'nemvem-1', 'nemvem-2'] });
   });
 
+  it('par de Latidores vai com alvo: um adversário vivo, nunca ele mesmo', () => {
+    const v = withGame(viewOf(started(3), 'p0'), { current: 'p0', hand: ['latido-0', 'latido-1', 'mico-0'], pending: null, choice: null });
+    const d = decideKittens(v, newKittensMemory(), () => 0)!;
+    expect(d.action).toMatchObject({ type: 'play', cards: ['latido-0', 'latido-1'] });
+    expect(['p1', 'p2']).toContain((d.action as { target: string }).target);
+  });
+
   it('par de Tucano (ou Boto + Tucano) vai com alvo: um adversário vivo, mesmo sem carta, nunca ele mesmo', () => {
     const base = viewOf(started(3), 'p0');
     const play = (hand: string[], game: Partial<KittensView> = {}) =>

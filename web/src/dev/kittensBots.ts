@@ -108,6 +108,12 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
   const attack = first('ataque');
   if (g.owed >= 2 && attack && rng() < 0.8) return { cards: [attack] };
   // Tatu Latidor: solta sempre que pode (todos que tiverem Latidor se defendem, um de cada vez; ninguém tem, fica na frente).
+  // Par de Latidores: às vezes, num adversário vivo (que joga um Desarme ou explode).
+  const latidos = byKind.get('latido') ?? [];
+  const rivals = g.alive.filter((p) => p !== me);
+  if (latidos.length >= 2 && rivals.length && mem.playedThisTurn < 2 && rng() < 0.5) {
+    return { cards: latidos.slice(0, 2), target: pickOne(rng, rivals) };
+  }
   const bark = first('latido');
   if (bark && mem.playedThisTurn < 2 && rng() < 0.9) return { cards: [bark] };
   if (mem.playedThisTurn >= 2 || rng() > 0.5) return null;

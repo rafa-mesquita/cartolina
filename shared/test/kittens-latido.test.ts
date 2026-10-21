@@ -254,3 +254,47 @@ describe('Tatu Latidor: todos que têm se defendem (pedido do Rafa, 2026-10-21)'
     expect(after.discard).toEqual(['latido-0', 'cafune-1', 'latido-1']);
   });
 });
+
+describe('par de Latidores', () => {
+  const pair = (target?: string) => ({ type: 'play' as const, cards: ['latido-0', 'latido-1'], ...(target ? { target } : {}) });
+  const hands = () => ({ p0: ['latido-0', 'latido-1', 'mico-0'], p1: ['mico-1', 'cafune-1', 'latido-2'], p2: ['cafune-2', 'latido-3'] });
+
+  it('pede um adversário vivo; o Boto não completa', () => {
+    const s = table({ hands: { ...hands(), p0: ['latido-0', 'latido-1', 'boto-0'] }, draw: DRAW });
+    expect(refuse(s, 'p0', pair(), ctx)).toBe('bad_target');
+    expect(refuse(s, 'p0', pair('p0'), ctx)).toBe('bad_target');
+    expect(refuse(s, 'p0', { type: 'play', cards: ['latido-0', 'boto-0'] }, ctx)).toBe('bad_combo');
+    expect(act(s, 'p0', pair('p2'), ctx).pending!.play).toEqual({ kind: 'par', cards: ['latido-0', 'latido-1'], target: 'p2', ask: null, as: 'latido' });
+  });
+
+  it('o alvo joga um Desarme (só ele, sem fila); os Latidores dele ficam e a vez continua', () => {
+    const s = settleKittens(act(table({ hands: hands(), draw: DRAW }), 'p0', pair('p2'), ctx), at(5000));
+    expect(s.choice).toEqual({ kind: 'latido', who: 'p2', by: 'p0', deadline: DEADLINE, pair: true });
+    expect(s.log.at(-1)!.ev).toEqual({ t: 'barked', by: 'p0', target: 'p2', pair: true });
+    const saved = act(s, 'p2', { type: 'choose', card: 'cafune-2' }, at(6000));
+    expect(saved.hands.p2).toEqual(['latido-3']);
+    expect(saved.hands.p1).toEqual(['mico-1', 'cafune-1', 'latido-2']);
+    expect(saved.discard).toEqual(['latido-0', 'latido-1', 'cafune-2']);
+    expect(saved).toMatchObject({ choice: null, current: 'p0', owed: 1, alive: ['p0', 'p1', 'p2'] });
+  });
+
+  it('alvo sem Desarme (com ou sem Latidor) explode na hora; prazo vencido, o Desarme vai sozinho', () => {
+    const s = settleKittens(act(table({ hands: { ...hands(), p2: ['pular-2'] }, draw: DRAW }), 'p0', pair('p2'), ctx), at(5000));
+    expect(s.alive).toEqual(['p0', 'p1']);
+    expect(s.choice).toBeNull();
+    expect(s.hands.p1).toContain('latido-2');
+    const slow = settleKittens(act(table({ hands: hands(), draw: DRAW }), 'p0', pair('p1'), ctx), at(5000));
+    const late = settleKittens(slow, at(5000 + KITTENS_CHOICE_MS));
+    expect(late.choice).toBeNull();
+    expect(late.hands.p1).toEqual(['mico-1', 'latido-2']);
+    expect(late.alive).toEqual(['p0', 'p1', 'p2']);
+  });
+
+  it('com 2 jogadores, o alvo sem Desarme explode e a partida acaba', () => {
+    const two = ctxOf(ids(2));
+    const s = table({ hands: { p0: ['latido-0', 'latido-1'], p1: ['mico-1'] }, draw: DRAW });
+    const done = settleKittens(act(s, 'p0', pair('p1'), two), ctxOf(ids(2), { now: T0 + 5000 }));
+    expect(done.phase).toBe('gameover');
+    expect(done.winner).toBe('p0');
+  });
+});

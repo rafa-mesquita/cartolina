@@ -44,14 +44,14 @@ describe('cartas do Tatubum', () => {
 });
 
 describe('baralho', () => {
-  it('um pacote tem 58 cartas (as 46 do original + 2 Mau-olhado, 2 Feitiço, 4 Botos e 4 Tucanos); Latidores: 1 por jogador, fora dos pacotes', () => {
+  it('um pacote tem 58 cartas (as 46 do original + 2 Mau-olhado, 2 Feitiço, 4 Botos e 4 Tucanos); Latidores fora dos pacotes: 2, 3 e depois n − 1', () => {
     expect(KITTENS_PACK_SIZE).toBe(58);
     expect(kittensPackCards(5)).toHaveLength(KITTENS_PACK_SIZE);
     expect(count(kittensPackCards(5), 'latido')).toBe(0);
-    expect([2, 3, 5, 8].map(kittensLatidos)).toEqual([2, 3, 5, 8]);
+    expect([2, 3, 4, 5, 6, 7, 8].map(kittensLatidos)).toEqual([2, 3, 3, 4, 5, 6, 7]);
     expect(kittensLatidoCards(3)).toEqual(['latido-0', 'latido-1', 'latido-2']);
     const deck = kittensBaseDeck(5);
-    expect(deck).toHaveLength(KITTENS_PACK_SIZE + 5);
+    expect(deck).toHaveLength(KITTENS_PACK_SIZE + 4);
     expect(count(deck, 'nemvem')).toBe(5);
     expect(count(deck, 'ataque')).toBe(4);
     expect(count(deck, 'pular')).toBe(4);
@@ -62,17 +62,17 @@ describe('baralho', () => {
     expect(count(deck, 'olhado')).toBe(2);
     expect(count(deck, 'feitico')).toBe(2);
     expect(count(deck, 'boto')).toBe(4);
-    expect(count(deck, 'latido')).toBe(5);
+    expect(count(deck, 'latido')).toBe(4);
     expect(count(deck, 'tatubum')).toBe(0);
     expect(count(deck, 'cafune')).toBe(0);
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  it('2 pacotes a partir de 6 jogadores; os Latidores continuam 1 por jogador', () => {
+  it('2 pacotes a partir de 6 jogadores; os Latidores continuam n − 1', () => {
     expect([2, 5, 6, 8].map(kittensPacksFor)).toEqual([1, 1, 2, 2]);
     const deck = kittensBaseDeck(6);
-    expect(deck).toHaveLength(2 * KITTENS_PACK_SIZE + 6);
-    expect(count(deck, 'latido')).toBe(6);
+    expect(deck).toHaveLength(2 * KITTENS_PACK_SIZE + 5);
+    expect(count(deck, 'latido')).toBe(5);
     expect(count(deck, 'boto')).toBe(8);
     expect(count(deck, 'tucano')).toBe(8);
     expect(new Set(deck).size).toBe(deck.length);
@@ -80,14 +80,14 @@ describe('baralho', () => {
 
   // Desarmes extras no monte como no original: 2 com até 4 jogadores, 1 a partir de 5.
   it.each([
-    // monte = pacotes × 58 + n Latidores − 7 por jogador + Desarmes extras + (n − 1) tatus
+    // monte = pacotes × 58 + Latidores − 7 por jogador + Desarmes extras + (n − 1) tatus
     [2, 49, 2],
     [3, 44, 2],
-    [4, 39, 2],
-    [5, 33, 1],
-    [6, 86, 1],
-    [8, 76, 1],
-  ])('com %i jogadores: 1 Desarme + 7 na mão, sem Latidor; monte com %i cartas, %i Desarme(s), n Latidores e n − 1 tatus', (n, drawSize, extras) => {
+    [4, 38, 2],
+    [5, 32, 1],
+    [6, 85, 1],
+    [8, 75, 1],
+  ])('com %i jogadores: 1 Desarme + 7 na mão, sem Latidor; monte com %i cartas, %i Desarme(s), os Latidores e n − 1 tatus', (n, drawSize, extras) => {
     const players = ps(n);
     for (const seed of [1, 7, 42]) {
       const { hands, draw } = kittensDeal(mulberry32(seed), players);
@@ -100,7 +100,7 @@ describe('baralho', () => {
       expect(draw).toHaveLength(drawSize);
       expect(count(draw, 'tatubum')).toBe(n - 1);
       expect(count(draw, 'cafune')).toBe(extras);
-      expect(count(draw, 'latido')).toBe(n);
+      expect(count(draw, 'latido')).toBe(kittensLatidos(n));
       const all = [...Object.values(hands).flat(), ...draw];
       expect(new Set(all).size).toBe(all.length);
     }
@@ -109,9 +109,9 @@ describe('baralho', () => {
   it('os Latidores vão embaralhados no monte (não ficam todos juntos no fundo nem no topo)', () => {
     const { draw } = kittensDeal(mulberry32(7), ps(4));
     const where = draw.flatMap((c, i) => (kittensKindOf(c) === 'latido' ? [i] : []));
-    expect(where).toHaveLength(4);
-    expect(where).not.toEqual([0, 1, 2, 3]);
-    expect(where).not.toEqual([draw.length - 4, draw.length - 3, draw.length - 2, draw.length - 1]);
+    expect(where).toHaveLength(3);
+    expect(where).not.toEqual([0, 1, 2]);
+    expect(where).not.toEqual([draw.length - 3, draw.length - 2, draw.length - 1]);
   });
 
   it('a distribuição usa o pacote todo: mão + monte = pacotes + Latidores + Desarmes + tatus', () => {

@@ -230,6 +230,9 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
     const near = others.filter((y) => others.some((x) => x !== y && Object.hasOwn(s.skips, x) && beside(x, y)));
     if (near.length > 0) return { type: 'play', cards: tucanos, target: pick(r, near)!, as: 'tucano' };
   }
+  // Dois Latidores na mão: às vezes o par num adversário (que joga um Desarme ou explode).
+  const latidos = hand.filter((x) => kittensKindOf(x) === 'latido');
+  if (latidos.length >= 2 && r() < 0.6) return { type: 'play', cards: latidos.slice(0, 2), target: pick(r, others)! };
   const hold = latido !== undefined && seeing.length > 0 && r() < 0.9;
   const playable = hold ? hand.filter((x) => x !== latido) : hand;
   if (a < 0.45 && playable.length > 0) return { type: 'play', cards: cardsToPlay(r, playable), ...extra };
@@ -399,12 +402,14 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     const lc = s.choice?.kind === 'latido' ? s.choice : null;
     if (lc) {
       const has = (k: string) => [...s.hands[lc.who]!, ...(s.front[lc.who] ?? [])].some((x) => kittensKindOf(x) === k);
-      if (!s.alive.includes(lc.who) || lc.who === lc.by || !has('latido') || !has('cafune')) {
+      // No par de Latidores o alvo pode não ter Latidor.
+      if (!s.alive.includes(lc.who) || lc.who === lc.by || (!lc.pair && !has('latido')) || !has('cafune')) {
         throw new Error(`defesa do Latidor inválida: ${JSON.stringify(lc)}\n  ${where()}`);
       }
       if (c?.kind === 'latido' && c.who !== lc.who) seen.add('latido:queue');
     }
-    if (c?.kind === 'latido' && !lc && s.phase === 'playing') {
+    if (c?.kind === 'latido' && c.pair) seen.add('latido:pair');
+    if (c?.kind === 'latido' && !c.pair && !lc && s.phase === 'playing') {
       const left = s.alive.filter((x) => x !== c.by && [...s.hands[x]!, ...(s.front[x] ?? [])].some((y) => kittensKindOf(y) === 'latido'));
       if (left.length > 0) throw new Error(`fila do Latidor acabou com [${left}] ainda com Latidor\n  ${where()}`);
     }
@@ -458,10 +463,11 @@ describe('simulação aleatória do Tatubum', () => {
   });
 
   it('as cartas novas aparecem nas simulações (com as próprias partidas, sem depender da ordem dos testes)', () => {
-    expect([2, 3, 5, 8].map(kittensLatidos)).toEqual([2, 3, 5, 8]);
+    expect([2, 3, 4, 5, 8].map(kittensLatidos)).toEqual([2, 3, 3, 4, 7]);
     const wanted = [
       'barked',
       'latido:queue',
+      'latido:pair',
       'latido:boom-mid',
       'cursed',
       'cured',

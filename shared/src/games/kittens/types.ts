@@ -93,8 +93,10 @@ export type KittensChoice =
    * Tatu Latidor jogado por `by`: `who` (um dos que têm Latidor) joga um Desarme à mão pra não explodir. Pública. Os
    * que têm Latidor se defendem um de cada vez, na ordem dos assentos a partir de `by` (pedido do Rafa, 2026-10-21): a
    * fila é quem ainda tem Latidor (quem se defende ou explode fica sem nenhum), então basta `by` pra achar o próximo.
+   * Par de Latidores (pedido do Rafa, 2026-10-21; `pair`): `who` é o alvo escolhido (com ou sem Latidor), só ele se
+   * defende e o Desarme vai sozinho pro descarte (os Latidores dele ficam).
    */
-  | { kind: 'latido'; who: string; by: string; deadline: number }
+  | { kind: 'latido'; who: string; by: string; deadline: number; pair?: true }
   /** Feitiço: `who` vê a carta de BAIXO do monte e decide se fica com ela (como se comprasse) ou se ela vai pro topo. */
   | { kind: 'feitico'; who: string; deadline: number };
 
@@ -137,17 +139,20 @@ export type KittensEvent =
   | { t: 'delayed'; by: string; moved: boolean }
   /** Par de Tamanduá: quantos Tatubuns comprados foram pro fundo. */
   | { t: 'buried'; by: string; tatus: number }
-  /** Par de Preguiça: `from` = quem deu, ou null quando veio do monte; `card` null = ninguém tinha, nem o monte. */
-  | { t: 'called'; by: string; ask: KittensCardKind; from: string | null; card: string | null }
+  /**
+   * Par de Preguiça: `from` = quem deu, ou null quando veio do monte (ou do descarte: `pile`); `card` null = ninguém
+   * tinha, nem o monte, nem o descarte.
+   */
+  | { t: 'called'; by: string; ask: KittensCardKind; from: string | null; card: string | null; pile?: true }
   /** Roda de capivara: `from` passou `card` pra `to` (só os dois veem). */
   | { t: 'passed'; from: string; to: string; card: string | null }
   /** Trio: roubou o Desarme `card` de `from` (null quando ninguém tinha). */
   | { t: 'grabbed'; by: string; from: string | null; card: string | null }
   /**
    * Tatu Latidor: latiu pra `target` (um dos que têm Latidor; um evento pra cada um, na vez dele de se defender) ou,
-   * ninguém mais tendo, ficou na frente de `by` (`target` null).
+   * ninguém mais tendo, ficou na frente de `by` (`target` null). `pair`: par de Latidores no alvo escolhido.
    */
-  | { t: 'barked'; by: string; target: string | null }
+  | { t: 'barked'; by: string; target: string | null; pair?: true }
   /** Mau-olhado: `target` ficou cego (a mão embaralhada e escondida dele até comprar). */
   | { t: 'cursed'; by: string; target: string }
   /** `by` comprou e voltou a ver a própria mão. */

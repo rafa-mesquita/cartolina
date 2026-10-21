@@ -153,11 +153,27 @@ export function barkNext(s: KittensState, by: string, deadline: number): Kittens
 }
 
 /**
+ * Par de Latidores jogado por `by` em `target` (pedido do Rafa, 2026-10-21): o alvo, tenha ou não Latidor, joga um
+ * Desarme (escolha `latido` com `pair`, prazo `deadline`) ou explode na hora. Só ele: não tem fila.
+ */
+export function barkPair(s: KittensState, by: string, target: string, deadline: number): KittensState {
+  const next = logged(s, { t: 'barked', by, target, pair: true });
+  if (next.hands[target]!.some(isKind('cafune'))) return { ...next, choice: { kind: 'latido', who: target, by, deadline, pair: true } };
+  return eliminate(logged(next, { t: 'boom', by: target }), target, 'boom');
+}
+
+/**
  * Tatu Latidor: `who` joga o Desarme `card` pra não explodir. O Desarme e TODOS os Latidores dele (da frente e da mão)
  * vão pro descarte: um Desarme basta, mesmo com mais de um Latidor (pedido do Rafa, 2026-10-21). O jogado já está lá.
  * Depois a fila segue (`barkNext`, prazo `deadline` pro próximo); no fim, a vez continua com quem jogou o Latidor.
  */
 export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string, deadline: number): KittensState {
+  if (c.pair) {
+    // Par de Latidores: só o Desarme vai pro descarte, e não tem fila.
+    const hand = s.hands[c.who]!.filter((x) => x !== card);
+    const next = counted({ ...s, hands: { ...s.hands, [c.who]: hand }, discard: [...s.discard, card], choice: null }, c.who, 'defuses');
+    return logged(next, { t: 'cafune', by: c.who });
+  }
   const latidos = latidosOf(s, c.who);
   const mine = s.front[c.who] ?? [];
   const front = mine.some(isKind('latido')) ? { ...s.front, [c.who]: mine.filter((x) => !latidos.includes(x)) } : s.front;
@@ -245,6 +261,7 @@ export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensS
       const deadline = now + KITTENS_CHOICE_MS;
       const card = s.hands[c.who]!.find(isKind('cafune'));
       if (card !== undefined) return defendLatido(s, c, card, deadline);
+      if (c.pair) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom');
       return barkNext(eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom'), c.by, deadline);
     }
     case 'feitico':

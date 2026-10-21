@@ -76,6 +76,7 @@ const PAIR_LABEL: Partial<Record<KittensCardKind, string>> = {
   tamandua: 'PAR DE TAMANDUÁ',
   preguica: 'PAR DE PREGUIÇA',
   tucano: 'PAR DE TUCANO',
+  latido: 'PAR DE LATIDORES',
   capivara: 'RODA DE CAPIVARA',
 };
 const PLAY_LABEL: Record<KittensPlayKind, string> = {
@@ -138,7 +139,7 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   mico: '<b>PAR DE MICO</b>: <b>todo mundo, menos você, descarta uma carta</b> à escolha, todos ao mesmo tempo (30 segundos; depois vai uma ao acaso). O efeito da carta descartada não vale, e todos veem o que foi pro descarte.<br>Depois <b>você pega uma das cartas descartadas</b> pra sua mão, no quadro do descarte (30 segundos; depois vai uma ao acaso).',
   quati: '<b>PAR DE QUATI</b>: só você vê a carta de cima do monte e decide se ela fica em cima ou vai pro fundo. Todo mundo sabe se foi pro fundo, ninguém sabe qual era.',
   tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
-  preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte.',
+  preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte; nem no monte, pega do descarte. Às vezes (30%) puxa <b>dois</b>, cada um nessa mesma ordem.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
   tucano: '<b>PAR DE TUCANO</b>: escolha um adversário (mesmo sem carta na mão). A sua vez acaba <b>sem você comprar</b> (sob ataque, gasta só um dos turnos), e a <b>próxima vez dele é pulada</b>: quando a vez chegar nele, ele não joga nem compra (se estiver devendo 2 turnos de um Ataque, perde um deles). Duas vezes no mesmo jogador, pula duas vezes.',
   boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>4 bichos diferentes</b> conta como um bicho a mais (só um Boto). No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
@@ -152,7 +153,7 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br><b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b> (a mão toda, se tiver menos), escolhidas por ele, uma de cada vez.<br>Pode levar Nem vem!.',
   embaralhar: 'Embaralha o monte inteiro.<br>Pode levar Nem vem!.',
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, só você.<br>Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Se quem muda a ordem é você, continua vendo o que sabe: a carta que você põe no topo com o Feitiço (em cima das que você já via) ou deixa no topo com o Quati fica à mostra pra você; escondendo o tatu com o Desarme (sem ser ao acaso), a sua espiada continua, com o tatu nela se ele cair no meio ou logo abaixo dela.<br>Pode levar Nem vem!.',
-  latido: 'Tem <b>um por jogador</b> na partida, e nenhum vem na mão inicial: estão todos no monte. Quando você joga um, <b>todo mundo que tiver Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b>, um de cada vez, na ordem da vez a partir de você (30 segundos cada, senão vai sozinho). O Desarme e <b>todos os Latidores dele</b> vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém mais tiver Latidor, o seu fica <b>na sua frente</b>, à vista de todos: quando outro for jogado, você também tem que se defender.<br>Não gasta a sua vez. Pode levar Nem vem!.',
+  latido: 'Tem <b>um por jogador</b> na partida, e nenhum vem na mão inicial: estão todos no monte. Quando você joga um, <b>todo mundo que tiver Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b>, um de cada vez, na ordem da vez a partir de você (30 segundos cada, senão vai sozinho). O Desarme e <b>todos os Latidores dele</b> vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém mais tiver Latidor, o seu fica <b>na sua frente</b>, à vista de todos: quando outro for jogado, você também tem que se defender.<br>Não gasta a sua vez. Pode levar Nem vem!.<br><b>PAR DE LATIDORES</b>: escolha um adversário (com ou sem Latidor); só ele tem que <b>jogar um Desarme</b> (30 segundos, senão vai sozinho), e os Latidores dele ficam onde estão. Sem Desarme, <b>explode</b>. Não gasta a sua vez.',
   olhado: 'Escolha um adversário (mesmo sem carta na mão): a mão dele é <b>embaralhada</b> e ele <b>fica cego</b>, vendo só o verso das próprias cartas, até <b>comprar</b> uma carta.<br>Cego, ele joga às cegas: escolhe cartas viradas sem saber quais são (se não formarem jogada, voltam pra mão).<br>Pode levar Nem vem!.',
   feitico: 'Só você vê a <b>carta de baixo</b> do monte e escolhe (30 segundos):<br><b>FICAR COM ELA</b>: é como comprar (se for Tatubum, é comprar o Tatubum: Desarme ou explode).<br><b>PÔR NO TOPO</b>: ela vai pra cima do monte.<br>Nos dois casos <b>acaba o seu turno</b>. Se o tempo acabar, ela vai pro topo.<br>Pode levar Nem vem!.',
 };
@@ -172,9 +173,9 @@ const ABOUT: Record<KittensCardKind, string> = {
   mico: 'Par: todo mundo, menos você, descarta uma carta (o efeito não vale); depois você pega uma delas.',
   quati: 'Par: vê a de cima e decide se vai pro fundo.',
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
-  preguica: 'Par: puxa o bicho que você pedir.',
+  preguica: 'Par: puxa o bicho que você pedir (às vezes, dois).',
   tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada.',
-  latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente.',
+  latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente. Par: o adversário escolhido joga um Desarme ou explode.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',
   feitico: 'Você vê a carta de baixo do monte: fica com ela (é comprar) ou põe no topo. Acaba o turno.',
   boto: 'Coringa: com um bicho forma o par dele; dois Botos, o par que você escolher. Completa trios.',
@@ -211,6 +212,7 @@ function guessPlay(ids: readonly string[]): PlayGuess | null {
   if (ks.length === 1) return ACTION_KINDS.includes(ks[0]!) ? { kind: ks[0] as KittensPlayKind, as: null } : null;
   if (ks.length === 2) {
     if (wild === 2) return { kind: 'par', as: null };
+    if (ks.every((k) => k === 'latido')) return { kind: 'par', as: 'latido' };
     return same && kittensIsBicho(plain[0]!) ? { kind: 'par', as: plain[0]! } : null;
   }
   if (ks.length === 3) {
@@ -225,7 +227,9 @@ function guessPlay(ids: readonly string[]): PlayGuess | null {
  * Favor, trio de Favor (o escolhido dá 3 cartas), Mau-olhado e par de Tucano (também com Boto) pedem um adversário. `as`
  * é o bicho que o par vale (no par de 2 Botos, o escolhido no painel).
  */
-const needsTarget = (g: PlayGuess): boolean => g.kind === 'favor' || g.kind === 'olhado' || isFavorTrio(g) || isTucanoPair(g);
+const needsTarget = (g: PlayGuess): boolean => g.kind === 'favor' || g.kind === 'olhado' || isFavorTrio(g) || isTucanoPair(g) || isLatidoPair(g);
+/** Par de Latidores: pede um adversário vivo (com ou sem Latidor), que joga um Desarme ou explode. */
+const isLatidoPair = (g: { kind: KittensPlayKind; as: KittensCardKind | null }): boolean => g.kind === 'par' && g.as === 'latido';
 /** Par de Tucano: pede um adversário vivo (com ou sem carta na mão). */
 const isTucanoPair = (g: { kind: KittensPlayKind; as: KittensCardKind | null }): boolean => g.kind === 'par' && g.as === 'tucano';
 /** 3 Favores: pede alvo com carta na mão, como o Favor sozinho (espelho de `kittensIsFavorPlay`). */
@@ -640,6 +644,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   let barkFx: BarkFx | null = null;
   /** Quem levou o latido agora há pouco (se o próximo efeito for a explosão dele, ela é do Latidor, não de um Tatubum). */
   let barkAt: string | null = null;
+  /** O último latido foi de um par de Latidores (a defesa leva só o Desarme: os Latidores do alvo ficam). */
+  let barkPair = false;
   /** Quem ficou com a carta do Feitiço: a compra seguinte dele sai do FUNDO do monte. */
   let conjureFrom: string | null = null;
   /** Cartas que acabaram de ir pra frente de alguém: escondidas até o voo chegar. */
@@ -832,7 +838,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         if (c.who === ME) return `${c.left === 2 ? 'Pegue DUAS do descarte' : cincoFirst === 2 ? 'Pegue MAIS UMA do descarte' : 'Pegue UMA do descarte'} ${TIMER}`;
         return `${nameOf(c.who)} vai pegar ${c.left === 2 ? 'duas' : cincoFirst === 2 ? 'mais uma' : 'uma'} do descarte…`;
       case 'latido':
-        if (c.who !== ME) return `${nameOf(c.who)} está se defendendo do Latidor…`;
+        if (c.who !== ME) return `${nameOf(c.who)} está se defendendo ${c.pair ? 'do par de Latidores' : 'do Latidor'}…`;
         return blindMe() ? `AU AU! Solte uma carta virada no Latidor (vai o seu Desarme) ${TIMER}` : `AU AU! JOGUE O DESARME! ${TIMER}`;
       case 'feitico':
         return c.who === ME ? null : `${nameOf(c.who)} está vendo a carta de baixo do monte…`;
@@ -1889,11 +1895,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'called':
         // Quem está cego não vê a carta que chegou (`card` null), mas ela veio de alguém.
         if (ev.from) return ev.card ? `${n(ev.by)} puxou ${cardName(ev.ask)} de ${n(ev.from)}` : `${n(ev.by)} puxou um bicho de ${n(ev.from)}`;
-        return ev.card ? `${n(ev.by)} puxou ${cardName(ev.ask)} do monte` : `Ninguém tinha ${cardName(ev.ask)}, nem o monte`;
+        if (ev.card) return `${n(ev.by)} puxou ${cardName(ev.ask)} ${ev.pile ? 'do descarte' : 'do monte'}`;
+        return `Ninguém tinha ${cardName(ev.ask)}, nem o monte, nem o descarte`;
       case 'passed': return ev.card ? `${n(ev.from)} passou ${cardNameOf(ev.card)} pra ${n(ev.to)}` : `${n(ev.from)} passou uma carta pra ${n(ev.to)}`;
       case 'grabbed': return ev.from ? `${n(ev.by)} roubou o DESARME de ${n(ev.from)}!` : 'Ninguém tinha Desarme pra roubar';
       case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
-      case 'barked': return ev.target ? `AU AU! ${n(ev.target)} tinha TATU LATIDOR: Desarme ou explode!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
+      case 'barked': return ev.target && ev.pair ? `AU AU AU! PAR DE LATIDORES em ${n(ev.target)}: Desarme ou explode!` : ev.target ? `AU AU! ${n(ev.target)} tinha TATU LATIDOR: Desarme ou explode!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
       case 'cursed': return `${n(ev.target)} ficou CEGO até comprar uma carta`;
       case 'tucano': return ev.target === ME ? `${n(ev.by)} jogou o TUCANO em você: a sua próxima vez vai ser pulada` : `${n(ev.by)} jogou o TUCANO em ${n(ev.target)}: a próxima vez dele vai ser pulada`;
       case 'skipped': return `${n(ev.who)} perdeu uma vez (TUCANO)`;
@@ -2121,6 +2128,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         // Latiu pra um dos que têm Latidor (um de cada vez, na ordem): o Latidor grande late no meio da mesa e quem levou
         // o latido treme.
         barkAt = ev.target;
+        barkPair = !!ev.pair;
         showBark();
         Fx.shake(420, 10);
         const s = ev.target === ME ? $('#hand') : seatEl(ev.target);
@@ -2239,9 +2247,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           const before = prev?.discard ?? [];
           const inFront = (prev?.front[ev.by] ?? []).filter(isLatido);
           const inHand = ev.by === ME ? (prev?.hand ?? []).filter(isLatido) : [];
-          const known = [...inFront, ...inHand];
+          // Par de Latidores: os Latidores de quem se defendeu ficam com ele.
+          const pairDef = prev?.choice?.kind === 'latido' && prev.choice.who === ev.by ? !!prev.choice.pair : barkPair;
+          const known = pairDef ? [] : [...inFront, ...inHand];
           const fresh = evView.discard.filter((x) => isLatido(x) && !before.includes(x) && !known.includes(x));
-          const his = known.length > 0 || fresh.length > 0 ? [...known, ...(ev.by === ME ? [] : fresh)] : ['latido-1'];
+          const his = pairDef ? [] : known.length > 0 || fresh.length > 0 ? [...known, ...(ev.by === ME ? [] : fresh)] : ['latido-1'];
           const played = [...before].reverse().find((x) => isLatido(x) && !his.includes(x)) ?? 'latido-0';
           await Promise.all([
             Fx.fly({ node: cardEl(played), from: { x: b.cx, y: b.cy }, to: $('#discard'), dur: 420, rot: 8 }),
@@ -2341,7 +2351,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         if ((ev.t === 'called' || ev.t === 'grabbed') && !ev.card && !ev.from) { await wait(700); break; }
         let from: At;
         if (ev.t === 'picked') from = $('#discard');
-        else if (ev.t === 'called' && !ev.from) from = $('#deck .stack');
+        else if (ev.t === 'called' && !ev.from) from = ev.pile ? $('#discard') : $('#deck .stack');
         else {
           const src = ev.from ?? '';
           from = src === ME && card && rects[card] ? rects[card]! : anchorOf(src);

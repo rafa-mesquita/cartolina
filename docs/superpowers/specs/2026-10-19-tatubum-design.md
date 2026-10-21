@@ -81,7 +81,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
 | **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano** | 4 de cada | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 (pedido do Rafa). | (combo sim) |
-| **Tatu Latidor** (id `latido`) | (fora do pacote: **1 por jogador**, nenhum na mão inicial) | Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
+| **Tatu Latidor** (id `latido`) | (fora do pacote: **2** com 2 jogadores, **3** com 3, depois **n − 1**; nenhum na mão inicial) | Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez; ninguém tem, o seu fica na sua frente. **Par de Latidores:** um adversário escolhido joga um Desarme ou explode. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
 | **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (é comprar) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
 | **Boto** (id `boto`) | 4 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
@@ -160,7 +160,7 @@ Sozinho o bicho continua não fazendo nada.
 | Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) **Depois que todos descartam, você pega uma das cartas descartadas nesse par** pra sua mão (30 s, no quadro do descarte; depois, ao acaso); se ninguém descartou nada, ou se você saiu do jogo antes, não pega (pedido do Rafa, 2026-10-20). |
 | Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
-| Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: nada. Todos veem de onde veio. |
+| Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: **pega do descarte** (sem contar as cartas do próprio par; pedido do Rafa, 2026-10-21). Nada em lugar nenhum: nada. **30% de chance de puxar dois** (`KITTENS_PREGUICA_DOUBLE`), cada um na mesma ordem (mão → monte → descarte); o segundo que não acha nada não aparece no diário. Todos veem de onde veio. |
 | Tucano (pedido do Rafa, 2026-10-21) | um adversário vivo (mesmo sem carta) | **A sua vez acaba sem você comprar**, como no Pular (sob ataque, gasta só um dos turnos devidos), e a **próxima vez do alvo é pulada**: ele não joga nem compra. Duas vezes no mesmo alvo pulam duas vezes dele. Todos veem quem vai ser pulado. Rafa: "par: você pula sua vez quando manda ele, não compra e nem joga, e escolhe outro jogador pra pular; ele também não joga nada nem compra, o turno dele é pulado." |
 | Capivara | — | **Todos os outros** vivos passam, ao mesmo tempo, uma carta **ao acaso** pro próximo na ordem da vez (o sentido em que a vez anda). **Você não passa**, mas recebe a do jogador antes de você. Quem está sem carta não passa. Cada um vê só o que deu e o que recebeu. |
 
@@ -190,7 +190,8 @@ Regras de motor:
   `{ t: 'buried', by, tatus }` (público) quando algum Tatubum vai pro fundo. As 2 compradas saem das
   espiadas (o resto continua à mostra; ver "Espiada à mostra").
 - Preguiça: evento `{ t: 'called', by, ask, from, card }` (público): `from` = quem deu, ou `null` quando
-  veio do monte; `card` = `null` quando ninguém tinha nem estava no monte. A carta tirada do monte sai das espiadas.
+  veio do monte ou do descarte (`pile: true`); `card` = `null` quando não estava em lugar nenhum. A carta tirada do
+  monte sai das espiadas. Puxando dois, dois eventos.
 - Capivara: um `{ t: 'passed', from, to, card }` por passe, com `seenBy` [from, to].
 - Tucano: o alvo tem que ser outro jogador vivo (qualquer tamanho de mão; Boto + Tucano e 2 Botos com `as: 'tucano'`
   também pedem). Resolvendo: evento público `{ t: 'tucano', by, target }`, `skips[target]` + 1 e `spendTurn` (a pulada
@@ -242,6 +243,11 @@ bicho.
   pra cada um, na ordem da fila.
 - Partida salva antes da fila (sem `by` na escolha `latido`): `compat.ts` completa com `by = current` (o Latidor só
   sai na vez de quem joga, e a vez fica com ele).
+- **Par de Latidores** (pedido do Rafa, 2026-10-21): 2 Latidores juntos (o Boto não completa) pedem um adversário
+  vivo (`target`, com ou sem Latidor; `bad_target`). Ao resolver: evento `{ t: 'barked', by, target, pair: true }`;
+  com Desarme, abre a escolha pública `{ kind: 'latido', who: target, by, deadline, pair: true }` (30 s) e **só o
+  Desarme** vai pro descarte (os Latidores dele ficam onde estão; sem fila); sem Desarme (ou prazo vencido sem ele),
+  explode. Não gasta a vez. Pode levar Nem vem!.
 
 #### Mau-olhado (`olhado`; do "Curse of the Cat Butt"; arte: tatu botando mau-olhado)
 
@@ -381,23 +387,23 @@ O monte nunca acaba enquanto há 2+ vivos, porque sempre tem `vivos − 1 ≥ 1`
 
 ## 3. Baralho
 
-Um **pacote** tem **56 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 24
+Um **pacote** tem **58 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 24
 bichos (6 tipos × 4; o Tucano entrou em 2026-10-21, pedido do Rafa) e, desde 2026-10-20, 2 Mau-olhado, 2 Feitiço e
-2 Boto. Os **Tatus Latidores** ficam fora dos pacotes: **1 por jogador** (pedido do Rafa, 2026-10-21; antes eram
-sempre 2), e **nenhum vem na mão inicial**: a mão (1 Desarme + 7) sai só dos pacotes, e os Latidores vão pro monte
-junto com o resto dos pacotes, os Desarmes extras e os Tatubuns, tudo embaralhado (`kittensLatidos(n) = n`).
+4 Botos (eram 2 até 2026-10-21). Os **Tatus Latidores** ficam fora dos pacotes: **2 com 2 jogadores, 3 com 3 e n − 1 a partir de 4** (pedido do
+Rafa, 2026-10-21; antes eram sempre 2), e **nenhum vem na mão inicial**: a mão (1 Desarme + 7) sai só dos pacotes, e os Latidores vão pro monte
+junto com o resto dos pacotes, os Desarmes extras e os Tatubuns, tudo embaralhado (`kittensLatidos(n)` = n até 3, n − 1 depois).
 
-Monte = pacotes × 58 − 7n + n Latidores + Desarmes extras + (n − 1) Tatubuns.
+Monte = pacotes × 58 − 7n + Latidores + Desarmes extras + (n − 1) Tatubuns.
 
 | Jogadores | Pacotes | Cartas dos pacotes | Latidores | Monte depois de distribuir | Desarmes | Tatubuns |
 |---|---|---|---|---|---|---|
 | 2 | 1 | 58 | 2 | 58 − 14 + 2 + 2 + 1 = 49 | n + 2 | n − 1 |
 | 3 | 1 | 58 | 3 | 58 − 21 + 3 + 2 + 2 = 44 | n + 2 | n − 1 |
-| 4 | 1 | 58 | 4 | 58 − 28 + 4 + 2 + 3 = 39 | n + 2 | n − 1 |
-| 5 | 1 | 58 | 5 | 58 − 35 + 5 + 1 + 4 = 33 | n + 1 | n − 1 |
-| 6 | 2 | 116 | 6 | 116 − 42 + 6 + 1 + 5 = 86 | n + 1 | n − 1 |
-| 7 | 2 | 116 | 7 | 116 − 49 + 7 + 1 + 6 = 81 | n + 1 | n − 1 |
-| 8 | 2 | 116 | 8 | 116 − 56 + 8 + 1 + 7 = 76 | n + 1 | n − 1 |
+| 4 | 1 | 58 | 3 | 58 − 28 + 3 + 2 + 3 = 38 | n + 2 | n − 1 |
+| 5 | 1 | 58 | 4 | 58 − 35 + 4 + 1 + 4 = 32 | n + 1 | n − 1 |
+| 6 | 2 | 116 | 5 | 116 − 42 + 5 + 1 + 5 = 85 | n + 1 | n − 1 |
+| 7 | 2 | 116 | 6 | 116 − 49 + 6 + 1 + 6 = 80 | n + 1 | n − 1 |
+| 8 | 2 | 116 | 7 | 116 − 56 + 7 + 1 + 7 = 75 | n + 1 | n − 1 |
 
 Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Antes das cartas novas, com 2
 a 5 o baralho era o do jogo original (46).
