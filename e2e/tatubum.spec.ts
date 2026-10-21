@@ -68,8 +68,9 @@ test('partida do Tatubum com dois navegadores', async ({ browser }) => {
   await expect(turn(second)).toContainText('SUA VEZ');
   await expect(turn(first)).toContainText(`vez de ${aFirst ? 'BIA' : 'ANA'}`);
   await expect(button(second, 'COMPRAR')).toBeVisible();
-  // quem comprou ficou com uma carta a mais (9), ou com 8 se jogou o Desarme no Tatubum
-  await expect.poll(() => hand(first).count()).toBeGreaterThanOrEqual(8);
+  // quem comprou ficou com uma carta a mais (9), ou com 7 se veio o Tatubum (ele volta pro monte e o Desarme vai pro
+  // descarte)
+  await expect.poll(() => hand(first).count()).toBeGreaterThanOrEqual(7);
 
   // E volta: o segundo compra e a vez é do primeiro de novo.
   await drawAndPass(second, first);
@@ -100,6 +101,20 @@ test('Tatubum no celular: entra pelo link, a mesa fica em pé e compra', async (
   await expect(b.locator('.kt-mesa #log')).toBeVisible();
   await b.locator('.kt-mesa #log .kt-close').tap();
   await expect(b.locator('.kt-mesa #log')).toBeHidden();
+
+  // tocar e segurar uma carta da mão (toque de verdade, pelo protocolo do Chrome): ela levanta e, ao soltar, abre o zoom
+  // (as cartas ainda voando da distribuição ficam invisíveis e o toque passaria por elas)
+  await expect(b.locator('.kt-mesa #hand .kt-card.arriving')).toHaveCount(0);
+  const card = (await hand(b).first().boundingBox())!;
+  const cdp = await b.context().newCDPSession(b);
+  const at = { x: card.x + card.width / 2, y: card.y + card.height / 2 };
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [at] });
+  await expect(b.locator('.kt-mesa #hand .kt-card.lifted')).toHaveCount(1);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(b.locator('.kt-mesa #viewer[role="dialog"] .vtext h3')).toBeVisible();
+  await expect(b.locator('.kt-mesa #hand .kt-card.sel')).toHaveCount(0);
+  await b.locator('.kt-mesa #viewer').tap();
+  await expect(b.locator('.kt-mesa #viewer .vtext')).toHaveCount(0);
 
   // cada um compra uma vez (o celular tocando em COMPRAR)
   const aFirst = (await turn(a).textContent())!.includes('SUA VEZ');

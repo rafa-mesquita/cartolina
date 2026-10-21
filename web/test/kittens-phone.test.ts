@@ -452,4 +452,118 @@ describe('Tatubum no celular em pé', () => {
     expect(info()).toContain('ATAQUE');
     mesa.destroy();
   });
+  /** Evento de ponteiro com `pointerId` (o jsdom não põe nos MouseEvent). */
+  const ptr = (type: string, pointerId: number, init: MouseEventInit = {}): MouseEvent => {
+    const e = new MouseEvent(type, { button: 0, bubbles: true, ...init });
+    Object.defineProperty(e, 'pointerId', { value: pointerId });
+    return e;
+  };
+
+  it('a fileira dos adversários não volta pro começo quando a mesa é redesenhada', () => {
+    const { root, mesa } = mount();
+    const v = midGame('p0');
+    mesa.update(toMesa(v));
+    const seats = root.querySelector<HTMLElement>('#seats')!;
+    // como no navegador: esvaziar a fileira joga a rolagem pra 0 (o jsdom não faz isso sozinho)
+    let stored = 0;
+    const html = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML')!;
+    Object.defineProperty(seats, 'scrollLeft', { configurable: true, get: () => stored, set: (x: number) => { stored = x; } });
+    Object.defineProperty(seats, 'innerHTML', { configurable: true, get: () => html.get!.call(seats), set: (x: string) => { stored = 0; html.set!.call(seats, x); } });
+    seats.scrollLeft = 120;
+    mesa.update(toMesa({ ...v, game: { ...v.game, current: 'p2' } }));
+    expect(seats.querySelector('.kt-seat.turn')).not.toBeNull();
+    expect(seats.scrollLeft).toBe(120);
+    mesa.destroy();
+  });
+
+  it('no celular, dois toques seguidos numa carta não jogam (o duplo clique é só do computador)', () => {
+    const v = midGame('p0');
+    v.game = { ...v.game, current: 'p0', hand: ['pular-90', ...v.game.hand] };
+    const phone = mount();
+    phone.mesa.update(toMesa(v));
+    handCard(phone.root, 'pular-90').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(phone.sent).toEqual([]);
+    phone.mesa.destroy();
+    document.body.innerHTML = '';
+    const desk = mount('desktop');
+    desk.mesa.update(toMesa(v));
+    handCard(desk.root, 'pular-90').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(desk.sent).toEqual([{ type: 'play', cards: ['pular-90'] }]);
+    desk.mesa.destroy();
+  });
+
+  it('com dois dedos na mão, só o primeiro mexe no arrasto (sem carta fantasma presa)', () => {
+    const { root, mesa } = mount();
+    const v = viewOf(started(3), 'p0');
+    mesa.update(toMesa(v));
+    const [a, b] = v.game.hand as [string, string];
+    handCard(root, a).dispatchEvent(ptr('pointerdown', 1));
+    // o segundo dedo encosta e sai: não começa outro arrasto nem acaba o primeiro
+    handCard(root, b).dispatchEvent(ptr('pointerdown', 2));
+    window.dispatchEvent(ptr('pointermove', 2, { clientX: 200, clientY: 200 }));
+    window.dispatchEvent(ptr('pointerup', 2));
+    expect(root.querySelector('.kt-card.ghost')).toBeNull();
+    expect(root.querySelector('#hand .kt-card.sel')).toBeNull();
+    // o primeiro solta: toque curto nele (seleciona só ele)
+    window.dispatchEvent(ptr('pointerup', 1));
+    expect([...root.querySelectorAll<HTMLElement>('#hand .kt-card.sel')].map((c) => c.dataset.id)).toEqual([a]);
+    mesa.destroy();
+  });
+
+  it('a aba escondida no meio de um toque acaba o arrasto e a mão volta a se redesenhar', () => {
+    const { root, mesa } = mount();
+    const v = viewOf(started(3), 'p0');
+    mesa.update(toMesa(v));
+    handCard(root, v.game.hand[0]!).dispatchEvent(ptr('pointerdown', 1));
+    mesa.update(toMesa({ ...v, game: { ...v.game, hand: [...v.game.hand, 'ataque-90'] } }));
+    expect(root.querySelector('#hand [data-id="ataque-90"]')).toBeNull();
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    try {
+      document.dispatchEvent(new Event('visibilitychange'));
+    } finally {
+      delete (document as { hidden?: boolean }).hidden;
+    }
+    expect(root.querySelector('#hand [data-id="ataque-90"]')).not.toBeNull();
+    mesa.destroy();
+  });
+
+  it('acessível: assento tocável é botão (Enter abre), diário e zoom são diálogos e o foco entra e volta', () => {
+    const { root, mesa } = mount();
+    mesa.update(toMesa(midGame('p0')));
+    const seat = root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!;
+    expect(seat.getAttribute('role')).toBe('button');
+    expect(seat.tabIndex).toBe(0);
+    seat.focus();
+    seat.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const viewer = root.querySelector<HTMLElement>('#viewer')!;
+    expect(viewer.textContent).toContain('P2');
+    expect(viewer.getAttribute('role')).toBe('dialog');
+    expect(viewer.getAttribute('aria-modal')).toBe('true');
+    expect(document.activeElement).toBe(viewer);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(viewer.getAttribute('role')).toBeNull();
+    expect(document.activeElement).toBe(root.querySelector('.kt-seat[data-p="p2"]'));
+    // o diário
+    const diary = root.querySelector<HTMLElement>('#diary')!;
+    expect(diary.getAttribute('aria-expanded')).toBe('false');
+    diary.click();
+    expect(diary.getAttribute('aria-expanded')).toBe('true');
+    const log = root.querySelector<HTMLElement>('#log')!;
+    expect(log.getAttribute('role')).toBe('dialog');
+    expect(document.activeElement).toBe(log);
+    mesa.destroy();
+  });
+
+  it('trocar de layout com o quadro do descarte aberto troca o texto (clique ↔ toque)', () => {
+    const v = midGame('p1');
+    v.game.discard = ['ataque-7'];
+    const { root, mesa } = mount('desktop');
+    mesa.update(toMesa(v));
+    root.querySelector<HTMLElement>('#eye')!.click();
+    const note = () => root.querySelector('#pile .note')?.textContent ?? '';
+    expect(note()).toContain('clique');
+    mesa.setLayout('phone');
+    expect(note()).toBe('toque fora pra fechar');
+    mesa.destroy();
+  });
 });

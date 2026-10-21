@@ -313,7 +313,11 @@ interface Drag {
    * lado, pra mudar a ordem da mão, sem a mão rolar).
    */
   lifted: boolean;
+  /** O ponteiro (dedo/mouse) do arrasto: os outros dedos na tela não mexem nele. */
+  pointerId: number;
 }
+/** Id do ponteiro (eventos de mouse sem `pointerId`, como nos testes, contam como o mouse: 1). */
+const pidOf = (e: PointerEvent): number => e.pointerId ?? 1;
 type Timer = ReturnType<typeof setTimeout>;
 /** Onde fica a carta grande do meio da mesa (o tatu, o Latidor, o BUM): centro e o tamanho relativo (1 no computador). */
 interface BigAt {
@@ -591,7 +595,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   const MAX_BACKLOG = 4;
   /** Uma visão só com mais entradas novas que isso (ex.: voltou depois de muito tempo) também é pulada. */
   const MAX_BATCH = 12;
-  const onVisibility = (): void => { if (document.hidden && queue.length) fastForward([]); };
+  const onVisibility = (): void => {
+    if (!document.hidden) return;
+    // Rede de segurança: sem o pointerup (aba trocada no meio do arrasto), a mão ficaria sem redesenhar.
+    if (drag) onDragCancel();
+    if (queue.length) fastForward([]);
+  };
 
   // ---------------------------------------------------------------- estado da tela
   let lastN = -1;
@@ -855,6 +864,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!v) return;
     const list = others();
     const box = $('#seats');
+    // Celular: a fileira rola pro lado; o redesenho não pode jogar a rolagem (nem a do revealSeat) pro começo.
+    const scrollX = box.scrollLeft;
     box.innerHTML = '';
     list.forEach((p, i) => {
       const { x, y } = seatPos(i, list.length);
@@ -876,6 +887,18 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       } else if (phone()) {
         // Celular: tocar no assento mostra tudo o que no computador fica nas dicas (title) dele.
         el.onclick = () => zoomSeat(p);
+      }
+      if (el.onclick) {
+        el.setAttribute('role', 'button');
+        el.tabIndex = 0;
+        el.setAttribute('aria-label', el.classList.contains('targetable') ? `Escolher ${rawName(p)}` : `Ver ${rawName(p)}`);
+        el.onkeydown = (e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          // (sem isto, Enter e espaço também iriam pros atalhos da mesa: jogar e comprar)
+          e.preventDefault();
+          e.stopPropagation();
+          el.click();
+        };
       }
       // Ordem da vez: PRÓXIMO no que joga depois de quem está na vez, número nos outros.
       const k = orderFromCurrent(p);
@@ -925,6 +948,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       else void Sprites.critter(color).then((url) => { if (url) { critterUrls.set(color, url); if (img) img.src = url; } });
       box.appendChild(el);
     });
+    box.scrollLeft = scrollX;
     // Setinhas no sentido da vez: você → assentos da esquerda pra direita → você de novo. (No celular a fileira já
     // está na ordem da vez e cada um tem PRÓXIMO/2º/3º.)
     if (v.phase !== 'playing' || phone()) return;
@@ -1122,7 +1146,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       if (selected.has(id)) el.classList.add('sel');
       if (arriving.has(id)) el.classList.add('arriving');
       el.onpointerdown = (e) => startDrag(e, id);
-      el.ondblclick = () => { if (!canDraw()) return; selected = new Set([id]); playSelected(); };
+      if (!phone()) el.ondblclick = () => { if (!canDraw()) return; selected = new Set([id]); playSelected(); };
       if (!phone()) el.onmouseleave = () => zoom(null);
       hand.appendChild(el);
     });
@@ -1164,7 +1188,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
 
   let drag: Drag | null = null;
   /** Toque longo em andamento (celular): onde o dedo desceu e o relógio dos 400 ms. */
-  let press: { x: number; y: number; t: Timer | null } | null = null;
+  let press: { x: number; y: number; t: Timer | null; pointerId: number } | null = null;
   /** Depois do toque longo, o clique que o navegador ainda manda é engolido (até esta hora). */
   let swallowUntil = 0;
 
@@ -1189,8 +1213,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
 
   function startDrag(e: PointerEvent, id: string): void {
     if (e.button !== 0) return;
+    // Outro dedo encostou com um arrasto em andamento: ignora. (O mesmo ponteiro de novo = o arrasto velho perdeu o
+    // pointerup, ex.: mouse solto fora da janela: ele acaba e começa outro.)
+    if (drag) {
+      if (drag.pointerId !== pidOf(e)) return;
+      onDragCancel();
+    }
     e.preventDefault();
-    drag = { id, x0: e.clientX, y0: e.clientY, moved: false, ghost: null, ids: [id], hover: null, lifted: false };
+    drag = { id, x0: e.clientX, y0: e.clientY, moved: false, ghost: null, ids: [id], hover: null, lifted: false, pointerId: pidOf(e) };
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragEnd);
     window.addEventListener('pointercancel', onDragCancel);
@@ -1207,20 +1237,24 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     stage.classList.remove('dragging');
     wrap.querySelectorAll('#hand .kt-card.dragging, #hand .kt-card.lifted').forEach((c) => c.classList.remove('dragging', 'lifted'));
     stopEdgeScroll();
+    stage.removeEventListener('touchmove', onTouchMove);
   }
-  /** O navegador tomou o ponteiro (rolagem, gesto, alerta): o arrasto acaba sem jogar nada. */
-  function onDragCancel(): void {
-    stopDragListeners();
+  /**
+   * O navegador tomou o ponteiro (rolagem da mão, gesto, alerta) ou a aba foi escondida: o arrasto acaba sem jogar
+   * nada. Só a mão é redesenhada, e só se mudou enquanto a carta estava segura.
+   */
+  function onDragCancel(e?: PointerEvent): void {
     const d = drag;
+    if (!d || (e && pidOf(e) !== d.pointerId)) return;
+    stopDragListeners();
     drag = null;
-    if (!d) return;
     dropGhost(d);
-    render();
+    if (handDirty) renderHand();
   }
 
   function onDragMove(e: PointerEvent): void {
     const d = drag;
-    if (!d) return;
+    if (!d || pidOf(e) !== d.pointerId) return;
     if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
     if (!d.moved) {
       d.moved = true;
@@ -1272,10 +1306,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   function onDragEnd(e: PointerEvent): void {
-    stopDragListeners();
     const d = drag;
+    if (!d || pidOf(e) !== d.pointerId) return;
+    stopDragListeners();
     drag = null;
-    if (!d) return;
     if (handDirty) renderHand();
     if (d.lifted && !d.moved) {
       // Tocou, segurou e soltou sem mexer: abre o zoom (sem selecionar a carta). O clique que o navegador ainda manda
@@ -1823,6 +1857,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
   /** Folha do diário (celular) aberta? */
   let logOpen = false;
+  /** A folha do celular aberta agora (pro foco) e quem tinha o foco antes dela (volta pra lá quando ela fecha). */
+  let openSheet: HTMLElement | null = null;
+  let sheetReturn: HTMLElement | null = null;
   function openLog(): void {
     if (!phone()) return;
     logOpen = true;
@@ -1846,6 +1883,31 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     stage.classList.toggle('kt-logopen', p && logOpen);
     stage.classList.toggle('kt-dim', p && (logOpen || zoomed !== null || panelSheet));
     $('#lastline').setAttribute('aria-expanded', String(p && logOpen));
+    $('#diary').setAttribute('aria-expanded', String(p && logOpen));
+    // Diário e zoom do celular são diálogos: o foco entra na folha aberta e volta pra onde estava quando ela fecha.
+    const sheet = !p ? null : logOpen ? $('#log') : zoomed !== null ? $('#viewer') : null;
+    for (const el of [$('#log'), $('#viewer')]) {
+      if (el === sheet) {
+        el.setAttribute('role', 'dialog');
+        el.setAttribute('aria-modal', 'true');
+        el.setAttribute('aria-label', el.id === 'log' ? 'Diário da partida' : 'Carta de perto');
+        el.tabIndex = -1;
+      } else {
+        el.removeAttribute('role');
+        el.removeAttribute('aria-modal');
+        el.removeAttribute('aria-label');
+        el.removeAttribute('tabindex');
+      }
+    }
+    if (sheet === openSheet) return;
+    const active = document.activeElement;
+    if (!openSheet) sheetReturn = active instanceof HTMLElement && active !== document.body ? active : null;
+    openSheet = sheet;
+    if (sheet) sheet.focus({ preventScroll: true });
+    else {
+      if (sheetReturn?.isConnected) sheetReturn.focus({ preventScroll: true });
+      sheetReturn = null;
+    }
   }
   $('#diary').onclick = () => (logOpen ? closeSheets() : openLog());
   $('#lastline').onclick = () => openLog();
@@ -2260,7 +2322,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   /** O Tatubum grande no meio da mesa (cria uma vez; o Desarme e o soldado usam o mesmo). */
-  function showTatu(): TatuFx {
+  function showTatu(quiet = false): TatuFx {
     if (tatuFx) return tatuFx;
     const { cx, cy, k } = bigAt();
     const big = cardEl('tatubum-0');
@@ -2269,7 +2331,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     big.style.top = cy + 'px';
     big.onclick = () => playDefuse();
     $('#fxlayer').appendChild(big);
-    Sound.play('fuse');
+    if (!quiet) Sound.play('fuse');
     let n = 0;
     // Faíscas do pavio sem parar e o chiado de novo de tempos em tempos, enquanto o Desarme não vem.
     const sp = every(() => {
@@ -2297,7 +2359,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
    * O Tatu Latidor grande no meio da mesa, tremendo e latindo "AU AU!" de tempos em tempos enquanto quem tinha o outro
    * não joga o Desarme (cria uma vez; o Desarme voa pra ele).
    */
-  function showBark(): BarkFx {
+  function showBark(quiet = false): BarkFx {
     if (barkFx) return barkFx;
     const { cx, cy, k } = bigAt();
     const big = cardEl('latido-0');
@@ -2310,7 +2372,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       Sound.play('bark');
       void Fx.pop('AU AU!', { x: cx + 170 * k, y: cy - 150 * k }, { size: popPx(46, 32), hold: 350, color: '#fff3c4' });
     };
-    bark();
+    if (!quiet) bark();
     const woof = every(() => { if (view?.choice?.kind === 'latido') bark(); }, 1800);
     barkFx = { big, woof, cx, cy, k };
     syncTatu();
@@ -2485,6 +2547,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     press = {
       x: e.clientX,
       y: e.clientY,
+      pointerId: pidOf(e),
       t: later(() => {
         press = null;
         const d = drag;
@@ -2493,6 +2556,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           if (!d || d.id !== id || d.moved) return;
           d.lifted = true;
           card.classList.add('lifted');
+          stage.addEventListener('touchmove', onTouchMove, { passive: false });
           navigator.vibrate?.(15);
           Sound.play('select');
           return;
@@ -2510,7 +2574,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (drag?.lifted && e.cancelable) e.preventDefault();
   }
   function onPressMove(e: PointerEvent): void {
-    if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) cancelPress();
+    if (press && pidOf(e) === press.pointerId && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) cancelPress();
+  }
+  function onPressUp(e: PointerEvent): void {
+    if (press && pidOf(e) === press.pointerId) cancelPress();
   }
   function cancelPress(): void {
     if (!press) return;
@@ -2574,11 +2641,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   stage.addEventListener('wheel', onWheel, { passive: false });
   stage.addEventListener('pointerdown', onPressDown);
   stage.addEventListener('contextmenu', onContextMenu);
-  stage.addEventListener('touchmove', onTouchMove, { passive: false });
   wrap.addEventListener('click', onClickCapture, true);
   window.addEventListener('pointermove', onPressMove);
-  window.addEventListener('pointerup', cancelPress);
-  window.addEventListener('pointercancel', cancelPress);
+  window.addEventListener('pointerup', onPressUp);
+  window.addEventListener('pointercancel', onPressUp);
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fit()) : null;
   ro?.observe(root);
   fit();
@@ -2609,8 +2675,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       stage.style.height = '';
       bgWidth = 0;
       fit();
-      if (tatuFx) { clearTatu(); showTatu(); }
-      if (barkFx) { stopEvery(barkFx.woof); barkFx.big.remove(); barkFx = null; showBark(); }
+      if (tatuFx) { clearTatu(); showTatu(true); }
+      if (barkFx) { clearBark(); showBark(true); }
+      // O painel e o quadro do descarte são refeitos (o texto muda: "clique" ↔ "toque").
+      panelKey = '';
+      pileKey = '';
       renderLog();
       render();
       syncSheets();
@@ -2645,8 +2714,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       stage.removeEventListener('touchmove', onTouchMove);
       wrap.removeEventListener('click', onClickCapture, true);
       window.removeEventListener('pointermove', onPressMove);
-      window.removeEventListener('pointerup', cancelPress);
-      window.removeEventListener('pointercancel', cancelPress);
+      window.removeEventListener('pointerup', onPressUp);
+      window.removeEventListener('pointercancel', onPressUp);
       ro?.disconnect();
       drag = null;
       Cerrado.stop();
