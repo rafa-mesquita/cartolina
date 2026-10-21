@@ -599,11 +599,9 @@ Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca 
 
 ## 6. Arte das cartas
 
-- **18 ilustrações**: as 17 cartas + o verso (as 4 cartas novas de 2026-10-20 ainda sem arte: Tatu Latidor =
-  tatu numa casinha de cachorro latindo "AU AU"; Mau-olhado = tatu botando mau-olhado; Feitiço = tatu feiticeiro
-  com caldeirão puxando uma carta de baixo do monte; Boto = boto-cor-de-rosa. Até lá, sprite de reserva "?" e
-  textos provisórios na mesa). O Tucano (2026-10-21) usa a arte da Capivara até a dele chegar do Flow
-  (`web/src/games/kittens/art/tucano.png`); a cor do fundo da carta é cobalto (`#3b5bc4`). **Pixel art** (sprite de bicho/objeto com contorno
+- **19 ilustrações**: as 18 cartas + o verso, todas do Flow (Tatu Latidor = tatu numa casinha de cachorro latindo;
+  Mau-olhado = tatu botando mau-olhado; Feitiço = tatu feiticeiro com caldeirão; Boto = boto-cor-de-rosa; Tucano =
+  tucano-toco, fundo cobalto `#3b5bc4`). **Pixel art** (sprite de bicho/objeto com contorno
   escuro, poucas cores, fundo liso, como a referência do tatu), sem texto na imagem (o nome da carta
   é desenhado pelo site).
 - Geradas no **Google Flow** (mesmo processo do Diquisti, ver `CLAUDE.md`), prompts em

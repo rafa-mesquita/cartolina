@@ -154,7 +154,7 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     if (two) options.push({ cards: [...byKind.get(two)!, botos[0]!] });
   }
   const distinct = BICHOS.filter((b) => byKind.get(b)?.length);
-  if (distinct.length === 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.map((b) => byKind.get(b)![0]!) });
+  if (distinct.length >= 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.slice(0, 5).map((b) => byKind.get(b)![0]!) });
   return options.length ? pickOne(rng, options) : null;
 }
 

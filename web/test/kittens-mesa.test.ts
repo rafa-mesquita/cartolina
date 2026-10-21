@@ -417,8 +417,8 @@ describe('mesa do Tatubum', () => {
     await vi.advanceTimersByTimeAsync(4000);
     const log = root.querySelector('#log')?.textContent ?? '';
     expect(log).toContain('P0 jogou o TUCANO em você: a sua próxima vez vai ser pulada');
-    expect(log).toContain('Você teve a vez pulada');
-    expect(log).toContain('P2 teve a vez pulada');
+    expect(log).toContain('Você perdeu uma vez (TUCANO)');
+    expect(log).toContain('P2 perdeu uma vez (TUCANO)');
     expect(root.querySelector('#hand .kt-skiptag')).toBeNull();
     expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.textContent).toBe('PULA');
     expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.getAttribute('title')).toContain('a próxima vez pulada');

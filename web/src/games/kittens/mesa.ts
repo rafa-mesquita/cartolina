@@ -1892,7 +1892,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'barked': return ev.target ? `AU AU! ${n(ev.target)} tinha o outro TATU LATIDOR: Desarme ou explode!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
       case 'cursed': return `${n(ev.target)} ficou CEGO até comprar uma carta`;
       case 'tucano': return ev.target === ME ? `${n(ev.by)} jogou o TUCANO em você: a sua próxima vez vai ser pulada` : `${n(ev.by)} jogou o TUCANO em ${n(ev.target)}: a próxima vez dele vai ser pulada`;
-      case 'skipped': return `${n(ev.who)} teve a vez pulada`;
+      case 'skipped': return `${n(ev.who)} perdeu uma vez (TUCANO)`;
       case 'cured': return `${n(ev.by)} voltou a enxergar`;
       case 'conjured': return ev.kept ? `${n(ev.by)} ficou com a carta de baixo do monte` : `${n(ev.by)} pôs a carta de baixo no topo do monte`;
     }
