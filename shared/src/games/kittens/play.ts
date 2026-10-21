@@ -33,6 +33,8 @@ function playKindOf(kinds: KittensCardKind[], as: KittensCardKind | undefined): 
   if (kinds.length === 2) {
     // Par só de bichos; o Boto faz as vezes de qualquer um. Dois Botos: o par vale o bicho declarado em `as`.
     if (wild === 2) return kittensIsBicho(as ?? null) ? { kind: 'par', as: as! } : 'bad_as';
+    // Par de Latidores (pedido do Rafa, 2026-10-21): só os dois Latidores (o Boto não completa: Latidor não é bicho).
+    if (kinds.every((k) => k === 'latido')) return { kind: 'par', as: 'latido' };
     return same && kittensIsBicho(plain[0]!) ? { kind: 'par', as: plain[0]! } : 'bad_combo';
   }
   if (kinds.length === 3) {
@@ -90,8 +92,8 @@ function readPlay(s: KittensState, p: string, cards: string[], action: PlayActio
   const { kind } = parsed;
   let target: string | null = null;
   const favor = kittensIsFavorPlay(parsed);
-  if (favor || kind === 'olhado' || (kind === 'par' && parsed.as === 'tucano')) {
-    // Favor (e trio de Favor): o alvo precisa ter carta pra dar. Mau-olhado e par de Tucano: qualquer adversário vivo
+  if (favor || kind === 'olhado' || (kind === 'par' && (parsed.as === 'tucano' || parsed.as === 'latido'))) {
+    // Favor (e trio de Favor): o alvo precisa ter carta pra dar. Mau-olhado, par de Tucano e par de Latidores: qualquer adversário vivo
     // (até sem carta).
     const t = action.target;
     if (t === undefined || t === p || !s.alive.includes(t)) return 'bad_target';

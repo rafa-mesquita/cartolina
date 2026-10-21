@@ -22,11 +22,11 @@ export const KITTENS_PACK: Partial<Record<KittensCardKind, number>> = {
 };
 export const KITTENS_PACK_SIZE = 58;
 /**
- * Tatu Latidor: 1 por jogador na partida (pedido do Rafa, 2026-10-21; antes eram sempre 2), fora dos pacotes. Nenhum
- * vem na mão inicial: vão todos pro monte.
+ * Tatu Latidor, fora dos pacotes (pedido do Rafa, 2026-10-21): 2 com 2 jogadores, 3 com 3 e, a partir de 4, um a menos
+ * que o número de jogadores. Nenhum vem na mão inicial: vão todos pro monte.
  */
 export function kittensLatidos(players: number): number {
-  return players;
+  return players <= 3 ? players : players - 1;
 }
 /** Cartas do baralho na mão inicial, além do Cafuné de cada um. */
 export const KITTENS_HAND_START = 7;
@@ -71,8 +71,8 @@ export interface KittensDeal {
 
 /**
  * Preparação (spec §2): 1 Cafuné + 7 cartas dos pacotes pra cada um (nenhum Latidor na mão inicial: pedido do Rafa,
- * 2026-10-21); no monte, embaralhados, o resto dos pacotes + os Latidores (1 por jogador) + os Cafunés extras + (n − 1)
- * Tatubuns. Tamanho do monte = pacotes × 58 − 7n + n + Cafunés extras + (n − 1).
+ * 2026-10-21); no monte, embaralhados, o resto dos pacotes + os Latidores (`kittensLatidos`) + os Cafunés extras + (n − 1)
+ * Tatubuns. Tamanho do monte = pacotes × 58 − 7n + Latidores + Cafunés extras + (n − 1).
  */
 export function kittensDeal(rng: Rng, players: readonly string[]): KittensDeal {
   const n = players.length;
