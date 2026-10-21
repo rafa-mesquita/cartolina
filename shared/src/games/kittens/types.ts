@@ -14,7 +14,16 @@ export function kittensNopeCooldownUntil(pending: { nopes: readonly unknown[]; r
   if (!pending || pending.nopes.length === 0) return null;
   return pending.resolvesAt - KITTENS_NOPE_MS + KITTENS_NOPE_COOLDOWN_MS;
 }
-/** Prazo das escolhas pessoais (Desarme, Favor, descarte e pegada do Mico, 5 diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
+/**
+ * 4 bichos diferentes (pedido do Rafa, 2026-10-21): não leva Nem vem!. A carta fica no ar só o tempo de todo mundo ver
+ * (sem contagem), e resolve.
+ */
+export const KITTENS_UNSTOPPABLE_MS = 1_500;
+/** A jogada aceita Nem vem!? Só os 4 bichos diferentes (`cinco`, nome antigo dos 5 diferentes) não aceitam. */
+export function kittensNopable(kind: KittensPlayKind): boolean {
+  return kind !== 'cinco';
+}
+/** Prazo das escolhas pessoais (Desarme, Favor, descarte e pegada do Mico, 4 bichos diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
 export const KITTENS_CHOICE_MS = 30_000;
 /** Quantas entradas do diário ficam no estado. */
 export const KITTENS_LOG_SIZE = 30;

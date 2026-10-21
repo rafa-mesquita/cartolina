@@ -186,6 +186,11 @@ describe('decisão do bot do Tatubum', () => {
     expect(decideKittens(v, newKittensMemory(), () => 0)).toBeNull();
   });
 
+  it('4 bichos diferentes no ar: nunca dá Nem vem!', () => {
+    const pending = { by: 'p0', play: { kind: 'cinco' as const, cards: ['capivara-1', 'quati-1', 'tucano-1', 'boto-1'], target: null, ask: null, as: null }, nopes: [], resolvesAt: 9000 };
+    expect(decideKittens(p1View(['nemvem-5', 'mico-1'], { pending }), newKittensMemory(), () => 0)).toBeNull();
+  });
+
   it('carta no ar contra ele, com Nem vem! na mão e rng 0: dá Nem vem!; na mesma etapa, a segunda chamada devolve null', () => {
     const v = p1View(['nemvem-5', 'mico-1'], { pending: inAir('p0', 'p1') });
     const mem = newKittensMemory();

@@ -170,9 +170,9 @@ describe('par de Tucano: o efeito', () => {
     for (const viewer of ['p0', 'p2', null]) expect(kittensViewFor(s, viewer).skips).toEqual({ p2: 1 });
   });
 
-  it('nos 5 diferentes conta como Tucano e o par de Preguiça pode pedir Tucano', () => {
-    const cinco = mesa({ hands: { p0: ['tucano-0', 'mico-0', 'quati-0', 'tamandua-0', 'boto-0'], p1: [], p2: [], p3: [] } });
-    expect(act(cinco, 'p0', { type: 'play', cards: ['tucano-0', 'mico-0', 'quati-0', 'tamandua-0', 'boto-0'] }, ctx).pending!.play.kind).toBe('cinco');
+  it('nos 4 bichos diferentes conta como Tucano e o par de Preguiça pode pedir Tucano', () => {
+    const cinco = mesa({ hands: { p0: ['tucano-0', 'mico-0', 'quati-0', 'boto-0'], p1: [], p2: [], p3: [] } });
+    expect(act(cinco, 'p0', { type: 'play', cards: ['tucano-0', 'mico-0', 'quati-0', 'boto-0'] }, ctx).pending!.play.kind).toBe('cinco');
     const preguica = mesa({ hands: { p0: ['preguica-0', 'preguica-1'], p1: [], p2: ['tucano-5'], p3: [] } });
     const called = resolved(preguica, { type: 'play', cards: ['preguica-0', 'preguica-1'], ask: 'tucano' });
     expect(called.hands.p0).toEqual(['tucano-5']);

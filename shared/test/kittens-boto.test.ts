@@ -117,13 +117,13 @@ describe('Boto: o bicho coringa', () => {
     expect(done.log.at(-1)!.ev).toEqual({ t: 'grabbed', by: 'p0', from: 'p1', card: 'cafune-5' });
   });
 
-  it('5 diferentes: o Boto conta como o próprio nome', () => {
+  it('4 bichos diferentes: o Boto conta como um bicho a mais (só um)', () => {
     const s = base();
-    expect(act(s, 'p0', play(['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'boto-0']), ctx).pending!.play).toMatchObject({
+    expect(act(s, 'p0', play(['capivara-0', 'mico-0', 'quati-0', 'boto-0']), ctx).pending!.play).toMatchObject({
       kind: 'cinco',
       as: null,
     });
-    expect(refuse(s, 'p0', play(['capivara-0', 'mico-0', 'quati-0', 'boto-0', 'boto-1']), ctx)).toBe('bad_combo');
+    expect(refuse(s, 'p0', play(['capivara-0', 'mico-0', 'boto-0', 'boto-1']), ctx)).toBe('bad_combo');
   });
 
   it('Nem vem! cancela o par com Boto (as duas cartas vão pro descarte)', () => {

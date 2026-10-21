@@ -58,7 +58,7 @@ export type KittensActionKind = (typeof KITTENS_ACTION_KINDS)[number];
 export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano'] as const;
 export type KittensBicho = (typeof KITTENS_BICHOS)[number];
 
-/** O bicho coringa: em par ou trio vale por qualquer bicho; nos 5 diferentes conta como o próprio nome. */
+/** O bicho coringa: em par ou trio vale por qualquer bicho; nos 4 bichos diferentes conta como um bicho a mais. */
 export const KITTENS_WILD = 'boto' as const;
 
 export function kittensIsBicho(kind: KittensCardKind | null): kind is KittensBicho {

@@ -10,6 +10,7 @@ import {
   PLAYER_COLORS,
   isKittensRoomView,
   kittensKindOf,
+  kittensNopable,
   kittensNopeCooldownUntil,
   mulberry32,
   type GameAction,
@@ -153,8 +154,10 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     const two = BICHOS.find((b) => (byKind.get(b)?.length ?? 0) === 2);
     if (two) options.push({ cards: [...byKind.get(two)!, botos[0]!] });
   }
-  const distinct = BICHOS.filter((b) => byKind.get(b)?.length);
-  if (distinct.length >= 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.slice(0, 5).map((b) => byKind.get(b)![0]!) });
+  // 4 bichos diferentes: o Boto conta como um bicho a mais.
+  const distinct = BICHOS.filter((b) => byKind.get(b)?.length).map((b) => byKind.get(b)![0]!);
+  if (botos.length) distinct.push(botos[0]!);
+  if (distinct.length >= 4 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.slice(0, 4) });
   return options.length ? pickOne(rng, options) : null;
 }
 
@@ -223,7 +226,7 @@ export function decideKittens(
 
   if (g.choice && g.choice.who === me) {
     const c = g.choice;
-    // Nos 5 diferentes são duas pegadas e no trio de Favor até 3 cartas a dar: `left` na chave faz o bot responder
+    // Nos 4 bichos diferentes são duas pegadas e no trio de Favor até 3 cartas a dar: `left` na chave faz o bot responder
     // cada uma. A pegada do fim do par de Mico usa a mesma escolha (`from: 'mico'`): a origem e as opções na chave a
     // separam de qualquer pegada anterior.
     const key =
@@ -258,7 +261,7 @@ export function decideKittens(
       const card = g.blind.includes(me) ? g.hand[0] : g.hand.find((x) => kittensKindOf(x) === 'cafune');
       return card ? { key, delay: between(rng, 1200, 2200), action: { type: 'choose', card } } : null;
     }
-    // 5 diferentes ou a pegada do fim do par de Mico: Desarme, Nem vem! e Ataque primeiro.
+    // 4 bichos diferentes ou a pegada do fim do par de Mico: Desarme, Nem vem! e Ataque primeiro.
     if (!c.options.length) return null;
     const pref: KittensCardKind[] = ['cafune', 'nemvem', 'ataque', 'pular', 'espiar'];
     const best = pref.map((k) => c.options.find((x) => kittensKindOf(x) === k)).find(Boolean) ?? pickOne(rng, c.options);
@@ -268,6 +271,8 @@ export function decideKittens(
 
   if (g.pending) {
     const p = g.pending;
+    // 4 bichos diferentes: não aceita Nem vem!.
+    if (!kittensNopable(p.play.kind)) return null;
     const key = `nope:${p.by}:${p.play.cards.join(',')}:${p.nopes.length}`;
     if (mem.noped === key) return null;
     // Na espera de 2 s depois de um Nem vem!, nem decide: a decisão desta etapa fica pra quando a espera acabar.
