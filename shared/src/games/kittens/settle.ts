@@ -20,7 +20,7 @@ function leave(state: KittensState, p: string, ctx: GameContext): KittensState {
   else if (c?.kind === 'favor' && c.to === p) s = { ...s, choice: null };
   // A escolha ao acaso pode ter feito ele explodir (Desarme que sumiu da mão): já saiu.
   if (s.phase !== 'playing' || !s.alive.includes(p)) return s;
-  return eliminate(logged(s, { t: 'left', by: p }), p);
+  return eliminate(logged(s, { t: 'left', by: p }), p, 'left');
 }
 
 /**
