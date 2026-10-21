@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { catalogEntry } from '../games/catalog';
 import { CoupHistory } from '../games/coup/history/CoupHistory';
 import { DixitHistory } from '../games/dixit/history/DixitHistory';
+import { KittensHistory } from '../games/kittens/history/KittensHistory';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goToRoom, type GameTab } from '../lib/router';
 import { createRoom } from '../net/api';
@@ -79,12 +80,7 @@ function HistoryTab({ game }: { game: GameId }) {
         </section>
       );
     case 'kittens':
-      // o histórico do Tatubum vem num plano próprio
-      return (
-        <section className="panel">
-          <p>O histórico do Tatubum vem em breve.</p>
-        </section>
-      );
+      return <KittensHistory />;
     case 'coup':
       return <CoupHistory />;
     default: {

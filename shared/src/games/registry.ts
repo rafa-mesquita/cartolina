@@ -87,8 +87,7 @@ export const GAMES: Record<GameId, GameEntry> = {
     maxPlayers: KITTENS_MAX_PLAYERS,
     // Cursor em cima de uma carta da mão entregaria a jogada.
     liveCursors: false,
-    // O histórico do Tatubum vem num plano próprio.
-    recordsHistory: false,
+    recordsHistory: true,
   }),
   coup: defineGame({
     id: 'coup',

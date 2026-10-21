@@ -12,11 +12,6 @@ describe('Tatubum no servidor', () => {
     expect(body).toMatchObject({ exists: true, game: 'kittens', phase: 'lobby' });
   });
 
-  it('o histórico do Tatubum ainda não existe', async () => {
-    const res = await SELF.fetch('https://x/history/kittens');
-    expect(res.status).toBe(404);
-  });
-
   it('começa com 2: cada um vê só a própria mão de 8 cartas', async () => {
     const code = await newGameRoom('kittens');
     const players = await joined(code, 2);

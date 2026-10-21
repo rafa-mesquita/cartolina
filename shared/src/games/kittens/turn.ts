@@ -1,5 +1,11 @@
 import { kittensKindOf } from './cards';
-import { KITTENS_LOG_SIZE, type KittensEvent, type KittensState } from './types';
+import { KITTENS_LOG_SIZE, type KittensEvent, type KittensExitHow, type KittensPlayerStats, type KittensState } from './types';
+
+/** Soma 1 no contador `key` de `p` (Nem vem! dados ou Desarmes usados), pro histórico. */
+export function counted(state: KittensState, p: string, key: keyof KittensPlayerStats): KittensState {
+  const mine = Object.hasOwn(state.stats, p) ? state.stats[p]! : { nopes: 0, defuses: 0 };
+  return { ...state, stats: { ...state.stats, [p]: { ...mine, [key]: mine[key] + 1 } } };
+}
 
 /** Acrescenta ao diário (só as últimas KITTENS_LOG_SIZE ficam). `seenBy`: quem vê a carta do evento (null = todos). */
 export function logged(state: KittensState, ev: KittensEvent, seenBy: string[] | null = null): KittensState {
@@ -95,9 +101,10 @@ export function checkWin(state: KittensState): KittensState {
  * `p` sai da partida (explodiu ou caiu de vez): a mão, as cartas na frente dele (Tatu Latidor) e `extraOut` (ex.: o tatu
  * que explodiu) vão pra fora do jogo, e ele deixa de estar cego. Se o monte ficou com mais tatus (contando o que está
  * sendo escondido) que vivos − 1 (quem caiu de vez), um tatu sai também (e sai das espiadas). A espiada de `p` some.
- * Se era a vez de `p`, a vez passa pro próximo vivo com 1 turno (os turnos devidos se perdem).
+ * Se era a vez de `p`, a vez passa pro próximo vivo com 1 turno (os turnos devidos se perdem). `how` entra na fila de
+ * saídas (`exits`) do histórico.
  */
-export function eliminate(state: KittensState, p: string, extraOut: string[] = []): KittensState {
+export function eliminate(state: KittensState, p: string, how: KittensExitHow, extraOut: string[] = []): KittensState {
   const alive = state.alive.filter((x) => x !== p);
   let draw = state.draw;
   let out = [...state.out, ...extraOut, ...(state.hands[p] ?? []), ...(state.front[p] ?? [])];
@@ -113,7 +120,8 @@ export function eliminate(state: KittensState, p: string, extraOut: string[] = [
   const front = (state.front[p]?.length ?? 0) > 0 ? { ...state.front, [p]: [] } : state.front;
   const blind = state.blind.includes(p) ? state.blind.filter((x) => x !== p) : state.blind;
   // A espiada de quem sai some; o tatu tirado do monte sai das espiadas dos outros (a ordem do resto não muda).
-  const base: KittensState = { ...state, alive, draw, out, front, blind, hands: { ...state.hands, [p]: [] } };
+  const exits = [...state.exits, { player: p, how }];
+  const base: KittensState = { ...state, alive, draw, out, front, blind, exits, hands: { ...state.hands, [p]: [] } };
   let next = unpeek(dropPeek(base, p), removed !== null ? [removed] : []);
   if (state.current === p) next = passTo(next, nextAlive(next, p), 1);
   return checkWin(next);
