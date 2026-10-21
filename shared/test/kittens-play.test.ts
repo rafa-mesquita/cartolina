@@ -71,16 +71,16 @@ describe('jogar', () => {
     expect(
       act(s, 'p0', play({ cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: 'p1', ask: 'favor' }), ctx).pending!.play,
     ).toEqual({ kind: 'trio', cards: ['capivara-0', 'capivara-1', 'capivara-2'], target: null, ask: null, as: 'capivara' });
-    expect(act(s, 'p0', play({ cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] }), ctx).pending!.play.kind).toBe(
+    expect(act(s, 'p0', play({ cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0'] }), ctx).pending!.play.kind).toBe(
       'cinco',
     );
   });
 
-  it('par só de bichos; trio e 5 diferentes valem com quaisquer cartas', () => {
+  it('par só de bichos; trio vale com quaisquer cartas; 4 diferentes só com bichos', () => {
     const s = table({ hands: { p0: ['ataque-0', 'ataque-1', 'ataque-2', 'pular-0', 'cafune-0', 'mico-0', 'nemvem-0'], p1: ['mico-1'], p2: [] } });
     expect(refuse(s, 'p0', play({ cards: ['ataque-0', 'ataque-1'], target: 'p1' }), ctx)).toBe('bad_combo');
     expect(act(s, 'p0', play({ cards: ['ataque-0', 'ataque-1', 'ataque-2'] }), ctx).pending!.play.kind).toBe('trio');
-    expect(act(s, 'p0', play({ cards: ['ataque-0', 'pular-0', 'cafune-0', 'mico-0', 'nemvem-0'] }), ctx).pending!.play.kind).toBe('cinco');
+    expect(refuse(s, 'p0', play({ cards: ['ataque-0', 'pular-0', 'cafune-0', 'mico-0'] }), ctx)).toBe('bad_combo');
   });
 
   it.each<[Play, string]>([

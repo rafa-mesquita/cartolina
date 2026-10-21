@@ -573,6 +573,27 @@ describe('mesa do Tatubum', () => {
     m2.mesa.destroy();
   });
 
+  it('4 bichos diferentes no ar: sem botão de Nem vem!, sem contagem, e a tecla N e o arrasto não mandam nada', () => {
+    const v = midGame('p1');
+    v.game.current = 'p0';
+    v.game.hand = ['nemvem-7', 'mico-7'];
+    v.game.pending = {
+      by: 'p0',
+      play: { kind: 'cinco', cards: ['capivara-1', 'quati-1', 'tucano-1', 'boto-1'], target: null, ask: null, as: null },
+      nopes: [],
+      resolvesAt: Date.now() + 1500,
+    };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#nope')).toBeNull();
+    expect(root.querySelector('#bar')!.innerHTML).toBe('');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    dragCard(root, 'nemvem-7', root.querySelector('#table')!);
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#toast')?.textContent).toBe('Os 4 bichos diferentes não aceitam Nem vem!');
+    mesa.destroy();
+  });
+
   it('Nem vem! manda o que você viu (at/on); atrasado, a carta continua na mão e aparece o aviso', () => {
     const v = midGame('p1');
     v.game.current = 'p0';

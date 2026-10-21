@@ -142,11 +142,14 @@ Aceitam Nem vem! (que cancela o combo todo). Regras dos combos redesenhadas pelo
     vivo com carta na mão; `bad_target` sem isso) e não rouba Desarme: o alvo **escolhe 3 cartas** da mão pra te
     dar (a mão toda, se tiver menos), uma de cada vez, no mesmo prazo de 30 s; vencido, as que faltam vão ao acaso.
     Só vocês dois veem quais cartas foram. O Boto não completa (Favor não é bicho).
-- **5 diferentes** (5 nomes diferentes, quaisquer cartas): você escolhe (30 s) **duas cartas** do **descarte
+- **4 bichos diferentes** (pedido do Rafa, 2026-10-21; antes eram 5 nomes diferentes de quaisquer cartas): **só bichos**,
+  4 diferentes; o Boto conta como um bicho a mais (no máximo um). **Não aceita Nem vem!**: a carta fica 1,5 s no ar
+  (`KITTENS_UNSTOPPABLE_MS`, sem contagem, sem botão), o Nem vem! é recusado (`unstoppable`) e ela resolve. O id da
+  jogada continua `cinco`. Você escolhe (30 s) **duas cartas** do **descarte
   como estava antes desta jogada** (pedido do Rafa, 2026-10-20; uma de cada vez, no quadro do descarte). Descarte
   com 1 carta = só ela; vazio = nada. Prazo vencido: o que faltar sai ao acaso.
 - **Quadro do descarte:** um olho ao lado da pilha de descarte abre um quadro com todas as cartas do descarte
-  (qualquer um, a qualquer hora). A escolha dos 5 diferentes acontece nesse quadro.
+  (qualquer um, a qualquer hora). A escolha dos 4 bichos diferentes acontece nesse quadro.
 
 ### Par de cada bicho (pedido do Rafa, 2026-10-20)
 
@@ -179,7 +182,7 @@ Regras de motor:
   deadline: now + 30000, from: 'mico' }` (`from` só muda os textos da mesa). Pega com `choose { card }` (evento público
   `picked`); prazo vencido, uma ao acaso. Senão a escolha fecha sem pegada. A vez continua com `by`. Escolha `mico`
   salva sem `discarded` (antes da mudança) entra com `[]`.
-- 5 diferentes: a escolha `cinco` ganha `left` (quantas ainda pegar, 2 ou 1); cada `choose { card }` pega uma e o `left` cai;
+- 4 bichos diferentes: a escolha `cinco` ganha `left` (quantas ainda pegar, 2 ou 1); cada `choose { card }` pega uma e o `left` cai;
   em 0 (ou sem opções) a escolha fecha.
 - Escolha nova `{ kind: 'quati', who, deadline }`; na visão, só `who` recebe `card` = a carta de cima.
   Ação: `choose` com `keep: boolean`. Evento `{ t: 'delayed', by, moved }` (público).
@@ -245,7 +248,7 @@ bicho.
   dá pra deduzir, e tudo bem (é o que ele saberia na mesa de verdade, e não ajuda a achar as cartas de antes do
   olhado, que foram embaralhadas):
   - a última ficha é a carta que acabou de chegar quando ele mesmo pediu ou escolheu: **par de Preguiça** (o bicho
-    pedido, se veio), **trio** (um Desarme, se alguém tinha; o `grabbed` é público), **5 diferentes** (a carta que
+    pedido, se veio), **trio** (um Desarme, se alguém tinha; o `grabbed` é público), **4 bichos diferentes** (a carta que
     ele pegou do descarte, que é público);
   - o diário mostra o que **saiu** da mão dele (a carta já não está lá, então não é apagada): **Capivara** (o que
     ele passou ao acaso, só pra ele e pra quem recebeu), **Favor** (o que deu), **par de Mico** e Desarme (público).
@@ -278,7 +281,7 @@ bicho.
   como antes; com ela, tem que ser um Nem vem! da mão, senão `no_nope`/`not_in_hand`). O cego **tem que** mandar
   uma ficha; se não for Nem vem!, `no_nope`. **(decisão)** A recusa ensina ao cego que aquela ficha não era o que
   ele queria (como no par/trio às cegas), o que é aceitável: errar não muda nada no jogo.
-- **Escolhas que não usam a mão** (onde esconder o tatu, 5 diferentes, Quati, Feitiço) funcionam normal; no 5
+- **Escolhas que não usam a mão** (onde esconder o tatu, 4 bichos diferentes, Quati, Feitiço) funcionam normal; no 4
   diferentes ele escolhe pelo id do descarte (que é público).
 - **Voltar a ver:** quando ele **compra** — compra normal (inclusive um Tatubum: vê a mão pra jogar o Desarme), as
   2 do par de Tamanduá, ou ficar com a carta do Feitiço. Evento público `{ t: 'cured', by }` antes do `draw`. Mandar
@@ -311,7 +314,7 @@ bicho.
   vira."). Par de Preguiça com Boto continua pedindo `ask`.
 - **Trio:** 3 iguais de qualquer tipo, como antes; o Boto completa **bichos** iguais (Capivara + Capivara + Boto,
   Boto + Boto + Mico); 3 Botos também é trio. Com carta que não é bicho (Ataque + Ataque + Boto) não vale.
-- **5 diferentes:** o Boto conta como o próprio nome (Boto + 4 bichos diferentes vale; 2 Botos repetem o nome).
+- **4 bichos diferentes:** o Boto conta como um bicho a mais (Boto + 3 bichos diferentes vale; 2 Botos repetem o nome).
 - **(decisão)** O pedido da Preguiça (`ask`) continua sendo um dos bichos (Boto não; o Tucano pode), e um Boto na mão de alguém
   **não conta** como o bicho pedido.
 - `KittensPlay` ganhou `as: KittensCardKind | null`: no par, o bicho que o par vale (sempre, com ou sem Boto); no
@@ -445,7 +448,7 @@ a 5 o baralho era o do jogo original (46).
      Nem vem! (ou a ficha do cego) pra mesa só mostram o aviso "Espere…"; a barrinha continua correndo. Os bots não
      decidem durante a espera (nem gastam a decisão daquele número de Nem vem!) e voltam a olhar quando ela acaba.
 3. O alarme da sala chama `onPresenceChange` com `ctx.now ≥ resolvesAt` → `resolve.ts` aplica.
-4. Se o efeito pede escolha (Favor, 5 diferentes), abre `choice` com `deadline = now + 30000`.
+4. Se o efeito pede escolha (Favor, 4 bichos diferentes), abre `choice` com `deadline = now + 30000`.
 5. Comprar, Cafuné e explodir **não** passam pela pilha: acontecem na hora.
 
 A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o `now` na mensagem
@@ -513,7 +516,7 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
   Nem vem!; no Favor que você deve, arrastar a carta pra mesa entrega.
 - Clicar seleciona (a carta sobe); duplo clique joga uma carta sozinha; o botão "JOGAR …" também joga.
 - Favor, Mau-olhado e par de Tucano pedem o alvo (clicar no assento ou arrastar as cartas pra ele): os adversários válidos ganham contorno e você clica num deles.
-- Selecionar 2, 3 ou 5 cartas que formam combo mostra o botão "jogar par / trio / 5". No par de
+- Selecionar 2, 3 ou 4 cartas que formam combo mostra o botão "jogar par / trio / 4 bichos". No par de
   Preguiça, aparece a lista dos 6 bichos pra pedir.
 - Quem tem vez pulada (Tucano) ganha o selo "PULA" no assento (×2 se tiver duas); o Tucano voa até o alvo e, quando a
   vez dele é pulada, o assento pisca e o diário diz "X teve a vez pulada".
@@ -537,7 +540,7 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
   Favor, "DÊ 3 CARTAS PRA CAIO", depois "MAIS 2", "MAIS 1"; os outros leem "Bia vai dar 3 cartas pro Caio".
 - **Espiar:** painel só seu com as 3 do topo, na ordem, ao lado do monte; fica lá depois que a vez passa e perde as
   cartas que forem compradas (pedido do Rafa, 2026-10-20). Quem tem espiada ganha um olhinho no assento.
-- **5 diferentes:** painel com o descarte pra escolher.
+- **4 bichos diferentes:** painel com o descarte pra escolher.
 - **Pegada do par de Mico** (pedido do Rafa, 2026-10-20): o mesmo quadro abre pra quem jogou, "PEGUE UMA DAS
   DESCARTADAS", só com as cartas descartadas no par acesas; os outros leem "Ana vai pegar uma das descartadas…".
 - **Explodiu:** quadro vermelho com **BUM!** pra todos por ~2 s; a cadeira vira fantasminha.
@@ -645,7 +648,7 @@ Tatubum.
 - **`shared/`** (TDD): baralho por número de jogadores (2, 5, 6, 8); distribuição; comprar,
   Cafuné (todas as posições) e explodir; Ataque acumulando (exemplos da §2) e Pular sob ataque;
   Nem vem! par/ímpar, cadeia reiniciando os 5 s, Nem vem! do próprio autor; cada combo (os 5 pares,
-  trio com e sem Desarme na mesa, 5 diferentes com descarte vazio); prazos das escolhas (acaso no
+  trio com e sem Desarme na mesa, 4 bichos diferentes com descarte vazio); prazos das escolhas (acaso no
   fim); segredos do `viewFor`; presença (queda < 30 s, eliminação, tatu removido, carta no ar de
   quem saiu); vitória por explosão e por queda; `nextDeadline`.
 - **`server/`**: `POST /rooms { game: 'kittens' }`, mão de cada um e erro em PT-BR. O alarme que
