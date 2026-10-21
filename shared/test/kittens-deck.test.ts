@@ -35,9 +35,9 @@ describe('cartas do Tatubum', () => {
 });
 
 describe('baralho', () => {
-  it('um pacote tem 56 cartas (as 46 do original + 2 Mau-olhado, 2 Feitiço, 2 Boto e 4 Tucanos); os 2 Latidores entram uma vez só', () => {
+  it('um pacote tem 58 cartas (as 46 do original + 2 Mau-olhado, 2 Feitiço, 4 Botos e 4 Tucanos); os 2 Latidores entram uma vez só', () => {
     const deck = kittensBaseDeck(5);
-    expect(KITTENS_PACK_SIZE).toBe(56);
+    expect(KITTENS_PACK_SIZE).toBe(58);
     expect(deck).toHaveLength(KITTENS_PACK_SIZE + KITTENS_LATIDOS);
     expect(count(deck, 'nemvem')).toBe(5);
     expect(count(deck, 'ataque')).toBe(4);
@@ -48,7 +48,7 @@ describe('baralho', () => {
     for (const bicho of ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano']) expect(count(deck, bicho)).toBe(4);
     expect(count(deck, 'olhado')).toBe(2);
     expect(count(deck, 'feitico')).toBe(2);
-    expect(count(deck, 'boto')).toBe(2);
+    expect(count(deck, 'boto')).toBe(4);
     expect(count(deck, 'latido')).toBe(2);
     expect(count(deck, 'tatubum')).toBe(0);
     expect(count(deck, 'cafune')).toBe(0);
@@ -60,19 +60,19 @@ describe('baralho', () => {
     const deck = kittensBaseDeck(6);
     expect(deck).toHaveLength(2 * KITTENS_PACK_SIZE + KITTENS_LATIDOS);
     expect(count(deck, 'latido')).toBe(2);
-    expect(count(deck, 'boto')).toBe(4);
+    expect(count(deck, 'boto')).toBe(8);
     expect(count(deck, 'tucano')).toBe(8);
     expect(new Set(deck).size).toBe(deck.length);
   });
 
   // Desarmes extras no monte como no original: 2 com até 4 jogadores, 1 a partir de 5.
   it.each([
-    // monte = pacotes × 56 + 2 Latidores − 7 por jogador + Desarmes extras + (n − 1) tatus
-    [2, 47, 2],
-    [4, 35, 2],
-    [5, 28, 1],
-    [6, 78, 1],
-    [8, 66, 1],
+    // monte = pacotes × 58 + 2 Latidores − 7 por jogador + Desarmes extras + (n − 1) tatus
+    [2, 49, 2],
+    [4, 37, 2],
+    [5, 30, 1],
+    [6, 82, 1],
+    [8, 70, 1],
   ])('com %i jogadores: 1 Desarme + 7 na mão; monte com %i cartas, %i Desarme(s) e n − 1 tatus', (n, drawSize, extras) => {
     const players = ps(n);
     const { hands, draw } = kittensDeal(mulberry32(7), players);
