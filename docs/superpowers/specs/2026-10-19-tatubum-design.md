@@ -84,7 +84,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Tatu Latidor** (id `latido`) | (fora do pacote: **2 na partida**) | Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
 | **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (é comprar) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
-| **Boto** (id `boto`) | 2 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
+| **Boto** (id `boto`) | 4 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
 
 **Ataque, exemplos:** Ana (normal, `owed = 1`) ataca → Bia joga 2. Bia, no 1º dos 2 turnos, ataca →
 Caio joga 4. Caio, no último turno devido (`owed = 1`), ataca → Duda joga 2.
@@ -373,13 +373,13 @@ jogadores.
 
 | Jogadores | Pacotes | Cartas no baralho antes de distribuir (pacotes + 2 Latidores) | Monte depois de distribuir | Desarmes | Tatubuns |
 |---|---|---|---|---|---|
-| 2 | 1 | 56 + 2 = 58 | 58 − 14 + 2 + 1 = 47 | n + 2 | n − 1 |
-| 3 | 1 | 58 | 58 − 21 + 2 + 2 = 41 | n + 2 | n − 1 |
-| 4 | 1 | 58 | 58 − 28 + 2 + 3 = 35 | n + 2 | n − 1 |
-| 5 | 1 | 58 | 58 − 35 + 1 + 4 = 28 | n + 1 | n − 1 |
-| 6 | 2 | 112 + 2 = 114 | 114 − 42 + 1 + 5 = 78 | n + 1 | n − 1 |
-| 7 | 2 | 114 | 114 − 49 + 1 + 6 = 72 | n + 1 | n − 1 |
-| 8 | 2 | 114 | 114 − 56 + 1 + 7 = 66 | n + 1 | n − 1 |
+| 2 | 1 | 58 + 2 = 60 | 60 − 14 + 2 + 1 = 49 | n + 2 | n − 1 |
+| 3 | 1 | 60 | 60 − 21 + 2 + 2 = 43 | n + 2 | n − 1 |
+| 4 | 1 | 60 | 60 − 28 + 2 + 3 = 37 | n + 2 | n − 1 |
+| 5 | 1 | 60 | 60 − 35 + 1 + 4 = 30 | n + 1 | n − 1 |
+| 6 | 2 | 116 + 2 = 118 | 118 − 42 + 1 + 5 = 82 | n + 1 | n − 1 |
+| 7 | 2 | 118 | 118 − 49 + 1 + 6 = 76 | n + 1 | n − 1 |
+| 8 | 2 | 118 | 118 − 56 + 1 + 7 = 70 | n + 1 | n − 1 |
 
 Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Antes das cartas novas, com 2
 a 5 o baralho era o do jogo original (46).
