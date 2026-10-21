@@ -384,3 +384,204 @@
 .kittens .kt-mesa .bigcard.drop { filter: drop-shadow(0 0 0 #f2c14e) drop-shadow(0 0 10px #f2c14e); }
 @keyframes kt-shake { 50% { translate: 4px -3px; } }
 @media (prefers-reduced-motion: reduce) { .kittens .kt-mesa * { animation: none !important; } }
+
+/* ================================================================ Celular em pé (classe kt-phone no #stage)
+ * O palco deixa a escala fixa de 1440×900: vira uma coluna da altura e da largura da tela, na escala 1 (só encolhe
+ * abaixo de 360 de largura). Assim a fonte de pixel fica nítida: Press Start 2P só em 8, 12, 16 e 24 px (o "pixel" da
+ * letra cai em px inteiro da tela) e VT323 em px inteiro. O #board some (display: contents) e os filhos dele entram na
+ * coluna, na ordem do `order`: barra de cima, adversários, tira do diário, legenda, mesa, sua frente, mão e botões.
+ * Tudo que aparece e some tem o lugar guardado (ou fica por cima), pra mesa não pular: a legenda tem altura fixa (o
+ * texto comprido encolhe), as faixas da sua vez ficam por cima do pé da mesa, o chip dos assentos tem o espaço dele e
+ * os botões, a faixa deles. Painéis, diário, zoom, descarte, galeria e fim viram folhas por cima, com o fundo escuro
+ * (#scrim). Só existem no celular: #diary, #lastline, #banners e #scrim (no computador ficam escondidos). */
+.kittens .kt-mesa #diary, .kittens .kt-mesa #lastline, .kittens .kt-mesa #banners, .kittens .kt-mesa #scrim { display: none; }
+.kittens .kt-mesa #stage.kt-phone { --hand-h: 208px; --hand-b: 10px; --act-h: 82px; --front-h: 40px; left: 0; top: 0; transform-origin: 0 0; display: flex; flex-direction: column; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.kittens .kt-mesa #stage.kt-phone #bg { object-fit: cover; }
+.kittens .kt-mesa #stage.kt-phone #board { display: contents; }
+/* barra de cima: a vez numa linha própria, botões pequenos */
+.kittens .kt-mesa #stage.kt-phone #topbar { position: relative; order: 1; flex: none; height: auto; flex-wrap: wrap; padding: 6px 8px 7px; gap: 4px 6px; }
+.kittens .kt-mesa #stage.kt-phone #logo { font-size: 12px; }
+.kittens .kt-mesa #stage.kt-phone #turn { order: 3; width: 100%; height: 16px; font-size: 8px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kittens .kt-mesa #stage.kt-phone #turn .owed { margin-left: 4px; }
+.kittens .kt-mesa #stage.kt-phone #topright { gap: 4px; flex-wrap: nowrap; }
+.kittens .kt-mesa #stage.kt-phone #topright .kt-btn { height: 34px; }
+.kittens .kt-mesa #stage.kt-phone #topright .kt-btn > span { font-size: 8px; padding: 0 8px; }
+.kittens .kt-mesa #stage.kt-phone #diary { display: inline-flex; }
+/* adversários: fileira compacta, rola pro lado se não couber */
+.kittens .kt-mesa #stage.kt-phone #seats { position: relative; order: 2; flex: none; top: auto; height: auto; display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 22px 10px 4px; scrollbar-width: none; touch-action: pan-x; }
+.kittens .kt-mesa #stage.kt-phone #seats::-webkit-scrollbar { display: none; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat { position: relative; flex: 1 0 100px; max-width: 132px; width: auto; transform: none; padding: 6px 2px 18px; cursor: pointer; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .kt-critter { width: 44px; height: 44px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .who { margin-top: 2px; font-size: 8px; line-height: 12px; max-width: 100%; text-shadow: 1px 1px 0 #050510; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .count { gap: 4px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .count .fan { display: none; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .count b { font-size: 16px; line-height: 20px; min-width: 0; text-shadow: 2px 2px 0 #050510; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .count b::before { content: ''; display: inline-block; width: 9px; height: 13px; margin-right: 6px; background: #1f3a6b; box-shadow: 0 0 0 2px var(--ink); vertical-align: 0; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .count.out { font-size: 8px; line-height: 20px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .order { top: -16px; font-size: 8px; padding: 2px 4px; }
+/* o chip ("pensando…", "caiu…") tem o lugar dele guardado no pé do assento: aparecer não aumenta a fileira */
+.kittens .kt-mesa #stage.kt-phone .kt-seat .chip { position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%); margin: 0; font-size: 8px; line-height: 8px; padding: 3px 4px; white-space: nowrap; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .kt-cursed { left: 2px; top: 6px; width: 24px; height: 18px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .kt-peeked { left: 4px; top: 30px; width: 21px; height: 14px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .kt-owed { right: -2px; top: 30px; font-size: 8px; padding: 3px 4px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .kt-front { right: 2px; top: 4px; width: 30px; height: 42px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .kt-front .kt-card { transform: scale(.26); }
+.kittens .kt-mesa #stage.kt-phone .kt-seat.hit { animation: kt-hitphone .5s steps(4); }
+@keyframes kt-hitphone { 25% { transform: translateY(-8px); } 75% { transform: translateY(4px); } }
+/* tira do diário: a última linha; tocar abre a folha */
+.kittens .kt-mesa #stage.kt-phone #lastline { position: relative; order: 3; flex: none; display: flex; align-items: center; gap: 8px; height: 34px; margin: 2px 10px 0; padding: 0 10px; border: none; background: rgba(14,14,28,.85); color: var(--txt); font-family: var(--vt); font-size: 20px; text-align: left; cursor: pointer;
+  box-shadow: 0 -3px 0 #050510, 0 3px 0 #050510, -3px 0 0 #050510, 3px 0 0 #050510; }
+.kittens .kt-mesa #stage.kt-phone #lastline .kt-lltxt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kittens .kt-mesa #stage.kt-phone #lastline .kt-lltxt.me { color: #ffd27e; }
+.kittens .kt-mesa #stage.kt-phone #lastline .kt-lltxt.bad { color: #ff9b7a; }
+.kittens .kt-mesa #stage.kt-phone #lastline b { flex: none; font-family: var(--px); font-size: 8px; font-weight: normal; color: var(--yellow); }
+/* legenda em quadrinho: altura fixa de 2 linhas (o texto que não cabe encolhe: kt-long, kt-longer), pra mesa não pular */
+.kittens .kt-mesa #stage.kt-phone #caption { position: relative; order: 4; flex: none; left: auto; top: auto; transform: none; min-width: 0; max-width: none; height: 52px; min-height: 0; margin: 12px 12px 0; padding: 4px 10px; overflow: hidden; font-size: 21px; line-height: 21px; display: flex; align-items: center; justify-content: center; }
+.kittens .kt-mesa #stage.kt-phone #caption.kt-long { font-size: 16px; line-height: 15px; }
+.kittens .kt-mesa #stage.kt-phone #caption.kt-longer { font-size: 14px; line-height: 13px; }
+.kittens .kt-mesa #stage.kt-phone #caption:empty { display: flex; visibility: hidden; }
+.kittens .kt-mesa #stage.kt-phone #caption .timer { margin-left: 6px; }
+/* a mesa: ocupa o meio; monte, carta no ar e descarte menores */
+.kittens .kt-mesa #stage.kt-phone #table { position: relative; z-index: 5; order: 5; flex: 1 1 0; min-height: 180px; left: auto; top: auto; width: auto; height: auto; margin: 14px 10px 8px; }
+.kittens .kt-mesa #stage.kt-phone #table .slot { top: calc(50% - 115px); scale: .7; }
+.kittens .kt-mesa #stage.kt-phone #deck { left: -8px; }
+.kittens .kt-mesa #stage.kt-phone #air { left: calc(50% - 70px); }
+.kittens .kt-mesa #stage.kt-phone #discard { left: auto; right: 48px; }
+.kittens .kt-mesa #stage.kt-phone #eye { right: 4px; top: 8px; width: 44px; padding: 6px 0 5px; }
+.kittens .kt-mesa #stage.kt-phone #eye svg { width: 28px; height: 19px; }
+.kittens .kt-mesa #stage.kt-phone #bar { top: calc(50% + 44px); }
+.kittens .kt-mesa #stage.kt-phone #future { left: 104px; top: calc(50% - 82px); }
+.kittens .kt-mesa #stage.kt-phone #future .kt-ftag { font-size: 8px; }
+.kittens .kt-mesa #stage.kt-phone #future .kt-card { transform: scale(.26); margin-bottom: -112px; }
+/* faixas da sua vez (turnos do Ataque, cego): uma fita presa na borda de cima da mesa (aparecer não empurra nada) */
+.kittens .kt-mesa #stage.kt-phone #banners { position: absolute; left: 0; right: 0; top: -12px; z-index: 6; display: flex; flex-wrap: nowrap; justify-content: center; gap: 12px; pointer-events: none; }
+.kittens .kt-mesa #stage.kt-phone #banners:empty { display: none; }
+.kittens .kt-mesa #stage.kt-phone #banners .kt-owedtag, .kittens .kt-mesa #stage.kt-phone #banners .kt-blindtag { position: relative; left: auto; top: auto; bottom: auto; transform: none; height: 24px; padding: 0 10px; gap: 6px; }
+.kittens .kt-mesa #stage.kt-phone #banners .kt-owedtag b, .kittens .kt-mesa #stage.kt-phone #banners .kt-blindtag b { font-size: 8px; }
+/* a explicação comprida fica na legenda (e na dica dos botões): aqui só o aviso */
+.kittens .kt-mesa #stage.kt-phone #banners .kt-owedtag span, .kittens .kt-mesa #stage.kt-phone #banners .kt-blindtag span { display: none; }
+.kittens .kt-mesa #stage.kt-phone #banners .kt-blindtag svg { width: 22px; height: 16px; }
+/* o Latidor na sua frente: por cima da faixa livre no alto da mão (aparecer não empurra a mesa) */
+.kittens .kt-mesa #stage.kt-phone #front { position: absolute; left: 10px; bottom: calc(var(--act-h) + 12px + env(safe-area-inset-bottom) + var(--hand-h) - var(--front-h)); width: 160px; height: var(--front-h); z-index: 7; pointer-events: none; }
+.kittens .kt-mesa #stage.kt-phone #front .kt-card { top: 0; transform: scale(.25); }
+.kittens .kt-mesa #stage.kt-phone #front .kt-ftag { left: 36px; top: 14px; }
+/* a mão: cartas grandes, rola pro lado; arrastar pra cima joga (o dedo de lado rola) */
+.kittens .kt-mesa #stage.kt-phone #hand { position: relative; order: 8; flex: none; left: auto; bottom: auto; width: auto; height: var(--hand-h); overflow-x: auto; overflow-y: hidden; touch-action: pan-x; scrollbar-width: thin; scrollbar-color: var(--yellow) transparent; }
+.kittens .kt-mesa #stage.kt-phone #hand .kt-card { bottom: var(--hand-b); touch-action: pan-x; -webkit-touch-callout: none; }
+.kittens .kt-mesa #stage.kt-phone #hand .kt-card.sel { bottom: calc(var(--hand-b) + 34px); }
+/* tocou e segurou: a carta levanta (soltar abre o zoom; arrastar de lado muda a ordem da mão) */
+.kittens .kt-mesa #stage.kt-phone #hand .kt-card.lifted { bottom: calc(var(--hand-b) + 20px); z-index: 30 !important; box-shadow: 0 -4px 0 var(--cream), 0 4px 0 var(--cream), -4px 0 0 var(--cream), 4px 0 0 var(--cream), 6px 10px 0 rgba(0,0,0,.4); }
+/* o nome das cartas em 8 px (no tamanho natural da carta a letra cai no pixel da tela) */
+.kittens .kt-mesa #stage.kt-phone .kt-card .kt-name { font-size: 8px; }
+.kittens .kt-mesa #stage.kt-phone #hand.defusing .kt-card.cafune { bottom: calc(var(--hand-b) + 20px); }
+.kittens .kt-mesa #stage.kt-phone #hand .kt-handpad { position: absolute; bottom: 0; width: 10px; height: 1px; }
+.kittens .kt-mesa #stage.kt-phone #hand.myturn::before { top: 4px; font-size: 8px; }
+.kittens .kt-mesa #stage.kt-phone #hand .dead { bottom: 90px; font-size: 8px; white-space: nowrap; }
+/* botões grandes, numa faixa de altura fixa (a dica numa linha, os botões noutra; se não cabem lado a lado, a letra
+ * diminui: kt-tight) */
+.kittens .kt-mesa #stage.kt-phone #actions { position: relative; order: 9; flex: none; right: auto; bottom: auto; width: auto; height: var(--act-h); flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; align-content: center; gap: 6px 8px; margin: 2px 10px calc(10px + env(safe-area-inset-bottom)); }
+.kittens .kt-mesa #stage.kt-phone #actions .kt-btn { width: auto; min-width: 0; flex: 1 1 auto; height: 54px; }
+.kittens .kt-mesa #stage.kt-phone #actions .kt-btn > span { font-size: 12px; padding: 0 8px; }
+.kittens .kt-mesa #stage.kt-phone #actions.kt-tight .kt-btn > span { font-size: 8px; padding: 0 6px; }
+.kittens .kt-mesa #stage.kt-phone #actions .kt-hint { width: 100%; font-size: 19px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kittens .kt-mesa #stage.kt-phone #nope.kt-btn { flex-basis: 100%; height: 64px; }
+.kittens .kt-mesa #stage.kt-phone #actions.kt-longhint .kt-hint { white-space: normal; font-size: 16px; line-height: 16px; }
+.kittens .kt-mesa #stage.kt-phone #actions.kt-longhint .kt-btn { height: 44px; }
+/* folhas: fundo escuro + diário, zoom, painéis, descarte, galeria e fim por cima */
+.kittens .kt-mesa #stage.kt-phone.kt-dim #scrim { display: block; position: absolute; inset: 0; z-index: 54; background: rgba(5,5,16,.74); }
+.kittens .kt-mesa #stage.kt-phone #log { display: none; }
+.kittens .kt-mesa #stage.kt-phone.kt-logopen #log { display: flex; position: absolute; left: 0; right: 0; top: auto; bottom: 0; width: auto; height: auto; max-height: 78%; z-index: 58; justify-content: flex-start; overflow-y: auto; padding: 14px 16px calc(22px + env(safe-area-inset-bottom)); background: #0e0e1c;
+  box-shadow: 0 -5px 0 var(--yellow); }
+.kittens .kt-mesa #stage.kt-phone #log .kt-close { flex: none; align-self: flex-end; margin-bottom: 4px; }
+/* as folhas recebem o foco quando abrem (diálogo); o contorno do foco na folha inteira não precisa aparecer */
+.kittens .kt-mesa #stage.kt-phone #log:focus, .kittens .kt-mesa #stage.kt-phone #viewer:focus { outline: none; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat:focus-visible { outline: 3px solid var(--yellow); outline-offset: -3px; }
+.kittens .kt-mesa #stage.kt-phone #log .h { font-size: 11px; margin-bottom: 10px; }
+.kittens .kt-mesa #stage.kt-phone #log p { font-size: 23px; margin-bottom: 6px; }
+.kittens .kt-mesa #stage.kt-phone #panel { left: 8px; right: 8px; top: 96px; transform: none; min-width: 0; max-height: calc(100% - 120px); overflow-y: auto; padding: 16px 16px 18px; z-index: 56; }
+.kittens .kt-mesa #stage.kt-phone #panel h2 { font-size: 12px; line-height: 1.5; }
+.kittens .kt-mesa #stage.kt-phone #panel p { font-size: 21px; }
+.kittens .kt-mesa #stage.kt-phone #panel .kt-btn { height: 48px; flex: 1 1 40%; }
+.kittens .kt-mesa #stage.kt-phone #panel .kt-btn > span { font-size: 8px; padding: 0 10px; }
+.kittens .kt-mesa #stage.kt-phone #panel .cards { justify-content: center; }
+.kittens .kt-mesa #stage.kt-phone #panel input[type=range] { height: 34px; }
+.kittens .kt-mesa #stage.kt-phone #board > #viewer { pointer-events: auto; }
+.kittens .kt-mesa #stage.kt-phone #viewer { left: 0; top: 0; right: 0; bottom: 0; transform: none; flex-direction: column; justify-content: safe center; gap: 18px; padding: 16px 14px; z-index: 57; cursor: pointer; }
+/* a carta do zoom em 2× (escala inteira: a arte e a letra de pixel ficam nítidas) */
+.kittens .kt-mesa #stage.kt-phone #viewer .vcard { flex: none; width: 224px; height: 312px; }
+.kittens .kt-mesa #stage.kt-phone #viewer .vcard .kt-card { transform: scale(2); }
+.kittens .kt-mesa #stage.kt-phone #viewer .vtext { width: 100%; flex: 0 1 auto; min-height: 0; max-height: 48%; overflow-y: auto; padding: 14px 16px; }
+.kittens .kt-mesa #stage.kt-phone #viewer .vtext h3 { font-size: 16px; }
+.kittens .kt-mesa #stage.kt-phone #viewer .vtext p { font-size: 23px; }
+.kittens .kt-mesa #stage.kt-phone #viewer .kt-vseat img { width: 110px; height: 110px; filter: drop-shadow(4px 4px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa #stage.kt-phone #viewer .kt-vclose { font-family: var(--px); font-size: 8px; color: var(--dim); padding: 6px 10px; background: rgba(14,14,28,.9); }
+.kittens .kt-mesa #stage.kt-phone #toast { bottom: auto; top: 42%; z-index: 70; max-width: calc(100% - 32px); text-align: center; line-height: 1.5; }
+.kittens .kt-mesa #stage.kt-phone #pile .box { width: 100%; height: 100%; max-height: none; padding: 14px 12px calc(12px + env(safe-area-inset-bottom)); }
+.kittens .kt-mesa #stage.kt-phone #pile h2 { font-size: 12px; line-height: 1.5; }
+.kittens .kt-mesa #stage.kt-phone #pile .psub { font-size: 20px; }
+.kittens .kt-mesa #stage.kt-phone #pile .pbody { flex-direction: column; gap: 10px; }
+.kittens .kt-mesa #stage.kt-phone #pile .grid { justify-content: center; gap: 16px 14px; padding: 14px 4px; min-height: 0; }
+.kittens .kt-mesa #stage.kt-phone #pile .grid .kt-card:hover { transform: none; }
+.kittens .kt-mesa #stage.kt-phone #pile .pinfo { width: auto; flex: none; max-height: 32%; padding: 10px 12px; }
+.kittens .kt-mesa #stage.kt-phone #pile .pinfo h3 { font-size: 12px; }
+.kittens .kt-mesa #stage.kt-phone #pile .pinfo p { font-size: 20px; }
+.kittens .kt-mesa #stage.kt-phone #pile .foot .note { display: none; }
+.kittens .kt-mesa #stage.kt-phone #pile .foot .kt-btn { flex: 1; height: 48px; }
+.kittens .kt-mesa #stage.kt-phone #gallery { padding: 14px 12px calc(12px + env(safe-area-inset-bottom)); }
+.kittens .kt-mesa #stage.kt-phone #gallery h2 { font-size: 16px; }
+.kittens .kt-mesa #stage.kt-phone #gallery .kt-how { flex: none; margin: 0; padding: 8px 10px; background: #1a2a50; font-size: 19px; line-height: 1.05; color: var(--cream); }
+.kittens .kt-mesa #stage.kt-phone #gallery .kt-how b { font-family: var(--px); font-size: 8px; font-weight: normal; color: var(--yellow); margin-right: 4px; }
+.kittens .kt-mesa #stage.kt-phone #gallery .item b { font-size: 8px; }
+.kittens .kt-mesa #stage.kt-phone #gallery .grid { grid-template-columns: 1fr; gap: 16px; }
+.kittens .kt-mesa #stage.kt-phone #gallery .item p { font-size: 20px; }
+.kittens .kt-mesa #stage.kt-phone #gallery .foot { flex-direction: column; align-items: stretch; gap: 10px; }
+.kittens .kt-mesa #stage.kt-phone #gallery .foot p { font-size: 18px; }
+/* fim: o nome no meio da tela e, quando o fundo escurece, os botões embaixo (perto do dedo) */
+.kittens .kt-mesa #stage.kt-phone #over { padding: 0 14px calc(18px + env(safe-area-inset-bottom)); gap: 12px; }
+.kittens .kt-mesa #stage.kt-phone #over.dim { background: rgba(5,5,16,.8); }
+.kittens .kt-mesa #stage.kt-phone #over.dim .biglogo { margin-top: auto; }
+.kittens .kt-mesa #stage.kt-phone #over.dim .biglogo + .kt-btn, .kittens .kt-mesa #stage.kt-phone #over.dim .biglogo + .sub { margin-top: auto; }
+.kittens .kt-mesa #stage.kt-phone #over .sub { font-size: 22px; }
+.kittens .kt-mesa #stage.kt-phone #over .biglogo { font-size: 24px !important; line-height: 1.5; text-align: center; }
+.kittens .kt-mesa #stage.kt-phone #over .kt-btn { min-width: 0; width: 100%; height: 58px; }
+.kittens .kt-mesa #stage.kt-phone #over .kt-btn > span { font-size: 12px; }
+/* efeitos no tamanho do celular (a carta grande do meio é até 1,3× em vez de 2×, do tamanho que cabe na mesa: --kt-big) */
+.kittens .kt-mesa #stage.kt-phone .bigcard { transform: translate(-50%, -50%) scale(var(--kt-big, 1.3)); }
+.kittens .kt-mesa #stage.kt-phone .soldier { width: calc(95px * var(--kt-big, 1.3)); }
+.kittens .kt-mesa #stage.kt-phone .stamp { font-size: 18px; }
+
+/* celular baixo (kt-short: palco com menos de 760 de altura, como o Safari com as barras): sem a linha da vez (a
+ * legenda e o assento dizem) e sem a tira do diário (o botão DIÁRIO fica), bichinhos, monte e mão menores */
+.kittens .kt-mesa #stage.kt-phone.kt-short { --hand-h: 188px; --hand-b: 4px; --front-h: 28px; }
+.kittens .kt-mesa #stage.kt-phone.kt-short #turn, .kittens .kt-mesa #stage.kt-phone.kt-short #lastline { display: none; }
+.kittens .kt-mesa #stage.kt-phone.kt-short #seats { padding-top: 20px; padding-bottom: 2px; }
+.kittens .kt-mesa #stage.kt-phone.kt-short .kt-seat .kt-critter { width: 34px; height: 34px; }
+.kittens .kt-mesa #stage.kt-phone.kt-short .kt-seat .kt-peeked, .kittens .kt-mesa #stage.kt-phone.kt-short .kt-seat .kt-owed { top: 22px; }
+.kittens .kt-mesa #stage.kt-phone.kt-short #caption { margin-top: 6px; }
+.kittens .kt-mesa #stage.kt-phone.kt-short #table { min-height: 130px; margin: 8px 10px 4px; }
+.kittens .kt-mesa #stage.kt-phone.kt-short #table .slot { top: calc(50% - 92px); scale: .58; }
+.kittens .kt-mesa #stage.kt-phone.kt-short #bar { top: calc(50% + 30px); }
+.kittens .kt-mesa #stage.kt-phone.kt-short #front .kt-card { transform: scale(.18); }
+.kittens .kt-mesa #stage.kt-phone.kt-short #front .kt-ftag { left: 26px; top: 8px; }
+
+/* celular estreito (menos de 375): o logo encolhe pra barra de cima caber numa linha */
+@media (max-width: 374px) {
+  .kittens .kt-mesa #stage.kt-phone #logo { font-size: 8px; }
+}
+
+/* Lobby no celular: coluna, botões grandes */
+@media (max-width: 640px) {
+  .kittens .kt-bg { object-fit: cover; }
+  .kt-lobby { justify-content: flex-start; gap: 18px; padding: 20px 12px calc(20px + env(safe-area-inset-bottom)); }
+  .kt-lobby .kt-panel { padding: 16px 14px; }
+  .kt-lobby .kt-panel p { font-size: 21px; }
+  .kt-lobby .kt-people { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .kt-lobby .kt-people img { width: 52px; height: 52px; }
+  .kt-lobby .kt-people .who { font-size: 8px; }
+  .kt-lobby .kt-row { flex-direction: column; align-items: stretch; }
+  .kt-lobby .kt-row .kt-btn { width: 100%; height: 58px; }
+  .kt-lobby .kt-row .kt-btn.small { height: 50px; }
+  .kt-lobby .kt-row .kt-btn > span { padding: 0 12px; }
+  .kt-lobby .kt-row > p { margin: 0; text-align: center; }
+  .kt-lobby .kt-pill { padding: 14px 10px; }
+}
