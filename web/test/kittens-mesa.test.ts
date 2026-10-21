@@ -494,12 +494,12 @@ describe('mesa do Tatubum', () => {
     const v = midGame('p1');
     v.game.current = 'p0';
     v.game.hand = ['nemvem-7', 'mico-7'];
-    // Já tem um Nem vem! (do p2) na carta no ar.
+    // Já tem um Nem vem! (do p2) na carta no ar, dado há 2,5 s (passou a espera de 2 s).
     v.game.pending = {
       by: 'p0',
       play: { kind: 'ataque', cards: ['ataque-1'], target: null, ask: null, as: null },
       nopes: [{ by: 'p2', card: 'nemvem-8' }],
-      resolvesAt: Date.now() + 5000,
+      resolvesAt: Date.now() + 2500,
     };
     const { root, mesa, sent } = mount();
     mesa.update(toMesa(v));
@@ -518,6 +518,50 @@ describe('mesa do Tatubum', () => {
     expect(root.querySelector('#nope')).not.toBeNull();
     mesa.destroy();
   });
+
+  it.each(['desktop', 'phone'] as const)(
+    'espera de 2 s depois de um Nem vem! (%s): botão apagado com o tempo; N e arrastar não fazem nada; depois volta',
+    async (layout) => {
+      const v = midGame('p1');
+      v.game.current = 'p0';
+      v.game.hand = ['nemvem-7', 'mico-7'];
+      // O p2 acabou de dar Nem vem! (a janela recomeçou agora).
+      v.game.pending = {
+        by: 'p0',
+        play: { kind: 'ataque', cards: ['ataque-1'], target: null, ask: null, as: null },
+        nopes: [{ by: 'p2', card: 'nemvem-8' }],
+        resolvesAt: Date.now() + 5000,
+      };
+      const { root, mesa, sent } = mount();
+      if (layout === 'phone') mesa.setLayout('phone');
+      mesa.update(toMesa(v));
+      const btn = () => root.querySelector<HTMLButtonElement>('#nope')!;
+      expect(btn().disabled).toBe(true);
+      expect(btn().textContent).toBe('NEM VEM! 2s');
+      btn().click();
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+      dragCard(root, 'nemvem-7', root.querySelector('#table')!);
+      expect(sent).toEqual([]);
+      expect(root.querySelector('#toast')?.textContent).toContain('Espere');
+      expect(root.querySelector('#hand .kt-card[data-id="nemvem-7"]')).not.toBeNull();
+      // A barrinha do Nem vem! continua correndo.
+      expect(root.querySelectorAll('#bar i.on').length).toBe(5);
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(btn().textContent).toBe('NEM VEM! 1s');
+      expect(btn().disabled).toBe(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(btn().disabled).toBe(false);
+      expect(btn().textContent).toBe('NEM VEM! (1)');
+      expect(root.querySelectorAll('#bar i.on').length).toBe(3);
+      btn().click();
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+      expect(sent).toEqual([
+        { type: 'nope', at: 1, on: 'ataque-1' },
+        { type: 'nope', at: 1, on: 'ataque-1' },
+      ]);
+      mesa.destroy();
+    },
+  );
 
   it('descarte: passar o mouse na de cima dá zoom; no quadro do olho, o painel diz o que a carta faz', () => {
     const v = midGame('p1');

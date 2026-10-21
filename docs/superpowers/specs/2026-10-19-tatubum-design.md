@@ -410,6 +410,17 @@ a 5 o baralho era o do jogo original (46).
      número de sequência no `pending`: não precisa de compatibilidade com sala salva. `at`/`on` são opcionais: sem
      eles (site antigo em cache) vale como antes. Mesa (botão, tecla N, arrastar o Nem vem! ou a ficha do cego pra
      mesa) e bots mandam os dois.
+   - **Espera de 2 s entre um Nem vem! e outro (pedido do Rafa, 2026-10-21).** Mesmo com `at`/`on`, ainda dava pra
+     usar dois Nem vem! por engano (o segundo clique chegava logo depois de o primeiro aparecer). Agora, depois de um
+     Nem vem! aceito, qualquer outro na mesma carta no ar é recusado com `nope_cooldown` ("Espere: acabaram de dar
+     Nem vem! (2 s).") até passarem `KITTENS_NOPE_COOLDOWN_MS` = 2000 ms desse Nem vem!; nada muda (a carta fica na
+     mão, o prazo não mexe). O primeiro Nem vem! de uma jogada não espera. A espera conta sempre do último Nem vem!.
+     Ordem das recusas: `nope_stale` e `nope_late` primeiro (mais específicos), depois `nope_cooldown`.
+     **(decisão)** Sem estado novo: a hora do último Nem vem! é `pending.resolvesAt - KITTENS_NOPE_MS` (só o `nope`
+     mexe no `resolvesAt` depois da jogada), então salas no ar continuam valendo. A mesa (computador e celular) apaga
+     o botão NEM VEM! mostrando quanto falta ("NEM VEM! 2s", "1s", pela hora do servidor); a tecla N e arrastar o
+     Nem vem! (ou a ficha do cego) pra mesa só mostram o aviso "Espere…"; a barrinha continua correndo. Os bots não
+     decidem durante a espera (nem gastam a decisão daquele número de Nem vem!) e voltam a olhar quando ela acaba.
 3. O alarme da sala chama `onPresenceChange` com `ctx.now ≥ resolvesAt` → `resolve.ts` aplica.
 4. Se o efeito pede escolha (Favor, 5 diferentes), abre `choice` com `deadline = now + 30000`.
 5. Comprar, Cafuné e explodir **não** passam pela pilha: acontecem na hora.

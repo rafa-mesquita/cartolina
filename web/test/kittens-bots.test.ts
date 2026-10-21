@@ -15,7 +15,7 @@ import {
   type Room,
 } from '@cartolina/shared';
 import { describe, expect, it } from 'vitest';
-import { decideKittens, newKittensMemory } from '../src/dev/kittensBots';
+import { decideKittens, kittensNopeWait, newKittensMemory } from '../src/dev/kittensBots';
 
 const HOST_ACTIONS = ['start', 'again', 'lobby'];
 
@@ -192,6 +192,22 @@ describe('decisão do bot do Tatubum', () => {
     expect(d2.action).toEqual({ type: 'nope', at: 1, on: 'favor-1' });
   });
 
+  it('na espera de 2 s depois de um Nem vem!, não dá Nem vem! nem gasta a decisão; quando ela acaba, decide', () => {
+    // Um Nem vem! na carta no ar, dado em 0 (resolvesAt 5000): a espera vai até 2000.
+    const v = p1View(['nemvem-5', 'mico-1'], { pending: inAir('p0', 'p1', 'favor', 1) });
+    expect(kittensNopeWait(v, 1000)).toBe(1000);
+    expect(kittensNopeWait(v, 2000)).toBe(0);
+    const mem = newKittensMemory();
+    expect(decideKittens(v, mem, () => 0, 0)).toBeNull();
+    expect(decideKittens(v, mem, () => 0, 1999)).toBeNull();
+    expect(mem.noped).toBeNull();
+    const d = decideKittens(v, mem, () => 0, 2000)!;
+    expect(d.action).toEqual({ type: 'nope', at: 1, on: 'favor-1' });
+    expect(mem.noped).toBe('nope:p0:favor-1:1');
+    // Sem Nem vem! nenhum na carta no ar, não tem espera.
+    expect(kittensNopeWait(p1View(['nemvem-5'], { pending: inAir('p0', 'p1') }), 0)).toBe(0);
+  });
+
   it('Ataque cujo próximo da vez é ele conta como "contra ele"; sem Nem vem! na mão, nunca dá', () => {
     // p0 ataca: o próximo vivo é o p1; chance 0.7 passa com rng 0.6
     const v = p1View(['nemvem-5'], { pending: inAir('p0', null, 'ataque') });
@@ -360,7 +376,7 @@ describe('decisão do bot do Tatubum', () => {
         let acted = false;
         for (const who of actors) {
           const v = viewOf(room, who);
-          const d = decideKittens(v, newKittensMemory(), rng);
+          const d = decideKittens(v, newKittensMemory(), rng, clock + 100);
           if (!d) continue;
           const a = d.action as GameAction & { type: string };
           expect(HOST_ACTIONS).not.toContain(a.type);

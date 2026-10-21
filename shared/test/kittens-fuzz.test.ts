@@ -5,7 +5,7 @@ import { KITTENS_LATIDOS, kittensBaseDeck, kittensExtraCafunes } from '../src/ga
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import { settleKittens } from '../src/games/kittens/settle';
 import { tatusIn } from '../src/games/kittens/turn';
-import type { KittensAction, KittensPending, KittensState } from '../src/games/kittens/types';
+import { kittensNopeCooldownUntil, type KittensAction, type KittensPending, type KittensState } from '../src/games/kittens/types';
 import { kittensViewFor } from '../src/games/kittens/view';
 import { mulberry32, type Rng } from '../src/rng';
 import { T0, deepFreeze, everyCard, ids, must } from './kittens-helpers';
@@ -312,12 +312,18 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
       const p = r() < 0.9 ? (owner !== null && r() < 0.7 ? owner : pick(r, players)!) : 'espectador';
       const action = randomAction(r, s, p);
       if (r() < 0.3) now += Math.floor(r() * 3000);
+      // Nem vem! em horas ao acaso, inclusive bem na beira da espera de 2 s (pedido do Rafa, 2026-10-21).
+      if (action.type === 'nope' && r() < 0.5) now += pick(r, [0, 300, 1000, 1999, 2000, 2001, 2500])!;
+      const cooldownUntil = kittensNopeCooldownUntil(s.pending);
       const res = applyKittensAction(deepFreeze(s), p, action, ctx());
       const alias = cardsOf(action).some(isAlias);
       if (alias) seen.add('alias');
       if (res.ok && alias) throw new Error(`ficha com outro nome aceita: ${p} ${JSON.stringify(action)}\n  ${where()}`);
       if (!res.ok) {
-        if (res.error === 'nope_late' || res.error === 'nope_stale') seen.add(`nope:${res.error}`);
+        if (res.error === 'nope_late' || res.error === 'nope_stale' || res.error === 'nope_cooldown') seen.add(`nope:${res.error}`);
+        if (res.error === 'nope_cooldown' && (cooldownUntil === null || now >= cooldownUntil)) {
+          throw new Error(`Nem vem! recusado fora da espera: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+        }
         continue;
       }
       // Nem vem! aceito com o que o jogador viu: tem que ser o que estava na mesa (senão contaria em cima do outro).
@@ -326,6 +332,11 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
       }
       if (action.type === 'nope' && action.on !== undefined && action.on !== s.pending?.play.cards[0]) {
         throw new Error(`Nem vem! em outra carta aceito: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+      }
+      // Espera de 2 s: nenhum Nem vem! aceito antes de 2 s do último na mesma carta no ar.
+      if (action.type === 'nope' && cooldownUntil !== null) {
+        if (now < cooldownUntil) throw new Error(`Nem vem! aceito na espera: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+        seen.add('nope:after-cooldown');
       }
       if (c?.kind === 'latido' && c.who === p && s.blind.includes(p) && res.state.choice === null) seen.add('latido:blind-defended');
       trace.push(`${p} ${JSON.stringify(action)}`);
@@ -398,6 +409,8 @@ describe('simulação aleatória do Tatubum', () => {
       'peek:many',
       'nope:nope_late',
       'nope:nope_stale',
+      'nope:nope_cooldown',
+      'nope:after-cooldown',
       'mico:pick',
       'mico:picked',
       'exit:boom',

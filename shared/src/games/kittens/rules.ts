@@ -16,7 +16,14 @@ import { kittensDeal } from './deck';
 import { parsePlay, realCard } from './play';
 import { settleKittens } from './settle';
 import { counted, logged } from './turn';
-import { KITTENS_CHOICE_MS, KITTENS_MIN_PLAYERS, KITTENS_NOPE_MS, type KittensAction, type KittensState } from './types';
+import {
+  KITTENS_CHOICE_MS,
+  KITTENS_MIN_PLAYERS,
+  KITTENS_NOPE_MS,
+  kittensNopeCooldownUntil,
+  type KittensAction,
+  type KittensState,
+} from './types';
 
 const fail = (error: string): ActionResult<KittensState> => ({ ok: false, error });
 const ok = (state: KittensState): ActionResult<KittensState> => ({ ok: true, state });
@@ -190,6 +197,9 @@ export function applyKittensAction(
       // `on` pega outra carta no ar com o mesmo número de Nem vem! (a jogada de antes já resolveu).
       if (action.on !== undefined && action.on !== s.pending.play.cards[0]) return fail('nope_stale');
       if (action.at !== undefined && action.at !== s.pending.nopes.length) return fail('nope_late');
+      // Espera de 2 s entre um Nem vem! e outro (pedido do Rafa, 2026-10-21): a carta fica na mão e nada muda.
+      const cooldownUntil = kittensNopeCooldownUntil(s.pending);
+      if (cooldownUntil !== null && ctx.now < cooldownUntil) return fail('nope_cooldown');
       const isNope = (c: string) => kittensKindOf(c) === 'nemvem';
       let card: string | undefined;
       if (action.card === undefined && !s.blind.includes(playerId)) {
