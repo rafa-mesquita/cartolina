@@ -1,6 +1,6 @@
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf } from './cards';
-import { clearPeeks, cure, eliminate, logged, spendTurn, unpeek } from './turn';
+import { clearPeeks, counted, cure, eliminate, logged, spendTurn, unpeek } from './turn';
 import { KITTENS_CHOICE_MS, type KittensChoice, type KittensState } from './types';
 
 type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K }>;
@@ -19,7 +19,7 @@ export function takeCard(s: KittensState, p: string, card: string, draw: string[
   if (kittensKindOf(card) !== 'tatubum') {
     return spendTurn(logged({ ...base, hands: { ...base.hands, [p]: [...hand, card] } }, { t: 'draw', by: p, card }, [p]));
   }
-  if (!hand.some(isKind('cafune'))) return eliminate(logged(base, { t: 'boom', by: p }), p, [card]);
+  if (!hand.some(isKind('cafune'))) return eliminate(logged(base, { t: 'boom', by: p }), p, 'boom', [card]);
   return logged({ ...base, choice: { kind: 'tatu', who: p, tatu: card, deadline } }, { t: 'tatu', by: p });
 }
 
@@ -41,7 +41,7 @@ export function hideTatu(s: KittensState, c: Choice<'cafune'>, position: number 
 export function useCafune(s: KittensState, c: Choice<'tatu'>, card: string, deadline: number): KittensState {
   const hands = { ...s.hands, [c.who]: s.hands[c.who]!.filter((x) => x !== card) };
   const choice: Choice<'cafune'> = { kind: 'cafune', who: c.who, tatu: c.tatu, deadline };
-  return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'cafune', by: c.who });
+  return logged(counted({ ...s, hands, discard: [...s.discard, card], choice }, c.who, 'defuses'), { t: 'cafune', by: c.who });
 }
 
 /**
@@ -118,7 +118,8 @@ export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string)
   const front = latido !== undefined && mine.includes(latido) ? { ...s.front, [c.who]: mine.filter((x) => x !== latido) } : s.front;
   const hand = s.hands[c.who]!.filter((x) => x !== card && x !== latido);
   const discard = [...s.discard, card, ...(latido !== undefined ? [latido] : [])];
-  return logged({ ...s, front, hands: { ...s.hands, [c.who]: hand }, discard, choice: null }, { t: 'cafune', by: c.who });
+  const next = counted({ ...s, front, hands: { ...s.hands, [c.who]: hand }, discard, choice: null }, c.who, 'defuses');
+  return logged(next, { t: 'cafune', by: c.who });
 }
 
 /**
@@ -145,7 +146,7 @@ export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensS
     case 'tatu': {
       // Usa o Desarme e esconde o tatu de uma vez só. (A mão não muda durante a escolha, então sempre há um Desarme.)
       const card = s.hands[c.who]!.find(isKind('cafune'));
-      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, [c.tatu]);
+      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom', [c.tatu]);
       const used = useCafune(s, c, card, c.deadline);
       return hideTatu(used, used.choice as Choice<'cafune'>, 'random', rng);
     }
@@ -190,7 +191,7 @@ export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensS
     case 'latido': {
       // A mão não muda durante a escolha (ela só abre pra quem tem Desarme); sem Desarme, explode.
       const card = s.hands[c.who]!.find(isKind('cafune'));
-      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who);
+      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom');
       return defendLatido(s, c, card);
     }
     case 'feitico':

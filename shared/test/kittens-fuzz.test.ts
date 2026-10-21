@@ -48,6 +48,13 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
     if (front.some((c) => kittensKindOf(c) !== 'latido')) throw broken(`carta que não é Latidor na frente de ${p}: [${front}]`);
     if (front.length > 0 && s.phase === 'playing' && !s.alive.includes(p)) throw broken(`${p} saiu com [${front}] na frente`);
   }
+  // Histórico: cada um que saiu aparece uma vez nas saídas, nunca o vencedor nem quem está vivo; no fim, todos menos 1.
+  const exited = s.exits.map((e) => e.player);
+  if (new Set(exited).size !== exited.length || exited.some((p) => !s.players.includes(p) || s.alive.includes(p) || p === s.winner)) {
+    throw broken(`saídas inválidas: ${JSON.stringify(s.exits)} (vivos [${s.alive}], vencedor ${s.winner})`);
+  }
+  if (exited.length !== s.players.length - s.alive.length) throw broken(`saídas ${JSON.stringify(s.exits)} com vivos [${s.alive}]`);
+  if (s.phase === 'gameover' && exited.length !== s.players.length - 1) throw broken(`fim de jogo com saídas ${JSON.stringify(s.exits)}`);
   if (s.phase !== 'playing') {
     if (s.pending || s.choice) throw broken('fim de jogo com carta no ar ou escolha aberta');
     if (Object.keys(s.peeks).length > 0) throw broken(`fora de partida com espiadas: ${JSON.stringify(s.peeks)}`);
@@ -244,6 +251,32 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
   let s = must(applyKittensAction(initialKittensState(), 'p0', { type: 'start' }, ctx()));
   if (rig) s = rig(s);
   checkInvariants(s, deck, someViewer(s), where);
+  // Histórico: os contadores e as saídas batem com o diário (lido a cada passo, antes de ele perder as entradas velhas).
+  const logNopes = new Map<string, number>();
+  const logDefuses = new Map<string, number>();
+  const logExits: string[] = [];
+  let readUpTo = s.seq;
+  const bump = (m: Map<string, number>, p: string) => m.set(p, (m.get(p) ?? 0) + 1);
+  const checkHistory = () => {
+    for (const { n, ev } of s.log) {
+      if (n < readUpTo) continue;
+      if (ev.t === 'nope') bump(logNopes, ev.by);
+      if (ev.t === 'cafune') bump(logDefuses, ev.by);
+      if (ev.t === 'boom' || ev.t === 'left') logExits.push(`${ev.by}:${ev.t}`);
+    }
+    readUpTo = s.seq;
+    for (const p of players) {
+      const mine = s.stats[p] ?? { nopes: 0, defuses: 0 };
+      if (mine.nopes !== (logNopes.get(p) ?? 0) || mine.defuses !== (logDefuses.get(p) ?? 0)) {
+        throw new Error(`contadores de ${p} ${JSON.stringify(mine)} não batem com o diário\n  ${where()}`);
+      }
+    }
+    if (s.exits.map((e) => `${e.player}:${e.how}`).join() !== logExits.join()) {
+      throw new Error(`saídas ${JSON.stringify(s.exits)} não batem com o diário [${logExits}]\n  ${where()}`);
+    }
+    for (const e of s.exits) seen.add(`exit:${e.how}`);
+    if (Object.values(s.stats).some((x) => x.defuses > 0)) seen.add('stats:defuse');
+  };
   for (let step = 0; s.phase !== 'gameover'; step++) {
     if (step === STEP_CAP) return false;
     const roll = r();
@@ -322,6 +355,7 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     if (peekers.some((p) => p !== s.current)) seen.add('peek:kept');
     if (peekers.length >= 2) seen.add('peek:many');
     checkInvariants(s, deck, someViewer(s), where);
+    checkHistory();
   }
   return true;
 }
@@ -366,6 +400,9 @@ describe('simulação aleatória do Tatubum', () => {
       'nope:nope_stale',
       'mico:pick',
       'mico:picked',
+      'exit:boom',
+      'exit:left',
+      'stats:defuse',
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

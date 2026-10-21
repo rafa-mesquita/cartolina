@@ -20,7 +20,7 @@ function bark(s: KittensState, by: string, card: string, deadline: number): Kitt
   }
   const next = logged(s, { t: 'barked', by, target });
   if (!next.hands[target]!.some((c) => kittensKindOf(c) === 'cafune')) {
-    return eliminate(logged(next, { t: 'boom', by: target }), target);
+    return eliminate(logged(next, { t: 'boom', by: target }), target, 'boom');
   }
   return { ...next, choice: { kind: 'latido', who: target, deadline } };
 }

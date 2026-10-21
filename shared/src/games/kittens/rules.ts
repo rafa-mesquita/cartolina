@@ -15,7 +15,7 @@ import {
 import { kittensDeal } from './deck';
 import { parsePlay, realCard } from './play';
 import { settleKittens } from './settle';
-import { logged } from './turn';
+import { counted, logged } from './turn';
 import { KITTENS_CHOICE_MS, KITTENS_MIN_PLAYERS, KITTENS_NOPE_MS, type KittensAction, type KittensState } from './types';
 
 const fail = (error: string): ActionResult<KittensState> => ({ ok: false, error });
@@ -40,18 +40,23 @@ export function initialKittensState(): KittensState {
     log: [],
     seq: 0,
     winner: null,
+    match: 0,
+    exits: [],
+    stats: {},
   };
 }
 
 /** Partida nova com os ativos (também usada em "jogar de novo"). A sala já limita a 8 pessoas. */
-function startMatch(ctx: GameContext): ActionResult<KittensState> {
+function startMatch(state: KittensState, ctx: GameContext): ActionResult<KittensState> {
   if (ctx.active.length < KITTENS_MIN_PLAYERS) return fail('not_enough_players');
   const players = [...ctx.active];
   const { hands, draw } = kittensDeal(ctx.rng, players);
   // Quem começa é sorteado (pedido do Rafa, 2026-10-20: o host começava sempre); a vez segue a ordem dos assentos.
   // O sorteio vem depois da distribuição, pra mesma semente dar as mesmas mãos.
   const first = players[randomInt(ctx.rng, players.length)]!;
-  return ok({ ...initialKittensState(), phase: 'playing', players, alive: [...players], hands, draw, current: first, owed: 1 });
+  const stats = Object.fromEntries(players.map((p) => [p, { nopes: 0, defuses: 0 }]));
+  const fresh = { ...initialKittensState(), match: state.match + 1, stats };
+  return ok({ ...fresh, phase: 'playing', players, alive: [...players], hands, draw, current: first, owed: 1 });
 }
 
 /** Por que `p` não pode jogar nem comprar agora (ou null se pode). */
@@ -90,7 +95,7 @@ export function applyKittensAction(
     case 'start':
       if (!isHost) return fail('not_host');
       if (s.phase !== 'lobby') return fail('bad_phase');
-      return startMatch(ctx);
+      return startMatch(s, ctx);
     case 'lobby':
       if (!isHost) return fail('not_host');
       if (s.phase === 'lobby') return fail('bad_phase');
@@ -98,7 +103,7 @@ export function applyKittensAction(
     case 'again':
       if (!isHost) return fail('not_host');
       if (s.phase !== 'gameover') return fail('bad_phase');
-      return startMatch(ctx);
+      return startMatch(s, ctx);
     case 'draw': {
       const e = turnError(s, playerId);
       if (e) return fail(e);
@@ -202,7 +207,7 @@ export function applyKittensAction(
         resolvesAt: ctx.now + KITTENS_NOPE_MS,
       };
       const hands = { ...s.hands, [playerId]: s.hands[playerId]!.filter((c) => c !== card) };
-      return ok(logged({ ...s, pending, hands }, { t: 'nope', by: playerId }));
+      return ok(logged(counted({ ...s, pending, hands }, playerId, 'nopes'), { t: 'nope', by: playerId }));
     }
     default:
       return fail('bad_action');

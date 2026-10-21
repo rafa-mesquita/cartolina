@@ -170,6 +170,28 @@ export interface KittensState {
   /** Número da próxima entrada do diário. */
   seq: number;
   winner: string | null;
+  /** Partidas da sala desde o lobby: sobe a cada "começar" e "jogar de novo" (entra no id da partida do histórico). */
+  match: number;
+  /** Quem saiu, na ordem (o vencedor não entra). Zera a cada partida. */
+  exits: KittensExit[];
+  /** Nem vem! e Desarmes de cada jogador nesta partida (chave ausente = nada ainda). Zera a cada partida. */
+  stats: Record<string, KittensPlayerStats>;
+}
+
+/** Como alguém saiu da partida: explodiu (Tatubum, Tatu Latidor ou Feitiço) ou caiu e não voltou em 30 s. */
+export type KittensExitHow = 'boom' | 'left';
+
+export interface KittensExit {
+  player: string;
+  how: KittensExitHow;
+}
+
+/** Contadores da partida por jogador, pro histórico (públicos: tudo isso já aparece no diário). */
+export interface KittensPlayerStats {
+  /** Nem vem! dados (cada `nope` aceito). */
+  nopes: number;
+  /** Desarmes usados (contra o Tatubum comprado ou o Tatu Latidor, inclusive o jogado sozinho no fim do prazo). */
+  defuses: number;
 }
 
 export type KittensAction =
