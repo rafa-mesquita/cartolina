@@ -16,9 +16,11 @@ export const KITTENS_PACK: Partial<Record<KittensCardKind, number>> = {
   quati: 4,
   tamandua: 4,
   preguica: 4,
+  // Tucano: pedido do Rafa, 2026-10-21.
+  tucano: 4,
   boto: 2,
 };
-export const KITTENS_PACK_SIZE = 52;
+export const KITTENS_PACK_SIZE = 56;
 /** Tatu Latidor: sempre 2 na partida, qualquer que seja o número de jogadores (fora dos pacotes). */
 export const KITTENS_LATIDOS = 2;
 /** Cartas do baralho na mão inicial, além do Cafuné de cada um. */

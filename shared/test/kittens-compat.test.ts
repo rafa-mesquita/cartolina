@@ -89,6 +89,19 @@ describe('estado salvo antes das cartas novas (sem front/blind)', () => {
     expect(late.hands.p1).toHaveLength(1);
   });
 
+  it('estado salvo antes do Tucano (sem `skips`): ninguém tem vez pulada, e o par de Tucano funciona', () => {
+    const { skips: _skips, ...rest } = table({ hands: { p0: ['tucano-0', 'tucano-1'], p1: ['pular-1'], p2: ['espiar-2'] }, draw: DRAW });
+    void _skips;
+    const saved = deepFreeze(rest as KittensState);
+    expect(kittensViewFor(saved, 'p1').skips).toEqual({});
+    expect(settleKittens(saved, ctx).skips).toEqual({});
+    const played = act(saved, 'p0', { type: 'play', cards: ['tucano-0', 'tucano-1'], target: 'p2' }, ctx);
+    const { skips: _s2, ...inAir } = played;
+    void _s2;
+    const done = settleKittens(deepFreeze(inAir as KittensState), at(5000));
+    expect(done).toMatchObject({ current: 'p1', owed: 1, skips: { p2: 1 } });
+  });
+
   it('estado completo não muda: settle sem nada a fazer devolve o mesmo objeto', () => {
     const s = deepFreeze(table({ hands: { p0: ['mico-0'], p1: [], p2: [] }, draw: DRAW }));
     expect(settleKittens(s, ctx)).toBe(s);

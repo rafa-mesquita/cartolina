@@ -1,7 +1,7 @@
 import type { GameContext } from '../../game';
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf, type KittensCardKind } from './cards';
-import { cure, logged, moveCard, nextAlive, unpeek } from './turn';
+import { addSkip, cure, logged, moveCard, nextAlive, spendTurn, unpeek } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 const isKind = (k: KittensCardKind) => (c: string) => kittensKindOf(c) === k;
@@ -74,6 +74,10 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
       return preguica(s, by, play.ask!, ctx.rng);
     case 'capivara':
       return roda(s, by, ctx.rng);
+    case 'tucano':
+      // Pedido do Rafa (2026-10-21): quem jogou acaba a vez sem comprar, como o Pular (sob ataque, gasta só um dos
+      // turnos), e a próxima vez do alvo é pulada. A pulada entra antes: se o alvo é o próximo, já perde a vez agora.
+      return spendTurn(addSkip(logged(s, { t: 'tucano', by, target: play.target! }), play.target!));
     default:
       return s; // parsePlay só deixa passar par de bicho
   }

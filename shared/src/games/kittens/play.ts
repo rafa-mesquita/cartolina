@@ -87,8 +87,9 @@ function readPlay(s: KittensState, p: string, cards: string[], action: PlayActio
   const { kind } = parsed;
   let target: string | null = null;
   const favor = kittensIsFavorPlay(parsed);
-  if (favor || kind === 'olhado') {
-    // Favor (e trio de Favor): o alvo precisa ter carta pra dar. Mau-olhado: qualquer adversário vivo (até sem carta).
+  if (favor || kind === 'olhado' || (kind === 'par' && parsed.as === 'tucano')) {
+    // Favor (e trio de Favor): o alvo precisa ter carta pra dar. Mau-olhado e par de Tucano: qualquer adversário vivo
+    // (até sem carta).
     const t = action.target;
     if (t === undefined || t === p || !s.alive.includes(t)) return 'bad_target';
     if (favor && (s.hands[t]?.length ?? 0) === 0) return 'bad_target';

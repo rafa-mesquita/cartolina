@@ -12,18 +12,20 @@ describe('cartas do Tatubum', () => {
     expect(kittensKindOf('ataque-3')).toBe('ataque');
     expect(kittensKindOf('mico-0')).toBe('mico');
     expect(kittensKindOf('boto-1')).toBe('boto');
+    expect(kittensKindOf('tucano-2')).toBe('tucano');
     expect(kittensKindOf('xadrez-1')).toBeNull();
     expect(kittensKindOf('ataque')).toBeNull();
     expect(kittensKindOf('?0')).toBeNull();
-    expect(KITTENS_CARD_KINDS).toHaveLength(17);
+    expect(KITTENS_CARD_KINDS).toHaveLength(18);
   });
 
   it('as cartas novas têm nome em português', () => {
-    expect([KITTENS_CARD_NAMES.latido, KITTENS_CARD_NAMES.olhado, KITTENS_CARD_NAMES.feitico, KITTENS_CARD_NAMES.boto]).toEqual([
+    expect([KITTENS_CARD_NAMES.latido, KITTENS_CARD_NAMES.olhado, KITTENS_CARD_NAMES.feitico, KITTENS_CARD_NAMES.boto, KITTENS_CARD_NAMES.tucano]).toEqual([
       'Tatu Latidor',
       'Mau-olhado',
       'Feitiço',
       'Boto',
+      'Tucano',
     ]);
   });
 
@@ -33,9 +35,9 @@ describe('cartas do Tatubum', () => {
 });
 
 describe('baralho', () => {
-  it('um pacote tem 52 cartas (as 46 do original + 2 Mau-olhado, 2 Feitiço e 2 Boto); os 2 Latidores entram uma vez só', () => {
+  it('um pacote tem 56 cartas (as 46 do original + 2 Mau-olhado, 2 Feitiço, 2 Boto e 4 Tucanos); os 2 Latidores entram uma vez só', () => {
     const deck = kittensBaseDeck(5);
-    expect(KITTENS_PACK_SIZE).toBe(52);
+    expect(KITTENS_PACK_SIZE).toBe(56);
     expect(deck).toHaveLength(KITTENS_PACK_SIZE + KITTENS_LATIDOS);
     expect(count(deck, 'nemvem')).toBe(5);
     expect(count(deck, 'ataque')).toBe(4);
@@ -43,7 +45,7 @@ describe('baralho', () => {
     expect(count(deck, 'favor')).toBe(4);
     expect(count(deck, 'embaralhar')).toBe(4);
     expect(count(deck, 'espiar')).toBe(5);
-    for (const bicho of ['capivara', 'mico', 'quati', 'tamandua', 'preguica']) expect(count(deck, bicho)).toBe(4);
+    for (const bicho of ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano']) expect(count(deck, bicho)).toBe(4);
     expect(count(deck, 'olhado')).toBe(2);
     expect(count(deck, 'feitico')).toBe(2);
     expect(count(deck, 'boto')).toBe(2);
@@ -59,16 +61,18 @@ describe('baralho', () => {
     expect(deck).toHaveLength(2 * KITTENS_PACK_SIZE + KITTENS_LATIDOS);
     expect(count(deck, 'latido')).toBe(2);
     expect(count(deck, 'boto')).toBe(4);
+    expect(count(deck, 'tucano')).toBe(8);
     expect(new Set(deck).size).toBe(deck.length);
   });
 
   // Desarmes extras no monte como no original: 2 com até 4 jogadores, 1 a partir de 5.
   it.each([
-    [2, 43, 2],
-    [4, 31, 2],
-    [5, 24, 1],
-    [6, 70, 1],
-    [8, 58, 1],
+    // monte = pacotes × 56 + 2 Latidores − 7 por jogador + Desarmes extras + (n − 1) tatus
+    [2, 47, 2],
+    [4, 35, 2],
+    [5, 28, 1],
+    [6, 78, 1],
+    [8, 66, 1],
   ])('com %i jogadores: 1 Desarme + 7 na mão; monte com %i cartas, %i Desarme(s) e n − 1 tatus', (n, drawSize, extras) => {
     const players = ps(n);
     const { hands, draw } = kittensDeal(mulberry32(7), players);

@@ -44,6 +44,7 @@ export function initialKittensState(): KittensState {
     pending: null,
     choice: null,
     peeks: {},
+    skips: {},
     log: [],
     seq: 0,
     winner: null,

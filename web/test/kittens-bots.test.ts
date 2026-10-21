@@ -19,7 +19,7 @@ import { decideKittens, kittensNopeWait, newKittensMemory } from '../src/dev/kit
 
 const HOST_ACTIONS = ['start', 'again', 'lobby'];
 
-/** Sala de Tatubum começada com `n` jogadores p0…; o p0 (host) é o da vez. */
+/** Sala de Tatubum começada com `n` jogadores p0…; o p0 (host) é o da vez (quem começa é sorteado: aqui, fixo). */
 function started(n = 3): Room {
   let room = createRoom('ABCD', 0, 'kittens');
   for (let i = 0; i < n; i++) {
@@ -29,7 +29,18 @@ function started(n = 3): Room {
   }
   const res = roomAction(room, 'p0', { type: 'start' }, mulberry32(7), 0);
   if (!res.ok) throw new Error(res.error);
-  return res.room;
+  return { ...res.room, game: { ...(res.room.game as KittensState), current: 'p0' } };
+}
+
+/** Os 2 Tatus Latidores vão pras mãos de p0 e p1 (saem de onde estavam: mãos ou monte). */
+function withLatidos(room: Room): Room {
+  const g = room.game as KittensState;
+  const latidos = ['latido-0', 'latido-1'];
+  const without = (cs: string[]) => cs.filter((c) => !latidos.includes(c));
+  const hands = Object.fromEntries(Object.entries(g.hands).map(([p, cs]) => [p, without(cs)]));
+  hands.p0 = [...hands.p0!, 'latido-0'];
+  hands.p1 = [...hands.p1!, 'latido-1'];
+  return { ...room, game: { ...g, hands, draw: without(g.draw) } };
 }
 
 function viewOf(room: Room, me: string): KittensRoomView {
@@ -267,8 +278,18 @@ describe('decisão do bot do Tatubum', () => {
     expect(play(['capivara-0', 'capivara-1'])).toEqual({ type: 'play', cards: ['capivara-0', 'capivara-1'] });
     const lazy = play(['preguica-0', 'preguica-1']);
     expect(lazy).toMatchObject({ type: 'play', cards: ['preguica-0', 'preguica-1'] });
-    expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica']).toContain((lazy as { ask: string }).ask);
+    expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano']).toContain((lazy as { ask: string }).ask);
     expect(play(['nemvem-0', 'nemvem-1', 'nemvem-2'])).toEqual({ type: 'play', cards: ['nemvem-0', 'nemvem-1', 'nemvem-2'] });
+  });
+
+  it('par de Tucano (ou Boto + Tucano) vai com alvo: um adversário vivo, mesmo sem carta, nunca ele mesmo', () => {
+    const base = viewOf(started(3), 'p0');
+    const play = (hand: string[], game: Partial<KittensView> = {}) =>
+      decideKittens(withGame(base, { hand, peek: null, owed: 1, ...game }), newKittensMemory(), () => 0)!.action;
+    expect(play(['tucano-0', 'tucano-1'])).toEqual({ type: 'play', cards: ['tucano-0', 'tucano-1'], target: 'p1' });
+    expect(play(['tucano-0', 'boto-1'])).toEqual({ type: 'play', cards: ['tucano-0', 'boto-1'], target: 'p1' });
+    const lone = play(['tucano-0', 'tucano-1'], { alive: ['p0', 'p2'], handCounts: { p0: 2, p1: 0, p2: 0 } });
+    expect(lone).toEqual({ type: 'play', cards: ['tucano-0', 'tucano-1'], target: 'p2' });
   });
 
   it('trio de Favor vai com alvo (adversário com carta na mão); ninguém com carta, não joga', () => {
@@ -339,10 +360,12 @@ describe('decisão do bot do Tatubum', () => {
       expect(a).toEqual({ type: 'play', cards: ['quati-1', 'boto-0'] });
       const two = decideKittens(myTurn(['boto-0', 'boto-1']), newKittensMemory(), () => 0)!.action as { cards: string[]; as: string; ask?: string };
       expect(two.cards).toEqual(['boto-0', 'boto-1']);
-      expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica']).toContain(two.as);
+      expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano']).toContain(two.as);
+      // Dois Botos que viram Tucano vão com alvo.
+      if (two.as === 'tucano') expect(['p1', 'p2']).toContain((two as { target?: string }).target);
       const lazy = decideKittens(myTurn(['boto-0', 'preguica-1']), newKittensMemory(), () => 0)!.action as { cards: string[]; ask: string };
       expect(lazy.cards).toEqual(['preguica-1', 'boto-0']);
-      expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica']).toContain(lazy.ask);
+      expect(['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano']).toContain(lazy.ask);
     });
 
     it('cego: quase sempre compra; às vezes arrisca uma ficha', () => {
@@ -365,7 +388,9 @@ describe('decisão do bot do Tatubum', () => {
     const news = new Set<string>();
     let blindTries = 0;
     for (let seed = 1; seed <= 60; seed++) {
-      let room = started(4);
+      // Metade das partidas começa com os 2 Latidores nas mãos de p0 e p1 (só move cartas): senão o Latidor que late pra
+      // alguém (e a defesa com o Desarme) depende da sorte do baralho.
+      let room = seed % 2 === 0 ? withLatidos(started(4)) : started(4);
       const rng = mulberry32(seed);
       let clock = 0;
       for (let step = 0; step < 60; step++) {
@@ -394,7 +419,7 @@ describe('decisão do bot do Tatubum', () => {
             const air = (room.game as KittensState).pending?.play;
             for (const c of air && a.type === 'play' ? air.cards : []) {
               const k = kittensKindOf(c);
-              if (k === 'latido' || k === 'olhado' || k === 'feitico' || k === 'boto') news.add(k);
+              if (k === 'latido' || k === 'olhado' || k === 'feitico' || k === 'boto' || k === 'tucano') news.add(k);
             }
           }
           acted = true;
@@ -409,7 +434,7 @@ describe('decisão do bot do Tatubum', () => {
       }
     }
     expect([...seen].sort()).toEqual(['choose', 'draw', 'nope', 'play']);
-    expect([...news].sort()).toEqual(['boto', 'choice:feitico', 'choice:latido', 'feitico', 'latido', 'olhado']);
+    expect([...news].sort()).toEqual(['boto', 'choice:feitico', 'choice:latido', 'feitico', 'latido', 'olhado', 'tucano']);
     void blindTries;
   });
 });

@@ -155,6 +155,19 @@
 .kittens .kt-mesa .kt-owedtag span { font-size: 22px; color: #ffd0c0; }
 .kittens .kt-mesa .kt-seat .kt-peeked { position: absolute; left: 6px; top: 50px; width: 27px; height: 18px; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
 .kittens .kt-mesa .kt-peeked svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
+/* Par de Tucano: quem vai ter a vez pulada (no assento e na faixa da sua mão); o assento pisca quando a vez é pulada */
+.kittens .kt-mesa .kt-seat .kt-skip { position: absolute; right: -6px; top: 0; z-index: 3; padding: 4px 6px; background: #3b5bc4; color: #fff3e0; font-family: var(--px); font-size: 9px; white-space: nowrap;
+  box-shadow: 0 -2px 0 #050510, 0 2px 0 #050510, -2px 0 0 #050510, 2px 0 0 #050510, 3px 4px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa .kt-seat.kt-skipped, .kittens .kt-mesa #hand.kt-skipped { animation: kt-skipflash .3s steps(2) 3; }
+@keyframes kt-skipflash { 50% { background: rgba(59,91,196,.55); } }
+.kittens .kt-mesa .kt-tucano { width: 90px; image-rendering: pixelated; }
+.kittens .kt-mesa .kt-skiptag { position: absolute; left: 50%; top: -52px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 12px; padding: 7px 16px 7px 10px; background: #1c2a66; white-space: nowrap; pointer-events: none;
+  box-shadow: 0 -4px 0 #3b5bc4, 0 4px 0 #3b5bc4, -4px 0 0 #3b5bc4, 4px 0 0 #3b5bc4, 6px 8px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa .kt-skiptag.high { top: -104px; }
+.kittens .kt-mesa .kt-skiptag svg { width: 42px; height: 26px; display: block; shape-rendering: crispEdges; }
+.kittens .kt-mesa .kt-skiptag b { font-family: var(--px); font-size: 13px; font-weight: normal; color: #e6ecff; text-shadow: 2px 2px 0 #050510; }
+.kittens .kt-mesa .kt-skiptag span { font-size: 22px; color: #b8c8ff; }
+.kittens .kt-mesa .kt-skiptag em { display: none; font-family: var(--px); font-size: 8px; font-style: normal; color: #e6ecff; text-shadow: 1px 1px 0 #050510; }
 @keyframes kt-pulse { 50% { box-shadow: 0 -3px 0 var(--red), 0 3px 0 var(--red), -3px 0 0 var(--red), 3px 0 0 var(--red); } }
 @keyframes kt-hit { 25% { transform: translateX(-50%) translateY(-8px); } 75% { transform: translateX(-50%) translateY(4px); } }
 @keyframes kt-blink { 50% { opacity: .35; } }
@@ -364,7 +377,7 @@
 .kittens .kt-mesa #gallery { position: absolute; inset: 0; z-index: 60; background: rgba(14,14,28,.94); padding: 30px 50px; display: flex; flex-direction: column; gap: 14px; }
 .kittens .kt-mesa #gallery[hidden] { display: none; }
 .kittens .kt-mesa #gallery h2 { margin: 0; font-family: var(--px); font-size: 20px; color: var(--yellow); font-weight: normal; }
-/* 17 cartas: 4 colunas e rolagem (a rodinha rola a galeria) */
+/* 18 cartas: 4 colunas e rolagem (a rodinha rola a galeria) */
 .kittens .kt-mesa #gallery .grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px 26px; overflow-y: auto; padding: 10px 6px; scrollbar-color: var(--yellow) #0e0e1c; }
 .kittens .kt-mesa #gallery .item { display: flex; gap: 22px; align-items: center; }
 .kittens .kt-mesa #gallery .item .kt-card { flex: none; }
@@ -462,6 +475,11 @@
 /* a explicação comprida fica na legenda (e na dica dos botões): aqui só o aviso */
 .kittens .kt-mesa #stage.kt-phone #banners .kt-owedtag span, .kittens .kt-mesa #stage.kt-phone #banners .kt-blindtag span { display: none; }
 .kittens .kt-mesa #stage.kt-phone #banners .kt-blindtag svg { width: 22px; height: 16px; }
+.kittens .kt-mesa #stage.kt-phone #banners .kt-skiptag { position: relative; left: auto; top: auto; bottom: auto; transform: none; height: 24px; padding: 0 10px; gap: 6px; }
+.kittens .kt-mesa #stage.kt-phone #banners .kt-skiptag b, .kittens .kt-mesa #stage.kt-phone #banners .kt-skiptag span { display: none; }
+.kittens .kt-mesa #stage.kt-phone #banners .kt-skiptag em { display: block; }
+.kittens .kt-mesa #stage.kt-phone #banners .kt-skiptag svg { width: 26px; height: 16px; }
+.kittens .kt-mesa #stage.kt-phone .kt-seat .kt-skip { right: -2px; top: -4px; font-size: 7px; padding: 2px 3px; }
 /* o Latidor na sua frente: por cima da faixa livre no alto da mão (aparecer não empurra a mesa) */
 .kittens .kt-mesa #stage.kt-phone #front { position: absolute; left: 10px; bottom: calc(var(--act-h) + 12px + env(safe-area-inset-bottom) + var(--hand-h) - var(--front-h)); width: 160px; height: var(--front-h); z-index: 7; pointer-events: none; }
 .kittens .kt-mesa #stage.kt-phone #front .kt-card { top: 0; transform: scale(.25); }

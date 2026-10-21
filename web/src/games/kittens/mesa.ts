@@ -74,6 +74,7 @@ const PAIR_LABEL: Partial<Record<KittensCardKind, string>> = {
   quati: 'PAR DE QUATI',
   tamandua: 'PAR DE TAMANDUÁ',
   preguica: 'PAR DE PREGUIÇA',
+  tucano: 'PAR DE TUCANO',
   capivara: 'RODA DE CAPIVARA',
 };
 const PLAY_LABEL: Record<KittensPlayKind, string> = {
@@ -98,7 +99,7 @@ const ACTION_KINDS: readonly string[] = KITTENS_ACTION_KINDS;
 const CARD_COLOR: Record<KittensCardKind, string> = {
   tatubum: '#e4572e', cafune: '#f2c14e', nemvem: '#c86fd4', ataque: '#9aa7bd', pular: '#5aa0e6', favor: '#f29bc0',
   embaralhar: '#8d7ae6', espiar: '#3fa7c9', capivara: '#5cc8b8', mico: '#f4a259', quati: '#c79a6a', tamandua: '#b0b8c8', preguica: '#a8bf6a',
-  latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
+  tucano: '#3b5bc4', latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
 };
 
 /** Pixel art em SVG (um retângulo por pixel): `rows` com uma letra por pixel, `pal` = cor de cada letra. */
@@ -120,6 +121,12 @@ const CURSE_SVG = pixelSvg(
   { k: '#1a0f2e', w: '#e9dcff', p: '#8a4fe0', s: '#c86fd4' },
 );
 const CURSE_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(CURSE_SVG);
+/** Tucano em pixel art (16×10, de lado, bico grande): o efeito do par de Tucano e a marca de quem vai ter a vez pulada. */
+const TUCANO_SVG = pixelSvg(
+  ['....kkkk........', '...kbbbbk.......', '..kbbwwwbkkkkk..', '..kbwwkwbyyyyok.', '..kbwwwwbyyooook', '..kbbwwbkkkkkkk.', '..kbbbbbk.......', '...kbbbbk.......', '....kbbk........', '.....kk.........'],
+  { k: '#050510', b: '#1c1f3a', w: '#fff3e0', y: '#f2c14e', o: '#e4572e' },
+);
+const TUCANO_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(TUCANO_SVG);
 
 /**
  * Explicação completa de cada carta, que aparece no zoom (pedido do Rafa: na mão fica só o básico).
@@ -132,6 +139,7 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
+  tucano: '<b>PAR DE TUCANO</b>: escolha um adversário (mesmo sem carta na mão). A sua vez acaba <b>sem você comprar</b> (sob ataque, gasta só um dos turnos), e a <b>próxima vez dele é pulada</b>: quando a vez chegar nele, ele não joga nem compra (se estiver devendo 2 turnos de um Ataque, perde um deles). Duas vezes no mesmo jogador, pula duas vezes.',
   boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>5 diferentes</b> conta como Boto. No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
 };
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
@@ -164,6 +172,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   quati: 'Par: vê a de cima e decide se vai pro fundo.',
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir.',
+  tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada.',
   latido: 'Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode. Ninguém tem: fica na sua frente.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',
   feitico: 'Você vê a carta de baixo do monte: fica com ela (é comprar) ou põe no topo. Acaba o turno.',
@@ -211,8 +220,13 @@ function guessPlay(ids: readonly string[]): PlayGuess | null {
   if (ks.length === 5 && new Set(ks).size === 5) return { kind: 'cinco', as: null };
   return null;
 }
-/** Favor, trio de Favor (o escolhido dá 3 cartas) e Mau-olhado pedem um adversário. */
-const needsTarget = (g: PlayGuess): boolean => g.kind === 'favor' || g.kind === 'olhado' || isFavorTrio(g);
+/**
+ * Favor, trio de Favor (o escolhido dá 3 cartas), Mau-olhado e par de Tucano (também com Boto) pedem um adversário. `as`
+ * é o bicho que o par vale (no par de 2 Botos, o escolhido no painel).
+ */
+const needsTarget = (g: PlayGuess): boolean => g.kind === 'favor' || g.kind === 'olhado' || isFavorTrio(g) || isTucanoPair(g);
+/** Par de Tucano: pede um adversário vivo (com ou sem carta na mão). */
+const isTucanoPair = (g: { kind: KittensPlayKind; as: KittensCardKind | null }): boolean => g.kind === 'par' && g.as === 'tucano';
 /** 3 Favores: pede alvo com carta na mão, como o Favor sozinho (espelho de `kittensIsFavorPlay`). */
 const isFavorTrio = (g: { kind: KittensPlayKind; as: KittensCardKind | null }): boolean => g.kind === 'trio' && g.as === 'favor';
 /** "UMA CARTA", "3 CARTAS". */
@@ -292,7 +306,10 @@ type Mode =
   | { type: 'ask'; play: PlayReq }
   /** Par de 2 Botos: falta dizer que bicho ele vira. */
   | { type: 'as'; play: PlayReq }
-  /** Cego com 1 ficha (ou 3): se as cartas pedirem alvo (Favor, Mau-olhado, 3 Favores), em quem (ou sem alvo). */
+  /**
+   * Cego com 1, 2 ou 3 fichas: se as cartas pedirem alvo (Favor, Mau-olhado, par de Tucano, 3 Favores), em quem (ou sem
+   * alvo). Com 2, depois vem o bicho (`blindBicho`).
+   */
   | { type: 'blindTarget'; play: PlayReq }
   /** Cego com 2 fichas: se forem par de Preguiça ou 2 Botos, o bicho (vai em `ask` e `as`; ou pula). */
   | { type: 'blindBicho'; play: PlayReq };
@@ -426,6 +443,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   const spectating = (): boolean => !players.includes(ME);
   /** Você está cego pelo Mau-olhado: a mão chega como fichas `?i` e você joga às cegas. */
   const blindMe = (): boolean => !!view && view.blind.includes(ME);
+  /** Par de Tucano: quantas vezes de `p` ainda vão ser puladas (visão de servidor antigo, sem `skips`: nenhuma). */
+  const skipsOf = (v: KittensView, p: string): number => {
+    const skips = v.skips as KittensView['skips'] | undefined;
+    return skips && Object.hasOwn(skips, p) ? skips[p]! : 0;
+  };
   /** "Sua vez" da legenda (cego: lembra que dá pra comprar pra voltar a ver). */
   /** Quantos turnos você ainda deve (Ataque acumula), na legenda da sua vez. */
   const owedText = (): string => ((view?.owed ?? 1) > 1 ? ` Faltam ${view!.owed} turnos seus (contando este).` : '');
@@ -923,7 +945,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       const peeked = !dead && v.peekers.includes(p) ? `<div class="kt-peeked" title="${nameOf(p)} espiou o topo do monte">${EYE_SVG}</div>` : '';
       // Ataque acumulado: quantos turnos quem está na vez ainda joga, grande no assento.
       const owed = !dead && v.phase === 'playing' && v.current === p && v.owed > 1 ? `<div class="kt-owed">${v.owed} TURNOS</div>` : '';
-      el.innerHTML = `${order}${cursed}${peeked}${owed}<img class="tatu kt-critter" alt="">
+      // Par de Tucano: quantas vezes dele ainda vão ser puladas.
+      const skips = dead ? 0 : skipsOf(v, p);
+      const skip = skips > 0 ? `<div class="kt-skip" title="${nameOf(p)} vai ter ${skips === 1 ? 'a próxima vez pulada' : `as próximas ${skips} vezes puladas`} (Tucano)">PULA${skips > 1 ? ` ×${skips}` : ''}</div>` : '';
+      el.innerHTML = `${order}${cursed}${peeked}${owed}${skip}<img class="tatu kt-critter" alt="">
         <div class="who">${nameOf(p)}</div>
         ${dead ? '<div class="count out">FORA</div>' : `<div class="count"><span class="fan">${fan}</span><b>${n}</b></div>`}${chip}`;
       // Tatu Latidor na frente dele (à vista de todos), pequenininho ao lado do bichinho.
@@ -1187,6 +1212,16 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       tag.innerHTML = `${CURSE_SVG}<b>VOCÊ ESTÁ CEGO!</b><span>compre uma carta pra voltar a ver</span>`;
       tags.appendChild(tag);
     }
+    // Par de Tucano: a sua próxima vez vai ser pulada (nunca junto com a faixa do Ataque: quem tem vez pulada não está na vez).
+    const skips = v.phase === 'playing' && v.alive.includes(ME) ? skipsOf(v, ME) : 0;
+    if (skips > 0) {
+      const tag = document.createElement('div');
+      tag.className = `kt-skiptag${blind ? ' high' : ''}`;
+      // No celular (fita estreita) só o curto: VAI PULAR.
+      const long = skips === 1 ? 'SUA PRÓXIMA VEZ VAI SER PULADA' : `SUAS PRÓXIMAS ${skips} VEZES VÃO SER PULADAS`;
+      tag.innerHTML = `${TUCANO_SVG}<b>${long}</b><em>VAI PULAR${skips > 1 ? ` ×${skips}` : ''}</em><span>Tucano</span>`;
+      tags.appendChild(tag);
+    }
   }
 
   // ---------------------------------------------------------------- ordem da mão e arrastar (como no Diquisti)
@@ -1419,14 +1454,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   /**
-   * Alvo que vale pra jogada que pede um: o Favor (e o trio de Favor) precisa de alguém com carta; o Mau-olhado vale em qualquer adversário
-   * vivo. Às cegas não dá pra saber qual das duas é: qualquer adversário vivo.
+   * Alvo que vale pra jogada que pede um: o Favor (e o trio de Favor) precisa de alguém com carta; o Mau-olhado e o par
+   * de Tucano valem em qualquer adversário vivo. Às cegas não dá pra saber qual é: qualquer adversário vivo.
    */
   function validTarget(p: string): boolean {
     const v = view;
     if (!v || p === ME || !v.alive.includes(p)) return false;
     const kind = mode?.type === 'target' ? mode.kind : mode?.type === 'blindTarget' ? 'olhado' : 'favor';
-    return kind === 'olhado' || (v.handCounts[p] ?? 0) > 0;
+    return kind === 'olhado' || kind === 'par' || (v.handCounts[p] ?? 0) > 0;
   }
 
   /** Muda o modo (pedir bicho, alvo…) com a legenda dele. */
@@ -1443,14 +1478,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
 
   /**
    * Leva a jogada adiante pedindo o que falta, na ordem: o bicho do par de 2 Botos (`as`), o bicho pedido no par de
-   * Preguiça (`ask`, também quando os Botos viram Preguiça) e o adversário (Favor, trio de Favor, Mau-olhado). `seat` = onde a carta foi
-   * solta (vale como alvo). Com tudo na mão, manda.
+   * Preguiça (`ask`, também quando os Botos viram Preguiça) e o adversário (Favor, trio de Favor, Mau-olhado, par de
+   * Tucano, também quando os Botos viram Tucano). `seat` = onde a carta foi solta (vale como alvo). Com tudo na mão, manda.
    */
   function proceed(play: PlayReq, guess: PlayGuess, seat?: string): void {
     if (guess.kind === 'par' && guess.as === null && !play.as) { setMode({ type: 'as', play }, AS_CAPTION); return; }
     const as = play.as ?? guess.as;
     if (guess.kind === 'par' && as === 'preguica' && !play.ask) { setMode({ type: 'ask', play }, ASK_CAPTION); return; }
-    if (needsTarget(guess) && !play.target) {
+    if (needsTarget({ kind: guess.kind, as }) && !play.target) {
       mode = { type: 'target', play, kind: guess.kind };
       if (seat && validTarget(seat)) { chooseTarget(seat); return; }
       setMode(mode, TARGET_CAPTION);
@@ -1469,17 +1504,17 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   function chooseTarget(p: string): void {
-    if (mode?.type !== 'target' && mode?.type !== 'blindTarget') return;
-    send({ ...mode.play, target: p });
+    if (mode?.type === 'target') send({ ...mode.play, target: p });
+    else if (mode?.type === 'blindTarget') blindStep({ ...mode.play, target: p });
   }
 
   /**
-   * Jogada às cegas: com 1 ficha (ou 3, que podem ser 3 Favores), pergunta em quem (se as cartas pedirem alvo); com 2,
-   * que bicho (se forem par de Preguiça ou 2 Botos, vai como `ask` e `as`). Dá pra pular as duas; o servidor ignora o
-   * que a jogada não usa.
+   * Jogada às cegas: com 1, 2 ou 3 fichas (Favor, Mau-olhado, par de Tucano, 3 Favores), pergunta em quem (se as cartas
+   * pedirem alvo); com 2, depois, que bicho (se forem par de Preguiça ou 2 Botos, vai como `ask` e `as`). Dá pra pular as
+   * duas (`noTarget` = já pulou o alvo); o servidor ignora o que a jogada não usa.
    */
-  function blindStep(play: PlayReq): void {
-    if ((play.cards.length === 1 || play.cards.length === 3) && !play.target) { setMode({ type: 'blindTarget', play }, BLIND_TARGET_CAPTION); return; }
+  function blindStep(play: PlayReq, noTarget = false): void {
+    if (play.cards.length <= 3 && !play.target && !noTarget) { setMode({ type: 'blindTarget', play }, BLIND_TARGET_CAPTION); return; }
     if (play.cards.length === 2 && !play.ask) { setMode({ type: 'blindBicho', play }, BLIND_BICHO_CAPTION); return; }
     send(play);
   }
@@ -1577,7 +1612,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       } else if (mode?.type === 'blindTarget') {
         const m = mode;
         box.appendChild(hint('clique num adversário ou jogue sem alvo'));
-        box.appendChild(button('SEM ALVO', () => send(m.play)));
+        box.appendChild(button('SEM ALVO', () => blindStep(m.play, true)));
         box.appendChild(button('CANCELAR', () => { dropMode(); render(); }, 'ghost'));
       } else if (mode?.type === 'target') {
         box.appendChild(hint('clique num adversário'));
@@ -1633,7 +1668,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (c.kind === 'feitico') return `feitico:${c.card ?? ''}:${c.deadline}`;
     return '';
   }
-  /** Painel com os 5 bichos (par de Preguiça: o pedido; 2 Botos: o que eles viram; cego: os dois, ou PULAR). */
+  /** Painel com os 6 bichos (par de Preguiça: o pedido; 2 Botos: o que eles viram; cego: os dois, ou PULAR). */
   function bichoPanel(title: string, sub: string, pick: (k: KittensCardKind) => void, skip?: () => void): void {
     const panel = $('#panel');
     panel.innerHTML = `<h2>${title}</h2><p>${sub}</p><div class="kt-row"></div>`;
@@ -1781,7 +1816,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
 
   // ---------------------------------------------------------------- diário
   function involves(ev: KittensEvent, p: string): boolean {
-    return ('by' in ev && ev.by === p) || ('to' in ev && ev.to === p) || ('from' in ev && ev.from === p) || ('target' in ev && ev.target === p);
+    return ('by' in ev && ev.by === p) || ('to' in ev && ev.to === p) || ('from' in ev && ev.from === p) || ('target' in ev && ev.target === p) || ('who' in ev && ev.who === p);
   }
   /** As cartas da jogada de um evento `play` (a carta no ar da visão que trouxe o evento), pra dizer "(com Boto)". */
   function playCardsOf(ev: KittensEvent, v: KittensView): string[] | undefined {
@@ -1856,6 +1891,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
       case 'barked': return ev.target ? `AU AU! ${n(ev.target)} tinha o outro TATU LATIDOR: Desarme ou explode!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
       case 'cursed': return `${n(ev.target)} ficou CEGO até comprar uma carta`;
+      case 'tucano': return ev.target === ME ? `${n(ev.by)} jogou o TUCANO em você: a sua próxima vez vai ser pulada` : `${n(ev.by)} jogou o TUCANO em ${n(ev.target)}: a próxima vez dele vai ser pulada`;
+      case 'skipped': return `${n(ev.who)} perdeu uma vez (TUCANO)`;
       case 'cured': return `${n(ev.by)} voltou a enxergar`;
       case 'conjured': return ev.kept ? `${n(ev.by)} ficou com a carta de baixo do monte` : `${n(ev.by)} pôs a carta de baixo no topo do monte`;
     }
@@ -2105,6 +2142,37 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         Fx.glitter(at, '#c86fd4');
         await Fx.icon(CURSE_URL, at, { size: mine ? 150 : 110, hold: 450 });
         if (mine) say('VOCÊ ESTÁ CEGO! Jogue às cegas ou compre pra voltar a ver.');
+        break;
+      }
+      case 'tucano': {
+        // Par de Tucano: o tucano voa de quem jogou até o alvo, que vai ter a próxima vez pulada.
+        say(text);
+        Sound.play('skip');
+        const mine = ev.target === ME;
+        const s = mine ? $('#hand') : seatEl(ev.target);
+        const to: At = mine ? mineAt(600) : s ? Fx.box(s) : anchorOf(ev.target);
+        const from: At = ev.by === ME ? mineAt(640) : anchorOf(ev.by);
+        const bird = document.createElement('img');
+        bird.src = TUCANO_URL;
+        bird.className = 'kt-tucano';
+        await Fx.fly({ node: bird, from, to, dur: 620, rot: 8, trail: '#f2c14e' });
+        s?.classList.add('hit');
+        later(() => s?.classList.remove('hit'), 600);
+        await Fx.pop(mine ? 'SUA VEZ VAI PULAR!' : 'VAI PULAR!', to, { size: popPx(mine ? 34 : 22, 16), hold: 450, color: '#8fb0ff' });
+        break;
+      }
+      case 'skipped': {
+        // A vez chegou em quem tinha vez pulada: o assento pisca e o turno passa sozinho.
+        say(text);
+        Sound.play('skip');
+        const mine = ev.who === ME;
+        const s = mine ? $('#hand') : seatEl(ev.who);
+        s?.classList.add('kt-skipped');
+        later(() => s?.classList.remove('kt-skipped'), 900);
+        const at: At = mine ? mineAt(600) : s ? Fx.box(s) : anchorOf(ev.who);
+        void Fx.icon(TUCANO_URL, at, { size: mine ? 120 : 80, hold: 250 });
+        await Fx.pop('PULOU!', at, { size: popPx(mine ? 40 : 26, 18), hold: 400, color: '#8fb0ff' });
+        if (view.current === ME && !view.pending && !view.choice) say(yourTurn());
         break;
       }
       case 'cured': {
@@ -2524,6 +2592,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     else if (!dead && k > 1) lines.push(`É o <b>${k + 1}º</b> a jogar, contando quem está na vez.`);
     if (!dead && v.blind.includes(p)) lines.push('Está <b>cego</b> (Mau-olhado) até comprar uma carta.');
     if (!dead && v.peekers.includes(p)) lines.push('<b>Espiou</b> o topo do monte (só ele vê as cartas).');
+    const skips = dead ? 0 : skipsOf(v, p);
+    if (skips === 1) lines.push('Vai ter a <b>próxima vez pulada</b> (Tucano).');
+    else if (skips > 1) lines.push(`Vai ter as <b>próximas ${skips} vezes puladas</b> (Tucano).`);
     const front = dead ? [] : (v.front[p] ?? []);
     if (front.length) lines.push(`Na frente: <b>${front.map((id) => cardNameOf(id)).join(', ')}</b> (à vista de todos).`);
     if (!dead && seatOf(p)?.connected === false) lines.push('A conexão <b>caiu</b>: se não voltar logo, sai do jogo.');

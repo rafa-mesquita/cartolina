@@ -284,6 +284,34 @@ describe('Tatubum no celular em pé', () => {
     mesa.destroy();
   });
 
+  it('vez pulada (Tucano): PULA no assento, a faixa curta na mesa e a linha no toque do assento', () => {
+    const v = midGame('p1');
+    v.game.skips = { p1: 1, p2: 2 };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.textContent).toBe('PULA ×2');
+    expect(root.querySelector('#table #banners .kt-skiptag em')?.textContent).toBe('VAI PULAR');
+    expect(root.querySelector('#hand .kt-skiptag')).toBeNull();
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.click();
+    expect(root.querySelector('#viewer')?.textContent).toContain('próximas 2 vezes puladas');
+    mesa.destroy();
+  });
+
+  it('tocar num adversário escolhe o alvo do par de Tucano (até um sem carta)', () => {
+    const v = midGame('p1');
+    v.game.hand = ['tucano-90', 'tucano-91', ...v.game.hand];
+    v.game.handCounts = { ...v.game.handCounts, p2: 0 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    press(handCard(root, 'tucano-90'), 50);
+    press(handCard(root, 'tucano-91'), 50);
+    buttonByText(root, 'JOGAR PAR')!.click();
+    expect(sent).toEqual([]);
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['tucano-90', 'tucano-91'], target: 'p2' }]);
+    mesa.destroy();
+  });
+
   it('a espiada com 4 cartas aparece inteira nas miniaturas ao lado do monte, encavaladas no espaço das 3', async () => {
     const v = midGame('p0');
     const four = ['quati-70', 'tatubum-71', 'mico-72', 'pular-73'];

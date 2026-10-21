@@ -54,13 +54,19 @@ Como no original (pedido do Rafa, 2026-10-21): 2 Desarmes extras com até 4 joga
 ### Turno
 
 Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada vez, e termina
-**comprando** a carta do topo. Pular e Ataque terminam o turno sem comprar.
+**comprando** a carta do topo. Pular, Ataque e o par de Tucano terminam o turno sem comprar.
 
 - **Turnos devidos** (`owed`): normalmente 1. Comprar, Pular e Cafuné gastam 1; quando chega a 0, a
   vez passa pro próximo vivo com `owed = 1`.
 - Enquanto há **carta no ar** (§4.2), ninguém joga carta nova nem compra; só vale Nem vem!.
 - Enquanto há **escolha em aberto**, o jogo espera essa escolha (ou o prazo).
 - Cafuné sob ataque (`owed ≥ 2`): gasta 1 turno e você continua jogando os que faltam.
+- **Vez pulada** (par de Tucano; pedido do Rafa, 2026-10-21): `skips[p]` = quantas vezes de `p` ainda vão ser
+  puladas. Toda passagem de vez é por `passTo` (`turn.ts`); quando a vez chega em quem tem `skips`, um turno dele é
+  gasto sozinho (`skips` − 1, evento público `{ t: 'skipped', who }`): devendo 2 (Ataque), ele perde um e continua na
+  vez; devendo 1, a vez segue pro próximo vivo, que também pode ter vez pulada (puladas em cadeia). Sempre acaba (cada
+  volta gasta uma pulada): se todos os outros tinham, as puladas se gastam na ordem e a vez volta. Quem sai do jogo
+  perde as puladas; no fim de jogo elas zeram. Vez pulada não entra no histórico (saídas, Nem vem!, Desarmes).
 
 ### Cartas
 
@@ -74,7 +80,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): o escolhido te dá **3 cartas** (ver "Combos"; pedido do Rafa, 2026-10-20). | sim |
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
-| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça** | 4 de cada | Sozinhas não fazem nada; só em combo. | (combo sim) |
+| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano** | 4 de cada | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 (pedido do Rafa). | (combo sim) |
 | **Tatu Latidor** (id `latido`) | (fora do pacote: **2 na partida**) | Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
 | **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (é comprar) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
@@ -152,12 +158,13 @@ Sozinho o bicho continua não fazendo nada.
 | Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
 | Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: nada. Todos veem de onde veio. |
+| Tucano (pedido do Rafa, 2026-10-21) | um adversário vivo (mesmo sem carta) | **A sua vez acaba sem você comprar**, como no Pular (sob ataque, gasta só um dos turnos devidos), e a **próxima vez do alvo é pulada**: ele não joga nem compra. Duas vezes no mesmo alvo pulam duas vezes dele. Todos veem quem vai ser pulado. Rafa: "par: você pula sua vez quando manda ele, não compra e nem joga, e escolhe outro jogador pra pular; ele também não joga nada nem compra, o turno dele é pulado." |
 | Capivara | — | **Todos os outros** vivos passam, ao mesmo tempo, uma carta **ao acaso** pro próximo na ordem da vez (o sentido em que a vez anda). **Você não passa**, mas recebe a do jogador antes de você. Quem está sem carta não passa. Cada um vê só o que deu e o que recebeu. |
 
 Regras de motor:
 - `playKindOf`: 2 iguais só vira `par` se for bicho; 3 iguais de qualquer tipo é `trio`.
-- `parsePlay`: alvo exigido só no Favor, no trio de Favor e no Mau-olhado (`bad_target`); pedido (`ask`) exigido
-  só no par de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Os outros trios ignoram alvo e pedido. (Quem está
+- `parsePlay`: alvo exigido só no Favor, no trio de Favor, no Mau-olhado e no par de Tucano (`bad_target`); pedido
+  (`ask`) exigido só no par de Preguiça e tem que ser um dos bichos (6, com o Tucano; `bad_ask`). Os outros trios ignoram alvo e pedido. (Quem está
   cego ouve `bad_combo` no lugar desses: ver "Jogar às cegas".)
 - Favor e trio de Favor: a escolha `favor` tem `left` (quantas cartas ainda dar: 1 no Favor sozinho, `min(3, mão do
   alvo)` no trio). Cada `choose { card }` do alvo passa uma carta (evento `gave`, só os dois veem) e o `left` cai; em
@@ -182,6 +189,10 @@ Regras de motor:
 - Preguiça: evento `{ t: 'called', by, ask, from, card }` (público): `from` = quem deu, ou `null` quando
   veio do monte; `card` = `null` quando ninguém tinha nem estava no monte. A carta tirada do monte sai das espiadas.
 - Capivara: um `{ t: 'passed', from, to, card }` por passe, com `seenBy` [from, to].
+- Tucano: o alvo tem que ser outro jogador vivo (qualquer tamanho de mão; Boto + Tucano e 2 Botos com `as: 'tucano'`
+  também pedem). Resolvendo: evento público `{ t: 'tucano', by, target }`, `skips[target]` + 1 e `spendTurn` (a pulada
+  entra antes: se o alvo é o próximo, já perde a vez agora). Cancelado (Nem vem! ímpar, quem jogou ou o alvo saiu): nada.
+  Sala salva antes do Tucano não tem `skips`: entra `{}` (`compat.ts`).
 - Trio: evento `{ t: 'grabbed', by, from, card }` (público; `from`/`card` = `null` quando ninguém tinha
   Desarme). O evento antigo `asked` (trio pelo nome) sai.
 
@@ -296,16 +307,16 @@ bicho.
 
 - 2 por pacote. Sozinho não faz nada; com carta de ação não forma par (`bad_combo`).
 - **Par:** Boto + bicho X = par de X (o efeito é o do X). Boto + Boto = par do bicho declarado no campo novo
-  **`as`** da jogada (um dos 5 bichos; faltando ou inválido → erro novo **`bad_as`**, "Escolha qual bicho o Boto
+  **`as`** da jogada (um dos bichos, o Tucano incluído desde 2026-10-21; faltando ou inválido → erro novo **`bad_as`**, "Escolha qual bicho o Boto
   vira."). Par de Preguiça com Boto continua pedindo `ask`.
 - **Trio:** 3 iguais de qualquer tipo, como antes; o Boto completa **bichos** iguais (Capivara + Capivara + Boto,
   Boto + Boto + Mico); 3 Botos também é trio. Com carta que não é bicho (Ataque + Ataque + Boto) não vale.
 - **5 diferentes:** o Boto conta como o próprio nome (Boto + 4 bichos diferentes vale; 2 Botos repetem o nome).
-- **(decisão)** O pedido da Preguiça (`ask`) continua sendo um dos 5 bichos (Boto não), e um Boto na mão de alguém
+- **(decisão)** O pedido da Preguiça (`ask`) continua sendo um dos bichos (Boto não; o Tucano pode), e um Boto na mão de alguém
   **não conta** como o bicho pedido.
 - `KittensPlay` ganhou `as: KittensCardKind | null`: no par, o bicho que o par vale (sempre, com ou sem Boto); no
   trio, o tipo das iguais (`boto` em 3 Botos); `null` no resto. O evento `play` também leva `as`, pra a tela mostrar
-  "par de Quati (com Boto)". `KITTENS_BICHOS` continua sendo os 5 bichos (o Boto é `KITTENS_WILD`).
+  "par de Quati (com Boto)". `KITTENS_BICHOS` continua sendo os bichos (6 desde o Tucano; o Boto é `KITTENS_WILD`).
 
 #### Motor e segredo
 
@@ -354,20 +365,21 @@ O monte nunca acaba enquanto há 2+ vivos, porque sempre tem `vivos − 1 ≥ 1`
 
 ## 3. Baralho
 
-Um **pacote** tem **52 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 20
-bichos (5 tipos × 4) e, desde 2026-10-20, 2 Mau-olhado, 2 Feitiço e 2 Boto. Os **2 Tatus Latidores** entram
+Um **pacote** tem **56 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 24
+bichos (6 tipos × 4; o Tucano entrou em 2026-10-21, pedido do Rafa) e, desde 2026-10-20, 2 Mau-olhado, 2 Feitiço e
+2 Boto. Os **2 Tatus Latidores** entram
 **uma vez só por partida**, fora dos pacotes (como no original, que tem só 2), qualquer que seja o número de
 jogadores.
 
-| Jogadores | Pacotes | Cartas no baralho antes de distribuir (pacotes + 2 Latidores) | Monte depois de distribuir | Cafunés | Tatubuns |
+| Jogadores | Pacotes | Cartas no baralho antes de distribuir (pacotes + 2 Latidores) | Monte depois de distribuir | Desarmes | Tatubuns |
 |---|---|---|---|---|---|
-| 2 | 1 | 52 + 2 = 54 | 54 − 14 + 2 + 1 = 43 | n + 2 | n − 1 |
-| 3 | 1 | 54 | 54 − 21 + 2 + 2 = 37 | n + 2 | n − 1 |
-| 4 | 1 | 54 | 54 − 28 + 2 + 3 = 31 | n + 2 | n − 1 |
-| 5 | 1 | 54 | 54 − 35 + 2 + 4 = 25 | n + 2 | n − 1 |
-| 6 | 2 | 104 + 2 = 106 | 106 − 42 + 2 + 5 = 71 | n + 2 | n − 1 |
-| 7 | 2 | 106 | 106 − 49 + 2 + 6 = 65 | n + 2 | n − 1 |
-| 8 | 2 | 106 | 106 − 56 + 2 + 7 = 59 | n + 2 | n − 1 |
+| 2 | 1 | 56 + 2 = 58 | 58 − 14 + 2 + 1 = 47 | n + 2 | n − 1 |
+| 3 | 1 | 58 | 58 − 21 + 2 + 2 = 41 | n + 2 | n − 1 |
+| 4 | 1 | 58 | 58 − 28 + 2 + 3 = 35 | n + 2 | n − 1 |
+| 5 | 1 | 58 | 58 − 35 + 1 + 4 = 28 | n + 1 | n − 1 |
+| 6 | 2 | 112 + 2 = 114 | 114 − 42 + 1 + 5 = 78 | n + 1 | n − 1 |
+| 7 | 2 | 114 | 114 − 49 + 1 + 6 = 72 | n + 1 | n − 1 |
+| 8 | 2 | 114 | 114 − 56 + 1 + 7 = 66 | n + 1 | n − 1 |
 
 Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Antes das cartas novas, com 2
 a 5 o baralho era o do jogo original (46).
@@ -500,9 +512,11 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
   arrastar Favor/par de Mico até um adversário já joga nele; arrastar Nem vem! pra mesa com carta no ar dá
   Nem vem!; no Favor que você deve, arrastar a carta pra mesa entrega.
 - Clicar seleciona (a carta sobe); duplo clique joga uma carta sozinha; o botão "JOGAR …" também joga.
-- Favor e par de Mico sem alvo pedem o alvo: os adversários válidos ganham contorno e você clica num deles.
+- Favor, Mau-olhado e par de Tucano pedem o alvo (clicar no assento ou arrastar as cartas pra ele): os adversários válidos ganham contorno e você clica num deles.
 - Selecionar 2, 3 ou 5 cartas que formam combo mostra o botão "jogar par / trio / 5". No par de
-  Preguiça, aparece a lista dos 5 bichos pra pedir.
+  Preguiça, aparece a lista dos 6 bichos pra pedir.
+- Quem tem vez pulada (Tucano) ganha o selo "PULA" no assento (×2 se tiver duas); o Tucano voa até o alvo e, quando a
+  vez dele é pulada, o assento pisca e o diário diz "X teve a vez pulada".
 - Botão **"comprar"** sempre à vista na sua vez.
 - Selo no topo: "vez da Ana · 2 turnos" quando há ataque acumulado.
 
@@ -585,10 +599,9 @@ Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca 
 
 ## 6. Arte das cartas
 
-- **18 ilustrações**: as 17 cartas + o verso (as 4 cartas novas de 2026-10-20 ainda sem arte: Tatu Latidor =
-  tatu numa casinha de cachorro latindo "AU AU"; Mau-olhado = tatu botando mau-olhado; Feitiço = tatu feiticeiro
-  com caldeirão puxando uma carta de baixo do monte; Boto = boto-cor-de-rosa. Até lá, sprite de reserva "?" e
-  textos provisórios na mesa). **Pixel art** (sprite de bicho/objeto com contorno
+- **19 ilustrações**: as 18 cartas + o verso, todas do Flow (Tatu Latidor = tatu numa casinha de cachorro latindo;
+  Mau-olhado = tatu botando mau-olhado; Feitiço = tatu feiticeiro com caldeirão; Boto = boto-cor-de-rosa; Tucano =
+  tucano-toco, fundo cobalto `#3b5bc4`). **Pixel art** (sprite de bicho/objeto com contorno
   escuro, poucas cores, fundo liso, como a referência do tatu), sem texto na imagem (o nome da carta
   é desenhado pelo site).
 - Geradas no **Google Flow** (mesmo processo do Diquisti, ver `CLAUDE.md`), prompts em

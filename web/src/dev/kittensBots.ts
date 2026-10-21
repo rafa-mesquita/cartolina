@@ -6,6 +6,7 @@
  * Nunca faz ações de host (começar, jogar de novo, lobby): isso fica com a pessoa que está testando.
  */
 import {
+  KITTENS_BICHOS,
   PLAYER_COLORS,
   isKittensRoomView,
   kittensKindOf,
@@ -25,7 +26,7 @@ import { BOT_NAMES } from './bots';
 const RETRY_MS = 4000;
 
 type Rng = () => number;
-const BICHOS: readonly KittensCardKind[] = ['capivara', 'mico', 'quati', 'tamandua', 'preguica'];
+const BICHOS: readonly KittensCardKind[] = KITTENS_BICHOS;
 
 /** O que o bot já decidiu (ele mesmo guarda; vive enquanto a partida dura). */
 export interface KittensBotMemory {
@@ -58,9 +59,17 @@ interface Play {
   as?: KittensCardKind;
 }
 
-/** Par de `b` (com as cartas dadas): Preguiça pede um bicho; `as` só no par de 2 Botos. */
-function pairOf(cards: string[], b: KittensCardKind, rng: Rng, botos: boolean): Play {
-  return { cards, ...(botos ? { as: b } : {}), ...(b === 'preguica' ? { ask: pickOne(rng, BICHOS) } : {}) };
+/**
+ * Par de `b` (com as cartas dadas): Preguiça pede um bicho; Tucano vai num adversário vivo (`opponents`, nunca vazio
+ * aqui); `as` só no par de 2 Botos.
+ */
+function pairOf(cards: string[], b: KittensCardKind, rng: Rng, botos: boolean, opponents: readonly string[]): Play {
+  return {
+    cards,
+    ...(botos ? { as: b } : {}),
+    ...(b === 'preguica' ? { ask: pickOne(rng, BICHOS) } : {}),
+    ...(b === 'tucano' ? { target: pickOne(rng, opponents) } : {}),
+  };
 }
 
 /** Às cegas (Mau-olhado): de vez em quando arrisca 1 ou 2 fichas ao acaso (o servidor recusa se não formar jogada). */
@@ -122,13 +131,16 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     // Par do bicho; sem par, um Boto completa.
     const pair = list.length >= 2 ? list.slice(0, 2) : list.length === 1 && botos.length ? [list[0]!, botos[0]!] : null;
     if (!pair) continue;
-    // Par de Mico sem alvo: os outros descartam uma carta (só vale a pena se alguém tiver carta).
-    if (b !== 'mico' || targets.length) options.push(pairOf(pair, b, rng, false));
+    // Par de Mico sem alvo: os outros descartam uma carta (só vale a pena se alguém tiver carta). Par de Tucano: às
+    // vezes, num adversário vivo (a vez dele é pulada).
+    if (b === 'mico' && !targets.length) continue;
+    if (b === 'tucano' && rng() >= 0.5) continue;
+    options.push(pairOf(pair, b, rng, false, opponents));
   }
   // Dois Botos: par do bicho que o bot quiser (nunca Mico sem ninguém com carta).
   if (botos.length >= 2) {
     const b = pickOne(rng, targets.length ? BICHOS : BICHOS.filter((x) => x !== 'mico'));
-    options.push(pairOf(botos.slice(0, 2), b, rng, true));
+    options.push(pairOf(botos.slice(0, 2), b, rng, true, opponents));
   }
   // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme; o Boto completa um par de bicho.
   // Trio de Favor pede alvo com carta na mão: o alvo dá 3 cartas.
@@ -142,7 +154,7 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     if (two) options.push({ cards: [...byKind.get(two)!, botos[0]!] });
   }
   const distinct = BICHOS.filter((b) => byKind.get(b)?.length);
-  if (distinct.length === 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.map((b) => byKind.get(b)![0]!) });
+  if (distinct.length >= 5 && g.discard.length && rng() < 0.5) options.push({ cards: distinct.slice(0, 5).map((b) => byKind.get(b)![0]!) });
   return options.length ? pickOne(rng, options) : null;
 }
 

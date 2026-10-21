@@ -26,9 +26,29 @@ export function nextAlive(state: KittensState, from: string): string | null {
 /**
  * A vez vai pra `next` com `owed` turnos. As espiadas ficam (pedido do Rafa, 2026-10-20): o Espiar fica à mostra até as
  * cartas saírem do monte ou o monte mudar de ordem.
+ *
+ * Único lugar onde a vez muda de mão, então é aqui que o par de Tucano vale (pedido do Rafa, 2026-10-21): quem recebe a
+ * vez com vez pulada (`skips`) perde 1 turno sem jogar nem comprar (diário: `skipped`). Devendo 2 (Ataque), a pulada gasta
+ * um deles e ele continua na vez; devendo 1, a vez segue pro próximo, que também pode ter vez pulada (pulas em cadeia).
+ * Sempre acaba: cada volta gasta uma pulada. Se todos os outros tinham, as puladas se gastam na ordem e a vez volta.
+ * Com 1 vivo (ou ninguém) não pula: a partida já acabou.
  */
 export function passTo(state: KittensState, next: string | null, owed: number): KittensState {
-  return { ...state, current: next, owed };
+  let s: KittensState = { ...state, current: next, owed };
+  while (s.current !== null && s.alive.length > 1 && Object.hasOwn(s.skips, s.current)) {
+    const who = s.current;
+    const left = s.skips[who]! - 1;
+    const skips = Object.fromEntries(Object.entries(s.skips).filter(([p]) => p !== who));
+    s = logged({ ...s, skips: left > 0 ? { ...skips, [who]: left } : skips }, { t: 'skipped', who });
+    s = s.owed > 1 ? { ...s, owed: s.owed - 1 } : { ...s, current: nextAlive(s, who), owed: 1 };
+  }
+  return s;
+}
+
+/** Par de Tucano: a próxima vez de `p` vai ser pulada (acumula, se já tinha). */
+export function addSkip(s: KittensState, p: string): KittensState {
+  const mine = Object.hasOwn(s.skips, p) ? s.skips[p]! : 0;
+  return { ...s, skips: { ...s.skips, [p]: mine + 1 } };
 }
 
 /** Gasta 1 turno de quem está na vez (comprar, Pular, Cafuné); acabaram os turnos, passa a vez. */
@@ -94,6 +114,7 @@ export function checkWin(state: KittensState): KittensState {
     pending: null,
     choice: null,
     peeks: {},
+    skips: {},
   };
   return winner === null ? ended : logged(ended, { t: 'win', by: winner });
 }
@@ -122,7 +143,9 @@ export function eliminate(state: KittensState, p: string, how: KittensExitHow, e
   const blind = state.blind.includes(p) ? state.blind.filter((x) => x !== p) : state.blind;
   // A espiada de quem sai some; o tatu tirado do monte sai das espiadas dos outros (a ordem do resto não muda).
   const exits = [...state.exits, { player: p, how }];
-  const base: KittensState = { ...state, alive, draw, out, front, blind, exits, hands: { ...state.hands, [p]: [] } };
+  // As vezes puladas de quem sai (Tucano) se perdem.
+  const skips = Object.hasOwn(state.skips, p) ? Object.fromEntries(Object.entries(state.skips).filter(([x]) => x !== p)) : state.skips;
+  const base: KittensState = { ...state, alive, draw, out, front, blind, exits, skips, hands: { ...state.hands, [p]: [] } };
   let next = unpeek(dropPeek(base, p), removed !== null ? [removed] : []);
   if (state.current === p) next = passTo(next, nextAlive(next, p), 1);
   return checkWin(next);

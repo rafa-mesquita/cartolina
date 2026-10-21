@@ -1,7 +1,7 @@
 import type { KittensExit, KittensExitHow, KittensPeek, KittensState } from './types';
 
 /** Campos que versões anteriores não salvavam (sala guardada no Durable Object no meio de uma partida, no deploy). */
-type NewFields = 'front' | 'blind' | 'peeks' | 'match' | 'exits' | 'stats';
+type NewFields = 'front' | 'blind' | 'peeks' | 'match' | 'exits' | 'stats' | 'skips';
 
 /** Estado como pode ter sido salvo por versões anteriores: sem os campos novos, e com o Espiar antigo (`peek`). */
 type SavedKittensState = Omit<KittensState, NewFields> & Partial<Pick<KittensState, NewFields>> & { peek?: KittensPeek | null };
@@ -44,6 +44,7 @@ function exitsOf(old: SavedKittensState): KittensExit[] {
  * descartado antes do deploy não conta; quem jogou pega uma das que forem descartadas daqui pra frente).
  * O histórico (2026-10-20) trouxe `match` (entra 0), `exits` (refeitas pelo diário, ver `exitsOf`) e `stats` (entra
  * vazio: os Nem vem! e Desarmes de antes do deploy não contam).
+ * O Tucano (2026-10-21) trouxe `skips`: entra vazio (ninguém tinha vez pulada).
  * Devolve o MESMO objeto quando o estado já está completo. Aplicado nas portas de entrada do motor
  * (`applyKittensAction`, `settleKittens`, `kittensViewFor`) e no registro do histórico.
  */
@@ -54,7 +55,10 @@ export function kittensWithNewFields(state: KittensState): KittensState {
   const oldMico = c?.kind === 'mico' && (c as Partial<typeof c>).discarded === undefined;
   const oldPeek = old.peeks === undefined || 'peek' in old;
   const oldHistory = old.match === undefined || old.exits === undefined || old.stats === undefined;
-  if (old.front !== undefined && old.blind !== undefined && !oldFavor && !oldMico && !oldPeek && !oldHistory) return state;
+  const oldSkips = old.skips === undefined;
+  if (old.front !== undefined && old.blind !== undefined && !oldFavor && !oldMico && !oldPeek && !oldHistory && !oldSkips) {
+    return state;
+  }
   const choice = oldFavor ? { ...c, left: 1 } : oldMico ? { ...c, discarded: [] } : c;
   const { peek: _peek, ...rest } = old;
   void _peek;
@@ -68,5 +72,6 @@ export function kittensWithNewFields(state: KittensState): KittensState {
     match: old.match ?? 0,
     exits: old.exits ?? exitsOf(old),
     stats: old.stats ?? {},
+    skips: old.skips ?? {},
   };
 }

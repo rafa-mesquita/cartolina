@@ -355,6 +355,89 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('par de Tucano pede um adversário (até um sem carta), clicando ou soltando no assento; Boto + Tucano também', () => {
+    const v = midGame('p1');
+    v.game.hand = ['tucano-90', 'tucano-91', 'boto-92', ...v.game.hand];
+    v.game.handCounts = { ...v.game.handCounts, p2: 0 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, 'tucano-90');
+    clickCard(root, 'tucano-91');
+    buttonByText(root, 'JOGAR PAR')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('Escolha um adversário');
+    const p2 = root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!;
+    expect(p2.classList.contains('targetable')).toBe(true);
+    p2.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['tucano-90', 'tucano-91'], target: 'p2' }]);
+    mesa.error('Não pode.');
+    // Boto + Tucano solto num assento: vai com ele de alvo (a seleção continuou depois da recusa).
+    clickCard(root, 'tucano-91');
+    clickCard(root, 'boto-92');
+    dragCard(root, 'tucano-90', root.querySelector('.kt-seat[data-p="p0"]')!);
+    expect(sent[1]).toEqual({ type: 'play', cards: ['tucano-90', 'boto-92'], target: 'p0' });
+    mesa.destroy();
+  });
+
+  it('par de 2 Botos virando Tucano pede o adversário depois do bicho', () => {
+    const v = midGame('p1');
+    const pair = ['boto-90', 'boto-91'];
+    v.game.hand = [...pair, ...v.game.hand];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    for (const id of pair) clickCard(root, id);
+    buttonByText(root, 'JOGAR PAR')!.click();
+    buttonByText(root, KITTENS_CARD_NAMES.tucano.toUpperCase())!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('Escolha um adversário');
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p0"]')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: pair, as: 'tucano', target: 'p0' }]);
+    mesa.destroy();
+  });
+
+  it('vez pulada (Tucano): PULA no assento, faixa na sua mão, dica do assento e o diário', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    v.game.skips = { p2: 2, p0: 1 };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.textContent).toBe('PULA ×2');
+    expect(root.querySelector('.kt-seat[data-p="p0"] .kt-skip')?.textContent).toBe('PULA');
+    expect(root.querySelector('#hand .kt-skiptag')).toBeNull();
+    let n = v.game.log.at(-1)!.n;
+    const next = (patch: Partial<KittensRoomView['game']>, ...evs: KittensEvent[]) => {
+      v.game = { ...v.game, ...patch, log: [...v.game.log, ...evs.map((ev) => ({ n: ++n, ev }))] };
+      mesa.update(toMesa(v));
+    };
+    // p0 joga o Tucano em você; depois a sua vez é pulada e a do p2 também (em cadeia).
+    next({ skips: { p2: 2, p0: 1, p1: 1 }, current: 'p0' }, { t: 'tucano', by: 'p0', target: 'p1' });
+    expect(root.querySelector('#hand .kt-skiptag')?.textContent).toContain('SUA PRÓXIMA VEZ VAI SER PULADA');
+    await vi.advanceTimersByTimeAsync(3000);
+    next({ skips: { p2: 1, p0: 1 }, current: 'p0' }, { t: 'skipped', who: 'p1' }, { t: 'skipped', who: 'p2' });
+    await vi.advanceTimersByTimeAsync(4000);
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('P0 jogou o TUCANO em você: a sua próxima vez vai ser pulada');
+    expect(log).toContain('Você perdeu uma vez (TUCANO)');
+    expect(log).toContain('P2 perdeu uma vez (TUCANO)');
+    expect(root.querySelector('#hand .kt-skiptag')).toBeNull();
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.textContent).toBe('PULA');
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.getAttribute('title')).toContain('a próxima vez pulada');
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+    errors.mockRestore();
+  });
+
+  it('zoom e galeria do Tucano dizem só o que a carta faz', () => {
+    const v = midGame('p1');
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    root.querySelector<HTMLElement>('#cards')!.click();
+    const item = [...root.querySelectorAll('#gallery .item')].find((el) => el.querySelector('.kt-card')?.getAttribute('data-id')?.startsWith('tucano-'));
+    expect(item?.textContent).toContain('TUCANO');
+    expect(item?.textContent).toContain('a próxima vez de um adversário é pulada');
+    mesa.destroy();
+  });
+
   it('par de 2 Botos abre o painel do bicho e manda o `as` (Preguiça ainda pede o bicho puxado)', () => {
     const v = midGame('p1');
     const pair = ['boto-90', 'boto-91'];
@@ -747,7 +830,7 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
-  it('cego com 2 fichas: JOGAR ÀS CEGAS pergunta o bicho (vai em `ask` e `as`) ou PULAR', () => {
+  it('cego com 2 fichas: JOGAR ÀS CEGAS pergunta o alvo (par de Tucano) e depois o bicho (vai em `ask` e `as`) ou PULAR', () => {
     const v = midGame('p1');
     v.game.blind = ['p1'];
     v.game.hand = ['?0', '?1', '?2'];
@@ -756,6 +839,18 @@ describe('mesa do Tatubum', () => {
     clickCard(root, '?0');
     clickCard(root, '?2');
     buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    expect(sent).toEqual([]);
+    // Podem ser um par de Tucano: primeiro o alvo (ou SEM ALVO), depois o bicho.
+    expect(root.querySelector('#caption')?.textContent).toContain('SE PRECISAR DE ALVO, EM QUEM?');
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#panel h2')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
+    buttonByText(root, 'PULAR')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['?0', '?2'], target: 'p2' }]);
+    mesa.error('Assim não forma jogada.');
+    sent.length = 0;
+    buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    buttonByText(root, 'SEM ALVO')!.click();
     expect(sent).toEqual([]);
     expect(root.querySelector('#caption')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
     expect(root.querySelector('#panel h2')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
@@ -766,6 +861,7 @@ describe('mesa do Tatubum', () => {
     mesa.error('Assim não forma jogada.');
     expect(root.querySelector('#panel')?.innerHTML).toBe('');
     buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    buttonByText(root, 'SEM ALVO')!.click();
     buttonByText(root, 'PULAR')!.click();
     expect(sent[1]).toEqual({ type: 'play', cards: ['?0', '?2'] });
     mesa.destroy();
