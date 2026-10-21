@@ -54,6 +54,8 @@ let layer: HTMLElement | null = null;
 let canvas: HTMLCanvasElement | null = null;
 let g: CanvasRenderingContext2D | null = null;
 let scaleOf: () => number = () => 1;
+/** Ajuste do ponto de um elemento (a mesa usa no celular: adversário fora da tela vira a borda visível da fileira). */
+let clampOf: ((el: Element, b: Box) => Box) | null = null;
 const parts: Particle[] = [];
 let raf = 0;
 /** Depois de `dispose()` (a mesa fechou) os efeitos que ainda estavam no ar viram no-ops, em vez de quebrar. */
@@ -74,7 +76,8 @@ function box(el: Element): Box {
   const s = scaleOf();
   const r = el.getBoundingClientRect();
   const st = need(stage, 'palco').getBoundingClientRect();
-  return { x: (r.left - st.left) / s + r.width / s / 2, y: (r.top - st.top) / s + r.height / s / 2, w: r.width / s, h: r.height / s };
+  const b = { x: (r.left - st.left) / s + r.width / s / 2, y: (r.top - st.top) / s + r.height / s / 2, w: r.width / s, h: r.height / s };
+  return clampOf ? clampOf(el, b) : b;
 }
 const pointOf = (p: At): Point => (p instanceof Element ? box(p) : p);
 
@@ -176,8 +179,11 @@ export const Fx = {
   },
   wait,
   box,
-  /** Liga os efeitos ao palco: `getScale` devolve a escala atual do palco (palco 1440×900 → tela). */
-  init(stageEl: HTMLElement, layerEl: HTMLElement, particleCanvas: HTMLCanvasElement, getScale: () => number): void {
+  /**
+   * Liga os efeitos ao palco: `getScale` devolve a escala atual do palco (palco 1440×900 → tela); `clamp` (opcional)
+   * ajusta o ponto de um elemento antes de um efeito usar.
+   */
+  init(stageEl: HTMLElement, layerEl: HTMLElement, particleCanvas: HTMLCanvasElement, getScale: () => number, clamp?: (el: Element, b: Box) => Box): void {
     disposed = false;
     stage = stageEl;
     layer = layerEl;
@@ -186,6 +192,7 @@ export const Fx = {
     canvas.height = 900 / PX;
     g = canvas.getContext('2d');
     scaleOf = getScale;
+    clampOf = clamp ?? null;
   },
   /** Desliga (ao desmontar a mesa): para as partículas e solta o palco. */
   dispose(): void {
@@ -197,6 +204,7 @@ export const Fx = {
     parts.length = 0;
     stage = layer = canvas = g = null;
     scaleOf = () => 1;
+    clampOf = null;
   },
 
   /**

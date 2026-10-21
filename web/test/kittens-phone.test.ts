@@ -274,14 +274,170 @@ describe('Tatubum no celular em pé', () => {
     mesa.destroy();
   });
 
-  it('as faixas da sua vez (turnos do Ataque, cego) ficam acima da mão, fora da rolagem', () => {
+  it('as faixas da sua vez (turnos do Ataque, cego) ficam por cima da mesa (fora da mão e sem linha própria)', () => {
     const v = midGame('p0');
     v.game = { ...v.game, current: 'p0', owed: 3 };
     const { root, mesa } = mount();
     mesa.update(toMesa(v));
-    expect(root.querySelector('#banners .kt-owedtag')?.textContent).toContain('FALTAM 3 TURNOS');
+    expect(root.querySelector('#table #banners .kt-owedtag')?.textContent).toContain('FALTAM 3 TURNOS');
     expect(root.querySelector('#hand .kt-owedtag')).toBeNull();
     mesa.destroy();
+  });
+
+  it('o palco fica na escala 1 (letra de pixel nítida) e vira compacto (kt-short) na tela baixa', () => {
+    vi.stubGlobal('innerWidth', 390);
+    vi.stubGlobal('innerHeight', 844);
+    const { root, mesa } = mount();
+    mesa.update(toMesa(viewOf(started(3), 'p0')));
+    expect(stageOf(root).style.transform).toBe('scale(1)');
+    expect(stageOf(root).style.width).toBe('390px');
+    expect(stageOf(root).classList.contains('kt-short')).toBe(false);
+    // o Safari com as barras: ~660 de altura
+    vi.stubGlobal('innerHeight', 664);
+    window.dispatchEvent(new Event('resize'));
+    expect(stageOf(root).style.transform).toBe('scale(1)');
+    expect(stageOf(root).classList.contains('kt-short')).toBe(true);
+    // nem o compacto cabe: aí encolhe
+    vi.stubGlobal('innerHeight', 560);
+    window.dispatchEvent(new Event('resize'));
+    expect(stageOf(root).style.transform).toBe(`scale(${560 / 640})`);
+    // no computador, nada de kt-short
+    mesa.setLayout('desktop');
+    expect(stageOf(root).classList.contains('kt-short')).toBe(false);
+    mesa.destroy();
+  });
+
+  it('as cartas da mão não se cobrem no celular (a mão rola pro lado)', () => {
+    const { root, mesa } = mount();
+    const v = viewOf(started(3), 'p0');
+    mesa.update(toMesa(v));
+    const lefts = [...root.querySelectorAll<HTMLElement>('#hand .kt-card')].map((c) => parseFloat(c.style.left));
+    expect(lefts).toHaveLength(8);
+    for (let i = 1; i < lefts.length; i++) expect(lefts[i]! - lefts[i - 1]!).toBeGreaterThanOrEqual(112);
+    mesa.destroy();
+  });
+
+  it('tocar, segurar e arrastar de lado muda a ordem da mão (a carta levanta e a mão não rola)', () => {
+    const { root, mesa } = mount();
+    const v = viewOf(started(3), 'p0');
+    mesa.update(toMesa(v));
+    const first = v.game.hand[0]!;
+    const hand = root.querySelector<HTMLElement>('#hand')!;
+    // jsdom não tem layout: o dedo solto "em cima da mão" e todas as cartas à esquerda dele
+    const efp = vi.fn(() => [hand]);
+    Object.defineProperty(document, 'elementsFromPoint', { value: efp, configurable: true });
+    const card = handCard(root, first);
+    card.dispatchEvent(new MouseEvent('pointerdown', { button: 0, clientX: 20, clientY: 700, bubbles: true }));
+    // antes de levantar, o dedo de lado é rolagem (o navegador decide)
+    const early = new Event('touchmove', { bubbles: true, cancelable: true });
+    card.dispatchEvent(early);
+    expect(early.defaultPrevented).toBe(false);
+    vi.advanceTimersByTime(450);
+    expect(handCard(root, first).classList.contains('lifted')).toBe(true);
+    // levantada: o dedo de lado arrasta a carta (a rolagem da mão é barrada)
+    const late = new Event('touchmove', { bubbles: true, cancelable: true });
+    card.dispatchEvent(late);
+    expect(late.defaultPrevented).toBe(true);
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 300, clientY: 700 }));
+    window.dispatchEvent(new MouseEvent('pointerup', { clientX: 300, clientY: 700 }));
+    const order = [...root.querySelectorAll<HTMLElement>('#hand .kt-card')].map((c) => c.dataset.id);
+    expect(order[order.length - 1]).toBe(first);
+    expect(order).toHaveLength(8);
+    // nada de zoom nem seleção
+    expect(root.querySelector('#viewer')?.textContent).toBe('');
+    expect(root.querySelector('#hand .kt-card.sel')).toBeNull();
+    delete (document as { elementsFromPoint?: unknown }).elementsFromPoint;
+    mesa.destroy();
+  });
+
+  it('a mão não é redesenhada debaixo do dedo: a visão nova entra quando solta', () => {
+    const { root, mesa } = mount();
+    const v = viewOf(started(3), 'p0');
+    mesa.update(toMesa(v));
+    const id = v.game.hand[0]!;
+    const card = handCard(root, id);
+    card.dispatchEvent(new MouseEvent('pointerdown', { button: 0, bubbles: true }));
+    mesa.update(toMesa({ ...v, game: { ...v.game, hand: [...v.game.hand, 'ataque-90'] } }));
+    // a mesma carta continua lá (o toque longo não se perde) e a nova ainda não entrou
+    expect(handCard(root, id)).toBe(card);
+    expect(root.querySelector('#hand [data-id="ataque-90"]')).toBeNull();
+    vi.advanceTimersByTime(450);
+    expect(card.classList.contains('lifted')).toBe(true);
+    window.dispatchEvent(new MouseEvent('pointerup'));
+    expect(root.querySelector('#hand [data-id="ataque-90"]')).not.toBeNull();
+    // soltou sem mexer: zoom
+    expect(root.querySelector('#viewer .vtext h3')?.textContent).toBeTruthy();
+    mesa.destroy();
+  });
+
+  it('no celular as dicas dizem "toque" (no computador, "clique")', () => {
+    const v = midGame('p1');
+    v.game.hand = ['olhado-90', ...v.game.hand];
+    const phone = mount();
+    phone.mesa.update(toMesa(v));
+    press(handCard(phone.root, 'olhado-90'), 50);
+    buttonByText(phone.root, 'JOGAR MAU-OLHADO')!.click();
+    expect(phone.root.querySelector('#actions')?.textContent).toContain('toque num adversário');
+    phone.mesa.destroy();
+    document.body.innerHTML = '';
+
+    const desk = mount('desktop');
+    desk.mesa.update(toMesa(v));
+    handCard(desk.root, 'olhado-90').dispatchEvent(new MouseEvent('pointerdown', { button: 0, bubbles: true }));
+    window.dispatchEvent(new MouseEvent('pointerup'));
+    buttonByText(desk.root, 'JOGAR MAU-OLHADO')!.click();
+    expect(desk.root.querySelector('#actions')?.textContent).toContain('clique num adversário');
+    desk.mesa.destroy();
+  });
+
+  it('o zoom do Desarme e o Favor falam em tocar; a galeria explica os toques', () => {
+    const v = midGame('p1');
+    v.game.hand = ['cafune-90', ...v.game.hand];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    press(handCard(root, 'cafune-90'), 450);
+    const text = root.querySelector('#viewer')?.textContent ?? '';
+    expect(text).toContain('toque nele');
+    expect(text).not.toContain('clique');
+    vi.advanceTimersByTime(1000);
+    root.querySelector<HTMLElement>('#viewer')!.click();
+    root.querySelector<HTMLElement>('#cards')!.click();
+    const how = root.querySelector('#gallery .kt-how')?.textContent ?? '';
+    expect(how).toContain('toque e segure');
+    expect(how).toContain('mudar a ordem da mão');
+    mesa.destroy();
+  });
+
+  it('efeito num adversário fora da tela: a fileira dos adversários rola até ele', async () => {
+    // jsdom não tem layout: a fileira mostra 0–390 e o assento do p2 está em 500–600 (fora, à direita)
+    const real = Element.prototype.getBoundingClientRect;
+    const rect = (l: number, w: number) => ({ left: l, right: l + w, top: 0, bottom: 100, width: w, height: 100, x: l, y: 0, toJSON: () => ({}) }) as DOMRect;
+    Element.prototype.getBoundingClientRect = function (this: Element) {
+      if (this.id === 'seats') return rect(0, 390);
+      const seat = this.closest('.kt-seat') as HTMLElement | null;
+      if (seat?.dataset.p === 'p2') return rect(500 - (seat.parentElement?.scrollLeft ?? 0), 100);
+      return real.call(this);
+    };
+    try {
+      const { root, mesa } = mount();
+      // p0 e p1 compram (a vez chega no p2); depois o p2 compra e a carta voa pro assento dele
+      const step = (room: Room, p: string): Room => {
+        const res = roomAction(room, p, { type: 'draw' }, mulberry32(3), 0);
+        if (!res.ok) throw new Error(res.error);
+        return res.room;
+      };
+      const before = step(step(started(3), 'p0'), 'p1');
+      mesa.update(toMesa(viewOf(before, 'p0')));
+      await vi.advanceTimersByTimeAsync(5000);
+      const seats = root.querySelector<HTMLElement>('#seats')!;
+      seats.scrollLeft = 0;
+      mesa.update(toMesa(viewOf(step(before, 'p2'), 'p0')));
+      await vi.advanceTimersByTimeAsync(50);
+      expect(seats.scrollLeft).toBeGreaterThanOrEqual(210);
+      mesa.destroy();
+    } finally {
+      Element.prototype.getBoundingClientRect = real;
+    }
   });
 
   it('o quadro do descarte: tocar numa carta explica o que ela faz', () => {
