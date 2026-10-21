@@ -50,8 +50,9 @@ export function unpeek(s: KittensState, cards: readonly string[]): KittensState 
 }
 
 /**
- * O monte mudou de ordem perto do topo (Embaralhar, Desarme escondendo o tatu, Feitiço pondo a de baixo no topo): ninguém
- * vê mais nada. No Desarme apaga de todos mesmo se o tatu foi pro fundo: apagar só às vezes contaria onde ele foi.
+ * O monte mudou de ordem perto do topo (Embaralhar; Desarme escondendo o tatu e Feitiço pondo a de baixo no topo, menos
+ * pra quem mexeu, que sabe o que fez): ninguém vê mais nada. No Desarme apaga mesmo se o tatu foi pro fundo: apagar só
+ * às vezes contaria onde ele foi.
  */
 export function clearPeeks(s: KittensState): KittensState {
   return Object.keys(s.peeks).length === 0 ? s : { ...s, peeks: {} };
