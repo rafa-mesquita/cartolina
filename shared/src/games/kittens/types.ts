@@ -4,6 +4,16 @@ export const KITTENS_MIN_PLAYERS = 2;
 export const KITTENS_MAX_PLAYERS = 8;
 /** Janela do Nem vem! (decisão do usuário, 2026-10-19): sempre corre, mesmo se ninguém tiver Nem vem!. */
 export const KITTENS_NOPE_MS = 5_000;
+/**
+ * Espera entre um Nem vem! e o próximo na mesma carta no ar (pedido do Rafa, 2026-10-21): evita dois por engano.
+ * Contada a partir do último Nem vem! aceito (= `pending.resolvesAt - KITTENS_NOPE_MS`); o primeiro não espera.
+ */
+export const KITTENS_NOPE_COOLDOWN_MS = 2_000;
+/** Até quando o próximo Nem vem! na carta no ar tem que esperar (null: pode agora, sem nenhum Nem vem! ainda). */
+export function kittensNopeCooldownUntil(pending: { nopes: readonly unknown[]; resolvesAt: number } | null | undefined): number | null {
+  if (!pending || pending.nopes.length === 0) return null;
+  return pending.resolvesAt - KITTENS_NOPE_MS + KITTENS_NOPE_COOLDOWN_MS;
+}
 /** Prazo das escolhas pessoais (Desarme, Favor, descarte e pegada do Mico, 5 diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
 export const KITTENS_CHOICE_MS = 30_000;
 /** Quantas entradas do diário ficam no estado. */

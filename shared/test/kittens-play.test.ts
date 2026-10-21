@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { kittensKindOf } from '../src/games/kittens/cards';
-import { KITTENS_NOPE_MS, type KittensAction } from '../src/games/kittens/types';
+import { KITTENS_NOPE_COOLDOWN_MS, KITTENS_NOPE_MS, type KittensAction } from '../src/games/kittens/types';
 import { applyKittensAction } from '../src/games/kittens/rules';
 import { errorMessage } from '../src/protocol';
 import { T0, act, ctxOf, deepFreeze, ids, refuse, table, tokenOf } from './kittens-helpers';
@@ -133,7 +133,7 @@ describe('Nem vem!', () => {
     expect(noped.pending!.resolvesAt).toBe(T0 + 3000 + KITTENS_NOPE_MS);
     expect(noped.hands.p1).toEqual(['favor-0']);
     expect(noped.log.at(-1)!.ev).toEqual({ t: 'nope', by: 'p1' });
-    const back = act(noped, 'p0', { type: 'nope' }, later);
+    const back = act(noped, 'p0', { type: 'nope' }, ctxOf(ids(3), { now: T0 + 5000 }));
     expect(back.pending!.nopes.map((n) => n.by)).toEqual(['p1', 'p0']);
   });
 
@@ -176,7 +176,8 @@ describe('Nem vem!', () => {
 
     it('sem `at` (cliente antigo) vale como antes: vira Nem vem! em cima de Nem vem!', () => {
       const first = act(air2(), 'p1', { type: 'nope', at: 0 }, later);
-      expect(act(first, 'p2', { type: 'nope' }, later).pending!.nopes.map((n) => n.by)).toEqual(['p1', 'p2']);
+      // (Passada a espera de 2 s entre um Nem vem! e outro.)
+      expect(act(first, 'p2', { type: 'nope' }, ctxOf(ids(3), { now: T0 + 3000 })).pending!.nopes.map((n) => n.by)).toEqual(['p1', 'p2']);
     });
 
     it('outra carta no ar com o mesmo número de Nem vem!: recusado (`on`)', () => {
@@ -191,10 +192,59 @@ describe('Nem vem!', () => {
       const token = tokenOf(s, 'p2', 'nemvem-2');
       const first = act(s, 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, later);
       expect(refuse(first, 'p2', { type: 'nope', card: token, at: 0, on: 'ataque-0' }, later)).toBe('nope_late');
-      expect(act(first, 'p2', { type: 'nope', card: token, at: 1, on: 'ataque-0' }, later).pending!.nopes.at(-1)).toEqual({
+      expect(act(first, 'p2', { type: 'nope', card: token, at: 1, on: 'ataque-0' }, ctxOf(ids(3), { now: T0 + 3000 })).pending!.nopes.at(-1)).toEqual({
         by: 'p2',
         card: 'nemvem-2',
       });
+    });
+  });
+
+  describe('espera de 2 s entre um Nem vem! e outro (pedido do Rafa, 2026-10-21)', () => {
+    const air2 = () => act(table({ hands: { ...hands(), p2: ['nemvem-2', 'mico-2'] } }), 'p0', play({ cards: ['ataque-0'] }), ctx);
+    const at = (ms: number) => ctxOf(ids(3), { now: T0 + ms });
+
+    it('a constante é 2 s', () => {
+      expect(KITTENS_NOPE_COOLDOWN_MS).toBe(2000);
+      expect(errorMessage('nope_cooldown')).toBe('Espere: acabaram de dar Nem vem! (2 s).');
+    });
+
+    it('o primeiro Nem vem! numa jogada não espera', () => {
+      expect(act(air2(), 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, at(0)).pending!.nopes).toHaveLength(1);
+    });
+
+    it('outro antes de 2 s é recusado: a carta fica na mão e o prazo não muda', () => {
+      const first = act(air2(), 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, at(1000));
+      for (const ms of [1000, 1500, 2999]) {
+        const res = applyKittensAction(deepFreeze(first), 'p2', { type: 'nope', at: 1, on: 'ataque-0' }, at(ms));
+        expect(res).toEqual({ ok: false, error: 'nope_cooldown' });
+      }
+      // Sem `at`/`on` (cliente antigo) também espera; quem deu o primeiro também.
+      expect(refuse(first, 'p2', { type: 'nope' }, at(2000))).toBe('nope_cooldown');
+      expect(refuse(first, 'p0', { type: 'nope' }, at(2000))).toBe('nope_cooldown');
+      expect(first.hands.p2).toEqual(['nemvem-2', 'mico-2']);
+      expect(first.pending!.resolvesAt).toBe(T0 + 1000 + KITTENS_NOPE_MS);
+    });
+
+    it('com 2 s cravados vale, como Nem vem! em cima de Nem vem!', () => {
+      const first = act(air2(), 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, at(1000));
+      const back = act(first, 'p2', { type: 'nope', at: 1, on: 'ataque-0' }, at(3000));
+      expect(back.pending!.nopes.map((n) => n.by)).toEqual(['p1', 'p2']);
+      expect(back.hands.p2).toEqual(['mico-2']);
+      expect(back.pending!.resolvesAt).toBe(T0 + 3000 + KITTENS_NOPE_MS);
+    });
+
+    it('a espera conta do último Nem vem!', () => {
+      const first = act(air2(), 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, at(0));
+      const second = act(first, 'p2', { type: 'nope', at: 1, on: 'ataque-0' }, at(2500));
+      // 2 s depois do primeiro, mas só 1 s depois do segundo: espera.
+      expect(refuse(second, 'p0', { type: 'nope', at: 2, on: 'ataque-0' }, at(3500))).toBe('nope_cooldown');
+      expect(act(second, 'p0', { type: 'nope', at: 2, on: 'ataque-0' }, at(4500)).pending!.nopes).toHaveLength(3);
+    });
+
+    it('atrasado ou em outra carta continua dando o erro mais específico', () => {
+      const first = act(air2(), 'p1', { type: 'nope', at: 0, on: 'ataque-0' }, at(1000));
+      expect(refuse(first, 'p2', { type: 'nope', at: 0, on: 'ataque-0' }, at(1100))).toBe('nope_late');
+      expect(refuse(first, 'p2', { type: 'nope', at: 1, on: 'pular-0' }, at(1100))).toBe('nope_stale');
     });
   });
 });

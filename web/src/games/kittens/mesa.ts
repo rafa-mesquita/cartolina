@@ -15,6 +15,7 @@ import {
   KITTENS_WILD,
   kittensIsBicho,
   kittensKindOf,
+  kittensNopeCooldownUntil,
   kittensTokenIndex,
   type GameAction,
   type KittensAction,
@@ -136,7 +137,7 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
   tatubum: 'O tatu-bola com o pavio aceso. Comprou esta carta e não tem Desarme? <b>Explodiu</b> e saiu do jogo.<br>Com Desarme, <b>você joga o Desarme</b> (30 segundos, senão ele vai sozinho), o tatu soldado corta o fio e você esconde o Tatubum de volta no monte, onde quiser.<br>O monte tem sempre um Tatubum a menos que o número de jogadores vivos.',
   cafune: 'Você joga na hora em que compra um Tatubum: <b>arraste o Desarme pro tatu</b> (ou clique nele). Tem 30 segundos; se não jogar, ele vai sozinho e o tatu volta pra um lugar sorteado.<br>O tatu soldado corta o fio e você não explode. Aí você escolhe <b>em segredo</b> onde o Tatubum volta no monte (no topo, no fundo, em qualquer posição ou ao acaso) e gasta um turno.<br>Não dá pra jogar Desarme fora dessa hora, nem cancelar com Nem vem!.',
-  nemvem: 'Cancela a carta que está no ar, <b>mesmo fora da sua vez</b>.<br>Toda carta jogada fica 5 segundos no ar esperando um Nem vem!, e cada Nem vem! recomeça os 5 segundos.<br>Dá pra dar Nem vem! no Nem vem!: conta quantos foram, número ímpar cancela e par deixa valer.<br>Não cancela o Tatubum nem o Desarme.',
+  nemvem: 'Cancela a carta que está no ar, <b>mesmo fora da sua vez</b>.<br>Toda carta jogada fica 5 segundos no ar esperando um Nem vem!, e cada Nem vem! recomeça os 5 segundos.<br>Dá pra dar Nem vem! no Nem vem!: conta quantos foram, número ímpar cancela e par deixa valer.<br>Depois de um Nem vem!, o próximo só pode vir 2 segundos depois.<br>Não cancela o Tatubum nem o Desarme.',
   ataque: 'Termina a sua vez <b>sem comprar</b>, e o próximo joga <b>2 turnos</b> seguidos.<br>Se você estava sob ataque, passa os turnos que você ainda devia + 2 (2 → 4 → 6…).<br>Pode levar Nem vem!.',
   pular: 'Termina um turno seu <b>sem comprar</b> carta.<br>Se você estava sob ataque (devendo 2 turnos), gasta só um deles e continua na vez.<br>Pode levar Nem vem!.',
   favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br><b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b> (a mão toda, se tiver menos), escolhidas por ele, uma de cada vez.<br>Pode levar Nem vem!.',
@@ -152,7 +153,7 @@ const detailOf = (k: KittensCardKind): string => DETAIL[k] ?? `Sozinho não faz 
 const ABOUT: Record<KittensCardKind, string> = {
   tatubum: 'Comprou e não tem Desarme? Explodiu, tá fora. Tem sempre um a menos que o número de jogadores.',
   cafune: 'Jogue quando comprar o Tatubum (30 s, senão vai sozinho): o tatu soldado corta o fio e o tatu volta pro monte onde você quiser, em segredo.',
-  nemvem: 'Cancela a carta no ar, mesmo fora da sua vez. Dá pra dar Nem vem! no Nem vem!.',
+  nemvem: 'Cancela a carta no ar, mesmo fora da sua vez. Dá pra dar Nem vem! no Nem vem!. Depois de um Nem vem!, o próximo só pode vir 2 segundos depois.',
   ataque: 'Termina sua vez sem comprar. O próximo joga 2 turnos (ou os seus + 2, se você estava sob ataque).',
   pular: 'Termina um turno seu sem comprar.',
   favor: 'Um adversário escolhe uma carta da mão dele pra te dar. Três Favores juntos: ele te dá 3.',
@@ -1089,9 +1090,18 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     bar.innerHTML = Array.from({ length: 5 }, (_, i) => `<i class="${i < left ? 'on' : ''}${i === left - 1 ? ' last' : ''}"></i>`).join('');
   }
 
+  /** Segundos que faltam da espera de 2 s depois do último Nem vem! na carta no ar (0: pode agora); hora do servidor. */
+  function nopeWaitSecs(): number {
+    const until = kittensNopeCooldownUntil(view?.pending);
+    return until === null ? 0 : Math.max(0, Math.ceil((until - opts.now()) / 1000));
+  }
+  /** A espera que o botão NEM VEM! mostra agora (quando muda, os botões são refeitos). */
+  let nopeWaitShown = 0;
+
   function tickTimers(): void {
     if (!view || destroyed) return;
     renderBar();
+    if (nopeWaitSecs() !== nopeWaitShown) renderActions();
     const c = view.choice;
     const left = c ? Math.max(0, Math.ceil((c.deadline - opts.now()) / 1000)) + 's' : '';
     wrap.querySelectorAll('[data-timer]').forEach((t) => { t.textContent = left; });
@@ -1511,6 +1521,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   function nope(card?: string): void {
     const p = view?.pending;
     if (!p) return;
+    // Espera de 2 s depois de um Nem vem! (pedido do Rafa, 2026-10-21): tecla N e Nem vem! arrastado não fazem nada.
+    const wait = nopeWaitSecs();
+    if (wait > 0) { toast(`Espere ${wait} s: acabaram de dar Nem vem!`); Sound.play('error'); return; }
     const on = p.play.cards[0];
     act({ type: 'nope', ...(card ? { card } : {}), at: p.nopes.length, ...(on ? { on } : {}) });
   }
@@ -1533,13 +1546,16 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!v) return;
     const box = $('#actions');
     box.innerHTML = '';
+    nopeWaitShown = nopeWaitSecs();
     if (v.phase !== 'playing' || !v.alive.includes(ME)) return;
     const blind = blindMe();
     const myNopes = v.hand.filter((c) => kindOf(c) === 'nemvem').length;
     // Cego não sabe se tem Nem vem!: sem botão (nem tecla N); tenta arrastando uma ficha pra mesa.
     if (v.pending && myNopes && !blind) {
-      const b = button(`NEM VEM! (${myNopes})`, () => nope());
+      // Na espera de 2 s depois de um Nem vem!, o botão fica apagado mostrando quanto falta.
+      const b = button(nopeWaitShown > 0 ? `NEM VEM! ${nopeWaitShown}s` : `NEM VEM! (${myNopes})`, () => nope());
       b.id = 'nope';
+      if (nopeWaitShown > 0) b.disabled = true;
       box.appendChild(b);
     } else if (v.pending && blind && v.hand.length) {
       box.appendChild(hint('cego: arraste uma carta virada pra mesa pra tentar um NEM VEM!'));
