@@ -102,6 +102,23 @@ describe('estado salvo antes das cartas novas (sem front/blind)', () => {
     expect(done).toMatchObject({ current: 'p1', owed: 1, skips: { p2: 1 } });
   });
 
+  it('defesa do Latidor salva antes da fila (sem `by`): quem jogou é quem está na vez, e a fila segue', () => {
+    const s = table({
+      hands: { p0: ['mico-0'], p1: ['cafune-1', 'latido-1'], p2: ['cafune-2', 'latido-2'] },
+      draw: DRAW,
+      discard: ['latido-0'],
+    });
+    const saved = deepFreeze({ ...s, choice: { kind: 'latido', who: 'p1', deadline: T0 + 30_000 } } as unknown as KittensState);
+    expect(settleKittens(saved, ctx).choice).toEqual({ kind: 'latido', who: 'p1', by: 'p0', deadline: T0 + 30_000 });
+    expect(kittensViewFor(saved, 'p2').choice).toEqual({ kind: 'latido', who: 'p1', by: 'p0', deadline: T0 + 30_000 });
+    const done = act(saved, 'p1', { type: 'choose', card: 'cafune-1' }, at(1000));
+    // Agora o p2 também se defende (todos que têm Latidor).
+    expect(done.choice).toEqual({ kind: 'latido', who: 'p2', by: 'p0', deadline: T0 + 1000 + 30_000 });
+    const last = act(done, 'p2', { type: 'choose', card: 'cafune-2' }, at(2000));
+    expect(last).toMatchObject({ choice: null, current: 'p0', owed: 1 });
+    expect(last.discard).toEqual(['latido-0', 'cafune-1', 'latido-1', 'cafune-2', 'latido-2']);
+  });
+
   it('estado completo não muda: settle sem nada a fazer devolve o mesmo objeto', () => {
     const s = deepFreeze(table({ hands: { p0: ['mico-0'], p1: [], p2: [] }, draw: DRAW }));
     expect(settleKittens(s, ctx)).toBe(s);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../src/game';
 import { KITTENS_BICHOS, kittensCardId, kittensKindOf } from '../src/games/kittens/cards';
-import { KITTENS_LATIDOS, kittensBaseDeck, kittensExtraCafunes } from '../src/games/kittens/deck';
+import { kittensBaseDeck, kittensExtraCafunes, kittensLatidos } from '../src/games/kittens/deck';
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import { settleKittens } from '../src/games/kittens/settle';
 import { tatusIn } from '../src/games/kittens/turn';
@@ -219,6 +219,9 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   // Outro com espiada à mostra (público): espia também (senão duas espiadas ao mesmo tempo quase nunca aparecem).
   const espiar = hand.find((x) => kittensKindOf(x) === 'espiar');
   if (espiar && Object.keys(s.peeks).some((x) => x !== p) && r() < 0.7) return { type: 'play', cards: [espiar] };
+  // Com a própria espiada à mostra, às vezes joga o Feitiço (senão a espiada com mais de 3 cartas quase nunca aparece).
+  const feitico = hand.find((x) => kittensKindOf(x) === 'feitico');
+  if (feitico && Object.hasOwn(s.peeks, p) && r() < 0.5) return { type: 'play', cards: [feitico] };
   // Alguém com vez pulada (público): manda o Tucano no vizinho dele (senão as puladas em cadeia quase nunca aparecem).
   const tucanos = hand.filter((x) => kittensKindOf(x) === 'tucano' || kittensKindOf(x) === 'boto').slice(0, 2);
   if (tucanos.length === 2 && tucanos.some((x) => kittensKindOf(x) === 'tucano') && r() < 0.7) {
@@ -361,7 +364,9 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
         if (now < cooldownUntil) throw new Error(`Nem vem! aceito na espera: ${p} ${JSON.stringify(action)}\n  ${where()}`);
         seen.add('nope:after-cooldown');
       }
-      if (c?.kind === 'latido' && c.who === p && s.blind.includes(p) && res.state.choice === null) seen.add('latido:blind-defended');
+      // Defendeu: a escolha fecha ou passa pro próximo da fila do Latidor.
+      const stillHis = res.state.choice?.kind === 'latido' && res.state.choice.who === p;
+      if (c?.kind === 'latido' && c.who === p && s.blind.includes(p) && !stillHis) seen.add('latido:blind-defended');
       trace.push(`${p} ${JSON.stringify(action)}`);
       s = res.state;
     }
@@ -389,6 +394,22 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     // A pulada gastou um dos turnos de Ataque e ele continua na vez.
     if (s.current !== null && skipped.includes(s.current)) seen.add('skipped:owed');
     if (s.choice?.kind === 'favor' && c?.kind === 'favor' && s.choice.left < c.left) seen.add('favor:again');
+    // Tatu Latidor (pedido do Rafa, 2026-10-21): quem se defende tem Latidor e Desarme; a fila passa de um pro outro; e
+    // quando ela acaba (partida seguindo), nenhum vivo além de quem jogou tem Latidor.
+    const lc = s.choice?.kind === 'latido' ? s.choice : null;
+    if (lc) {
+      const has = (k: string) => [...s.hands[lc.who]!, ...(s.front[lc.who] ?? [])].some((x) => kittensKindOf(x) === k);
+      if (!s.alive.includes(lc.who) || lc.who === lc.by || !has('latido') || !has('cafune')) {
+        throw new Error(`defesa do Latidor inválida: ${JSON.stringify(lc)}\n  ${where()}`);
+      }
+      if (c?.kind === 'latido' && c.who !== lc.who) seen.add('latido:queue');
+    }
+    if (c?.kind === 'latido' && !lc && s.phase === 'playing') {
+      const left = s.alive.filter((x) => x !== c.by && [...s.hands[x]!, ...(s.front[x] ?? [])].some((y) => kittensKindOf(y) === 'latido'));
+      if (left.length > 0) throw new Error(`fila do Latidor acabou com [${left}] ainda com Latidor\n  ${where()}`);
+    }
+    const barks = fresh.flatMap((ev) => (ev.t === 'barked' && ev.target !== null ? [ev.target] : []));
+    if (barks.length >= 2) seen.add('latido:boom-mid');
     // Par de Mico (pedido do Rafa, 2026-10-20): quando todos descartam, quem jogou pega uma das descartadas.
     if (s.choice?.kind === 'cinco' && s.choice.from === 'mico') {
       seen.add('mico:pick');
@@ -437,9 +458,11 @@ describe('simulação aleatória do Tatubum', () => {
   });
 
   it('as cartas novas aparecem nas simulações (com as próprias partidas, sem depender da ordem dos testes)', () => {
-    expect(KITTENS_LATIDOS).toBe(2);
+    expect([2, 3, 5, 8].map(kittensLatidos)).toEqual([2, 3, 5, 8]);
     const wanted = [
       'barked',
+      'latido:queue',
+      'latido:boom-mid',
       'cursed',
       'cured',
       'conjured',

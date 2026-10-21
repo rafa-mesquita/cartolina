@@ -152,7 +152,7 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br><b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b> (a mão toda, se tiver menos), escolhidas por ele, uma de cada vez.<br>Pode levar Nem vem!.',
   embaralhar: 'Embaralha o monte inteiro.<br>Pode levar Nem vem!.',
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, só você.<br>Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Se quem muda a ordem é você, continua vendo o que sabe: a carta que você põe no topo com o Feitiço (em cima das que você já via) ou deixa no topo com o Quati fica à mostra pra você; escondendo o tatu com o Desarme (sem ser ao acaso), a sua espiada continua, com o tatu nela se ele cair no meio ou logo abaixo dela.<br>Pode levar Nem vem!.',
-  latido: 'Só existem <b>2</b> na partida. Quando você joga um, quem tiver <b>o outro Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b> (30 segundos, senão vai sozinho) e os dois Latidores vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém tiver o outro, o seu fica <b>na sua frente</b>, à vista de todos: quando o outro for jogado, quem se defende é você.<br>Não gasta a sua vez. Pode levar Nem vem!.',
+  latido: 'Tem <b>um por jogador</b> na partida, e nenhum vem na mão inicial: estão todos no monte. Quando você joga um, <b>todo mundo que tiver Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b>, um de cada vez, na ordem da vez a partir de você (30 segundos cada, senão vai sozinho). O Desarme e <b>todos os Latidores dele</b> vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém mais tiver Latidor, o seu fica <b>na sua frente</b>, à vista de todos: quando outro for jogado, você também tem que se defender.<br>Não gasta a sua vez. Pode levar Nem vem!.',
   olhado: 'Escolha um adversário (mesmo sem carta na mão): a mão dele é <b>embaralhada</b> e ele <b>fica cego</b>, vendo só o verso das próprias cartas, até <b>comprar</b> uma carta.<br>Cego, ele joga às cegas: escolhe cartas viradas sem saber quais são (se não formarem jogada, voltam pra mão).<br>Pode levar Nem vem!.',
   feitico: 'Só você vê a <b>carta de baixo</b> do monte e escolhe (30 segundos):<br><b>FICAR COM ELA</b>: é como comprar (se for Tatubum, é comprar o Tatubum: Desarme ou explode).<br><b>PÔR NO TOPO</b>: ela vai pra cima do monte.<br>Nos dois casos <b>acaba o seu turno</b>. Se o tempo acabar, ela vai pro topo.<br>Pode levar Nem vem!.',
 };
@@ -174,7 +174,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir.',
   tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada.',
-  latido: 'Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode. Ninguém tem: fica na sua frente.',
+  latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',
   feitico: 'Você vê a carta de baixo do monte: fica com ela (é comprar) ou põe no topo. Acaba o turno.',
   boto: 'Coringa: com um bicho forma o par dele; dois Botos, o par que você escolher. Completa trios.',
@@ -349,7 +349,7 @@ interface TatuFx extends BigAt {
   big: HTMLElement;
   sp: Timer | null;
 }
-/** O Tatu Latidor grande latindo no meio da mesa enquanto quem tinha o outro não joga o Desarme. */
+/** O Tatu Latidor grande latindo no meio da mesa enquanto quem tem que se defender não joga o Desarme. */
 interface BarkFx extends BigAt {
   big: HTMLElement;
   woof: Timer | null;
@@ -636,7 +636,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   let lastTic = 0;
   /** O Tatubum grande tremendo no meio da mesa enquanto quem comprou não joga o Desarme. */
   let tatuFx: TatuFx | null = null;
-  /** O Tatu Latidor grande latindo enquanto quem tinha o outro não joga o Desarme. */
+  /** O Tatu Latidor grande latindo enquanto quem tem que se defender não joga o Desarme. */
   let barkFx: BarkFx | null = null;
   /** Quem levou o latido agora há pouco (se o próximo efeito for a explosão dele, ela é do Latidor, não de um Tatubum). */
   let barkAt: string | null = null;
@@ -1893,7 +1893,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'passed': return ev.card ? `${n(ev.from)} passou ${cardNameOf(ev.card)} pra ${n(ev.to)}` : `${n(ev.from)} passou uma carta pra ${n(ev.to)}`;
       case 'grabbed': return ev.from ? `${n(ev.by)} roubou o DESARME de ${n(ev.from)}!` : 'Ninguém tinha Desarme pra roubar';
       case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
-      case 'barked': return ev.target ? `AU AU! ${n(ev.target)} tinha o outro TATU LATIDOR: Desarme ou explode!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
+      case 'barked': return ev.target ? `AU AU! ${n(ev.target)} tinha TATU LATIDOR: Desarme ou explode!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
       case 'cursed': return `${n(ev.target)} ficou CEGO até comprar uma carta`;
       case 'tucano': return ev.target === ME ? `${n(ev.by)} jogou o TUCANO em você: a sua próxima vez vai ser pulada` : `${n(ev.by)} jogou o TUCANO em ${n(ev.target)}: a próxima vez dele vai ser pulada`;
       case 'skipped': return `${n(ev.who)} perdeu uma vez (TUCANO)`;
@@ -2108,7 +2108,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'barked': {
         say(text);
         if (!ev.target) {
-          // Ninguém tinha o outro: o Latidor sai do descarte e vai pra frente de quem jogou.
+          // Ninguém mais tinha Latidor: o jogado sai do descarte e vai pra frente de quem jogou.
           const id = (evView.front[ev.by] ?? []).at(-1) ?? 'latido-0';
           Sound.play('bark');
           void Fx.pop('AU AU!', $('#discard'), { size: popPx(36, 32), hold: 300, color: '#fff3c4' });
@@ -2118,7 +2118,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           renderFront();
           break;
         }
-        // Latiu pra quem tinha o outro: o Latidor grande late no meio da mesa e quem levou o latido treme.
+        // Latiu pra um dos que têm Latidor (um de cada vez, na ordem): o Latidor grande late no meio da mesa e quem levou
+        // o latido treme.
         barkAt = ev.target;
         showBark();
         Fx.shake(420, 10);
@@ -2214,7 +2215,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         break;
       }
       case 'cafune': {
-        // Desarme contra o Tatu Latidor: voa até o Latidor, que para de latir; os dois Latidores vão pro descarte.
+        // Desarme contra o Tatu Latidor: voa até o Latidor, que para de latir; ele e os Latidores de quem se defendeu vão
+        // pro descarte (o jogado volta pro meio se o próximo da fila levar o latido).
         if ((prev?.choice?.kind === 'latido' && prev.choice.who === ev.by) || barkAt === ev.by) {
           barkAt = null;
           const b = showBark();
@@ -2231,18 +2233,24 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           Fx.hearts({ x: b.cx, y: b.cy });
           await Fx.pop('UFA!', { x: b.cx, y: b.cy - 210 * b.k }, { size: popPx(60, 56), hold: 500, color: '#ff8fab' });
           clearBark();
-          // O Latidor de quem se defendeu sai de onde estava: da frente dele, da sua mão ou do bichinho do assento.
+          // Os Latidores de quem se defendeu (pode ser mais de um) saem de onde estavam: da frente dele, da sua mão ou do
+          // bichinho do assento (os da mão dos outros não aparecem: são os que chegaram no descarte agora).
           const isLatido = (x: string) => kindOf(x) === 'latido';
           const before = prev?.discard ?? [];
-          const inFront = (prev?.front[ev.by] ?? []).find(isLatido);
-          const inHand = ev.by === ME ? prev?.hand.find(isLatido) : undefined;
-          const his = inFront ?? inHand ?? evView.discard.filter(isLatido).find((x) => !before.includes(x)) ?? 'latido-1';
-          const played = [...before, ...evView.discard].filter(isLatido).find((x) => x !== his) ?? 'latido-0';
-          const hisFrom: At = rects[his] ?? (inFront ? frontAnchor(ev.by) : anchorOf(ev.by));
-          const hisScale = inFront ? (ev.by === ME ? 0.78 : 0.36) : ev.by === ME ? 1 : 0.5;
+          const inFront = (prev?.front[ev.by] ?? []).filter(isLatido);
+          const inHand = ev.by === ME ? (prev?.hand ?? []).filter(isLatido) : [];
+          const known = [...inFront, ...inHand];
+          const fresh = evView.discard.filter((x) => isLatido(x) && !before.includes(x) && !known.includes(x));
+          const his = known.length > 0 || fresh.length > 0 ? [...known, ...(ev.by === ME ? [] : fresh)] : ['latido-1'];
+          const played = [...before].reverse().find((x) => isLatido(x) && !his.includes(x)) ?? 'latido-0';
           await Promise.all([
             Fx.fly({ node: cardEl(played), from: { x: b.cx, y: b.cy }, to: $('#discard'), dur: 420, rot: 8 }),
-            Fx.fly({ node: cardEl(his), from: hisFrom, to: $('#discard'), dur: 460, rot: -8, scaleFrom: hisScale }),
+            ...his.map((id, i) => {
+              const front = inFront.includes(id);
+              const from: At = rects[id] ?? (front ? frontAnchor(ev.by) : anchorOf(ev.by));
+              const scaleFrom = front ? (ev.by === ME ? 0.78 : 0.36) : ev.by === ME ? 1 : 0.5;
+              return Fx.fly({ node: cardEl(id), from, to: $('#discard'), dur: 460 + 60 * i, rot: -8, scaleFrom });
+            }),
           ]);
           sayChoice();
           break;
@@ -2446,8 +2454,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   /**
-   * O Tatu Latidor grande no meio da mesa, tremendo e latindo "AU AU!" de tempos em tempos enquanto quem tinha o outro
-   * não joga o Desarme (cria uma vez; o Desarme voa pra ele).
+   * O Tatu Latidor grande no meio da mesa, tremendo e latindo "AU AU!" de tempos em tempos enquanto quem tem que se
+   * defender não joga o Desarme (cria uma vez; o Desarme voa pra ele).
    */
   function showBark(quiet = false): BarkFx {
     if (barkFx) return barkFx;

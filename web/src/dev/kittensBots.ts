@@ -107,7 +107,7 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
   }
   const attack = first('ataque');
   if (g.owed >= 2 && attack && rng() < 0.8) return { cards: [attack] };
-  // Tatu Latidor: solta sempre que pode (quem tiver o outro se defende; ninguém tem, fica na frente).
+  // Tatu Latidor: solta sempre que pode (todos que tiverem Latidor se defendem, um de cada vez; ninguém tem, fica na frente).
   const bark = first('latido');
   if (bark && mem.playedThisTurn < 2 && rng() < 0.9) return { cards: [bark] };
   if (mem.playedThisTurn >= 2 || rng() > 0.5) return null;
@@ -257,7 +257,7 @@ export function decideKittens(
       return { key, delay: between(rng, 900, 1600), action: { type: 'choose', keep } };
     }
     if (c.kind === 'latido') {
-      // Tatu Latidor: joga o Desarme (às cegas, qualquer ficha: o servidor acha o Desarme).
+      // Tatu Latidor (a vez dele na fila de defesa): joga o Desarme (às cegas, qualquer ficha: o servidor acha o Desarme).
       const card = g.blind.includes(me) ? g.hand[0] : g.hand.find((x) => kittensKindOf(x) === 'cafune');
       return card ? { key, delay: between(rng, 1200, 2200), action: { type: 'choose', card } } : null;
     }

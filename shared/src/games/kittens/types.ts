@@ -89,8 +89,12 @@ export type KittensChoice =
   | { kind: 'mico'; by: string; waiting: string[]; discarded: string[]; deadline: number }
   /** Par de Quati: `who` vê a carta de cima do monte e decide se ela fica ou vai pro fundo. */
   | { kind: 'quati'; who: string; deadline: number }
-  /** Tatu Latidor: `who` (quem tinha o outro Latidor) joga um Desarme à mão pra não explodir. Pública. */
-  | { kind: 'latido'; who: string; deadline: number }
+  /**
+   * Tatu Latidor jogado por `by`: `who` (um dos que têm Latidor) joga um Desarme à mão pra não explodir. Pública. Os
+   * que têm Latidor se defendem um de cada vez, na ordem dos assentos a partir de `by` (pedido do Rafa, 2026-10-21): a
+   * fila é quem ainda tem Latidor (quem se defende ou explode fica sem nenhum), então basta `by` pra achar o próximo.
+   */
+  | { kind: 'latido'; who: string; by: string; deadline: number }
   /** Feitiço: `who` vê a carta de BAIXO do monte e decide se fica com ela (como se comprasse) ou se ela vai pro topo. */
   | { kind: 'feitico'; who: string; deadline: number };
 
@@ -139,7 +143,10 @@ export type KittensEvent =
   | { t: 'passed'; from: string; to: string; card: string | null }
   /** Trio: roubou o Desarme `card` de `from` (null quando ninguém tinha). */
   | { t: 'grabbed'; by: string; from: string | null; card: string | null }
-  /** Tatu Latidor: latiu pra `target` (quem tinha o outro Latidor) ou, ninguém tendo, ficou na frente de `by` (`target` null). */
+  /**
+   * Tatu Latidor: latiu pra `target` (um dos que têm Latidor; um evento pra cada um, na vez dele de se defender) ou,
+   * ninguém mais tendo, ficou na frente de `by` (`target` null).
+   */
   | { t: 'barked'; by: string; target: string | null }
   /** Mau-olhado: `target` ficou cego (a mão embaralhada e escondida dele até comprar). */
   | { t: 'cursed'; by: string; target: string }

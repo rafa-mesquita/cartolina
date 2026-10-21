@@ -115,23 +115,56 @@ export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): Ki
   return logged({ ...next, choice: null }, { t: 'delayed', by: c.who, moved: !keep });
 }
 
-/** O Tatu Latidor que `p` tem (na frente primeiro, depois na mão), ou undefined. */
-export function latidoOf(s: KittensState, p: string): string | undefined {
-  return (s.front[p] ?? []).find(isKind('latido')) ?? s.hands[p]?.find(isKind('latido'));
+/** Os Tatus Latidores que `p` tem: os da frente primeiro, depois os da mão. */
+export function latidosOf(s: KittensState, p: string): string[] {
+  return [...(s.front[p] ?? []).filter(isKind('latido')), ...(s.hands[p] ?? []).filter(isKind('latido'))];
 }
 
 /**
- * Tatu Latidor: `who` joga o Desarme `card` pra não explodir. O Desarme e o Latidor dele (da frente ou da mão) vão pro
- * descarte (o que foi jogado já está lá). A vez continua com quem jogou o Latidor.
+ * Quem é o próximo a se defender do Tatu Latidor jogado por `by`: o primeiro vivo depois de `by`, na ordem dos assentos,
+ * que tenha Latidor (na mão ou na frente). `by` nunca é alvo do próprio Latidor. Ninguém: null.
  */
-export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string): KittensState {
-  const latido = latidoOf(s, c.who);
+export function nextBarked(s: KittensState, by: string): string | null {
+  const order = s.players;
+  const start = order.indexOf(by);
+  for (let k = 1; k < order.length; k++) {
+    const p = order[(start + k) % order.length]!;
+    if (p !== by && s.alive.includes(p) && latidosOf(s, p).length > 0) return p;
+  }
+  return null;
+}
+
+/**
+ * Tatu Latidor jogado por `by` (pedido do Rafa, 2026-10-21): todo outro vivo que tenha Latidor se defende, um de cada
+ * vez, na ordem dos assentos a partir de `by`. O próximo da fila (`nextBarked`) com Desarme ganha a escolha `latido`
+ * (prazo `deadline`); sem Desarme, explode na hora (a mão e os Latidores dele pra fora do jogo) e a fila segue. A fila
+ * acaba quando ninguém mais tem Latidor (a escolha fecha e a vez continua com `by`) ou a partida acaba.
+ */
+export function barkNext(s: KittensState, by: string, deadline: number): KittensState {
+  let next: KittensState = { ...s, choice: null };
+  for (;;) {
+    if (next.phase !== 'playing') return next;
+    const target = nextBarked(next, by);
+    if (target === null) return next;
+    next = logged(next, { t: 'barked', by, target });
+    if (next.hands[target]!.some(isKind('cafune'))) return { ...next, choice: { kind: 'latido', who: target, by, deadline } };
+    next = eliminate(logged(next, { t: 'boom', by: target }), target, 'boom');
+  }
+}
+
+/**
+ * Tatu Latidor: `who` joga o Desarme `card` pra não explodir. O Desarme e TODOS os Latidores dele (da frente e da mão)
+ * vão pro descarte: um Desarme basta, mesmo com mais de um Latidor (pedido do Rafa, 2026-10-21). O jogado já está lá.
+ * Depois a fila segue (`barkNext`, prazo `deadline` pro próximo); no fim, a vez continua com quem jogou o Latidor.
+ */
+export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string, deadline: number): KittensState {
+  const latidos = latidosOf(s, c.who);
   const mine = s.front[c.who] ?? [];
-  const front = latido !== undefined && mine.includes(latido) ? { ...s.front, [c.who]: mine.filter((x) => x !== latido) } : s.front;
-  const hand = s.hands[c.who]!.filter((x) => x !== card && x !== latido);
-  const discard = [...s.discard, card, ...(latido !== undefined ? [latido] : [])];
+  const front = mine.some(isKind('latido')) ? { ...s.front, [c.who]: mine.filter((x) => !latidos.includes(x)) } : s.front;
+  const hand = s.hands[c.who]!.filter((x) => x !== card && !latidos.includes(x));
+  const discard = [...s.discard, card, ...latidos];
   const next = counted({ ...s, front, hands: { ...s.hands, [c.who]: hand }, discard, choice: null }, c.who, 'defuses');
-  return logged(next, { t: 'cafune', by: c.who });
+  return barkNext(logged(next, { t: 'cafune', by: c.who }), c.by, deadline);
 }
 
 /**
@@ -207,10 +240,12 @@ export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensS
       // Sem resposta, a carta fica onde está (quem escolhia viu a de cima, como se tivesse deixado).
       return delayTop(s, c, true);
     case 'latido': {
-      // A mão não muda durante a escolha (ela só abre pra quem tem Desarme); sem Desarme, explode.
+      // A mão não muda durante a escolha (ela só abre pra quem tem Desarme); sem Desarme, explode. Nos dois casos a
+      // fila do Latidor segue, com prazo novo pro próximo.
+      const deadline = now + KITTENS_CHOICE_MS;
       const card = s.hands[c.who]!.find(isKind('cafune'));
-      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom');
-      return defendLatido(s, c, card);
+      if (card !== undefined) return defendLatido(s, c, card, deadline);
+      return barkNext(eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom'), c.by, deadline);
     }
     case 'feitico':
       // A carta SEMPRE vai pro topo: decidir pelo tipo dela (ex.: "fica, a não ser que seja Tatubum") contaria pra quem

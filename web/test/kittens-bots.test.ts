@@ -350,7 +350,7 @@ describe('decisão do bot do Tatubum', () => {
     });
 
     it('Latidor contra ele: joga o Desarme; cego, manda qualquer ficha', () => {
-      const choice = { kind: 'latido' as const, who: 'p1', deadline: 9000 };
+      const choice = { kind: 'latido' as const, who: 'p1', by: 'p0', deadline: 9000 };
       const d = decideKittens(p1View(['mico-1', 'cafune-3'], { choice }), newKittensMemory(), () => 0.5)!;
       expect(d.action).toEqual({ type: 'choose', card: 'cafune-3' });
       expect(d.key).toBe('choice:latido:9000');

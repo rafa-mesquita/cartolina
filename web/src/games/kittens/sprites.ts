@@ -288,7 +288,7 @@ export const CARD_STYLE: Record<KittensCardKind, { band: string; hint: string }>
   tamandua: { band: '#3b8a4a', hint: 'par: compra 2' },
   preguica: { band: '#3b8a4a', hint: 'par: puxa um bicho' },
   tucano: { band: '#3b8a4a', hint: 'par: pula alguém' },
-  latido: { band: '#b5653a', hint: 'late pro outro' },
+  latido: { band: '#b5653a', hint: 'late pros outros' },
   olhado: { band: '#5b3f9e', hint: 'deixa alguém cego' },
   feitico: { band: '#2f8f6b', hint: 'a de baixo do monte' },
   boto: { band: '#3b8a4a', hint: 'vira qualquer bicho' },
