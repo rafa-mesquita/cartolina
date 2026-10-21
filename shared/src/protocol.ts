@@ -98,6 +98,7 @@ export const ERROR_CODES = [
   'no_nope',
   'nope_late',
   'nope_stale',
+  'nope_cooldown',
   'not_your_choice',
   'bad_choice',
   // Cúpi (`not_your_turn` e `bad_target` já vêm do Tatubum)
@@ -163,6 +164,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   no_nope: 'Você não tem nenhum Nem vem!',
   nope_late: 'Alguém deu Nem vem! antes de você: sua carta voltou pra mão.',
   nope_stale: 'A carta no ar mudou: seu Nem vem! voltou pra mão.',
+  nope_cooldown: 'Espere: acabaram de dar Nem vem! (2 s).',
   not_your_choice: 'Essa escolha não é sua.',
   bad_choice: 'Escolha inválida.',
   not_enough_coins: 'Faltam moedas pra essa ação.',

@@ -10,6 +10,7 @@ import {
   PLAYER_COLORS,
   isKittensRoomView,
   kittensKindOf,
+  kittensNopeCooldownUntil,
   mulberry32,
   type GameAction,
   type KittensCardKind,
@@ -189,10 +190,24 @@ export function leastValuable(hand: readonly string[], rng: Rng): string {
 }
 
 /**
- * O que o bot faz agora (ou null). `key` identifica a etapa, pra não agir duas vezes nela.
- * `mem` é mutada: guarda o Nem vem! já considerado e as jogadas do turno.
+ * Quanto falta (ms, hora do servidor) da espera de 2 s depois do último Nem vem! na carta no ar (pedido do Rafa,
+ * 2026-10-21); 0 se não tem espera.
  */
-export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng: Rng): { key: string; delay: number; action: GameAction } | null {
+export function kittensNopeWait(view: KittensRoomView, now: number): number {
+  const until = kittensNopeCooldownUntil(view.game.pending);
+  return until === null ? 0 : Math.max(0, until - now);
+}
+
+/**
+ * O que o bot faz agora (ou null). `key` identifica a etapa, pra não agir duas vezes nela.
+ * `mem` é mutada: guarda o Nem vem! já considerado e as jogadas do turno. `now` = hora do servidor.
+ */
+export function decideKittens(
+  view: KittensRoomView,
+  mem: KittensBotMemory,
+  rng: Rng,
+  now: number = Date.now(),
+): { key: string; delay: number; action: GameAction } | null {
   const g = view.game, me = view.you;
   if (!me || g.phase !== 'playing' || !g.alive.includes(me)) return null;
 
@@ -255,6 +270,8 @@ export function decideKittens(view: KittensRoomView, mem: KittensBotMemory, rng:
     const p = g.pending;
     const key = `nope:${p.by}:${p.play.cards.join(',')}:${p.nopes.length}`;
     if (mem.noped === key) return null;
+    // Na espera de 2 s depois de um Nem vem!, nem decide: a decisão desta etapa fica pra quando a espera acabar.
+    if (kittensNopeWait(view, now) > 0) return null;
     mem.noped = key;
     if (!g.hand.some((x) => kittensKindOf(x) === 'nemvem')) return null;
     const valendo = p.nopes.length % 2 === 0;
@@ -297,6 +314,8 @@ class KittensBot {
   private mem = newKittensMemory();
   /** Etapa que o bot já agendou (limpa quando ele não tem mais nada a fazer). */
   private planned: string | null = null;
+  /** Quando o bot volta a olhar a mesa depois da espera de 2 s do Nem vem! (um despertador só por espera). */
+  private wakeAt: number | null = null;
   private tried = new Set<string>();
   constructor(
     readonly code: string,
@@ -367,18 +386,29 @@ class KittensBot {
     // a mesma semente nas duas decisões (agendar e enviar): o sorteio não muda de ideia no meio da espera
     const seed = Math.floor(Math.random() * 2 ** 32);
     const before = { ...this.mem };
-    const d = decideKittens(snap.view, this.mem, mulberry32(seed));
+    const now = Date.now() + snap.serverOffset;
+    const d = decideKittens(snap.view, this.mem, mulberry32(seed), now);
     if (!d) {
       this.planned = null;
+      // Espera de 2 s do Nem vem!: volta a olhar quando ela acabar (nenhum estado novo chega sozinho).
+      const wait = kittensNopeWait(snap.view, now);
+      if (wait > 0 && this.wakeAt !== now + wait) {
+        this.wakeAt = now + wait;
+        this.later(wait + 50, () => {
+          this.wakeAt = null;
+          this.react();
+        });
+      }
       return;
     }
     if (this.planned === d.key) return;
     this.planned = d.key;
     this.later(d.delay, () => {
-      const now = this.conn?.getSnapshot().view;
-      if (!now || !isKittensRoomView(now)) return;
+      const snapNow = this.conn?.getSnapshot();
+      const viewNow = snapNow?.view;
+      if (!snapNow || !viewNow || !isKittensRoomView(viewNow)) return;
       // decide de novo com a visão atual (a etapa pode ter mudado enquanto esperava), sem sujar a memória
-      const again = decideKittens(now, { ...before }, mulberry32(seed));
+      const again = decideKittens(viewNow, { ...before }, mulberry32(seed), Date.now() + snapNow.serverOffset);
       if (again?.key !== d.key) return;
       this.conn?.sendAction(again.action);
       // se a ação se perdeu e a etapa não andou, tenta de novo

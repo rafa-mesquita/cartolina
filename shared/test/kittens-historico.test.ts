@@ -75,7 +75,7 @@ describe('contadores do histórico: partida, saídas, Nem vem! e Desarmes', () =
     expect(noped.stats.p1).toEqual({ nopes: 1, defuses: 0 });
     // Atrasado (viu 0 Nem vem! na carta no ar): recusado, não conta.
     expect(refuse(noped, 'p1', { type: 'nope', at: 0 }, at(1500))).toBe('nope_late');
-    expect(act(noped, 'p1', { type: 'nope', at: 1 }, at(2000)).stats.p1).toEqual({ nopes: 2, defuses: 0 });
+    expect(act(noped, 'p1', { type: 'nope', at: 1 }, at(3000)).stats.p1).toEqual({ nopes: 2, defuses: 0 });
   });
 
   it('Desarme contra o Tatubum comprado conta, jogado à mão ou sozinho no fim do prazo', () => {

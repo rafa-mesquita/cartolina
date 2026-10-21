@@ -53,7 +53,7 @@ export * from './games/kittens/cards';
 export * from './games/kittens/record';
 export * from './games/kittens/summary';
 export {
-  KITTENS_EXTRA_CAFUNES,
+  kittensExtraCafunes,
   KITTENS_HAND_START,
   KITTENS_LATIDOS,
   KITTENS_PACK,
