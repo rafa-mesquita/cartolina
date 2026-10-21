@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../src/game';
 import { KITTENS_BICHOS, kittensCardId, kittensKindOf } from '../src/games/kittens/cards';
-import { KITTENS_EXTRA_CAFUNES, KITTENS_LATIDOS, kittensBaseDeck } from '../src/games/kittens/deck';
+import { KITTENS_LATIDOS, kittensBaseDeck, kittensExtraCafunes } from '../src/games/kittens/deck';
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import { settleKittens } from '../src/games/kittens/settle';
 import { tatusIn } from '../src/games/kittens/turn';
@@ -25,7 +25,7 @@ const COVERAGE_SEEDS = 40;
 
 /** Todas as cartas de uma partida com `n` jogadores, em ordem alfabética. */
 function fullDeck(n: number): string[] {
-  const cafunes = Array.from({ length: n + KITTENS_EXTRA_CAFUNES }, (_, i) => kittensCardId('cafune', i));
+  const cafunes = Array.from({ length: n + kittensExtraCafunes(n) }, (_, i) => kittensCardId('cafune', i));
   const tatus = Array.from({ length: n - 1 }, (_, i) => kittensCardId('tatubum', i));
   return [...kittensBaseDeck(n), ...cafunes, ...tatus].sort();
 }

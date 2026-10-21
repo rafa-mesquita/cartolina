@@ -62,12 +62,14 @@ describe('baralho', () => {
     expect(new Set(deck).size).toBe(deck.length);
   });
 
+  // Desarmes extras no monte como no original: 2 com até 4 jogadores, 1 a partir de 5.
   it.each([
-    [2, 43],
-    [5, 25],
-    [6, 71],
-    [8, 59],
-  ])('com %i jogadores: 1 Cafuné + 7 na mão; monte com %i cartas, 2 Cafunés e n − 1 tatus', (n, drawSize) => {
+    [2, 43, 2],
+    [4, 31, 2],
+    [5, 24, 1],
+    [6, 70, 1],
+    [8, 58, 1],
+  ])('com %i jogadores: 1 Desarme + 7 na mão; monte com %i cartas, %i Desarme(s) e n − 1 tatus', (n, drawSize, extras) => {
     const players = ps(n);
     const { hands, draw } = kittensDeal(mulberry32(7), players);
     for (const p of players) {
@@ -77,7 +79,7 @@ describe('baralho', () => {
     }
     expect(draw).toHaveLength(drawSize);
     expect(count(draw, 'tatubum')).toBe(n - 1);
-    expect(count(draw, 'cafune')).toBe(2);
+    expect(count(draw, 'cafune')).toBe(extras);
     const all = [...Object.values(hands).flat(), ...draw];
     expect(new Set(all).size).toBe(all.length);
   });
