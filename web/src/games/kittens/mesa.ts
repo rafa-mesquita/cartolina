@@ -38,7 +38,12 @@ export interface MesaOptions {
   now(): number;
   /** Semente do cerrado (a mesma do lobby: seedOf(code)). */
   seed: number;
+  /** Layout da tela: 'phone' = celular em pé (coluna da altura da tela, sem a escala fixa de 1440×900). */
+  layout?: MesaLayout;
 }
+
+/** O layout que o React escolhe (`useLayout()`): computador (palco 1440×900 escalado) ou celular em pé. */
+export type MesaLayout = 'phone' | 'desktop';
 
 export interface MesaState {
   view: KittensView;
@@ -52,6 +57,8 @@ export interface Mesa {
   update(state: MesaState): void;
   /** Ação recusada pelo servidor: toast + som de erro. */
   error(message: string): void;
+  /** Troca o layout (computador ↔ celular em pé) sem recriar a mesa. */
+  setLayout(layout: MesaLayout): void;
   /** Para animações, timers, listeners de janela e o canvas. */
   destroy(): void;
 }
@@ -227,6 +234,7 @@ const TEMPLATE = `
     <div id="topright">
       <button type="button" class="kt-btn small ghost" id="cards"><span>AS CARTAS</span></button>
       <button type="button" class="kt-btn small ghost" id="sound"><span>SOM: SIM</span></button>
+      <button type="button" class="kt-btn small ghost" id="diary" aria-haspopup="dialog"><span>DIÁRIO</span></button>
     </div>
   </div>
   <div id="seats"></div>
@@ -241,6 +249,8 @@ const TEMPLATE = `
       <button type="button" id="eye" title="Ver todas as cartas do descarte"></button>
     </div>
     <div id="log"></div>
+    <button type="button" id="lastline" aria-haspopup="dialog"></button>
+    <div id="banners"></div>
     <div id="front"></div>
     <div id="hand"></div>
     <div id="actions"></div>
@@ -248,6 +258,7 @@ const TEMPLATE = `
     <div id="viewer"></div>
     <div id="toast"></div>
   </div>
+  <div id="scrim"></div>
   <div id="gallery" hidden></div>
   <div id="pile" hidden></div>
   <div id="over" hidden></div>
@@ -299,17 +310,32 @@ interface Drag {
   hover: Element | null;
 }
 type Timer = ReturnType<typeof setTimeout>;
-interface TatuFx {
+/** Onde fica a carta grande do meio da mesa (o tatu, o Latidor, o BUM): centro e o tamanho relativo (1 no computador). */
+interface BigAt {
+  cx: number;
+  cy: number;
+  /** Fator dos deslocamentos dos efeitos em volta da carta grande (no celular ela é menor). */
+  k: number;
+}
+interface TatuFx extends BigAt {
   big: HTMLElement;
   sp: Timer | null;
-  cx: number;
 }
 /** O Tatu Latidor grande latindo no meio da mesa enquanto quem tinha o outro não joga o Desarme. */
-interface BarkFx {
+interface BarkFx extends BigAt {
   big: HTMLElement;
   woof: Timer | null;
-  cx: number;
 }
+
+/** Celular em pé: o palco é desenhado pra esta largura (e escalado pro aparelho, até PHONE_MAX_SCALE). */
+const PHONE_W = 430;
+const PHONE_MAX_SCALE = 1.2;
+/** Tamanho da carta grande do meio no celular, em relação à do computador (lá ela é 2×; aqui 1,3×). */
+const PHONE_K = 0.65;
+/** Distância entre as cartas da mão no celular quando elas não cabem (a mão rola pro lado). */
+const PHONE_STEP = 88;
+/** Tocar e segurar numa carta abre o zoom (celular). */
+const LONG_PRESS_MS = 400;
 
 export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   // O CSS da mesa é escopado em `.kittens .kt-mesa`: se o React montou fora de um `.kittens`, o root vira um.
@@ -394,11 +420,34 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   // A altura manda; a largura cresce até a do espaço da mesa (sem faixas vazias nos lados), como no Diquisti.
   let scale = 1;
   let stageW = 1440;
+  let stageH = 900;
   let bgWidth = 0;
+  // Celular em pé: o palco vira uma coluna da altura da tela (classe kt-phone), desenhada pra PHONE_W de largura.
+  let layout: MesaLayout = opts.layout ?? 'desktop';
+  const phone = (): boolean => layout === 'phone';
+  stage.classList.toggle('kt-phone', phone());
   function fit(): void {
     if (destroyed) return;
     const W = wrap.clientWidth || window.innerWidth;
     const H = wrap.clientHeight || window.innerHeight;
+    if (phone()) {
+      scale = Math.min(PHONE_MAX_SCALE, W / PHONE_W);
+      stageW = Math.round(W / scale);
+      stageH = Math.round(H / scale);
+      stage.style.width = stageW + 'px';
+      stage.style.height = stageH + 'px';
+      stage.style.transform = `scale(${scale})`;
+      const pc = $<HTMLCanvasElement>('#particles');
+      pc.width = Math.ceil(stageW / 4);
+      pc.height = Math.ceil(stageH / 4);
+      // O cerrado fica na proporção da tela em pé (o canvas cobre o palco com object-fit: cover).
+      const w = Math.max(120, Math.round((180 * stageW) / stageH));
+      if (Math.abs(w - bgWidth) > 2) { bgWidth = w; Cerrado.start($<HTMLCanvasElement>('#bg'), opts.seed, w); }
+      if (view) { renderSeats(); renderHand(); }
+      return;
+    }
+    stageH = 900;
+    stage.style.height = '';
     scale = H / 900;
     stageW = W / scale;
     if (stageW < 1440) { scale = W / 1440; stageW = 1440; }
@@ -416,6 +465,17 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (view) { renderSeats(); renderHand(); }
   }
   Fx.init(stage, $('#fxlayer'), $<HTMLCanvasElement>('#particles'), () => scale);
+  /**
+   * Onde fica a carta grande do meio (o tatu do Desarme, o Latidor, o BUM): no computador, o ponto fixo de sempre do
+   * palco; no celular, o centro da mesa (que muda com a altura da tela), com a carta menor.
+   */
+  function bigAt(): BigAt {
+    if (!phone()) return { cx: stageW / 2, cy: 470, k: 1 };
+    const b = Fx.box($('#table'));
+    return { cx: b.w ? b.x : stageW / 2, cy: b.h ? b.y : stageH / 2, k: PHONE_K };
+  }
+  /** Onde os efeitos "em você" aparecem: no computador, acima da mão; no celular, no meio da mão. */
+  const mineAt = (y: number): At => (phone() ? Fx.box($('#hand')) : { x: stageW / 2, y });
 
   // ---------------------------------------------------------------- fila de efeitos
   /** Um efeito: `run` anima; `skip` é o que fica dele quando a fila é pulada (a linha do diário, o quadro do descarte). */
@@ -658,6 +718,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     syncTatu();
     $('#caption').innerHTML = captionText;
     tickTimers();
+    syncSheets();
   }
 
   /** A escolha aberta é sua? (no par de Mico, "sua" = você ainda tem que descartar) */
@@ -747,8 +808,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       const el = document.createElement('div');
       el.className = 'kt-seat';
       el.dataset.p = p;
-      el.style.left = x + 'px';
-      el.style.top = y + 'px';
+      // No celular os assentos ficam numa fileira (com rolagem pro lado), sem posição no arco.
+      if (!phone()) {
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+      }
       const dead = v.phase !== 'lobby' && !v.alive.includes(p);
       if (dead) el.classList.add('dead');
       if (v.winner === p) el.classList.add('winner');
@@ -756,6 +820,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       if ((mode?.type === 'target' || mode?.type === 'blindTarget') && validTarget(p)) {
         el.classList.add('targetable');
         el.onclick = () => chooseTarget(p);
+      } else if (phone()) {
+        // Celular: tocar no assento mostra tudo o que no computador fica nas dicas (title) dele.
+        el.onclick = () => zoomSeat(p);
       }
       // Ordem da vez: PRÓXIMO no que joga depois de quem está na vez, número nos outros.
       const k = orderFromCurrent(p);
@@ -805,8 +872,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       else void Sprites.critter(color).then((url) => { if (url) { critterUrls.set(color, url); if (img) img.src = url; } });
       box.appendChild(el);
     });
-    // Setinhas no sentido da vez: você → assentos da esquerda pra direita → você de novo.
-    if (v.phase !== 'playing') return;
+    // Setinhas no sentido da vez: você → assentos da esquerda pra direita → você de novo. (No celular a fileira já
+    // está na ordem da vez e cada um tem PRÓXIMO/2º/3º.)
+    if (v.phase !== 'playing' || phone()) return;
     const pts = list.map((_, i) => seatPos(i, list.length));
     const arrow = (x: number, y: number, label = '') => {
       const a = document.createElement('div');
@@ -911,8 +979,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     v.discard.slice(-3).forEach((id, i, arr) => {
       const c = cardEl(id);
       c.style.transform = `rotate(${(i - arr.length + 1) * 7 + 3}deg)`;
-      // A de cima do descarte: passar o mouse abre o zoom com a explicação (pedido do Rafa).
-      if (i === arr.length - 1) {
+      // A de cima do descarte: passar o mouse abre o zoom com a explicação (pedido do Rafa). No celular é tocar e
+      // segurar (tocar abre o quadro do descarte).
+      if (i === arr.length - 1 && !phone()) {
         c.onmouseenter = () => zoom(id);
         c.onmouseleave = () => zoom(null);
       }
@@ -948,7 +1017,10 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const v = view;
     if (!v) return;
     const hand = $('#hand');
+    // Celular: a mão rola pro lado; o redesenho não pode jogar a rolagem pro começo.
+    const scrollX = hand.scrollLeft;
     hand.innerHTML = '';
+    $('#banners').innerHTML = '';
     hand.classList.toggle('myturn', v.phase === 'playing' && v.current === ME && !v.pending && !v.choice);
     const c = v.choice;
     // Favor e descarte do Mico: a carta clicada sai da mão (contorno vermelho); Tatubum: só o Desarme acende.
@@ -970,33 +1042,50 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     }
     const order = orderedHand();
     const n = order.length;
-    const hw = hand.clientWidth || 940;
-    const step = Math.min(118, (hw - 112) / Math.max(1, n - 1));
-    const width = step * (n - 1) + 112;
+    const hw = hand.clientWidth || (phone() ? PHONE_W : 940);
+    let step = Math.min(118, (hw - 112) / Math.max(1, n - 1));
+    let width = step * (n - 1) + 112;
+    let x0 = (hw - width) / 2;
+    // Celular: as cartas ficam grandes e, se não couberem, a mão rola pro lado (em vez de espremer).
+    if (phone() && step < PHONE_STEP) {
+      step = PHONE_STEP;
+      width = step * (n - 1) + 112;
+      x0 = 10;
+    }
     order.forEach((id, i) => {
       const el = cardEl(id);
-      el.style.left = (hw - width) / 2 + i * step + 'px';
+      el.style.left = x0 + i * step + 'px';
       el.style.zIndex = String(i);
       if (selected.has(id)) el.classList.add('sel');
       if (arriving.has(id)) el.classList.add('arriving');
       el.onpointerdown = (e) => startDrag(e, id);
       el.ondblclick = () => { if (!canDraw()) return; selected = new Set([id]); playSelected(); };
-      el.onmouseleave = () => zoom(null);
+      if (!phone()) el.onmouseleave = () => zoom(null);
       hand.appendChild(el);
     });
+    if (phone() && x0 === 10) {
+      // Respiro no fim da rolagem.
+      const pad = document.createElement('div');
+      pad.className = 'kt-handpad';
+      pad.style.left = x0 + width + 'px';
+      hand.appendChild(pad);
+      hand.scrollLeft = scrollX;
+    }
+    // No celular as faixas ficam acima da mão (a mão rola e cortaria o que passa da borda).
+    const tags = phone() ? $('#banners') : hand;
     // Ataque acumulado: faixa grande com quantos turnos você ainda joga (contando este).
     if (v.phase === 'playing' && v.current === ME && v.owed > 1) {
       const tag = document.createElement('div');
       tag.className = `kt-owedtag${blind ? ' high' : ''}`;
       tag.innerHTML = `<b>FALTAM ${v.owed} TURNOS</b><span>contando este</span>`;
-      hand.appendChild(tag);
+      tags.appendChild(tag);
     }
     // Mau-olhado: a faixa grande fica até você comprar.
     if (blind) {
       const tag = document.createElement('div');
       tag.className = 'kt-blindtag';
       tag.innerHTML = `${CURSE_SVG}<b>VOCÊ ESTÁ CEGO!</b><span>compre uma carta pra voltar a ver</span>`;
-      hand.appendChild(tag);
+      tags.appendChild(tag);
     }
   }
 
@@ -1010,6 +1099,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   }
 
   let drag: Drag | null = null;
+  /** Toque longo em andamento (celular): a carta, onde o dedo desceu e o relógio dos 400 ms. */
+  let press: { x: number; y: number; t: Timer | null } | null = null;
+  /** O toque longo já abriu o zoom: soltar o dedo não seleciona nem joga. */
+  let pressFired = false;
+  /** Depois do toque longo, o clique que o navegador ainda manda é engolido (até esta hora). */
+  let swallowUntil = 0;
 
   function stagePoint(e: PointerEvent): { x: number; y: number } {
     const r = stage.getBoundingClientRect();
@@ -1063,6 +1158,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   function onDragMove(e: PointerEvent): void {
     const d = drag;
     if (!d) return;
+    // Tocou e segurou (celular): o zoom abriu, o dedo não arrasta mais a carta.
+    if (pressFired) return;
     if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
     if (!d.moved) {
       d.moved = true;
@@ -1094,6 +1191,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const d = drag;
     drag = null;
     if (!d) return;
+    if (pressFired) {
+      // Soltou depois do toque longo: só o zoom (sem selecionar a carta).
+      pressFired = false;
+      if (d.moved) { dropGhost(d); render(); }
+      return;
+    }
     if (!d.moved) { clickCard(d.id); return; }
     dropGhost(d);
     const t = dropTarget(e);
@@ -1393,6 +1496,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const key = panelKeyOf(v);
     if (key === panelKey) { tickTimers(); return; }
     panelKey = key;
+    syncSheets();
     panel.innerHTML = '';
     if (!key) return;
     const c = v.choice;
@@ -1498,7 +1602,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const info = $('#pile .pinfo');
     const explain = (id: string | null): void => {
       const k = id ? kindOf(id) : null;
-      info.innerHTML = k ? `<h3>${cardName(k)}</h3><p>${detailOf(k)}</p>` : '<p class="phint">Passe o mouse numa carta pra ver o que ela faz.</p>';
+      info.innerHTML = k ? `<h3>${cardName(k)}</h3><p>${detailOf(k)}</p>` : phone() ? '<p class="phint">Toque numa carta pra ver o que ela faz (ou toque e segure).</p>' : '<p class="phint">Passe o mouse numa carta pra ver o que ela faz.</p>';
     };
     explain(null);
     cards.forEach((id) => {
@@ -1510,6 +1614,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           el.onclick = () => act({ type: 'choose', card: id });
         } else el.classList.add('off');
       }
+      // Celular (sem mouse): tocar numa carta que não dá pra pegar mostra o que ela faz.
+      if (phone() && !el.onclick) el.onclick = () => explain(id);
       grid.appendChild(el);
     });
     if (!cards.length) grid.innerHTML = '<div class="none">O descarte está vazio.</div>';
@@ -1608,8 +1714,42 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     renderLog();
   }
   function renderLog(): void {
-    $('#log').innerHTML = '<div class="h">DIÁRIO</div>' + logLines.map((l) => `<p class="${l.cls}">${l.text}</p>`).join('');
+    // No celular o diário é uma folha (com FECHAR); a última linha fica na tira fina debaixo dos adversários.
+    const close = phone() ? '<button type="button" class="kt-btn small ghost kt-close"><span>FECHAR</span></button>' : '';
+    $('#log').innerHTML = close + '<div class="h">DIÁRIO</div>' + logLines.map((l) => `<p class="${l.cls}">${l.text}</p>`).join('');
+    const last = logLines[logLines.length - 1];
+    $('#lastline').innerHTML = `<span class="kt-lltxt ${last?.cls ?? ''}">${last?.text ?? 'diário da partida'}</span><b>DIÁRIO ›</b>`;
   }
+  /** Folha do diário (celular) aberta? */
+  let logOpen = false;
+  function openLog(): void {
+    if (!phone()) return;
+    logOpen = true;
+    zoom(null);
+    Sound.play('select');
+    syncSheets();
+  }
+  /** Fecha as folhas que dá pra fechar tocando fora (diário e zoom). */
+  function closeSheets(): void {
+    logOpen = false;
+    zoom(null);
+    syncSheets();
+  }
+  /**
+   * Celular: o fundo escuro (#scrim) aparece com qualquer folha aberta por cima da mesa: o diário, o zoom e os painéis
+   * de escolha (menos o do Favor, que pede pra tocar numa carta da mão).
+   */
+  function syncSheets(): void {
+    const p = phone();
+    const panelSheet = p && panelKey !== '' && !panelKey.startsWith('favor');
+    stage.classList.toggle('kt-logopen', p && logOpen);
+    stage.classList.toggle('kt-dim', p && (logOpen || zoomed !== null || panelSheet));
+    $('#lastline').setAttribute('aria-expanded', String(p && logOpen));
+  }
+  $('#diary').onclick = () => (logOpen ? closeSheets() : openLog());
+  $('#lastline').onclick = () => openLog();
+  $('#scrim').onclick = () => closeSheets();
+  $('#log').addEventListener('click', (e) => { if (e.target instanceof Element && e.target.closest('.kt-close')) closeSheets(); });
 
   function say(text: string): void {
     captionText = text;
@@ -1691,7 +1831,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
               const s = next === ME ? $('#hand') : seatEl(next);
               s?.classList.add('hit');
               later(() => s?.classList.remove('hit'), 600);
-              const at: At | null = next === ME ? { x: 650, y: 600 } : s ? Fx.box(s) : null;
+              const at: At | null = next === ME ? (phone() ? mineAt(600) : { x: 650, y: 600 }) : s ? Fx.box(s) : null;
               if (at) void Fx.pop(`${view.owed} TURNOS!`, at, { size: 34, hold: 500, color: '#e4572e' });
             }
           } else if (ev.play === 'pular') Sound.play('skip');
@@ -1767,7 +1907,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           $('#hand').classList.add('kt-shuffling');
           later(() => q('#hand')?.classList.remove('kt-shuffling'), 900);
         }
-        const at: At = mine ? { x: stageW / 2, y: 600 } : s ? Fx.box(s) : anchorOf(ev.target);
+        const at: At = mine ? mineAt(600) : s ? Fx.box(s) : anchorOf(ev.target);
         Fx.glitter(at, '#c86fd4');
         await Fx.icon(CURSE_URL, at, { size: mine ? 150 : 110, hold: 450 });
         if (mine) say('VOCÊ ESTÁ CEGO! Jogue às cegas ou compre pra voltar a ver.');
@@ -1776,7 +1916,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'cured': {
         say(text);
         Sound.play('peek');
-        const at: At = ev.by === ME ? { x: stageW / 2, y: 640 } : anchorOf(ev.by);
+        const at: At = ev.by === ME ? mineAt(640) : anchorOf(ev.by);
         Fx.glitter(at, '#e9dcff');
         void Fx.pop(ev.by === ME ? 'VOCÊ VOLTOU A VER!' : 'VOLTOU A VER!', at, { size: ev.by === ME ? 34 : 22, hold: 450, color: '#e9dcff' });
         await wait(600);
@@ -1819,11 +1959,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           const used = ev.by === ME ? prev?.hand.find((x) => kindOf(x) === 'cafune' && !now.hand.includes(x)) : undefined;
           const from: At = used && rects[used] ? rects[used]! : anchorOf(ev.by);
           Sound.play('card');
-          await Fx.fly({ node: cardEl(used ?? 'cafune-0'), from, to: { x: b.cx, y: 470 }, dur: 420, rot: -6, trail: '#f2c14e' });
+          await Fx.fly({ node: cardEl(used ?? 'cafune-0'), from, to: { x: b.cx, y: b.cy }, dur: 420, rot: -6, trail: '#f2c14e' });
           b.big.classList.remove('shaking');
           Sound.play('cafune');
-          Fx.hearts({ x: b.cx, y: 470 });
-          await Fx.pop('UFA!', { x: b.cx, y: 260 }, { size: 60, hold: 500, color: '#ff8fab' });
+          Fx.hearts({ x: b.cx, y: b.cy });
+          await Fx.pop('UFA!', { x: b.cx, y: b.cy - 210 * b.k }, { size: 60, hold: 500, color: '#ff8fab' });
           clearBark();
           // O Latidor de quem se defendeu sai de onde estava: da frente dele, da sua mão ou do bichinho do assento.
           const isLatido = (x: string) => kindOf(x) === 'latido';
@@ -1835,7 +1975,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           const hisFrom: At = rects[his] ?? (inFront ? frontAnchor(ev.by) : anchorOf(ev.by));
           const hisScale = inFront ? (ev.by === ME ? 0.78 : 0.36) : ev.by === ME ? 1 : 0.5;
           await Promise.all([
-            Fx.fly({ node: cardEl(played), from: { x: b.cx, y: 470 }, to: $('#discard'), dur: 420, rot: 8 }),
+            Fx.fly({ node: cardEl(played), from: { x: b.cx, y: b.cy }, to: $('#discard'), dur: 420, rot: 8 }),
             Fx.fly({ node: cardEl(his), from: hisFrom, to: $('#discard'), dur: 460, rot: -8, scaleFrom: hisScale }),
           ]);
           sayChoice();
@@ -1843,7 +1983,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         }
         // O Desarme foi jogado: voa até o tatu, o tatu soldado entra andando, corta o fio e o pavio apaga.
         const t = showTatu();
-        const cx = t.cx;
+        const { cx, cy } = t;
         holdPanel = true;
         renderPanel();
         say(text);
@@ -1851,15 +1991,15 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         const used = ev.by === ME ? prev?.hand.find((x) => kindOf(x) === 'cafune' && !now.hand.includes(x)) : undefined;
         const from: At = used && rects[used] ? rects[used]! : anchorOf(ev.by);
         Sound.play('card');
-        await Fx.fly({ node: cardEl(used ?? 'cafune-0'), from, to: { x: cx, y: 470 }, dur: 420, rot: -6, trail: '#f2c14e' });
-        await defuseWalk(cx);
+        await Fx.fly({ node: cardEl(used ?? 'cafune-0'), from, to: { x: cx, y: cy }, dur: 420, rot: -6, trail: '#f2c14e' });
+        await defuseWalk(t);
         stopEvery(t.sp);
         t.big.classList.remove('shaking', 'live');
         Sound.play('cafune');
-        Fx.hearts({ x: cx, y: 470 });
+        Fx.hearts({ x: cx, y: cy });
         // Já escondido (o prazo venceu e foi tudo sozinho)? O UFA! é rápido.
         const quick = !(view.choice?.kind === 'cafune' && view.choice.who === ev.by);
-        await Fx.pop('UFA!', { x: cx, y: 260 }, { size: 60, hold: quick ? 300 : 700, color: '#ff8fab' });
+        await Fx.pop('UFA!', { x: cx, y: cy - 210 * t.k }, { size: 60, hold: quick ? 300 : 700, color: '#ff8fab' });
         clearTatu();
         holdPanel = false;
         renderPanel();
@@ -1874,23 +2014,23 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         conjureFrom = null;
         clearBark();
         say(barked ? `${nameOf(ev.by)} não tinha Desarme pro Latidor…` : `${nameOf(ev.by)} comprou o… TATUBUM!`);
-        const cx = stageW / 2;
+        const { cx, cy, k } = bigAt();
         const big = cardEl(barked ? 'latido-0' : 'tatubum-0');
         big.classList.add('bigcard', 'shaking');
         big.style.left = cx + 'px';
-        big.style.top = '470px';
+        big.style.top = cy + 'px';
         $('#fxlayer').appendChild(big);
         Sound.play(barked ? 'bark' : 'fuse');
-        const sp = every(() => Fx.sparks({ x: cx + 15, y: 340 }), 120);
+        const sp = every(() => Fx.sparks({ x: cx + 15 * k, y: cy - 130 * k }), 120);
         await wait(1100);
         stopEvery(sp);
         big.remove();
         Sound.play('boom');
         Fx.flash('#fff3c4', 220);
         Fx.shake(600, 14);
-        Fx.boom({ x: cx, y: 470 });
+        Fx.boom({ x: cx, y: cy });
         say(text);
-        await Fx.pop('BUM!', { x: cx, y: 450 }, { size: 150, hold: 900, color: '#e4572e' });
+        await Fx.pop('BUM!', { x: cx, y: cy - 20 * k }, { size: Math.round(150 * k), hold: 900, color: '#e4572e' });
         break;
       }
       case 'discarded': {
@@ -1960,7 +2100,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         clearTatu();
         overStage = 'title';
         renderOver();
-        Fx.fireworks({ x: stageW / 2, y: 420 });
+        Fx.fireworks(phone() ? { x: stageW / 2, y: bigAt().cy } : { x: stageW / 2, y: 420 });
         await wait(2400);
         overStage = 'full';
         renderOver();
@@ -1973,34 +2113,34 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
    * Desarme (pedido do Rafa): o tatu soldado (arte do Flow, fundo recortado) entra andando pela esquerda até a carta
    * do Tatubum no centro, corta o fio com o alicate (faísca + "clic") e sai andando de volta.
    */
-  async function defuseWalk(cx: number): Promise<void> {
+  async function defuseWalk({ cx, cy, k }: BigAt): Promise<void> {
     const s = document.createElement('img');
     s.src = SOLDADO;
     s.className = 'soldier walking';
     $('#fxlayer').appendChild(s);
-    const y = 500; // pés na altura da base da carta grande
-    const stop = cx - 205; // o alicate (lado direito do soldado) encosta na carta
+    const y = cy + 30 * k; // pés na altura da base da carta grande
+    const stop = cx - 205 * k; // o alicate (lado direito do soldado) encosta na carta
     const at = (x: number, flip = 1) => `translate(${x}px, ${y}px) translate(-50%, -100%) scaleX(${flip})`;
     const walk = (from: number, to: number, flip: number, ms: number): Promise<unknown> =>
       Fx.REDUCED || document.hidden || typeof s.animate !== 'function'
         ? Promise.resolve()
         : s.animate([{ transform: at(from, flip) }, { transform: at(to, flip) }], { duration: ms, easing: 'steps(14, end)', fill: 'forwards' }).finished.catch(() => {});
-    s.style.transform = at(-140);
-    await Promise.race([walk(-140, stop, 1, 1300), wait(1500)]);
+    s.style.transform = at(-140 * k);
+    await Promise.race([walk(-140 * k, stop, 1, 1300), wait(1500)]);
     s.classList.remove('walking');
     s.style.transform = at(stop);
     // corta o fio
     await wait(250);
     s.classList.add('snip');
     Sound.play('snip');
-    Fx.glitter({ x: stop + 80, y: 430 }, '#ffffff');
-    Fx.sparks({ x: stop + 80, y: 430 });
+    Fx.glitter({ x: stop + 80 * k, y: cy - 40 * k }, '#ffffff');
+    Fx.sparks({ x: stop + 80 * k, y: cy - 40 * k });
     await wait(450);
     s.classList.remove('snip');
     // missão cumprida: vira e volta
     void (async () => {
       s.classList.add('walking');
-      await Promise.race([walk(stop, -160, -1, 1100), wait(1300)]);
+      await Promise.race([walk(stop, -160 * k, -1, 1100), wait(1300)]);
       s.remove();
     })();
   }
@@ -2008,21 +2148,21 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   /** O Tatubum grande no meio da mesa (cria uma vez; o Desarme e o soldado usam o mesmo). */
   function showTatu(): TatuFx {
     if (tatuFx) return tatuFx;
-    const cx = stageW / 2;
+    const { cx, cy, k } = bigAt();
     const big = cardEl('tatubum-0');
     big.classList.add('bigcard', 'shaking');
     big.style.left = cx + 'px';
-    big.style.top = '470px';
+    big.style.top = cy + 'px';
     big.onclick = () => playDefuse();
     $('#fxlayer').appendChild(big);
     Sound.play('fuse');
-    let k = 0;
+    let n = 0;
     // Faíscas do pavio sem parar e o chiado de novo de tempos em tempos, enquanto o Desarme não vem.
     const sp = every(() => {
-      Fx.sparks({ x: cx + 15, y: 340 });
-      if (++k % 14 === 0 && view?.choice?.kind === 'tatu') Sound.play('fuse');
+      Fx.sparks({ x: cx + 15 * k, y: cy - 130 * k });
+      if (++n % 14 === 0 && view?.choice?.kind === 'tatu') Sound.play('fuse');
     }, 120);
-    tatuFx = { big, sp, cx };
+    tatuFx = { big, sp, cx, cy, k };
     syncTatu();
     return tatuFx;
   }
@@ -2045,20 +2185,20 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
    */
   function showBark(): BarkFx {
     if (barkFx) return barkFx;
-    const cx = stageW / 2;
+    const { cx, cy, k } = bigAt();
     const big = cardEl('latido-0');
     big.classList.add('bigcard', 'shaking');
     big.style.left = cx + 'px';
-    big.style.top = '470px';
+    big.style.top = cy + 'px';
     big.onclick = () => playDefuse();
     $('#fxlayer').appendChild(big);
     const bark = (): void => {
       Sound.play('bark');
-      void Fx.pop('AU AU!', { x: cx + 170, y: 320 }, { size: 46, hold: 350, color: '#fff3c4' });
+      void Fx.pop('AU AU!', { x: cx + 170 * k, y: cy - 150 * k }, { size: Math.round(46 * Math.max(k, 0.75)), hold: 350, color: '#fff3c4' });
     };
     bark();
     const woof = every(() => { if (view?.choice?.kind === 'latido') bark(); }, 1800);
-    barkFx = { big, woof, cx };
+    barkFx = { big, woof, cx, cy, k };
     syncTatu();
     return barkFx;
   }
@@ -2118,6 +2258,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const tgt = e.target;
     if (tgt instanceof HTMLElement && (tgt.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tgt.tagName))) return;
     const gallery = $('#gallery');
+    if (e.key === 'Escape' && phone() && (logOpen || zoomed !== null)) { closeSheets(); return; }
     if (e.key === 'Escape' && !gallery.hidden) { gallery.hidden = true; return; }
     if (e.key === 'Escape' && pileOpen) { closePile(); return; }
     // Com a galeria ou o quadro do descarte aberto, os atalhos da mesa (espaço, N, Enter) ficam parados.
@@ -2145,7 +2286,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const v = $('#viewer');
     v.innerHTML = '';
     const k = id ? kindOf(id) : null;
-    if (!id || (!k && !isToken(id))) return;
+    if (!id || (!k && !isToken(id))) { zoomed = null; syncSheets(); return; }
     const big = document.createElement('div');
     big.className = 'vcard';
     big.appendChild(cardEl(id));
@@ -2156,7 +2297,104 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       ? `<h3>${cardName(k)}</h3><p>${detailOf(k)}</p>`
       : '<h3>CARTA VIRADA</h3><p>Você está <b>cego</b> pelo Mau-olhado: não sabe que carta é esta.<br>Dá pra jogar às cegas (se não formar jogada, ela volta pra mão) ou <b>comprar</b> uma carta pra voltar a ver.</p>';
     v.append(big, txt);
+    if (phone()) v.appendChild(closeHint());
     Sound.play('zoom');
+    syncSheets();
+  }
+  /** "toque pra fechar", no pé das folhas do celular. */
+  function closeHint(): HTMLElement {
+    const p = document.createElement('p');
+    p.className = 'kt-vclose';
+    p.textContent = 'toque pra fechar';
+    return p;
+  }
+  /**
+   * Celular: tocar num adversário mostra tudo dele numa folha (o que no computador fica nas dicas do assento): cartas
+   * na mão, a ordem da vez, turnos de Ataque, cego, espiada, o Latidor na frente e se a conexão caiu.
+   */
+  function zoomSeat(p: string): void {
+    const v = view;
+    if (!v) return;
+    zoom(null);
+    zoomed = 'seat:' + p;
+    const box = $('#viewer');
+    const dead = v.phase !== 'lobby' && !v.alive.includes(p);
+    const n = v.handCounts[p] ?? 0;
+    const k = orderFromCurrent(p);
+    const lines: string[] = [];
+    if (dead) lines.push('<b>Está fora</b> (explodiu ou saiu).');
+    else lines.push(`Tem <b>${n === 1 ? 'uma carta' : `${n} cartas`}</b> na mão.`);
+    if (v.winner === p) lines.push('<b>Venceu!</b>');
+    if (!dead && k === 0) lines.push(v.owed > 1 ? `Está na vez e ainda joga <b>${v.owed} turnos</b> (contando este).` : 'Está na vez.');
+    else if (!dead && k === 1) lines.push('Joga <b>depois</b> de quem está na vez (PRÓXIMO).');
+    else if (!dead && k > 1) lines.push(`É o <b>${k + 1}º</b> a jogar, contando quem está na vez.`);
+    if (!dead && v.blind.includes(p)) lines.push('Está <b>cego</b> (Mau-olhado) até comprar uma carta.');
+    if (!dead && v.peekers.includes(p)) lines.push('<b>Espiou</b> o topo do monte (só ele vê as cartas).');
+    const front = dead ? [] : (v.front[p] ?? []);
+    if (front.length) lines.push(`Na frente: <b>${front.map((id) => cardNameOf(id)).join(', ')}</b> (à vista de todos).`);
+    if (!dead && seatOf(p)?.connected === false) lines.push('A conexão <b>caiu</b>: se não voltar logo, sai do jogo.');
+    const head = document.createElement('div');
+    head.className = 'kt-vseat';
+    const img = document.createElement('img');
+    img.alt = '';
+    const url = critterUrls.get(colorOf(p));
+    if (url) img.src = url;
+    head.appendChild(img);
+    const txt = document.createElement('div');
+    txt.className = 'vtext';
+    txt.innerHTML = `<h3>${upName(p)}</h3><p>${lines.join('<br>')}</p>`;
+    box.append(head, txt, closeHint());
+    Sound.play('zoom');
+    syncSheets();
+  }
+  // Celular: o zoom é uma folha; tocar nela fecha.
+  $('#viewer').onclick = () => { if (phone()) zoom(null); };
+
+  // ---------------------------------------------------------------- toque (celular): tocar e segurar = zoom
+  /**
+   * Tocar e segurar (~400 ms) numa carta abre o zoom com a explicação (no celular não tem rodinha nem mouse por cima).
+   * Vale no layout do celular e em qualquer toque de dedo; mexer o dedo antes cancela (vira arrasto ou rolagem).
+   */
+  function onPressDown(e: PointerEvent): void {
+    cancelPress();
+    pressFired = false;
+    if (!phone() && e.pointerType !== 'touch') return;
+    const t = e.target instanceof Element ? e.target : null;
+    if (!t || t.closest('#gallery') || t.closest('#viewer')) return;
+    const card = t.closest<HTMLElement>('.kt-card[data-id]');
+    const id = card?.dataset.id;
+    if (!card || !id || card.classList.contains('ghost')) return;
+    press = {
+      x: e.clientX,
+      y: e.clientY,
+      t: later(() => {
+        press = null;
+        pressFired = true;
+        swallowUntil = Date.now() + 700;
+        zoom(id);
+      }, LONG_PRESS_MS),
+    };
+  }
+  function onPressMove(e: PointerEvent): void {
+    if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) cancelPress();
+  }
+  function cancelPress(): void {
+    if (!press) return;
+    cancel(press.t);
+    press = null;
+  }
+  /** O clique que vem depois do toque longo não pode pegar carta, abrir o descarte nem fechar o zoom que acabou de abrir. */
+  function onClickCapture(e: MouseEvent): void {
+    if (!swallowUntil) return;
+    const fresh = Date.now() < swallowUntil;
+    swallowUntil = 0;
+    if (!fresh) return;
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  /** Segurar o dedo abre o menu do navegador (copiar imagem…): no celular, não. */
+  function onContextMenu(e: Event): void {
+    if (phone()) e.preventDefault();
   }
   function onWheel(e: WheelEvent): void {
     const t = e.target;
@@ -2193,6 +2431,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   window.addEventListener('keydown', onKey);
   document.addEventListener('visibilitychange', onVisibility);
   stage.addEventListener('wheel', onWheel, { passive: false });
+  stage.addEventListener('pointerdown', onPressDown);
+  stage.addEventListener('contextmenu', onContextMenu);
+  wrap.addEventListener('click', onClickCapture, true);
+  window.addEventListener('pointermove', onPressMove);
+  window.addEventListener('pointerup', cancelPress);
+  window.addEventListener('pointercancel', cancelPress);
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fit()) : null;
   ro?.observe(root);
   fit();
@@ -2209,6 +2453,25 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       seats = s.seats;
       players = s.view.players;
       onState(s.view);
+    },
+    setLayout(next: MesaLayout): void {
+      if (destroyed || next === layout) return;
+      layout = next;
+      stage.classList.toggle('kt-phone', phone());
+      // Recomeça no jeito do layout novo: sem folhas abertas, palco e cerrado refeitos, a carta grande no lugar novo.
+      logOpen = false;
+      zoom(null);
+      cancelPress();
+      stage.style.transform = '';
+      stage.style.width = '';
+      stage.style.height = '';
+      bgWidth = 0;
+      fit();
+      if (tatuFx) { clearTatu(); showTatu(); }
+      if (barkFx) { stopEvery(barkFx.woof); barkFx.big.remove(); barkFx = null; showBark(); }
+      renderLog();
+      render();
+      syncSheets();
     },
     error(message: string): void {
       if (destroyed) return;
@@ -2235,6 +2498,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       document.removeEventListener('visibilitychange', onVisibility);
       stopDragListeners();
       stage.removeEventListener('wheel', onWheel);
+      stage.removeEventListener('pointerdown', onPressDown);
+      stage.removeEventListener('contextmenu', onContextMenu);
+      wrap.removeEventListener('click', onClickCapture, true);
+      window.removeEventListener('pointermove', onPressMove);
+      window.removeEventListener('pointerup', cancelPress);
+      window.removeEventListener('pointercancel', cancelPress);
       ro?.disconnect();
       drag = null;
       Cerrado.stop();

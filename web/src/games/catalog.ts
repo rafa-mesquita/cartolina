@@ -65,7 +65,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Quem sobrar vivo vence.',
     ],
     playable: true,
-    mobile: false,
+    mobile: true,
   },
   coup: {
     name: 'Cúpi',

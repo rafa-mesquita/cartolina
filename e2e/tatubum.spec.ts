@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { closePlayers, join, newPlayer } from './helpers';
+import { closePlayers, join, newPhonePlayer, newPlayer } from './helpers';
 
 test.afterEach(closePlayers);
 
@@ -12,8 +12,9 @@ const button = (page: Page, label: string) => page.locator('.kt-mesa #actions bu
  * Quem está na vez compra. Se vier o Tatubum, joga o Desarme e esconde o tatu de volta no monte (a mão inicial
  * sempre tem um Desarme); em qualquer caso a vez acaba passando pra outra pessoa.
  */
-async function drawAndPass(me: Page, other: Page): Promise<void> {
-  await button(me, 'COMPRAR').click();
+async function drawAndPass(me: Page, other: Page, phone = false): Promise<void> {
+  // no celular é toque (tap), no computador clique
+  await (phone ? button(me, 'COMPRAR').tap() : button(me, 'COMPRAR').click());
   await expect
     .poll(
       async () => {
@@ -73,4 +74,41 @@ test('partida do Tatubum com dois navegadores', async ({ browser }) => {
   // E volta: o segundo compra e a vez é do primeiro de novo.
   await drawAndPass(second, first);
   await expect(turn(first)).toContainText('SUA VEZ');
+});
+
+test('Tatubum no celular: entra pelo link, a mesa fica em pé e compra', async ({ browser }) => {
+  test.setTimeout(200_000);
+  const a = await newPlayer(browser);
+  const b = await newPhonePlayer(browser);
+  await a.goto('/');
+  await a.getByRole('link', { name: /Tatubum/ }).click();
+  await a.getByRole('button', { name: 'criar sala' }).click();
+  await expect(a).toHaveURL(/#\/sala\/[A-Z0-9]{4}$/);
+  await join(a, 'Ana', 0);
+  // o celular não vê "abre no computador": entra direto
+  await b.goto(a.url());
+  await join(b, 'Bia', 1);
+  await expect(b.getByText('esperando o host começar…')).toBeVisible();
+  await a.getByRole('button', { name: 'COMEÇAR' }).click();
+
+  // no celular: palco em pé (kt-phone), as 8 cartas, a tira do diário e o botão DIÁRIO
+  await expect(b.locator('.kt-mesa #stage.kt-phone')).toBeVisible();
+  await expect(a.locator('.kt-mesa #stage.kt-phone')).toHaveCount(0);
+  await expect(hand(b)).toHaveCount(8);
+  await expect(b.locator('.kt-mesa #lastline')).toBeVisible();
+  await b.locator('.kt-mesa #diary').tap();
+  await expect(b.locator('.kt-mesa #log')).toBeVisible();
+  await b.locator('.kt-mesa #log .kt-close').tap();
+  await expect(b.locator('.kt-mesa #log')).toBeHidden();
+
+  // cada um compra uma vez (o celular tocando em COMPRAR)
+  const aFirst = (await turn(a).textContent())!.includes('SUA VEZ');
+  if (aFirst) {
+    await drawAndPass(a, b);
+    await drawAndPass(b, a, true);
+  } else {
+    await drawAndPass(b, a, true);
+    await drawAndPass(a, b);
+  }
+  await expect(turn(aFirst ? a : b)).toContainText('SUA VEZ');
 });
