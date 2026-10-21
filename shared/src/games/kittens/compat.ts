@@ -45,6 +45,8 @@ function exitsOf(old: SavedKittensState): KittensExit[] {
  * O histórico (2026-10-20) trouxe `match` (entra 0), `exits` (refeitas pelo diário, ver `exitsOf`) e `stats` (entra
  * vazio: os Nem vem! e Desarmes de antes do deploy não contam).
  * O Tucano (2026-10-21) trouxe `skips`: entra vazio (ninguém tinha vez pulada).
+ * A defesa do Latidor de antes da fila (2026-10-21) não tem `by` (quem jogou o Latidor): era sempre quem está na vez
+ * (o Latidor só sai na vez de quem joga, e a vez fica com ele), então `by` = `current`.
  * Devolve o MESMO objeto quando o estado já está completo. Aplicado nas portas de entrada do motor
  * (`applyKittensAction`, `settleKittens`, `kittensViewFor`) e no registro do histórico.
  */
@@ -56,10 +58,17 @@ export function kittensWithNewFields(state: KittensState): KittensState {
   const oldPeek = old.peeks === undefined || 'peek' in old;
   const oldHistory = old.match === undefined || old.exits === undefined || old.stats === undefined;
   const oldSkips = old.skips === undefined;
-  if (old.front !== undefined && old.blind !== undefined && !oldFavor && !oldMico && !oldPeek && !oldHistory && !oldSkips) {
+  const oldLatido = c?.kind === 'latido' && (c as Partial<typeof c>).by === undefined;
+  if (old.front !== undefined && old.blind !== undefined && !oldFavor && !oldMico && !oldPeek && !oldHistory && !oldSkips && !oldLatido) {
     return state;
   }
-  const choice = oldFavor ? { ...c, left: 1 } : oldMico ? { ...c, discarded: [] } : c;
+  const choice = oldFavor
+    ? { ...c, left: 1 }
+    : oldMico
+      ? { ...c, discarded: [] }
+      : oldLatido
+        ? { ...c, by: old.current ?? c.who }
+        : c;
   const { peek: _peek, ...rest } = old;
   void _peek;
   const peeks = old.peeks ?? peeksOf(old);

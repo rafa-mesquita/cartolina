@@ -504,7 +504,7 @@ describe('mesa do Tatubum', () => {
   it('Tatu Latidor: o Latidor grande late e quem tem que se defender joga o Desarme à mão', () => {
     const v = midGame('p1');
     v.game.hand = ['cafune-90', ...v.game.hand.filter((id) => !id.startsWith('cafune'))];
-    v.game.choice = { kind: 'latido', who: 'p1', deadline: Date.now() + 30_000 };
+    v.game.choice = { kind: 'latido', who: 'p1', by: 'p0', deadline: Date.now() + 30_000 };
     const { root, mesa, sent } = mount();
     mesa.update(toMesa(v));
     const big = root.querySelector<HTMLElement>('.bigcard');
@@ -525,7 +525,7 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
 
     const w = midGame('p2');
-    w.game.choice = { kind: 'latido', who: 'p1', deadline: Date.now() + 30_000 };
+    w.game.choice = { kind: 'latido', who: 'p1', by: 'p0', deadline: Date.now() + 30_000 };
     const watcher = mount();
     watcher.mesa.update(toMesa(w));
     expect(watcher.root.querySelector('#caption')?.textContent).toContain('P1 está se defendendo do Latidor');
@@ -886,7 +886,7 @@ describe('mesa do Tatubum', () => {
     const v = midGame('p1');
     v.game.blind = ['p1'];
     v.game.hand = ['?0', '?1', '?2'];
-    v.game.choice = { kind: 'latido', who: 'p1', deadline: Date.now() + 30_000 };
+    v.game.choice = { kind: 'latido', who: 'p1', by: 'p0', deadline: Date.now() + 30_000 };
     const { root, mesa, sent } = mount();
     mesa.update(toMesa(v));
     expect(root.querySelector('#hand')?.classList.contains('giving')).toBe(true);
@@ -919,6 +919,45 @@ describe('mesa do Tatubum', () => {
     errors.mockRestore();
   });
 
+  it('Latidor com vários se defendendo: um de cada vez, o Latidor grande late pra cada um', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const hand = ['cafune-90', 'latido-1', ...v.game.hand.filter((id) => !id.startsWith('cafune'))];
+    v.game = { ...v.game, hand, front: { p0: [], p1: [], p2: ['latido-2'] } };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    let n = v.game.log.at(-1)!.n;
+    const next = (patch: Partial<KittensRoomView['game']>, ...evs: KittensEvent[]) => {
+      v.game = { ...v.game, ...patch, log: [...v.game.log, ...evs.map((ev) => ({ n: ++n, ev }))] };
+      mesa.update(toMesa(v));
+    };
+    const deadline = Date.now() + 30_000;
+    // p0 jogou: primeiro o p2 (Latidor na frente) se defende…
+    next({ current: 'p0', discard: [...v.game.discard, 'latido-0'], choice: { kind: 'latido', who: 'p2', by: 'p0', deadline } }, { t: 'barked', by: 'p0', target: 'p2' });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(root.querySelector('#caption')?.textContent).toContain('P2 está se defendendo do Latidor');
+    // …e depois é a sua vez (o Latidor da sua mão).
+    next(
+      { front: { p0: [], p1: [], p2: [] }, discard: [...v.game.discard, 'cafune-5', 'latido-2'], choice: { kind: 'latido', who: 'p1', by: 'p0', deadline } },
+      { t: 'cafune', by: 'p2' },
+      { t: 'barked', by: 'p0', target: 'p1' },
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(root.querySelector<HTMLElement>('.bigcard[data-id^="latido"]')?.classList.contains('live')).toBe(true);
+    expect(root.querySelector('#caption')?.textContent).toContain('JOGUE O DESARME');
+    next(
+      { hand: hand.filter((id) => id !== 'cafune-90' && id !== 'latido-1'), discard: [...v.game.discard, 'cafune-90', 'latido-1'], choice: null },
+      { t: 'cafune', by: 'p1' },
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(root.querySelector('.bigcard')).toBeNull();
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log.match(/tinha TATU LATIDOR/g)).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+    errors.mockRestore();
+  });
+
   it('pulou a fila depois de um latido: o Desarme de um Tatubum comprado depois não vira o do Latidor', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const v = midGame('p1');
@@ -931,7 +970,7 @@ describe('mesa do Tatubum', () => {
       mesa.update(toMesa(v));
     };
     const deadline = Date.now() + 30_000;
-    next({ current: 'p0', choice: { kind: 'latido', who: 'p2', deadline } }, { t: 'barked', by: 'p0', target: 'p2' });
+    next({ current: 'p0', choice: { kind: 'latido', who: 'p2', by: 'p0', deadline } }, { t: 'barked', by: 'p0', target: 'p2' });
     await vi.advanceTimersByTimeAsync(2000);
     expect(root.querySelector<HTMLElement>('.bigcard')?.dataset.id).toBe('latido-0');
     // Reconectou e perdeu entradas: o Desarme do P2 contra o Latidor chega pulado.

@@ -55,10 +55,12 @@ export * from './games/kittens/summary';
 export {
   kittensExtraCafunes,
   KITTENS_HAND_START,
-  KITTENS_LATIDOS,
+  kittensLatidos,
   KITTENS_PACK,
   KITTENS_PACK_SIZE,
   kittensBaseDeck,
+  kittensLatidoCards,
+  kittensPackCards,
   kittensDeal,
   kittensPacksFor,
 } from './games/kittens/deck';

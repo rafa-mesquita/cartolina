@@ -164,7 +164,7 @@ export function applyKittensAction(
           if (card === null) return fail(badOwnCard(s, playerId, action.card));
           const desarme = s.blind.includes(playerId) ? s.hands[playerId]!.find((x) => kittensKindOf(x) === 'cafune') : card;
           if (desarme === undefined || kittensKindOf(desarme) !== 'cafune') return fail('bad_choice');
-          return ok(defendLatido(s, c, desarme));
+          return ok(defendLatido(s, c, desarme, ctx.now + KITTENS_CHOICE_MS));
         }
         case 'feitico':
           if (action.keep === undefined) return fail('bad_choice');

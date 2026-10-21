@@ -81,7 +81,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
 | **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano** | 4 de cada | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 (pedido do Rafa). | (combo sim) |
-| **Tatu Latidor** (id `latido`) | (fora do pacote: **2 na partida**) | Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
+| **Tatu Latidor** (id `latido`) | (fora do pacote: **1 por jogador**, nenhum na mão inicial) | Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
 | **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (é comprar) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
 | **Boto** (id `boto`) | 4 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
@@ -205,31 +205,40 @@ bicho.
 
 #### Tatu Latidor (`latido`; do "Barking Kitten"; arte: tatu numa casinha de cachorro latindo "AU AU")
 
-- **2 na partida**, qualquer que seja o número de jogadores (entram no baralho uma vez só, fora dos pacotes, e são
-  distribuídos como as outras cartas).
+- **1 por jogador** na partida (pedido do Rafa, 2026-10-21; antes eram sempre 2), fora dos pacotes, e **nenhum na
+  mão inicial**: vão todos pro monte (§3).
 - Jogado sozinho, sem alvo; vai pro ar e aceita Nem vem! (cancelado: vai pro descarte e nada acontece).
-- Ao resolver: se **outro jogador vivo** tem o outro Latidor **na mão ou na frente dele**, esse jogador tem que se
-  defender:
-  - **Tem Desarme:** abre a escolha **pública** `{ kind: 'latido', who, deadline }` (30 s). Ele joga o Desarme à mão
-    (`choose { card: <Desarme> }`): o Desarme vai pro descarte (evento `{ t: 'cafune', by }`, o mesmo do Tatubum) e o
-    Latidor dele (da frente ou da mão) também. O jogado já está no descarte: **os dois Latidores acabam no
-    descarte.** Prazo vencido (ou ele cai de vez): o Desarme vai sozinho. A vez continua com quem jogou o Latidor
-    (a carta não gasta turno).
+- Ao resolver (pedido do Rafa, 2026-10-21): **todo outro jogador vivo** que tem Latidor **na mão ou na frente dele**
+  tem que se defender, **um de cada vez, na ordem dos assentos a partir de quem jogou**. Cada um, na vez dele
+  (evento `{ t: 'barked', by, target }`):
+  - **Tem Desarme:** abre a escolha **pública** `{ kind: 'latido', who, by, deadline }` (30 s; `by` = quem jogou o
+    Latidor). Ele joga o Desarme à mão (`choose { card: <Desarme> }`): o Desarme vai pro descarte (evento
+    `{ t: 'cafune', by }`, o mesmo do Tatubum) e **todos os Latidores dele** (da frente e da mão) também.
+    **(decisão)** Um Desarme basta, mesmo com mais de um Latidor. O jogado já está no descarte. Prazo vencido (ou ele
+    cai de vez): o Desarme vai sozinho. Aí a escolha abre pro próximo da fila, com prazo novo.
   - **Não tem Desarme:** **explode na hora** (sem escolha), como quem compra um Tatubum sem Desarme: sai do jogo, a
-    mão vai pra fora e um Tatubum sai do monte pra manter `vivos − 1`. **(decisão)** O Latidor dele vai **pra fora
-    do jogo junto com a mão** (ou com o que estava na frente dele); só o jogado fica no descarte.
-- Ninguém mais tem o outro: o Latidor jogado sai do descarte e fica **na frente de quem jogou** (estado público
-  `front: Record<jogador, carta[]>`; chave ausente = nada). Quem tem um Latidor na frente é alvo quando o outro for
-  jogado.
-- **(decisão)** Quem jogou já tem o outro Latidor na frente (ou na mão): ele não conta como alvo de si mesmo; o
-  jogado também fica na frente dele e nada acontece.
+    mão vai pra fora e um Tatubum sai do monte pra manter `vivos − 1`. **(decisão)** Os Latidores dele vão **pra
+    fora do jogo junto com a mão** (e com o que estava na frente dele). A fila segue.
+  - **(decisão)** A fila não fica guardada: o próximo é sempre o primeiro vivo depois de quem jogou, na ordem dos
+    assentos, que ainda tem Latidor (quem se defendeu ou explodiu fica sem nenhum, e durante a defesa ninguém joga
+    nem compra). Por isso a escolha só guarda `by`.
+  - Se as explosões deixam 1 vivo, a partida acaba ali (quem jogou vence). Senão, depois do último a vez continua
+    com quem jogou o Latidor (a carta não gasta turno). O jogado fica no descarte.
+- Ninguém mais tem Latidor: o jogado sai do descarte e fica **na frente de quem jogou** (estado público
+  `front: Record<jogador, carta[]>`; chave ausente = nada). Quem tem um Latidor na frente também tem que se defender
+  quando outro for jogado.
+- **(decisão)** Quem jogou e tem outro Latidor na frente (ou na mão) não conta como alvo de si mesmo; se ninguém
+  mais tem, o jogado também fica na frente dele e nada acontece.
 - **(decisão)** A escolha `latido` só abre pra quem tem Desarme, então nunca trava; mesmo assim, se no prazo não
   houver Desarme na mão, ele explode.
 - Quem sai do jogo (explodiu ou caiu de vez) com Latidor na frente: o Latidor vai **pra fora do jogo** com a mão.
 - Quem está cego (Mau-olhado) e tem que se defender não sabe qual ficha é o Desarme: **(decisão)** qualquer ficha da
   própria mão vale, e o servidor joga o Desarme dele.
 - Eventos públicos: `{ t: 'barked', by, target }` (`target` = quem tem que se defender, ou `null` quando foi pra
-  frente de `by`), depois `{ t: 'cafune', by }` ou `{ t: 'boom', by }`.
+  frente de `by`), depois `{ t: 'cafune', by }` ou `{ t: 'boom', by }`; com vários se defendendo, um par desses
+  pra cada um, na ordem da fila.
+- Partida salva antes da fila (sem `by` na escolha `latido`): `compat.ts` completa com `by = current` (o Latidor só
+  sai na vez de quem joga, e a vez fica com ele).
 
 #### Mau-olhado (`olhado`; do "Curse of the Cat Butt"; arte: tatu botando mau-olhado)
 
@@ -341,6 +350,10 @@ bicho.
   cobertura joga as próprias partidas (não depende da ordem dos testes) e exige, além das cartas novas, ficha com
   outro nome, cego se defendendo do Latidor e Feitiço sem resposta. Rodada pesada (SEEDS = 225: 900 partidas
   normais + 900 arranjadas) passou.
+  Com a fila do Latidor (2026-10-21) ela também confere que quem tem a escolha `latido` está vivo, não é quem jogou e
+  tem Latidor e Desarme, e que quando a fila acaba (partida seguindo) nenhum vivo além de quem jogou tem Latidor; e
+  exige ver a escolha passando de um pro outro e uma explosão no meio da fila. Os jogadores ao acaso com espiada
+  jogam o Feitiço mais vezes (a espiada com mais de 3 cartas ficou rara com o baralho novo).
 
 ### Fim
 
@@ -367,19 +380,21 @@ O monte nunca acaba enquanto há 2+ vivos, porque sempre tem `vivos − 1 ≥ 1`
 
 Um **pacote** tem **56 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 24
 bichos (6 tipos × 4; o Tucano entrou em 2026-10-21, pedido do Rafa) e, desde 2026-10-20, 2 Mau-olhado, 2 Feitiço e
-2 Boto. Os **2 Tatus Latidores** entram
-**uma vez só por partida**, fora dos pacotes (como no original, que tem só 2), qualquer que seja o número de
-jogadores.
+2 Boto. Os **Tatus Latidores** ficam fora dos pacotes: **1 por jogador** (pedido do Rafa, 2026-10-21; antes eram
+sempre 2), e **nenhum vem na mão inicial**: a mão (1 Desarme + 7) sai só dos pacotes, e os Latidores vão pro monte
+junto com o resto dos pacotes, os Desarmes extras e os Tatubuns, tudo embaralhado (`kittensLatidos(n) = n`).
 
-| Jogadores | Pacotes | Cartas no baralho antes de distribuir (pacotes + 2 Latidores) | Monte depois de distribuir | Desarmes | Tatubuns |
-|---|---|---|---|---|---|
-| 2 | 1 | 58 + 2 = 60 | 60 − 14 + 2 + 1 = 49 | n + 2 | n − 1 |
-| 3 | 1 | 60 | 60 − 21 + 2 + 2 = 43 | n + 2 | n − 1 |
-| 4 | 1 | 60 | 60 − 28 + 2 + 3 = 37 | n + 2 | n − 1 |
-| 5 | 1 | 60 | 60 − 35 + 1 + 4 = 30 | n + 1 | n − 1 |
-| 6 | 2 | 116 + 2 = 118 | 118 − 42 + 1 + 5 = 82 | n + 1 | n − 1 |
-| 7 | 2 | 118 | 118 − 49 + 1 + 6 = 76 | n + 1 | n − 1 |
-| 8 | 2 | 118 | 118 − 56 + 1 + 7 = 70 | n + 1 | n − 1 |
+Monte = pacotes × 58 − 7n + n Latidores + Desarmes extras + (n − 1) Tatubuns.
+
+| Jogadores | Pacotes | Cartas dos pacotes | Latidores | Monte depois de distribuir | Desarmes | Tatubuns |
+|---|---|---|---|---|---|---|
+| 2 | 1 | 58 | 2 | 58 − 14 + 2 + 2 + 1 = 49 | n + 2 | n − 1 |
+| 3 | 1 | 58 | 3 | 58 − 21 + 3 + 2 + 2 = 44 | n + 2 | n − 1 |
+| 4 | 1 | 58 | 4 | 58 − 28 + 4 + 2 + 3 = 39 | n + 2 | n − 1 |
+| 5 | 1 | 58 | 5 | 58 − 35 + 5 + 1 + 4 = 33 | n + 1 | n − 1 |
+| 6 | 2 | 116 | 6 | 116 − 42 + 6 + 1 + 5 = 86 | n + 1 | n − 1 |
+| 7 | 2 | 116 | 7 | 116 − 49 + 7 + 1 + 6 = 81 | n + 1 | n − 1 |
+| 8 | 2 | 116 | 8 | 116 − 56 + 8 + 1 + 7 = 76 | n + 1 | n − 1 |
 
 Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Antes das cartas novas, com 2
 a 5 o baralho era o do jogo original (46).
@@ -393,7 +408,8 @@ a 5 o baralho era o do jogo original (46).
   `boto`), nomes em PT-BR, quem aceita Nem vem! (`KITTENS_ACTION_KINDS`, com as 3 cartas de ação novas), os 5
   bichos (`KITTENS_BICHOS`, sem o Boto) e o coringa (`KITTENS_WILD`), e as fichas do Mau-olhado (`?i`). Cada carta
   física tem id próprio `<tipo>-<n>` (ex.: `ataque-3`) pra animar.
-- `deck.ts`: `kittensBaseDeck(n)` e `kittensDeal(...)` (§3). Os números dos Cafunés são sorteados, pra
+- `deck.ts`: `kittensPackCards(n)` (os pacotes, de onde sai a mão), `kittensLatidos(n)`/`kittensLatidoCards(n)`,
+  `kittensBaseDeck(n)` (pacotes + Latidores) e `kittensDeal(...)` (§3). Os números dos Cafunés são sorteados, pra
   um Cafuné roubado não entregar de quem era.
 - `types.ts`: fases `lobby → playing → gameover`. Estado: `players` (ordem dos assentos), `alive`,
   `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `front` (cartas na frente: Tatu
