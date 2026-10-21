@@ -141,7 +141,7 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   pular: 'Termina um turno seu <b>sem comprar</b> carta.<br>Se você estava sob ataque (devendo 2 turnos), gasta só um deles e continua na vez.<br>Pode levar Nem vem!.',
   favor: 'Escolha um adversário que tenha carta na mão: <b>ele escolhe</b> uma carta dele pra te dar.<br>Só vocês dois veem qual carta foi. Ele tem 30 segundos pra escolher; depois vai uma ao acaso.<br><b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b> (a mão toda, se tiver menos), escolhidas por ele, uma de cada vez.<br>Pode levar Nem vem!.',
   embaralhar: 'Embaralha o monte inteiro.<br>Pode levar Nem vem!.',
-  espiar: 'Você vê as <b>3 cartas de cima</b> do monte, só você.<br>Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Pode levar Nem vem!.',
+  espiar: 'Você vê as <b>3 cartas de cima</b> do monte, só você.<br>Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Se quem muda a ordem é você, continua vendo o que sabe: a carta que você põe no topo com o Feitiço (em cima das que você já via) ou deixa no topo com o Quati fica à mostra pra você; escondendo o tatu com o Desarme (sem ser ao acaso), a sua espiada continua, com o tatu nela se ele cair no meio ou logo abaixo dela.<br>Pode levar Nem vem!.',
   latido: 'Só existem <b>2</b> na partida. Quando você joga um, quem tiver <b>o outro Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b> (30 segundos, senão vai sozinho) e os dois Latidores vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém tiver o outro, o seu fica <b>na sua frente</b>, à vista de todos: quando o outro for jogado, quem se defende é você.<br>Não gasta a sua vez. Pode levar Nem vem!.',
   olhado: 'Escolha um adversário (mesmo sem carta na mão): a mão dele é <b>embaralhada</b> e ele <b>fica cego</b>, vendo só o verso das próprias cartas, até <b>comprar</b> uma carta.<br>Cego, ele joga às cegas: escolhe cartas viradas sem saber quais são (se não formarem jogada, voltam pra mão).<br>Pode levar Nem vem!.',
   feitico: 'Só você vê a <b>carta de baixo</b> do monte e escolhe (30 segundos):<br><b>FICAR COM ELA</b>: é como comprar (se for Tatubum, é comprar o Tatubum: Desarme ou explode).<br><b>PÔR NO TOPO</b>: ela vai pra cima do monte.<br>Nos dois casos <b>acaba o seu turno</b>. Se o tempo acabar, ela vai pro topo.<br>Pode levar Nem vem!.',
@@ -157,7 +157,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   pular: 'Termina um turno seu sem comprar.',
   favor: 'Um adversário escolhe uma carta da mão dele pra te dar. Três Favores juntos: ele te dá 3.',
   embaralhar: 'Embaralha o monte inteiro.',
-  espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.',
+  espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem; se quem mexe é você (Feitiço, Desarme, Quati), continua vendo o que sabe.',
   capivara: 'Par: todo mundo, menos você, passa uma carta pro próximo.',
   mico: 'Par: todo mundo, menos você, descarta uma carta (o efeito não vale); depois você pega uma delas.',
   quati: 'Par: vê a de cima e decide se vai pro fundo.',
@@ -1040,6 +1040,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     fut.innerHTML = '';
     if (v.peek) {
       fut.innerHTML = '<div class="kt-ftag">O FUTURO ↓</div>';
+      // Pode passar de 3 (quem mexe no monte continua vendo o que sabe): aí as cartas se encavalam no espaço das 3.
+      fut.style.setProperty('--fut-gaps', String(Math.max(2, v.peek.length - 1)));
       v.peek.forEach((id) => fut.appendChild(cardEl(id)));
     }
 

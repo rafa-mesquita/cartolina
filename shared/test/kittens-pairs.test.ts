@@ -381,4 +381,17 @@ describe('par de Quati: a carta de cima fica ou vai pro fundo', () => {
     expect(act(s, 'p0', { type: 'choose', keep: false }, at(5000)).peeks).toEqual({ p0: ['embaralhar-9', 'cafune-9'] });
     expect(act(s, 'p0', { type: 'choose', keep: true }, at(5000)).peeks).toEqual({ p0: ['pular-9', 'embaralhar-9', 'cafune-9'] });
   });
+
+  it('FICA sem espiada: quem escolheu viu a de cima, e ela fica à mostra só pra ele (pedido do Rafa, 2026-10-21)', () => {
+    const s = { ...fuca(), peeks: { p1: ['pular-9', 'embaralhar-9'] } };
+    const kept = act(s, 'p0', { type: 'choose', keep: true }, at(5000));
+    expect(kept.peeks).toEqual({ p1: ['pular-9', 'embaralhar-9'], p0: ['pular-9'] });
+    expect(kittensViewFor(kept, 'p0')).toMatchObject({ peek: ['pular-9'], peekers: ['p0', 'p1'] });
+    expect(kittensViewFor(kept, 'p2')).toMatchObject({ peek: null, peekers: ['p0', 'p1'] });
+    expect(JSON.stringify(kittensViewFor(kept, 'p2'))).not.toContain('"pular-9"');
+    // Sem resposta, a carta fica: ele viu ela na escolha do mesmo jeito.
+    expect(settleKittens(fuca(), at(5000 + KITTENS_CHOICE_MS)).peeks).toEqual({ p0: ['pular-9'] });
+    // FUNDO: a carta saiu do topo; nada fica à mostra pra ele.
+    expect(act(fuca(), 'p0', { type: 'choose', keep: false }, at(5000)).peeks).toEqual({});
+  });
 });

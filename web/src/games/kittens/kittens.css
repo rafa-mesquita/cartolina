@@ -197,7 +197,8 @@
 @keyframes kt-eyepulse { 50% { background: #3b2412; box-shadow: 0 -3px 0 var(--yellow), 0 3px 0 var(--yellow), -3px 0 0 var(--yellow), 3px 0 0 var(--yellow), 4px 6px 0 rgba(0,0,0,.35); } }
 .kittens .kt-mesa #future { position: absolute; left: 230px; top: 46px; display: flex; flex-direction: column; gap: 4px; }
 .kittens .kt-mesa #future .kt-ftag { font-family: var(--px); font-size: 8px; color: var(--yellow); margin-bottom: 2px; }
-.kittens .kt-mesa #future .kt-card { transform: scale(.38); transform-origin: left top; margin-bottom: -96px; }
+/* passo de 64px entre as cartas até 3; com mais (`--fut-gaps` = cartas − 1), elas se encavalam no mesmo espaço das 3 */
+.kittens .kt-mesa #future .kt-card { transform: scale(.38); transform-origin: left top; margin-bottom: calc(128px / var(--fut-gaps, 2) - 160px); }
 
 /* Cartas */
 .kittens .kt-mesa .kt-card { width: 112px; height: 156px; background: var(--paper); color: var(--ink); position: relative; display: flex; flex-direction: column; align-items: center;
@@ -452,7 +453,7 @@
 .kittens .kt-mesa #stage.kt-phone #bar { top: calc(50% + 44px); }
 .kittens .kt-mesa #stage.kt-phone #future { left: 104px; top: calc(50% - 82px); }
 .kittens .kt-mesa #stage.kt-phone #future .kt-ftag { font-size: 8px; }
-.kittens .kt-mesa #stage.kt-phone #future .kt-card { transform: scale(.26); margin-bottom: -112px; }
+.kittens .kt-mesa #stage.kt-phone #future .kt-card { transform: scale(.26); margin-bottom: calc(96px / var(--fut-gaps, 2) - 160px); }
 /* faixas da sua vez (turnos do Ataque, cego): uma fita presa na borda de cima da mesa (aparecer não empurra nada) */
 .kittens .kt-mesa #stage.kt-phone #banners { position: absolute; left: 0; right: 0; top: -12px; z-index: 6; display: flex; flex-wrap: nowrap; justify-content: center; gap: 12px; pointer-events: none; }
 .kittens .kt-mesa #stage.kt-phone #banners:empty { display: none; }
