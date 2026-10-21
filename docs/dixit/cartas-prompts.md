@@ -315,7 +315,7 @@ Gerados em **x2**; o usuário escolhe dando coração (favorito) no Flow. Mesmo 
 
 ## Temas extras do usuário (187–208), 2026-10-21
 
-Gerados em **x2**; o usuário escolheu numa **página local de votação** (o coração no Flow não funcionou pra ele). Mesmo começo e fim de óleo. Entraram 33 cartas, `d192`–`d224`, na ordem dos temas abaixo, **sem** o 210 (dinossauros: a escolha não ficou salva, entra depois) e **sem** o 217 (Linhas: o usuário não gostou do tema). 211–221 vieram num segundo pedido, no mesmo dia. ("Terremoto" já existia como `d190`, com casas; o usuário pediu um novo, só a terra se abrindo: o 209.)
+Gerados em **x2**; o usuário escolheu numa **página local de votação** (o coração no Flow não funcionou pra ele). Mesmo começo e fim de óleo. Entraram 33 cartas, `d192`–`d224`, na ordem dos temas abaixo, o 210 (dinossauros) entrou depois, à parte, como `d225` (opção A) e **sem** o 217 (Linhas: o usuário não gostou do tema). 211–221 vieram num segundo pedido, no mesmo dia. ("Terremoto" já existia como `d190`, com casas; o usuário pediu um novo, só a terra se abrindo: o 209.)
 
 187. **Quente e sádico:** a grinning summer sun with a mischievous face leans down from the sky holding a giant magnifying glass over a beach, where tiny ice cream people melt and run for the shade of umbrellas; playfully wicked like a cartoon villain, not violent [scorching beach at noon; blazing orange, sun yellow and melting pastels].
 188. **Ânimo:** a tired man on a grey morning street sips from a cup, and out of the steam burst sunflowers, colorful birds and a tiny brass band, while the grey street around him turns bright with color wherever they fly [grey city street turning colorful; ash grey, sunflower yellow and brass gold].
