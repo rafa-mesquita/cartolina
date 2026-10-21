@@ -12,7 +12,7 @@ import { T0, deepFreeze, everyCard, ids, must } from './kittens-helpers';
 
 /**
  * Simulação aleatória (mas determinística: tudo sai de `mulberry32`) de partidas inteiras. Jogadores ao acaso jogam
- * cartas e combos (inclusive Boto, Latidor, Mau-olhado e Feitiço), dão Nem vem!, compram e escolhem; quem está cego
+ * cartas e combos (inclusive Boto, Latidor, Mau-olhado, Feitiço e Tucano), dão Nem vem!, compram e escolhem; quem está cego
  * joga por ficha; o relógio anda (inclusive além dos prazos de 5 s e 30 s) e de vez em quando alguém cai de vez.
  * Depois de cada passo, as invariantes têm que valer.
  */
@@ -59,6 +59,7 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
     if (s.pending || s.choice) throw broken('fim de jogo com carta no ar ou escolha aberta');
     if (Object.keys(s.peeks).length > 0) throw broken(`fora de partida com espiadas: ${JSON.stringify(s.peeks)}`);
     if (s.blind.length > 0) throw broken('fim de jogo com gente cega');
+    if (Object.keys(s.skips).length > 0) throw broken(`fora de partida com vez pulada: ${JSON.stringify(s.skips)}`);
     return;
   }
   if (s.blind.some((p) => !s.alive.includes(p)) || new Set(s.blind).size !== s.blind.length) throw broken(`cegos inválidos: [${s.blind}]`);
@@ -68,6 +69,13 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   if (tatus !== s.alive.length - 1) throw broken(`${tatus} tatus no monte com ${s.alive.length} vivos`);
   if (s.current === null || !s.alive.includes(s.current)) throw broken(`vez de ${s.current}, que não está vivo`);
   if (s.owed < 1) throw broken(`vez com ${s.owed} turnos devidos`);
+  // Tucano (pedido do Rafa, 2026-10-21): vez pulada só de quem está vivo, sempre ≥ 1, e nunca de quem está na vez (a
+  // pulada se gasta quando a vez chega nele).
+  for (const [p, k] of Object.entries(s.skips)) {
+    if (!s.alive.includes(p) || !Number.isInteger(k) || k < 1 || p === s.current) {
+      throw broken(`vez pulada inválida: ${JSON.stringify(s.skips)} (vez de ${s.current})`);
+    }
+  }
   // Espiadas (pedido do Rafa, 2026-10-20): só de quem está vivo, com 1 carta ou mais (quem mexe no monte sabendo o que
   // fez pode passar de 3: pedido do Rafa, 2026-10-21), e sempre o topo do monte, na ordem (a do topo primeiro). Se alguma
   // regra deixasse a espiada desatualizada, ela teria que apagar ou cortar.
@@ -211,6 +219,14 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   // Outro com espiada à mostra (público): espia também (senão duas espiadas ao mesmo tempo quase nunca aparecem).
   const espiar = hand.find((x) => kittensKindOf(x) === 'espiar');
   if (espiar && Object.keys(s.peeks).some((x) => x !== p) && r() < 0.7) return { type: 'play', cards: [espiar] };
+  // Alguém com vez pulada (público): manda o Tucano no vizinho dele (senão as puladas em cadeia quase nunca aparecem).
+  const tucanos = hand.filter((x) => kittensKindOf(x) === 'tucano' || kittensKindOf(x) === 'boto').slice(0, 2);
+  if (tucanos.length === 2 && tucanos.some((x) => kittensKindOf(x) === 'tucano') && r() < 0.7) {
+    const gap = (x: string, y: string) => Math.abs(s.players.indexOf(x) - s.players.indexOf(y));
+    const beside = (x: string, y: string) => gap(x, y) === 1 || gap(x, y) === s.players.length - 1;
+    const near = others.filter((y) => others.some((x) => x !== y && Object.hasOwn(s.skips, x) && beside(x, y)));
+    if (near.length > 0) return { type: 'play', cards: tucanos, target: pick(r, near)!, as: 'tucano' };
+  }
   const hold = latido !== undefined && seeing.length > 0 && r() < 0.9;
   const playable = hold ? hand.filter((x) => x !== latido) : hand;
   if (a < 0.45 && playable.length > 0) return { type: 'play', cards: cardsToPlay(r, playable), ...extra };
@@ -345,6 +361,22 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     if (s.choice) seen.add(`choice:${s.choice.kind}`);
     // Trio de Favor: o alvo dá até 3 cartas, uma de cada vez (a escolha continua aberta entre uma e outra).
     if (air?.kind === 'trio' && air.as === 'favor') seen.add('trio:favor');
+    // Par de Tucano: quem tem a vez pulada perde o turno quando a vez chega nele (às vezes vários seguidos). Só quem tinha
+    // pulada (de antes ou do Tucano que resolveu agora) é pulado.
+    if (air?.kind === 'par' && air.as === 'tucano') seen.add('tucano:par');
+    const fresh = s.log.filter((e) => e.n >= before.seq).map((e) => e.ev);
+    const skipped = fresh.flatMap((ev) => (ev.t === 'skipped' ? [ev.who] : []));
+    const marked = new Map(Object.entries(before.skips));
+    for (const ev of fresh) if (ev.t === 'tucano') marked.set(ev.target, (marked.get(ev.target) ?? 0) + 1);
+    for (const who of skipped) {
+      const k = marked.get(who) ?? 0;
+      if (k < 1) throw new Error(`${who} foi pulado sem ter vez pulada
+  ${where()}`);
+      marked.set(who, k - 1);
+    }
+    if (new Set(skipped).size >= 2) seen.add('skipped:chain');
+    // A pulada gastou um dos turnos de Ataque e ele continua na vez.
+    if (s.current !== null && skipped.includes(s.current)) seen.add('skipped:owed');
     if (s.choice?.kind === 'favor' && c?.kind === 'favor' && s.choice.left < c.left) seen.add('favor:again');
     // Par de Mico (pedido do Rafa, 2026-10-20): quando todos descartam, quem jogou pega uma das descartadas.
     if (s.choice?.kind === 'cinco' && s.choice.from === 'mico') {
@@ -427,6 +459,11 @@ describe('simulação aleatória do Tatubum', () => {
       'exit:boom',
       'exit:left',
       'stats:defuse',
+      'tucano',
+      'tucano:par',
+      'skipped',
+      'skipped:chain',
+      'skipped:owed',
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

@@ -28,7 +28,7 @@ export type KittensPlayKind =
 export interface KittensPlay {
   kind: KittensPlayKind;
   cards: string[];
-  /** Favor, trio de Favor e Mau-olhado (o par de Mico não tem alvo). */
+  /** Favor, trio de Favor, Mau-olhado e par de Tucano (o par de Mico não tem alvo). */
   target: string | null;
   /** Par de Preguiça: o bicho pedido. */
   ask: KittensCardKind | null;
@@ -128,6 +128,10 @@ export type KittensEvent =
   | { t: 'cured'; by: string }
   /** Feitiço: `by` ficou com a carta de baixo do monte (`kept`) ou mandou ela pro topo. Ninguém vê qual era. */
   | { t: 'conjured'; by: string; kept: boolean }
+  /** Par de Tucano: `by` acabou a vez sem comprar e a próxima vez de `target` vai ser pulada. */
+  | { t: 'tucano'; by: string; target: string }
+  /** A vez chegou em `who`, que tinha vez pulada (Tucano): o turno dele foi gasto sem ele jogar nem comprar. */
+  | { t: 'skipped'; who: string }
   | { t: 'win'; by: string };
 
 export interface KittensLogEntry {
@@ -167,6 +171,12 @@ export interface KittensState {
    * Desarme, Quati: pedido do Rafa, 2026-10-21), que pode passar de 3 cartas. Espiada vazia não fica. Chave ausente = nada.
    */
   peeks: Record<string, string[]>;
+  /**
+   * Par de Tucano (pedido do Rafa, 2026-10-21): quantas vezes de cada jogador ainda vão ser puladas (público; acumula).
+   * Quando a vez chega em quem tem, um turno dele é gasto sozinho (`passTo`). Só vivos, sempre ≥ 1 (chave ausente = 0);
+   * nunca de quem está na vez.
+   */
+  skips: Record<string, number>;
   log: KittensLogEntry[];
   /** Número da próxima entrada do diário. */
   seq: number;
@@ -239,6 +249,8 @@ export interface KittensView {
   peek: string[] | null;
   /** Quem tem espiada à mostra agora (público; as cartas de cada um, só ele vê), na ordem dos assentos. */
   peekers: string[];
+  /** Vezes que ainda vão ser puladas, por jogador (par de Tucano; público). Sem nada = chave ausente. */
+  skips: Record<string, number>;
   log: { n: number; ev: KittensEvent }[];
   winner: string | null;
 }

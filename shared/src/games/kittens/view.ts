@@ -68,6 +68,7 @@ export function kittensViewFor(saved: KittensState, viewerId: string | null): Ki
     choice: choiceView(state, viewerId),
     peek: own(state.peeks, viewerId) ?? null,
     peekers: state.players.filter((p) => (own(state.peeks, p)?.length ?? 0) > 0),
+    skips: state.skips,
     log: state.log.map(({ n, ev, seenBy }) => {
       const sees = seenBy === null || (viewerId !== null && seenBy.includes(viewerId));
       const card = 'card' in ev ? ev.card : null;

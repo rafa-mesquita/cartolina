@@ -30,7 +30,7 @@ describe('começar', () => {
       out: [],
     });
     for (const p of ids(3)) expect(state.hands[p]).toHaveLength(8);
-    expect(state.draw).toHaveLength(52 + 2 - 21 + 2 + 2); // pacote + 2 Latidores − mãos + Desarmes extras + tatus
+    expect(state.draw).toHaveLength(56 + 2 - 21 + 2 + 2); // pacote + 2 Latidores − mãos + Desarmes extras + tatus
   });
 
   it('quem começa é sorteado: não é sempre o host (cada um começa em alguma semente)', () => {

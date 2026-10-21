@@ -40,6 +40,8 @@ export const ART: Record<KittensCardKind, string> = {
   quati,
   tamandua,
   preguica,
+  // TODO: arte do Tucano chega do Flow (vira `import tucano from './art/tucano.png'`); por enquanto, a da Capivara.
+  tucano: capivara,
   boto,
 };
 
