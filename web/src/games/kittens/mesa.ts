@@ -15,6 +15,7 @@ import {
   KITTENS_WILD,
   kittensIsBicho,
   kittensKindOf,
+  kittensNopable,
   kittensNopeCooldownUntil,
   kittensTokenIndex,
   type GameAction,
@@ -88,7 +89,7 @@ const PLAY_LABEL: Record<KittensPlayKind, string> = {
   feitico: 'FEITIÇO',
   par: 'PAR',
   trio: 'TRIO',
-  cinco: '5 DIFERENTES',
+  cinco: '4 BICHOS DIFERENTES',
 };
 const ACTION_KINDS: readonly string[] = KITTENS_ACTION_KINDS;
 
@@ -130,9 +131,9 @@ const TUCANO_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(TUCANO_SVG);
 
 /**
  * Explicação completa de cada carta, que aparece no zoom (pedido do Rafa: na mão fica só o básico).
- * Cada bicho explica o próprio par; o trio e os 5 diferentes valem pra qualquer carta.
+ * Cada bicho explica o próprio par; o trio vale pra qualquer carta e os 4 diferentes pra qualquer bicho.
  */
-const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha (3 Favores: o adversário escolhido te dá 3 cartas).<br><b>5 DIFERENTES</b>: você pega <b>duas cartas</b> que quiser do descarte (do jeito que ele estava antes da jogada), uma de cada vez, no quadro do descarte.<br>Combos podem levar Nem vem!.';
+const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha (3 Favores: o adversário escolhido te dá 3 cartas).<br><b>4 BICHOS DIFERENTES</b> (só bichos; o Boto conta como um): você pega <b>duas cartas</b> que quiser do descarte (do jeito que ele estava antes da jogada), uma de cada vez, no quadro do descarte. <b>Não aceita Nem vem!</b>.<br>Par e trio podem levar Nem vem!.';
 const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   mico: '<b>PAR DE MICO</b>: <b>todo mundo, menos você, descarta uma carta</b> à escolha, todos ao mesmo tempo (30 segundos; depois vai uma ao acaso). O efeito da carta descartada não vale, e todos veem o que foi pro descarte.<br>Depois <b>você pega uma das cartas descartadas</b> pra sua mão, no quadro do descarte (30 segundos; depois vai uma ao acaso).',
   quati: '<b>PAR DE QUATI</b>: só você vê a carta de cima do monte e decide se ela fica em cima ou vai pro fundo. Todo mundo sabe se foi pro fundo, ninguém sabe qual era.',
@@ -140,7 +141,7 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta de um adversário que tenha (sorteado). Se ninguém tiver, procura no monte.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
   tucano: '<b>PAR DE TUCANO</b>: escolha um adversário (mesmo sem carta na mão). A sua vez acaba <b>sem você comprar</b> (sob ataque, gasta só um dos turnos), e a <b>próxima vez dele é pulada</b>: quando a vez chegar nele, ele não joga nem compra (se estiver devendo 2 turnos de um Ataque, perde um deles). Duas vezes no mesmo jogador, pula duas vezes.',
-  boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>5 diferentes</b> conta como Boto. No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
+  boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>4 bichos diferentes</b> conta como um bicho a mais (só um Boto). No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
 };
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
   tatubum: 'O tatu-bola com o pavio aceso. Comprou esta carta e não tem Desarme? <b>Explodiu</b> e saiu do jogo.<br>Com Desarme, <b>você joga o Desarme</b> (30 segundos, senão ele vai sozinho), o tatu soldado corta o fio e você esconde o Tatubum de volta no monte, onde quiser.<br>O monte tem sempre um Tatubum a menos que o número de jogadores vivos.',
@@ -197,8 +198,8 @@ interface PlayGuess {
 }
 /**
  * Espelho de `playKindOf` (shared/src/games/kittens/play.ts), só pra mostrar o botão certo e pedir o que falta: ação
- * sozinha, par só de bichos (o Boto faz as vezes de qualquer um), trio de 3 iguais (o Boto completa bichos), 5 nomes
- * diferentes. Fichas do cego (`?i`) não têm tipo: aí `null` (quem decide é o servidor).
+ * sozinha, par só de bichos (o Boto faz as vezes de qualquer um), trio de 3 iguais (o Boto completa bichos), 4 bichos
+ * diferentes (o Boto conta como um). Fichas do cego (`?i`) não têm tipo: aí `null` (quem decide é o servidor).
  */
 function guessPlay(ids: readonly string[]): PlayGuess | null {
   const kinds = ids.map((id) => kittensKindOf(id));
@@ -217,7 +218,7 @@ function guessPlay(ids: readonly string[]): PlayGuess | null {
     if (wild === 3) return { kind: 'trio', as: KITTENS_WILD };
     return same && kittensIsBicho(plain[0]!) ? { kind: 'trio', as: plain[0]! } : null;
   }
-  if (ks.length === 5 && new Set(ks).size === 5) return { kind: 'cinco', as: null };
+  if (ks.length === 4 && new Set(ks).size === 4 && ks.every((k) => k === KITTENS_WILD || kittensIsBicho(k))) return { kind: 'cinco', as: null };
   return null;
 }
 /**
@@ -645,11 +646,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   const frontHidden = new Set<string>();
   /** Fim de jogo: 'hidden' → 'title' (só o nome, durante os fogos) → 'full' (fundo escuro e botões). */
   let overStage: 'hidden' | 'title' | 'full' = 'hidden';
-  /** Quadro do descarte: aberto? aberto pra escolher dos 5 diferentes? */
+  /** Quadro do descarte: aberto? aberto pra escolher dos 4 bichos diferentes? */
   let pileOpen = false;
   let pileForPick = false;
   let pileKey = '';
-  /** Quantas o 5 diferentes mandou pegar no começo (pra dizer "mais uma" só na segunda). */
+  /** Quantas os 4 bichos diferentes mandaram pegar no começo (pra dizer "mais uma" só na segunda). */
   let cincoFirst = 2;
   /** Quantas o Favor aberto mandou dar no começo (1; 3 no trio de Favor), pra dizer "MAIS 2" depois da primeira. */
   let favorFirst = 1;
@@ -723,7 +724,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     for (const e of fresh) {
       items.push({ run: () => animate(e.ev, prev, rects, v), skip: () => pushLog(textOf(e.ev, prev, playCardsOf(e.ev, v)), logClass(e.ev)) });
     }
-    // 5 diferentes e o fim do par de Mico: o quadro do descarte abre sozinho pra você escolher (depois que a jogada, ou
+    // 4 bichos diferentes e o fim do par de Mico: o quadro do descarte abre sozinho pra você escolher (depois que a jogada, ou
     // o último descarte do Mico, chega no descarte).
     const c = v.choice;
     if (c?.kind === 'cinco' && c.who === ME && !myCinco(prev)) {
@@ -1109,7 +1110,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   function renderBar(): void {
     const bar = $('#bar');
     const p = view?.pending;
-    if (!p) { bar.innerHTML = ''; return; }
+    // Sem contagem quando a carta no ar não aceita Nem vem! (4 bichos diferentes).
+    if (!p || !kittensNopable(p.play.kind)) { bar.innerHTML = ''; return; }
     const left = Math.max(0, Math.ceil((p.resolvesAt - opts.now()) / 1000));
     if (left !== lastTic && left > 0) { lastTic = left; if (left <= 3) Sound.play('tic'); }
     bar.innerHTML = Array.from({ length: 5 }, (_, i) => `<i class="${i < left ? 'on' : ''}${i === left - 1 ? ' last' : ''}"></i>`).join('');
@@ -1305,7 +1307,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
     if (!d.moved) {
       d.moved = true;
-      // Arrastar uma carta da seleção leva a seleção inteira (par, trio, 5 diferentes).
+      // Arrastar uma carta da seleção leva a seleção inteira (par, trio, 4 bichos diferentes).
       d.ids = selected.has(d.id) && selected.size > 1 ? orderedHand().filter((x) => selected.has(x)) : [d.id];
       const g = cardEl(d.id);
       g.classList.add('ghost');
@@ -1556,6 +1558,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   function nope(card?: string): void {
     const p = view?.pending;
     if (!p) return;
+    if (!kittensNopable(p.play.kind)) { toast('Os 4 bichos diferentes não aceitam Nem vem!'); Sound.play('error'); return; }
     // Espera de 2 s depois de um Nem vem! (pedido do Rafa, 2026-10-21): tecla N e Nem vem! arrastado não fazem nada.
     const wait = nopeWaitSecs();
     if (wait > 0) { toast(`Espere ${wait} s: acabaram de dar Nem vem!`); Sound.play('error'); return; }
@@ -1586,13 +1589,14 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const blind = blindMe();
     const myNopes = v.hand.filter((c) => kindOf(c) === 'nemvem').length;
     // Cego não sabe se tem Nem vem!: sem botão (nem tecla N); tenta arrastando uma ficha pra mesa.
-    if (v.pending && myNopes && !blind) {
+    const nopable = !!v.pending && kittensNopable(v.pending.play.kind);
+    if (nopable && myNopes && !blind) {
       // Na espera de 2 s depois de um Nem vem!, o botão fica apagado mostrando quanto falta.
       const b = button(nopeWaitShown > 0 ? `NEM VEM! ${nopeWaitShown}s` : `NEM VEM! (${myNopes})`, () => nope());
       b.id = 'nope';
       if (nopeWaitShown > 0) b.disabled = true;
       box.appendChild(b);
-    } else if (v.pending && blind && v.hand.length) {
+    } else if (nopable && blind && v.hand.length) {
       box.appendChild(hint('cego: arraste uma carta virada pra mesa pra tentar um NEM VEM!'));
     }
     const c = v.choice;
@@ -1739,7 +1743,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     tickTimers();
   }
 
-  // ---------------------------------------------------------------- quadro do descarte (olho) e 5 diferentes
+  // ---------------------------------------------------------------- quadro do descarte (olho) e 4 bichos diferentes
   function openPile(): void {
     if (!view || view.phase === 'lobby') return;
     pileOpen = true;
@@ -1758,7 +1762,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!silent && view) render();
   }
   /**
-   * Todas as cartas do descarte, da mais nova pra mais velha. Na escolha dos 5 diferentes, só as que estavam no
+   * Todas as cartas do descarte, da mais nova pra mais velha. Na escolha dos 4 bichos diferentes, só as que estavam no
    * descarte antes da jogada (e continuam lá) acendem; na pegada do fim do par de Mico, só as descartadas nele. Um
    * clique pega a carta.
    */
@@ -2080,7 +2084,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         }
         await Promise.all(cards.map((id) => Fx.fly({ node: cardEl(id), from: air, to: $('#discard'), dur: 320 })));
         await wait(250);
-        // A jogada abriu uma escolha (Mico, 5 diferentes…): a legenda diz quem faz o quê.
+        // A jogada abriu uma escolha (Mico, 4 bichos diferentes…): a legenda diz quem faz o quê.
         sayChoice();
         break;
       }
@@ -2338,7 +2342,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         const target = toP === ME && card ? handCard(card) ?? $('#hand') : anchorOf(toP);
         await Fx.fly({ node: cardEl(card, { back: !card }), from, to: target, dur: ev.t === 'passed' ? 360 : 520, trail: '#ff8fab' });
         if (card) { arriving.delete(card); handCard(card)?.classList.remove('arriving'); }
-        // 5 diferentes e trio de Favor: a escolha continua aberta ("MAIS UMA", "MAIS 2 CARTAS").
+        // 4 bichos diferentes e trio de Favor: a escolha continua aberta ("MAIS UMA", "MAIS 2 CARTAS").
         if (ev.t === 'picked' || ev.t === 'gave') sayChoice();
         break;
       }
@@ -2700,7 +2704,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   // ---------------------------------------------------------------- galeria das cartas
   $('#cards').onclick = () => {
     const g = $('#gallery');
-    g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa; o BOTO vale por qualquer bicho) · TRIO de qualquer carta rouba um Desarme (3 FAVORES: o escolhido te dá 3 cartas) · 5 DIFERENTES pega DUAS do descarte. Toda carta jogada fica 5 s no ar pra alguém dar Nem vem!. Quem pega MAU-OLHADO joga às cegas até comprar. O olho ao lado do descarte mostra todas as cartas da pilha.</p></div>';
+    g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa; o BOTO vale por qualquer bicho) · TRIO de qualquer carta rouba um Desarme (3 FAVORES: o escolhido te dá 3 cartas) · 4 BICHOS DIFERENTES (o BOTO conta como um) pega DUAS do descarte e não aceita Nem vem!. As outras jogadas ficam 5 s no ar pra alguém dar Nem vem!. Quem pega MAU-OLHADO joga às cegas até comprar. O olho ao lado do descarte mostra todas as cartas da pilha.</p></div>';
     // No celular, o jeito de mexer nas cartas com o dedo (no computador é o de sempre: clicar, arrastar, rodinha).
     if (phone()) {
       const how = document.createElement('p');

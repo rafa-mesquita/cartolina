@@ -41,8 +41,11 @@ function playKindOf(kinds: KittensCardKind[], as: KittensCardKind | undefined): 
     if (wild === 3) return { kind: 'trio', as: KITTENS_WILD };
     return same && kittensIsBicho(plain[0]!) ? { kind: 'trio', as: plain[0]! } : 'bad_combo';
   }
-  // 5 diferentes: o Boto conta como o próprio nome.
-  if (kinds.length === 5 && new Set(kinds).size === 5) return { kind: 'cinco', as: null };
+  // 4 bichos diferentes (pedido do Rafa, 2026-10-21; eram 5 cartas quaisquer): só bichos, e o Boto conta como um bicho
+  // a mais (no máximo um). O tipo da jogada continua `cinco`.
+  if (kinds.length === 4 && new Set(kinds).size === 4 && kinds.every((k) => k === KITTENS_WILD || kittensIsBicho(k))) {
+    return { kind: 'cinco', as: null };
+  }
   return 'bad_combo';
 }
 
