@@ -68,12 +68,13 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   if (tatus !== s.alive.length - 1) throw broken(`${tatus} tatus no monte com ${s.alive.length} vivos`);
   if (s.current === null || !s.alive.includes(s.current)) throw broken(`vez de ${s.current}, que não está vivo`);
   if (s.owed < 1) throw broken(`vez com ${s.owed} turnos devidos`);
-  // Espiadas (pedido do Rafa, 2026-10-20): só de quem está vivo, de 1 a 3 cartas, e sempre o topo do monte, na ordem
-  // (a do topo primeiro). Se alguma regra deixasse a espiada desatualizada, ela teria que apagar ou cortar.
+  // Espiadas (pedido do Rafa, 2026-10-20): só de quem está vivo, com 1 carta ou mais (quem mexe no monte sabendo o que
+  // fez pode passar de 3: pedido do Rafa, 2026-10-21), e sempre o topo do monte, na ordem (a do topo primeiro). Se alguma
+  // regra deixasse a espiada desatualizada, ela teria que apagar ou cortar.
   for (const [p, xs] of Object.entries(s.peeks)) {
     if (!s.alive.includes(p)) throw broken(`espiada de ${p}, que não está vivo`);
     const top = s.draw.slice(-xs.length).reverse();
-    if (xs.length < 1 || xs.length > 3 || xs.join() !== top.join()) {
+    if (xs.length < 1 || xs.length > s.draw.length || xs.join() !== top.join()) {
       throw broken(`espiada de ${p} [${xs}] não é o topo do monte [${top}]`);
     }
   }
@@ -179,7 +180,12 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
       if (blind) return { type: 'choose', card: own() };
       return { type: 'choose', card: pick(r, hand.filter((x) => kittensKindOf(x) === 'cafune')) ?? 'cafune-0' };
     }
-    if (c.kind === 'cafune') return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
+    if (c.kind === 'cafune') {
+      // Com espiada, às vezes esconde dentro dela (senão o tatu entrando na espiada de quem escondeu quase nunca aparece).
+      const k = Object.hasOwn(s.peeks, p) ? s.peeks[p]!.length : 0;
+      if (k > 0 && r() < 0.5) return { type: 'choose', position: Math.floor(r() * (k + 1)) };
+      return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
+    }
     if (c.kind === 'favor') return { type: 'choose', card: own() };
     if (c.kind === 'quati' || c.kind === 'feitico') return { type: 'choose', keep: r() < 0.5 };
     // 5 diferentes: uma das opções que ainda estão no descarte.
@@ -281,6 +287,7 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     if (step === STEP_CAP) return false;
     const roll = r();
     const c = s.choice;
+    const before = s;
     if (c?.kind === 'latido' && s.blind.includes(c.who)) seen.add('latido:blind');
     /** Prazo ou queda: o servidor resolve; o Feitiço sem resposta sempre manda a carta de baixo pro topo. */
     const settle = () => {
@@ -365,6 +372,19 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     const peekers = Object.keys(s.peeks);
     if (peekers.some((p) => p !== s.current)) seen.add('peek:kept');
     if (peekers.length >= 2) seen.add('peek:many');
+    if (Object.values(s.peeks).some((xs) => xs.length > 3)) seen.add('peek:long');
+    // Quem mexe no monte sabendo o que fez continua vendo (pedido do Rafa, 2026-10-21): Feitiço pondo no topo e Desarme
+    // escondendo o tatu apagam a espiada de todos os outros; quem mexeu fica com a dele (o topo conferido acima).
+    if (c !== null && s.choice !== c && (c.kind === 'feitico' || c.kind === 'cafune')) {
+      const moved = c.kind === 'cafune' || s.log.some((e) => e.n >= before.seq && e.ev.t === 'conjured' && !e.ev.kept);
+      if (moved && peekers.some((p) => p !== c.who)) throw new Error(`espiada de outro sobrou: ${JSON.stringify(s.peeks)}\n  ${where()}`);
+      const mine = Object.hasOwn(s.peeks, c.who) ? s.peeks[c.who]! : [];
+      if (c.kind === 'feitico' && moved && mine[0] === before.draw[0]) seen.add('peek:feitico');
+      if (c.kind === 'cafune' && mine.includes(c.tatu)) seen.add('peek:desarme');
+    }
+    if (c?.kind === 'quati' && s.choice !== c && !Object.hasOwn(before.peeks, c.who) && Object.hasOwn(s.peeks, c.who)) {
+      seen.add('peek:quati');
+    }
     checkInvariants(s, deck, someViewer(s), where);
     checkHistory();
   }
@@ -407,6 +427,10 @@ describe('simulação aleatória do Tatubum', () => {
       'favor:again',
       'peek:kept',
       'peek:many',
+      'peek:long',
+      'peek:feitico',
+      'peek:desarme',
+      'peek:quati',
       'nope:nope_late',
       'nope:nope_stale',
       'nope:nope_cooldown',

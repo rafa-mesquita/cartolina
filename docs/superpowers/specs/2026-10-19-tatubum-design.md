@@ -90,27 +90,37 @@ comprada etc."
 
 - Estado `peeks: Record<jogador, id[]>` (a do topo primeiro). O Espiar põe `peeks[quem] = as 3 de cima` (troca a
   espiada anterior dele). A vez passar **não** apaga nada.
-- Vale sempre `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada, 1 a 3): cada espiada é o topo do monte,
-  na ordem. A simulação aleatória confere isso depois de cada passo. Espiada vazia não fica no estado.
+- Vale sempre `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada, 1 ou mais: passa de 3 quando quem mexe
+  no monte continua vendo o que sabe, abaixo): cada espiada é o topo do monte, na ordem. A simulação aleatória confere
+  isso depois de cada passo. Espiada vazia não fica no estado.
 - O que mexe no monte, um por um (`draw:` em `shared/src/games/kittens`):
   - **Comprar** (compra normal, inclusive comprar um Tatubum): a carta sai de todas as espiadas; o resto continua o topo.
   - **Par de Tamanduá**: as 2 compradas saem; o Tatubum comprado vai pro fundo (embaixo de tudo), então o resto continua
     o topo.
   - **Par de Quati, carta pro fundo**: tratada como compra, sai das espiadas (o resto vira o topo, na mesma ordem).
-    Ficando, nada muda.
+    Ficando (inclusive sem resposta), quem escolheu viu a de cima: sem espiada, ganha `[a de cima]`; com espiada, ela
+    já começa por essa carta e nada muda (pedido do Rafa, 2026-10-21).
   - **Par de Preguiça puxando do monte**: a carta sai das espiadas que a tinham (o resto do monte não muda de ordem).
   - **Tatu tirado do monte quando alguém sai** (`eliminate`): sai das espiadas que o tinham.
   - **Feitiço ficando com a de baixo**: sai das espiadas que a tinham (só se a espiada era o monte inteiro).
   - **Embaralhar**: apaga **todas**.
-  - **Desarme escondendo o tatu** (Cafuné, escolhido ou ao acaso): apaga **todas**, em qualquer posição (até no fundo):
-    apagar só às vezes contaria onde o tatu foi.
-  - **Feitiço pondo a de baixo no topo**: apaga **todas** (o topo mudou).
+  - **Desarme escondendo o tatu** (Cafuné): apaga as dos **outros**, em qualquer posição (até no fundo): apagar só às
+    vezes contaria onde o tatu foi. Quem escondeu, numa posição escolhida, sabe onde pôs (pedido do Rafa, 2026-10-21):
+    com espiada de k cartas e o tatu na posição `pos` (0 = topo, = cartas acima dele) com `pos ≤ k`, o tatu entra na
+    espiada no índice `pos`; com `pos > k`, a espiada fica igual (o topo não mudou). Sem espiada, **não** ganha uma, nem
+    com `pos = 0`: o olhinho (`peekers`) é público, e aparecer só nesse caso contaria pra mesa que o tatu está no topo.
+    No "aleatório" (escolhido, ou o automático do prazo vencido / de quem caiu) ele também não sabe: perde a espiada.
+  - **Feitiço pondo a de baixo no topo** (escolhido ou sem resposta): apaga as dos **outros** (o topo mudou); quem
+    escolheu viu a carta, e a espiada dele vira `[a carta, ...a espiada que ele tinha]` (ou só `[a carta]`; se a
+    espiada já era o monte todo, a carta só sobe pro começo) (pedido do Rafa, 2026-10-21: "o correto seria ver as 4
+    cartas reveladas, porque teoricamente tenho informação de todas").
   - **Distribuir / jogar de novo / lobby / fim de jogo**: sem espiadas.
 - Quem sai da partida (explodiu ou caiu de vez) perde a espiada.
 - Sala salva no meio da partida antes disso tem `peek: { who, cards } | null`: o `compat.ts` converte pra
   `peeks = { [who]: cards }` (ou `{}`), só com o que ainda é o topo e só se `who` está vivo, e tira `peek` do estado.
 - Visão: `peek` = a sua espiada (ou `null`); `peekers` = quem tem espiada agora (público, na ordem dos assentos). Na
-  mesa, a sua fica ao lado do monte (e encolhe conforme as cartas são compradas); nos assentos dos outros, um olhinho.
+  mesa, a sua fica ao lado do monte (e encolhe conforme as cartas são compradas; com mais de 3, as cartas se encavalam
+  no mesmo espaço das 3, no computador e no celular); nos assentos dos outros, um olhinho.
 
 ### Combos
 
@@ -380,7 +390,8 @@ a 5 o baralho era o do jogo original (46).
   - `choice`: `{ kind: 'tatu' | 'cafune' | 'favor' | 'cinco' | 'mico' | 'quati' | 'latido' | 'feitico', who, deadline, ... }`
     (o Mico tem `by` e `waiting` no lugar de `who`; o par de Preguiça não precisa de escolha: o bicho vai junto da jogada).
   - `peeks`: `{ [jogador]: cards }`, a espiada de cada um, que fica à mostra entre os turnos; carta comprada ou tirada
-    do monte sai dela, e o monte mudar de ordem perto do topo apaga todas (§2 "Espiada à mostra").
+    do monte sai dela, e o monte mudar de ordem perto do topo apaga todas, menos a de quem mexeu sabendo o que fez
+    (§2 "Espiada à mostra").
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
 - Ações (`schema.ts`, zod): `start`, `play { cards: id[], target?, ask?, as? }`, `nope { card? }`, `draw`,
   `choose { … }` (posição do tatu, carta do Favor/Mico/Desarme, carta do descarte, `keep` do Quati/Feitiço),

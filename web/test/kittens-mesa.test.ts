@@ -1024,11 +1024,29 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('espiada com mais de 3 cartas (Feitiço pondo no topo, pedido do Rafa, 2026-10-21): mostra todas, encavaladas no espaço das 3', async () => {
+    const v = midGame('p0');
+    const four = ['tatubum-70', 'mico-71', 'pular-72', 'quati-73'];
+    v.game = { ...v.game, current: 'p0', peek: four, peekers: ['p0'] };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const fut = root.querySelector<HTMLElement>('#future')!;
+    expect([...fut.querySelectorAll<HTMLElement>('.kt-card')].map((el) => el.dataset.id)).toEqual(four);
+    expect(fut.style.getPropertyValue('--fut-gaps')).toBe('3');
+    // Com 3 ou menos, o passo de sempre (64px no computador).
+    mesa.update(toMesa({ ...v, game: { ...v.game, peek: four.slice(1) } }));
+    expect(fut.style.getPropertyValue('--fut-gaps')).toBe('2');
+    const css = Object.values(await siteCss()).join('\n');
+    expect(css).toContain('.kittens .kt-mesa #future .kt-card { transform: scale(.38); transform-origin: left top; margin-bottom: calc(128px / var(--fut-gaps, 2) - 160px); }');
+    mesa.destroy();
+  });
+
   it('zoom e galeria do Espiar dizem só o que a carta faz', () => {
     expect(mesaSrc).toContain(
-      "espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.'",
+      "espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem; se quem mexe é você (Feitiço, Desarme, Quati), continua vendo o que sabe.'",
     );
-    expect(mesaSrc).toContain('Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Pode levar Nem vem!.');
+    expect(mesaSrc).toContain('Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Se quem muda a ordem é você, continua vendo o que sabe:');
+    expect(mesaSrc).toContain('com o tatu nela se ele cair no meio ou logo abaixo dela.<br>Pode levar Nem vem!.');
     expect(mesaSrc).not.toContain('a vez passar ou o monte mudar');
   });
 

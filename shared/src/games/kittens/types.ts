@@ -173,7 +173,8 @@ export interface KittensState {
   /**
    * Espiar (pedido do Rafa, 2026-10-20): o que cada um espiou e ainda está à mostra pra ele, a carta do topo primeiro.
    * Sempre vale `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada): carta comprada ou tirada do monte sai
-   * das espiadas; o monte mudar de ordem perto do topo apaga todas. Espiada vazia não fica. Chave ausente = nada.
+   * das espiadas; o monte mudar de ordem perto do topo apaga todas, menos a de quem mexeu sabendo o que fez (Feitiço,
+   * Desarme, Quati: pedido do Rafa, 2026-10-21), que pode passar de 3 cartas. Espiada vazia não fica. Chave ausente = nada.
    */
   peeks: Record<string, string[]>;
   log: KittensLogEntry[];
@@ -244,7 +245,7 @@ export interface KittensView {
   blind: string[];
   pending: KittensPending | null;
   choice: KittensChoiceView | null;
-  /** O que você espiou e ainda está à mostra (até 3 de cima, a do topo primeiro); null se nada. */
+  /** O que você espiou e ainda está à mostra (as de cima, a do topo primeiro; pode passar de 3); null se nada. */
   peek: string[] | null;
   /** Quem tem espiada à mostra agora (público; as cartas de cada um, só ele vê), na ordem dos assentos. */
   peekers: string[];

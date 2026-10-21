@@ -25,13 +25,21 @@ export function takeCard(s: KittensState, p: string, card: string, draw: string[
 
 /**
  * Cafuné: o tatu volta pro monte `position` cartas abaixo do topo (0 = topo, tamanho do monte = fundo). Gasta 1 turno.
- * Apaga as espiadas de todos, em qualquer posição (apagar só quando o tatu cai perto do topo contaria onde ele foi).
+ * Apaga as espiadas dos outros, em qualquer posição (apagar só quando o tatu cai perto do topo contaria onde ele foi).
+ * Quem escondeu sabe onde pôs (pedido do Rafa, 2026-10-21): se tinha espiada, continua com ela, com o tatu no meio se ele
+ * caiu dentro dela (`pos` ≤ tamanho). Sem espiada, não ganha uma nem com o tatu no topo: o olhinho de quem tem espiada é
+ * público, e ele aparecer só nesse caso contaria pra mesa que o tatu está em cima. No "ao acaso" (inclusive quando o
+ * prazo vence ou ele cai) ele também não sabe onde o tatu foi: perde a espiada como os outros.
  */
 export function hideTatu(s: KittensState, c: Choice<'cafune'>, position: number | 'random', rng: Rng): KittensState {
   const pos = position === 'random' ? randomInt(rng, s.draw.length + 1) : position;
   const at = s.draw.length - pos;
   const draw = [...s.draw.slice(0, at), c.tatu, ...s.draw.slice(at)];
-  return spendTurn(logged(clearPeeks({ ...s, draw, choice: null }), { t: 'hid', by: c.who }));
+  const mine = position !== 'random' && Object.hasOwn(s.peeks, c.who) ? s.peeks[c.who]! : [];
+  // Topo primeiro: o tatu fica no índice `pos` (com `pos` cartas acima dele).
+  const known = pos <= mine.length ? [...mine.slice(0, pos), c.tatu, ...mine.slice(pos)] : mine;
+  const next = mine.length > 0 ? { ...s, peeks: { [c.who]: known } } : clearPeeks(s);
+  return spendTurn(logged({ ...next, draw, choice: null }, { t: 'hid', by: c.who }));
 }
 
 /**
@@ -95,11 +103,15 @@ export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, ca
 
 /**
  * Par de Quati: a carta de cima fica (`keep`) ou vai pro fundo. Todos sabem se foi, ninguém sabe qual. Indo pro fundo,
- * ela sai das espiadas como se fosse comprada (o resto vira o topo, na mesma ordem).
+ * ela sai das espiadas como se fosse comprada (o resto vira o topo, na mesma ordem). Ficando, quem escolheu viu a de
+ * cima (pedido do Rafa, 2026-10-21): sem espiada, ela fica à mostra pra ele; com espiada, ela já é a primeira. Vale
+ * também sem resposta (ele viu a carta na escolha).
  */
 export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): KittensState {
   const top = s.draw.at(-1)!;
-  const next = keep ? s : unpeek({ ...s, draw: [top, ...s.draw.slice(0, -1)] }, [top]);
+  const knew = Object.hasOwn(s.peeks, c.who) || !s.alive.includes(c.who);
+  const seen = knew ? s : { ...s, peeks: { ...s.peeks, [c.who]: [top] } };
+  const next = keep ? seen : unpeek({ ...s, draw: [top, ...s.draw.slice(0, -1)] }, [top]);
   return logged({ ...next, choice: null }, { t: 'delayed', by: c.who, moved: !keep });
 }
 
@@ -124,14 +136,20 @@ export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string)
 
 /**
  * Feitiço: `who` fica com a carta de baixo do monte (`keep`: é comprar; Tatubum segue o fluxo do Desarme) ou ela vai pro
- * topo (aí as espiadas de todos se apagam: o topo mudou). Ficando com ela, ela sai das espiadas. Nos dois casos gasta 1 turno (o Tatubum guardado gasta quando o tatu volta pro monte, ou some com a explosão).
- * `deadline` = prazo da escolha do Desarme, se o guardado for Tatubum.
+ * topo. Ficando com ela, ela sai das espiadas. Indo pro topo, as espiadas dos outros se apagam (o topo mudou), e `who`,
+ * que viu a carta (pedido do Rafa, 2026-10-21), passa a ver ela em cima da espiada que já tinha (ou só ela). Vale também
+ * sem resposta: ele viu a carta na escolha. Nos dois casos gasta 1 turno (o Tatubum guardado gasta quando o tatu volta
+ * pro monte, ou some com a explosão). `deadline` = prazo da escolha do Desarme, se o guardado for Tatubum.
  */
 export function conjure(s: KittensState, c: Choice<'feitico'>, keep: boolean, deadline: number): KittensState {
   const bottom = s.draw[0]!;
   const done = logged({ ...s, choice: null }, { t: 'conjured', by: c.who, kept: keep });
   if (keep) return takeCard(done, c.who, bottom, s.draw.slice(1), deadline);
-  return spendTurn(clearPeeks({ ...done, draw: [...s.draw.slice(1), bottom] }));
+  const draw = [...s.draw.slice(1), bottom];
+  if (!s.alive.includes(c.who)) return spendTurn(clearPeeks({ ...done, draw }));
+  // Monte todo na espiada: a de baixo já estava nela (no fim) e só sobe pro começo.
+  const mine = (Object.hasOwn(s.peeks, c.who) ? s.peeks[c.who]! : []).filter((x) => x !== bottom);
+  return spendTurn({ ...done, draw, peeks: { [c.who]: [bottom, ...mine] } });
 }
 
 /**
@@ -186,7 +204,7 @@ export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensS
       return next;
     }
     case 'quati':
-      // Sem resposta, a carta fica onde está (nada muda pra ninguém).
+      // Sem resposta, a carta fica onde está (quem escolhia viu a de cima, como se tivesse deixado).
       return delayTop(s, c, true);
     case 'latido': {
       // A mão não muda durante a escolha (ela só abre pra quem tem Desarme); sem Desarme, explode.

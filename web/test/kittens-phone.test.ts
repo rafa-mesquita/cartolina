@@ -284,6 +284,23 @@ describe('Tatubum no celular em pé', () => {
     mesa.destroy();
   });
 
+  it('a espiada com 4 cartas aparece inteira nas miniaturas ao lado do monte, encavaladas no espaço das 3', async () => {
+    const v = midGame('p0');
+    const four = ['quati-70', 'tatubum-71', 'mico-72', 'pular-73'];
+    v.game = { ...v.game, current: 'p0', peek: four, peekers: ['p0'] };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    expect(stageOf(root).classList.contains('kt-phone')).toBe(true);
+    const fut = root.querySelector<HTMLElement>('#table #future')!;
+    expect([...fut.querySelectorAll<HTMLElement>('.kt-card')].map((el) => el.dataset.id)).toEqual(four);
+    expect(fut.style.getPropertyValue('--fut-gaps')).toBe('3');
+    const name = 'node:fs';
+    const fs = (await import(/* @vite-ignore */ name)) as { readFileSync(file: string, enc: 'utf8'): string };
+    const css = fs.readFileSync(`${(import.meta as ImportMeta & { dirname: string }).dirname}/../src/games/kittens/kittens.css`, 'utf8');
+    expect(css).toContain('.kittens .kt-mesa #stage.kt-phone #future .kt-card { transform: scale(.26); margin-bottom: calc(96px / var(--fut-gaps, 2) - 160px); }');
+    mesa.destroy();
+  });
+
   it('o palco fica na escala 1 (letra de pixel nítida) e vira compacto (kt-short) na tela baixa', () => {
     vi.stubGlobal('innerWidth', 390);
     vi.stubGlobal('innerHeight', 844);
