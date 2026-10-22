@@ -3,7 +3,7 @@ import { withDixitCounters } from './games/dixit/rules';
 import type { DixitState, DixitView } from './games/dixit/types';
 import type { CoupState, CoupView } from './games/coup/types';
 import type { KittensState, KittensView } from './games/kittens/types';
-import type { CamelioView } from './games/camelio/types';
+import type { CamelioState, CamelioView } from './games/camelio/types';
 import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
@@ -115,6 +115,11 @@ export function coupStateOf(room: Room): CoupState | null {
 /** Estado do Tatubum, ou null se a sala é de outro jogo. */
 export function kittensStateOf(room: Room): KittensState | null {
   return room.gameId === 'kittens' ? (room.game as KittensState) : null;
+}
+
+/** Estado do Cama-Leão, ou null se a sala é de outro jogo. */
+export function camelioStateOf(room: Room): CamelioState | null {
+  return room.gameId === 'camelio' ? (room.game as CamelioState) : null;
 }
 
 type StoredRoom = Omit<Room, 'gameId' | 'runStartedAt' | 'recordedRevealKey'> &
