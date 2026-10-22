@@ -12,11 +12,6 @@ describe('Tatubum no servidor', () => {
     expect(body).toMatchObject({ exists: true, game: 'kittens', phase: 'lobby' });
   });
 
-  it('o histórico do Tatubum ainda não existe', async () => {
-    const res = await SELF.fetch('https://x/history/kittens');
-    expect(res.status).toBe(404);
-  });
-
   it('começa com 2: cada um vê só a própria mão de 8 cartas', async () => {
     const code = await newGameRoom('kittens');
     const players = await joined(code, 2);
@@ -25,8 +20,10 @@ describe('Tatubum no servidor', () => {
     for (const v of views) {
       expect(v.game.hand).toHaveLength(8);
       expect(v.game.handCounts).toEqual({ [players[0]!.id]: 8, [players[1]!.id]: 8 });
-      expect(v.game.current).toBe(players[0]!.id);
+      // Quem começa é sorteado (pode ser qualquer um dos dois), mas todos veem o mesmo.
+      expect(players.map((p) => p.id)).toContain(v.game.current);
     }
+    expect(views[1]!.game.current).toBe(views[0]!.game.current);
     expect(views[0]!.game.hand).not.toEqual(views[1]!.game.hand);
   });
 
@@ -34,9 +31,24 @@ describe('Tatubum no servidor', () => {
     const code = await newGameRoom('kittens');
     const players = await joined(code, 2);
     players[0]!.client.send({ t: 'action', action: { type: 'start' } });
-    await players[1]!.client.state<KittensRoomView>(isPlaying);
-    players[1]!.client.send({ t: 'action', action: { type: 'draw' } });
-    const err = await players[1]!.client.next('error');
+    const v = await players[1]!.client.state<KittensRoomView>(isPlaying);
+    // Quem começa é sorteado: tenta comprar quem NÃO está na vez.
+    const waiting = players.find((p) => p.id !== v.game.current)!;
+    waiting.client.send({ t: 'action', action: { type: 'draw' } });
+    const err = await waiting.client.next('error');
     expect(err).toMatchObject({ code: 'not_your_turn', message: 'Não é a sua vez.' });
+  });
+
+  it('Nem vem! com o que o jogador viu (at/on) chega nas regras; at inválido é recusado antes', async () => {
+    const code = await newGameRoom('kittens');
+    const players = await joined(code, 2);
+    players[0]!.client.send({ t: 'action', action: { type: 'start' } });
+    await players[1]!.client.state<KittensRoomView>(isPlaying);
+    const p = players[1]!;
+    // Sem carta no ar: quem responde são as regras (o schema aceitou `at` e `on`).
+    p.client.send({ t: 'action', action: { type: 'nope', at: 0, on: 'ataque-0' } });
+    expect(await p.client.next('error')).toMatchObject({ code: 'nothing_to_nope' });
+    p.client.send({ t: 'action', action: { type: 'nope', at: -1 } });
+    expect(await p.client.next('error')).toMatchObject({ code: 'bad_action' });
   });
 });

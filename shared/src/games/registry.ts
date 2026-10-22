@@ -90,8 +90,7 @@ export const GAMES: Record<GameId, GameEntry> = {
     maxPlayers: KITTENS_MAX_PLAYERS,
     // Cursor em cima de uma carta da mão entregaria a jogada.
     liveCursors: false,
-    // O histórico do Tatubum vem num plano próprio.
-    recordsHistory: false,
+    recordsHistory: true,
   }),
   coup: defineGame({
     id: 'coup',
@@ -112,8 +111,8 @@ export const GAMES: Record<GameId, GameEntry> = {
     maxPlayers: CAMELIO_MAX_PLAYERS,
     // Tudo é aberto na mesa (só o topo do monte é segredo, e o cursor não entrega nada).
     liveCursors: true,
-    // O histórico do Cama-Leão vem no Plano C4.
-    recordsHistory: false,
+    // Cada partida terminada grava em `camelio_matches` (sem bot).
+    recordsHistory: true,
   }),
 };
 

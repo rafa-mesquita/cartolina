@@ -16,30 +16,51 @@ export const KITTENS_PACK: Partial<Record<KittensCardKind, number>> = {
   quati: 4,
   tamandua: 4,
   preguica: 4,
-  boto: 2,
+  // Tucano: pedido do Rafa, 2026-10-21.
+  tucano: 4,
+  boto: 4,
 };
-export const KITTENS_PACK_SIZE = 52;
-/** Tatu Latidor: sempre 2 na partida, qualquer que seja o número de jogadores (fora dos pacotes). */
-export const KITTENS_LATIDOS = 2;
+export const KITTENS_PACK_SIZE = 58;
+/**
+ * Tatu Latidor, fora dos pacotes (pedido do Rafa, 2026-10-21): 2 com 2 jogadores, 3 com 3 e, a partir de 4, um a menos
+ * que o número de jogadores. Nenhum vem na mão inicial: vão todos pro monte.
+ */
+export function kittensLatidos(players: number): number {
+  return players <= 3 ? players : players - 1;
+}
 /** Cartas do baralho na mão inicial, além do Cafuné de cada um. */
 export const KITTENS_HAND_START = 7;
-/** Cafunés que vão pro monte além do de cada um (sempre 2: decisão de 2026-10-19). */
-export const KITTENS_EXTRA_CAFUNES = 2;
+/**
+ * Desarmes (`cafune`) que vão pro monte além do de cada um, como no original: 2 com até 4 jogadores, 1 com 5
+ * (pedido do Rafa, 2026-10-21: fiel ao original). De 6 a 8 o original não tem regra: 1, seguindo a tendência.
+ */
+export function kittensExtraCafunes(players: number): number {
+  return players <= 4 ? 2 : 1;
+}
 
 /** Com 8 a mão inicial gasta 56 cartas: a partir de 6 jogadores entram 2 pacotes. */
 export function kittensPacksFor(players: number): number {
   return players >= 6 ? 2 : 1;
 }
 
-/** As cartas dos pacotes mais os 2 Tatus Latidores (sem Tatubum e Cafuné), numeradas por tipo. */
-export function kittensBaseDeck(players: number): string[] {
+/** As cartas dos pacotes (sem Tatubum, Cafuné e Tatu Latidor), numeradas por tipo: de onde sai a mão inicial. */
+export function kittensPackCards(players: number): string[] {
   const packs = kittensPacksFor(players);
   const cards: string[] = [];
   for (const [kind, count] of Object.entries(KITTENS_PACK) as [KittensCardKind, number][]) {
     for (let i = 0; i < count * packs; i++) cards.push(kittensCardId(kind, i));
   }
-  for (let i = 0; i < KITTENS_LATIDOS; i++) cards.push(kittensCardId('latido', i));
   return cards;
+}
+
+/** Os Tatus Latidores da partida (1 por jogador), numerados. */
+export function kittensLatidoCards(players: number): string[] {
+  return Array.from({ length: kittensLatidos(players) }, (_, i) => kittensCardId('latido', i));
+}
+
+/** Todas as cartas da partida menos Tatubum e Cafuné: os pacotes mais os Tatus Latidores. */
+export function kittensBaseDeck(players: number): string[] {
+  return [...kittensPackCards(players), ...kittensLatidoCards(players)];
 }
 
 export interface KittensDeal {
@@ -48,15 +69,19 @@ export interface KittensDeal {
   draw: string[];
 }
 
-/** Preparação (spec §2): 1 Cafuné + 7 cartas pra cada um; no monte, o resto + 2 Cafunés + (n − 1) Tatubuns. */
+/**
+ * Preparação (spec §2): 1 Cafuné + 7 cartas dos pacotes pra cada um (nenhum Latidor na mão inicial: pedido do Rafa,
+ * 2026-10-21); no monte, embaralhados, o resto dos pacotes + os Latidores (`kittensLatidos`) + os Cafunés extras + (n − 1)
+ * Tatubuns. Tamanho do monte = pacotes × 58 − 7n + Latidores + Cafunés extras + (n − 1).
+ */
 export function kittensDeal(rng: Rng, players: readonly string[]): KittensDeal {
   const n = players.length;
-  const pool = shuffle(rng, kittensBaseDeck(n));
+  const pool = shuffle(rng, kittensPackCards(n));
   // Cafunés embaralhados: se `cafune-i` fosse sempre do assento i, um Cafuné roubado (par/Favor) se denunciaria
   // quando jogado, e só os dois envolvidos podem saber qual carta trocou de mão (spec §4.3).
   const cafunes = shuffle(
     rng,
-    Array.from({ length: n + KITTENS_EXTRA_CAFUNES }, (_, i) => kittensCardId('cafune', i)),
+    Array.from({ length: n + kittensExtraCafunes(n) }, (_, i) => kittensCardId('cafune', i)),
   );
   const hands: Record<string, string[]> = {};
   players.forEach((p, i) => {
@@ -65,5 +90,5 @@ export function kittensDeal(rng: Rng, players: readonly string[]): KittensDeal {
   const rest = pool.slice(n * KITTENS_HAND_START);
   const extras = cafunes.slice(n);
   const tatus = Array.from({ length: n - 1 }, (_, i) => kittensCardId('tatubum', i));
-  return { hands, draw: shuffle(rng, [...rest, ...extras, ...tatus]) };
+  return { hands, draw: shuffle(rng, [...rest, ...kittensLatidoCards(n), ...extras, ...tatus]) };
 }

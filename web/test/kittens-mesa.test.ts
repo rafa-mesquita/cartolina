@@ -10,7 +10,7 @@ import {
   roomView,
   type GameAction,
   type KittensEvent,
-  type KittensRoomView,
+  type KittensRoomView, type KittensState,
   type Room,
 } from '@cartolina/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -72,7 +72,8 @@ function started(n = 3): Room {
   }
   const res = roomAction(room, 'p0', { type: 'start' }, mulberry32(7), 0);
   if (!res.ok) throw new Error(res.error);
-  return res.room;
+  // Quem começa é sorteado; os testes fixam a vez no p0 (host).
+  return { ...res.room, game: { ...(res.room.game as KittensState), current: 'p0' } };
 }
 
 function viewOf(room: Room, me: string | null): KittensRoomView {
@@ -140,6 +141,24 @@ describe('mesa do Tatubum', () => {
     buttonByText(root, 'COMPRAR')!.click();
     expect(sent).toEqual([{ type: 'draw' }]);
     mesa.destroy();
+  });
+
+  it('Ataque acumulado: os turnos que faltam aparecem na sua mão e no assento de quem está na vez', () => {
+    const mine = midGame('p0');
+    mine.game = { ...mine.game, current: 'p0', owed: 3 };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(mine));
+    expect(root.querySelector('#hand .kt-owedtag')?.textContent).toContain('FALTAM 3 TURNOS');
+    mesa.destroy();
+
+    const theirs = midGame('p0');
+    theirs.game = { ...theirs.game, current: 'p1', owed: 2 };
+    const other = mount();
+    other.mesa.update(toMesa(theirs));
+    expect(other.root.querySelector('.kt-seat[data-p="p1"] .kt-owed')?.textContent).toBe('2 TURNOS');
+    expect(other.root.querySelector('.kt-seat[data-p="p2"] .kt-owed')).toBeNull();
+    expect(other.root.querySelector('#hand .kt-owedtag')).toBeNull();
+    other.mesa.destroy();
   });
 
   it('nomes vão escapados pro HTML', () => {
@@ -336,6 +355,104 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('par de Tucano pede um adversário (até um sem carta), clicando ou soltando no assento; Boto + Tucano também', () => {
+    const v = midGame('p1');
+    v.game.hand = ['tucano-90', 'tucano-91', 'boto-92', ...v.game.hand];
+    v.game.handCounts = { ...v.game.handCounts, p2: 0 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, 'tucano-90');
+    clickCard(root, 'tucano-91');
+    buttonByText(root, 'JOGAR PAR')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('Escolha um adversário');
+    const p2 = root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!;
+    expect(p2.classList.contains('targetable')).toBe(true);
+    p2.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['tucano-90', 'tucano-91'], target: 'p2' }]);
+    mesa.error('Não pode.');
+    // Boto + Tucano solto num assento: vai com ele de alvo (a seleção continuou depois da recusa).
+    clickCard(root, 'tucano-91');
+    clickCard(root, 'boto-92');
+    dragCard(root, 'tucano-90', root.querySelector('.kt-seat[data-p="p0"]')!);
+    expect(sent[1]).toEqual({ type: 'play', cards: ['tucano-90', 'boto-92'], target: 'p0' });
+    mesa.destroy();
+  });
+
+  it('par de Latidores pede um adversário', () => {
+    const v = midGame('p1');
+    v.game.hand = ['latido-90', 'latido-91', ...v.game.hand];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, 'latido-90');
+    clickCard(root, 'latido-91');
+    buttonByText(root, 'JOGAR PAR')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('Escolha um adversário');
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['latido-90', 'latido-91'], target: 'p2' }]);
+    mesa.destroy();
+  });
+
+  it('par de 2 Botos virando Tucano pede o adversário depois do bicho', () => {
+    const v = midGame('p1');
+    const pair = ['boto-90', 'boto-91'];
+    v.game.hand = [...pair, ...v.game.hand];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    for (const id of pair) clickCard(root, id);
+    buttonByText(root, 'JOGAR PAR')!.click();
+    buttonByText(root, KITTENS_CARD_NAMES.tucano.toUpperCase())!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#caption')?.textContent).toContain('Escolha um adversário');
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p0"]')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: pair, as: 'tucano', target: 'p0' }]);
+    mesa.destroy();
+  });
+
+  it('vez pulada (Tucano): PULA no assento, faixa na sua mão, dica do assento e o diário', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    v.game.skips = { p2: 2, p0: 1 };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.textContent).toBe('PULA ×2');
+    expect(root.querySelector('.kt-seat[data-p="p0"] .kt-skip')?.textContent).toBe('PULA');
+    expect(root.querySelector('#hand .kt-skiptag')).toBeNull();
+    let n = v.game.log.at(-1)!.n;
+    const next = (patch: Partial<KittensRoomView['game']>, ...evs: KittensEvent[]) => {
+      v.game = { ...v.game, ...patch, log: [...v.game.log, ...evs.map((ev) => ({ n: ++n, ev }))] };
+      mesa.update(toMesa(v));
+    };
+    // p0 joga o Tucano em você; depois a sua vez é pulada e a do p2 também (em cadeia).
+    next({ skips: { p2: 2, p0: 1, p1: 1 }, current: 'p0' }, { t: 'tucano', by: 'p0', target: 'p1' });
+    expect(root.querySelector('#hand .kt-skiptag')?.textContent).toContain('SUA PRÓXIMA VEZ VAI SER PULADA');
+    await vi.advanceTimersByTimeAsync(3000);
+    next({ skips: { p2: 1, p0: 1 }, current: 'p0' }, { t: 'skipped', who: 'p1' }, { t: 'skipped', who: 'p2' });
+    await vi.advanceTimersByTimeAsync(4000);
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('P0 jogou o TUCANO em você: a sua próxima vez vai ser pulada');
+    expect(log).toContain('Você perdeu uma vez (TUCANO)');
+    expect(log).toContain('P2 perdeu uma vez (TUCANO)');
+    expect(root.querySelector('#hand .kt-skiptag')).toBeNull();
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.textContent).toBe('PULA');
+    expect(root.querySelector('.kt-seat[data-p="p2"] .kt-skip')?.getAttribute('title')).toContain('a próxima vez pulada');
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+    errors.mockRestore();
+  });
+
+  it('zoom e galeria do Tucano dizem só o que a carta faz', () => {
+    const v = midGame('p1');
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    root.querySelector<HTMLElement>('#cards')!.click();
+    const item = [...root.querySelectorAll('#gallery .item')].find((el) => el.querySelector('.kt-card')?.getAttribute('data-id')?.startsWith('tucano-'));
+    expect(item?.textContent).toContain('TUCANO');
+    expect(item?.textContent).toContain('a próxima vez de um adversário é pulada');
+    mesa.destroy();
+  });
+
   it('par de 2 Botos abre o painel do bicho e manda o `as` (Preguiça ainda pede o bicho puxado)', () => {
     const v = midGame('p1');
     const pair = ['boto-90', 'boto-91'];
@@ -402,7 +519,7 @@ describe('mesa do Tatubum', () => {
   it('Tatu Latidor: o Latidor grande late e quem tem que se defender joga o Desarme à mão', () => {
     const v = midGame('p1');
     v.game.hand = ['cafune-90', ...v.game.hand.filter((id) => !id.startsWith('cafune'))];
-    v.game.choice = { kind: 'latido', who: 'p1', deadline: Date.now() + 30_000 };
+    v.game.choice = { kind: 'latido', who: 'p1', by: 'p0', deadline: Date.now() + 30_000 };
     const { root, mesa, sent } = mount();
     mesa.update(toMesa(v));
     const big = root.querySelector<HTMLElement>('.bigcard');
@@ -423,7 +540,7 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
 
     const w = midGame('p2');
-    w.game.choice = { kind: 'latido', who: 'p1', deadline: Date.now() + 30_000 };
+    w.game.choice = { kind: 'latido', who: 'p1', by: 'p0', deadline: Date.now() + 30_000 };
     const watcher = mount();
     watcher.mesa.update(toMesa(w));
     expect(watcher.root.querySelector('#caption')?.textContent).toContain('P1 está se defendendo do Latidor');
@@ -467,9 +584,103 @@ describe('mesa do Tatubum', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
     expect(m2.sent).toEqual([]);
     dragCard(m2.root, '?1', m2.root.querySelector('#table')!);
-    expect(m2.sent).toEqual([{ type: 'nope', card: '?1' }]);
+    expect(m2.sent).toEqual([{ type: 'nope', card: '?1', at: 0, on: 'ataque-1' }]);
     m2.mesa.destroy();
   });
+
+  it('4 bichos diferentes no ar: sem botão de Nem vem!, sem contagem, e a tecla N e o arrasto não mandam nada', () => {
+    const v = midGame('p1');
+    v.game.current = 'p0';
+    v.game.hand = ['nemvem-7', 'mico-7'];
+    v.game.pending = {
+      by: 'p0',
+      play: { kind: 'cinco', cards: ['capivara-1', 'quati-1', 'tucano-1', 'boto-1'], target: null, ask: null, as: null },
+      nopes: [],
+      resolvesAt: Date.now() + 1500,
+    };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#nope')).toBeNull();
+    expect(root.querySelector('#bar')!.innerHTML).toBe('');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    dragCard(root, 'nemvem-7', root.querySelector('#table')!);
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#toast')?.textContent).toBe('Os 4 bichos diferentes não aceitam Nem vem!');
+    mesa.destroy();
+  });
+
+  it('Nem vem! manda o que você viu (at/on); atrasado, a carta continua na mão e aparece o aviso', () => {
+    const v = midGame('p1');
+    v.game.current = 'p0';
+    v.game.hand = ['nemvem-7', 'mico-7'];
+    // Já tem um Nem vem! (do p2) na carta no ar, dado há 2,5 s (passou a espera de 2 s).
+    v.game.pending = {
+      by: 'p0',
+      play: { kind: 'ataque', cards: ['ataque-1'], target: null, ask: null, as: null },
+      nopes: [{ by: 'p2', card: 'nemvem-8' }],
+      resolvesAt: Date.now() + 2500,
+    };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    const want = { type: 'nope', at: 1, on: 'ataque-1' };
+    // Botão, tecla N e o Nem vem! arrastado pra mesa: todos mandam `at` e `on`.
+    root.querySelector<HTMLButtonElement>('#nope')!.click();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    dragCard(root, 'nemvem-7', root.querySelector('#table')!);
+    expect(sent).toEqual([want, want, want]);
+    // O servidor recusa (alguém deu Nem vem! antes): o aviso aparece e o Nem vem! continua na mão, visível.
+    mesa.error('Alguém deu Nem vem! antes de você: sua carta voltou pra mão.');
+    expect(root.querySelector('#toast')?.textContent).toBe('Alguém deu Nem vem! antes de você: sua carta voltou pra mão.');
+    const card = root.querySelector<HTMLElement>('#hand .kt-card[data-id="nemvem-7"]');
+    expect(card).not.toBeNull();
+    expect(card!.classList.contains('dragging')).toBe(false);
+    expect(root.querySelector('#nope')).not.toBeNull();
+    mesa.destroy();
+  });
+
+  it.each(['desktop', 'phone'] as const)(
+    'espera de 2 s depois de um Nem vem! (%s): botão apagado com o tempo; N e arrastar não fazem nada; depois volta',
+    async (layout) => {
+      const v = midGame('p1');
+      v.game.current = 'p0';
+      v.game.hand = ['nemvem-7', 'mico-7'];
+      // O p2 acabou de dar Nem vem! (a janela recomeçou agora).
+      v.game.pending = {
+        by: 'p0',
+        play: { kind: 'ataque', cards: ['ataque-1'], target: null, ask: null, as: null },
+        nopes: [{ by: 'p2', card: 'nemvem-8' }],
+        resolvesAt: Date.now() + 5000,
+      };
+      const { root, mesa, sent } = mount();
+      if (layout === 'phone') mesa.setLayout('phone');
+      mesa.update(toMesa(v));
+      const btn = () => root.querySelector<HTMLButtonElement>('#nope')!;
+      expect(btn().disabled).toBe(true);
+      expect(btn().textContent).toBe('NEM VEM! 2s');
+      btn().click();
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+      dragCard(root, 'nemvem-7', root.querySelector('#table')!);
+      expect(sent).toEqual([]);
+      expect(root.querySelector('#toast')?.textContent).toContain('Espere');
+      expect(root.querySelector('#hand .kt-card[data-id="nemvem-7"]')).not.toBeNull();
+      // A barrinha do Nem vem! continua correndo.
+      expect(root.querySelectorAll('#bar i.on').length).toBe(5);
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(btn().textContent).toBe('NEM VEM! 1s');
+      expect(btn().disabled).toBe(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(btn().disabled).toBe(false);
+      expect(btn().textContent).toBe('NEM VEM! (1)');
+      expect(root.querySelectorAll('#bar i.on').length).toBe(3);
+      btn().click();
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+      expect(sent).toEqual([
+        { type: 'nope', at: 1, on: 'ataque-1' },
+        { type: 'nope', at: 1, on: 'ataque-1' },
+      ]);
+      mesa.destroy();
+    },
+  );
 
   it('descarte: passar o mouse na de cima dá zoom; no quadro do olho, o painel diz o que a carta faz', () => {
     const v = midGame('p1');
@@ -487,6 +698,71 @@ describe('mesa do Tatubum', () => {
     root.querySelector<HTMLElement>('#pile .kt-card[data-id="ataque-7"]')!.dispatchEvent(new MouseEvent('mouseenter'));
     expect(info()).toContain('ATAQUE');
     expect(info()).toContain('sem comprar');
+    mesa.destroy();
+  });
+
+  it('par de Mico: depois do último descarte, o quadro abre pra quem jogou pegar uma das descartadas', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const deadline = Date.now() + 30_000;
+    v.game.discard = ['ataque-7', 'mico-80', 'mico-81', 'pular-5'];
+    v.game.choice = { kind: 'mico', by: 'p1', waiting: ['p2'], discarded: ['pular-5'], deadline };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#caption')?.textContent).toContain('Todo mundo descartando');
+    expect(root.querySelector<HTMLElement>('#pile')!.hidden).toBe(true);
+    // O P2 descarta o último: abre a pegada (a escolha dos 5 diferentes, com `from: 'mico'`).
+    const n = v.game.log.at(-1)!.n;
+    const pick = { kind: 'cinco' as const, who: 'p1', options: ['pular-5', 'espiar-5'], left: 1, deadline: Date.now() + 30_000, from: 'mico' as const };
+    const after = {
+      ...v,
+      game: { ...v.game, discard: [...v.game.discard, 'espiar-5'], choice: pick, log: [...v.game.log, { n: n + 1, ev: { t: 'discarded', by: 'p2', card: 'espiar-5' } as KittensEvent }] },
+    };
+    mesa.update(toMesa(after));
+    await vi.advanceTimersByTimeAsync(3000);
+    const pile = root.querySelector<HTMLElement>('#pile')!;
+    expect(pile.hidden).toBe(false);
+    expect(pile.querySelector('h2')?.textContent).toContain('PEGUE UMA DAS DESCARTADAS');
+    expect(pile.querySelector('.psub')?.textContent).toContain('descartadas no seu par de Mico');
+    // Só as descartadas no par acendem; o que já estava no descarte fica apagado.
+    const lit = [...pile.querySelectorAll<HTMLElement>('.kt-card.pickable')].map((el) => el.dataset.id).sort();
+    expect(lit).toEqual(['espiar-5', 'pular-5']);
+    expect(pile.querySelector('.kt-card[data-id="ataque-7"]')!.classList.contains('off')).toBe(true);
+    expect(pile.querySelector('.kt-card[data-id="mico-80"]')!.classList.contains('off')).toBe(true);
+    expect(root.querySelector('#caption')?.textContent).toContain('Pegue UMA das descartadas');
+    pile.querySelector<HTMLElement>('.kt-card[data-id="espiar-5"]')!.click();
+    expect(sent).toEqual([{ type: 'choose', card: 'espiar-5' }]);
+    // Pegou: o quadro fecha sozinho.
+    const done = { ...after, game: { ...after.game, discard: after.game.discard.filter((c) => c !== 'espiar-5'), hand: [...after.game.hand, 'espiar-5'], choice: null, log: [...after.game.log, { n: n + 2, ev: { t: 'picked', by: 'p1', card: 'espiar-5' } as KittensEvent }] } };
+    mesa.update(toMesa(done));
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(pile.hidden).toBe(true);
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+
+    // Os outros leem quem vai pegar, e o quadro não abre pra eles.
+    const w = midGame('p2');
+    w.game.choice = { ...pick };
+    const other = mount();
+    other.mesa.update(toMesa(w));
+    expect(other.root.querySelector('#caption')?.textContent).toContain('P1 vai pegar uma das descartadas');
+    expect(other.root.querySelector<HTMLElement>('#pile')!.hidden).toBe(true);
+    other.mesa.destroy();
+    errors.mockRestore();
+  });
+
+  it('par de Mico: a galeria e o zoom dizem que depois você pega uma das descartadas', () => {
+    const v = midGame('p1');
+    v.game.discard = ['mico-7'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    root.querySelector<HTMLElement>('#cards')!.click();
+    const item = [...root.querySelectorAll('#gallery .item')].find((el) => el.querySelector('.kt-card')?.getAttribute('data-id')?.startsWith('mico-'));
+    expect(item?.textContent).toContain('todo mundo, menos você, descarta uma carta');
+    expect(item?.textContent).toContain('depois você pega uma delas');
+    root.querySelector<HTMLElement>('#eye')!.click();
+    root.querySelector<HTMLElement>('#pile .kt-card[data-id="mico-7"]')!.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(root.querySelector('#pile .pinfo')?.textContent).toContain('você pega uma das cartas descartadas');
     mesa.destroy();
   });
 
@@ -590,7 +866,7 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
-  it('cego com 2 fichas: JOGAR ÀS CEGAS pergunta o bicho (vai em `ask` e `as`) ou PULAR', () => {
+  it('cego com 2 fichas: JOGAR ÀS CEGAS pergunta o alvo (par de Tucano) e depois o bicho (vai em `ask` e `as`) ou PULAR', () => {
     const v = midGame('p1');
     v.game.blind = ['p1'];
     v.game.hand = ['?0', '?1', '?2'];
@@ -599,6 +875,18 @@ describe('mesa do Tatubum', () => {
     clickCard(root, '?0');
     clickCard(root, '?2');
     buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    expect(sent).toEqual([]);
+    // Podem ser um par de Tucano: primeiro o alvo (ou SEM ALVO), depois o bicho.
+    expect(root.querySelector('#caption')?.textContent).toContain('SE PRECISAR DE ALVO, EM QUEM?');
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p2"]')!.click();
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#panel h2')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
+    buttonByText(root, 'PULAR')!.click();
+    expect(sent).toEqual([{ type: 'play', cards: ['?0', '?2'], target: 'p2' }]);
+    mesa.error('Assim não forma jogada.');
+    sent.length = 0;
+    buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    buttonByText(root, 'SEM ALVO')!.click();
     expect(sent).toEqual([]);
     expect(root.querySelector('#caption')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
     expect(root.querySelector('#panel h2')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
@@ -609,6 +897,7 @@ describe('mesa do Tatubum', () => {
     mesa.error('Assim não forma jogada.');
     expect(root.querySelector('#panel')?.innerHTML).toBe('');
     buttonByText(root, 'JOGAR ÀS CEGAS')!.click();
+    buttonByText(root, 'SEM ALVO')!.click();
     buttonByText(root, 'PULAR')!.click();
     expect(sent[1]).toEqual({ type: 'play', cards: ['?0', '?2'] });
     mesa.destroy();
@@ -633,7 +922,7 @@ describe('mesa do Tatubum', () => {
     const v = midGame('p1');
     v.game.blind = ['p1'];
     v.game.hand = ['?0', '?1', '?2'];
-    v.game.choice = { kind: 'latido', who: 'p1', deadline: Date.now() + 30_000 };
+    v.game.choice = { kind: 'latido', who: 'p1', by: 'p0', deadline: Date.now() + 30_000 };
     const { root, mesa, sent } = mount();
     mesa.update(toMesa(v));
     expect(root.querySelector('#hand')?.classList.contains('giving')).toBe(true);
@@ -666,6 +955,45 @@ describe('mesa do Tatubum', () => {
     errors.mockRestore();
   });
 
+  it('Latidor com vários se defendendo: um de cada vez, o Latidor grande late pra cada um', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const hand = ['cafune-90', 'latido-1', ...v.game.hand.filter((id) => !id.startsWith('cafune'))];
+    v.game = { ...v.game, hand, front: { p0: [], p1: [], p2: ['latido-2'] } };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    let n = v.game.log.at(-1)!.n;
+    const next = (patch: Partial<KittensRoomView['game']>, ...evs: KittensEvent[]) => {
+      v.game = { ...v.game, ...patch, log: [...v.game.log, ...evs.map((ev) => ({ n: ++n, ev }))] };
+      mesa.update(toMesa(v));
+    };
+    const deadline = Date.now() + 30_000;
+    // p0 jogou: primeiro o p2 (Latidor na frente) se defende…
+    next({ current: 'p0', discard: [...v.game.discard, 'latido-0'], choice: { kind: 'latido', who: 'p2', by: 'p0', deadline } }, { t: 'barked', by: 'p0', target: 'p2' });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(root.querySelector('#caption')?.textContent).toContain('P2 está se defendendo do Latidor');
+    // …e depois é a sua vez (o Latidor da sua mão).
+    next(
+      { front: { p0: [], p1: [], p2: [] }, discard: [...v.game.discard, 'cafune-5', 'latido-2'], choice: { kind: 'latido', who: 'p1', by: 'p0', deadline } },
+      { t: 'cafune', by: 'p2' },
+      { t: 'barked', by: 'p0', target: 'p1' },
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(root.querySelector<HTMLElement>('.bigcard[data-id^="latido"]')?.classList.contains('live')).toBe(true);
+    expect(root.querySelector('#caption')?.textContent).toContain('JOGUE O DESARME');
+    next(
+      { hand: hand.filter((id) => id !== 'cafune-90' && id !== 'latido-1'), discard: [...v.game.discard, 'cafune-90', 'latido-1'], choice: null },
+      { t: 'cafune', by: 'p1' },
+    );
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(root.querySelector('.bigcard')).toBeNull();
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log.match(/tinha TATU LATIDOR/g)).toHaveLength(2);
+    expect(errors).not.toHaveBeenCalled();
+    mesa.destroy();
+    errors.mockRestore();
+  });
+
   it('pulou a fila depois de um latido: o Desarme de um Tatubum comprado depois não vira o do Latidor', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const v = midGame('p1');
@@ -678,7 +1006,7 @@ describe('mesa do Tatubum', () => {
       mesa.update(toMesa(v));
     };
     const deadline = Date.now() + 30_000;
-    next({ current: 'p0', choice: { kind: 'latido', who: 'p2', deadline } }, { t: 'barked', by: 'p0', target: 'p2' });
+    next({ current: 'p0', choice: { kind: 'latido', who: 'p2', by: 'p0', deadline } }, { t: 'barked', by: 'p0', target: 'p2' });
     await vi.advanceTimersByTimeAsync(2000);
     expect(root.querySelector<HTMLElement>('.bigcard')?.dataset.id).toBe('latido-0');
     // Reconectou e perdeu entradas: o Desarme do P2 contra o Latidor chega pulado.
@@ -867,11 +1195,29 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('espiada com mais de 3 cartas (Feitiço pondo no topo, pedido do Rafa, 2026-10-21): mostra todas, encavaladas no espaço das 3', async () => {
+    const v = midGame('p0');
+    const four = ['tatubum-70', 'mico-71', 'pular-72', 'quati-73'];
+    v.game = { ...v.game, current: 'p0', peek: four, peekers: ['p0'] };
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    const fut = root.querySelector<HTMLElement>('#future')!;
+    expect([...fut.querySelectorAll<HTMLElement>('.kt-card')].map((el) => el.dataset.id)).toEqual(four);
+    expect(fut.style.getPropertyValue('--fut-gaps')).toBe('3');
+    // Com 3 ou menos, o passo de sempre (64px no computador).
+    mesa.update(toMesa({ ...v, game: { ...v.game, peek: four.slice(1) } }));
+    expect(fut.style.getPropertyValue('--fut-gaps')).toBe('2');
+    const css = Object.values(await siteCss()).join('\n');
+    expect(css).toContain('.kittens .kt-mesa #future .kt-card { transform: scale(.38); transform-origin: left top; margin-bottom: calc(128px / var(--fut-gaps, 2) - 160px); }');
+    mesa.destroy();
+  });
+
   it('zoom e galeria do Espiar dizem só o que a carta faz', () => {
     expect(mesaSrc).toContain(
-      "espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.'",
+      "espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem; se quem mexe é você (Feitiço, Desarme, Quati), continua vendo o que sabe.'",
     );
-    expect(mesaSrc).toContain('Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Pode levar Nem vem!.');
+    expect(mesaSrc).toContain('Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Se quem muda a ordem é você, continua vendo o que sabe:');
+    expect(mesaSrc).toContain('com o tatu nela se ele cair no meio ou logo abaixo dela.<br>Pode levar Nem vem!.');
     expect(mesaSrc).not.toContain('a vez passar ou o monte mudar');
   });
 

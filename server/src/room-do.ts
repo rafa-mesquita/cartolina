@@ -21,31 +21,39 @@ import {
   roomSummary,
   roomView,
   tick,
+  type CamelioMatchRecord,
   type CoupMatchRecord,
   type DixitRoundRecord,
+  type KittensMatchRecord,
   type Room,
   type RoundRecord,
   type ServerMessage,
 } from '@cartolina/shared';
+import { insertCamelioMatch } from './camelio-history-db';
 import { insertCoupMatch } from './coup-history-db';
 import { insertDixitRound } from './dixit-history-db';
 import { insertRound } from './history-db';
+import { insertKittensMatch } from './kittens-history-db';
 import { isStale, nextWakeAt } from './liveness';
 
 /**
- * Rodada revelada (ou, no Cúpi, a partida inteira) ainda não confirmada no D1 (fila durável no storage do DO, uma chave por rodada ou partida).
+ * Rodada revelada (ou, no Cúpi, no Tatubum e no Cama-Leão, a partida inteira) ainda não confirmada no D1 (fila durável no storage do DO, uma chave por rodada ou partida).
  * Entra no mesmo `put` que marca `recordedRevealKey`, então nem queda do DO nem falha do D1 perdem a rodada.
  * Pendentes deixados por um servidor antigo (antes da estante) têm só `groupId` e eram do ITO.
  */
 export type PendingRound =
   | { game: 'dixit'; key: string; record: DixitRoundRecord }
   | { game: 'coup'; key: string; record: CoupMatchRecord }
+  | { game: 'kittens'; key: string; record: KittensMatchRecord }
+  | { game: 'camelio'; key: string; record: CamelioMatchRecord }
   | { game?: 'ito'; groupId?: string; key: string; record: RoundRecord };
 
 /** Grava o pendente na tabela do jogo dele (o UNIQUE de cada tabela absorve repetições). */
 export async function insertPending(db: D1Database, round: PendingRound): Promise<void> {
   if (round.game === 'dixit') await insertDixitRound(db, round.record, round.key);
   else if (round.game === 'coup') await insertCoupMatch(db, round.record);
+  else if (round.game === 'kittens') await insertKittensMatch(db, round.record);
+  else if (round.game === 'camelio') await insertCamelioMatch(db, round.record);
   else await insertRound(db, 'ito', round.record, round.key);
 }
 

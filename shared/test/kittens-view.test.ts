@@ -103,7 +103,8 @@ describe('visão do Tatubum', () => {
   it('as outras escolhas aparecem como estão', () => {
     const choice = { kind: 'cinco' as const, who: 'p0', options: ['ataque-0'], left: 1, deadline: T0 + 30_000 };
     expect(kittensViewFor({ ...s, choice }, 'p1').choice).toEqual(choice);
-    const mico = { kind: 'mico' as const, by: 'p0', waiting: ['p1', 'p2'], deadline: T0 + 30_000 };
+    const mico = { kind: 'mico' as const, by: 'p0', waiting: ['p1', 'p2'], discarded: ['pular-7'], deadline: T0 + 30_000 };
+    expect(kittensViewFor({ ...s, choice: { ...choice, from: 'mico' as const } }, 'p1').choice).toEqual({ ...choice, from: 'mico' });
     expect(kittensViewFor({ ...s, choice: mico }, 'p1').choice).toEqual(mico);
   });
 });

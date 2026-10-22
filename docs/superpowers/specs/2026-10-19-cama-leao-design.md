@@ -270,16 +270,18 @@ aparece o aviso de jogar no computador.
   entra**. Partida com bot (`isBotName`) **não entra**.
 - Id da partida: `${room.code}-${room.runStartedAt}-${match}`; essa também é a
   chave anti-duplicata.
-- **Registro (`CamelioMatchRecord`):** `id`, `roomCode`, `playedAt`, `target`,
-  `endReason`, `players` (`{ name, color }` como estavam na hora, na ordem dos
-  assentos), `winners` (nomes), `final` (por jogador: cores pontuadas e esferas na
-  mesa) e `plays` (o `log` com nomes no lugar dos ids e a carta como
-  `{ color, spheres, kind }`). Uma partida tem ~70 a 140 jogadas.
-- **Banco:** migração nova `NNNN_camelio_matches.sql` (próximo número livre no
-  `main` na hora do C4; hoje seria 0004, mas Tatubum e Cúpi estão sendo feitos em
-  paralelo), que só **cria** a tabela
-  `camelio_matches` (`id`, `room_code`, `match_key`, `played_at`, `record_json`;
-  `UNIQUE (room_code, match_key)`; índice por `played_at DESC`). Não toca em
+- **Registro (`CamelioMatchRecord`):** `id`, `matchId`, `roomCode`, `playedAt`,
+  `target`, `endReason`, `players` (`{ name, color }` como estavam na hora, na
+  ordem dos assentos), `winners` (posições em `players`), `final` (na ordem de
+  `players`: cores pontuadas e esferas na mesa) e `plays` (o `log` com `by`/`to`
+  como posições em `players` e a carta como `{ color, spheres, kind }`). Uma
+  partida tem ~70 a 140 jogadas. *Na execução (plano C4):* posições em vez de
+  nomes deixam o JSON menor e não se confundem com nome repetido.
+- **Banco:** migração `0006_camelio_matches.sql` (o próximo número livre no
+  `main` na hora do C4), que só **cria** a tabela
+  `camelio_matches` (`id`, `match_id`, `room_code`, `played_at`, `record_json`;
+  `UNIQUE (room_code, match_id)`, como no Cúpi e no Tatubum; índice por
+  `played_at DESC`). Não toca em
   nenhuma outra tabela; segura pra aplicar sozinha na publicação. Teste de
   migração em `server/test/migration-*.test.ts`.
 - `GAMES.camelio.recordsHistory` passa a `true` no C4.
@@ -296,6 +298,8 @@ aparece o aviso de jogar no computador.
   - **palhaço**: mais estouros na própria mesa (`by == to` e `bust` ou `lost`);
   - **Papai Noel**: mais vezes deu 5 de bandeja pros outros (`by != to` e
     `scored`).
+  Empate num título mostra todos os empatados; ninguém ganha título com zero
+  (decisão do plano C4).
 - API: `GET /history/camelio[?before=<ms>]` → 20 partidas, `stats` só na primeira
   página, `nextBefore`; mesmo limite de 60 pedidos/min/IP e `no-cache`.
 

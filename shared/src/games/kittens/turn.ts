@@ -1,5 +1,11 @@
 import { kittensKindOf } from './cards';
-import { KITTENS_LOG_SIZE, type KittensEvent, type KittensState } from './types';
+import { KITTENS_LOG_SIZE, type KittensEvent, type KittensExitHow, type KittensPlayerStats, type KittensState } from './types';
+
+/** Soma 1 no contador `key` de `p` (Nem vem! dados ou Desarmes usados), pro histórico. */
+export function counted(state: KittensState, p: string, key: keyof KittensPlayerStats): KittensState {
+  const mine = Object.hasOwn(state.stats, p) ? state.stats[p]! : { nopes: 0, defuses: 0 };
+  return { ...state, stats: { ...state.stats, [p]: { ...mine, [key]: mine[key] + 1 } } };
+}
 
 /** Acrescenta ao diário (só as últimas KITTENS_LOG_SIZE ficam). `seenBy`: quem vê a carta do evento (null = todos). */
 export function logged(state: KittensState, ev: KittensEvent, seenBy: string[] | null = null): KittensState {
@@ -20,9 +26,29 @@ export function nextAlive(state: KittensState, from: string): string | null {
 /**
  * A vez vai pra `next` com `owed` turnos. As espiadas ficam (pedido do Rafa, 2026-10-20): o Espiar fica à mostra até as
  * cartas saírem do monte ou o monte mudar de ordem.
+ *
+ * Único lugar onde a vez muda de mão, então é aqui que o par de Tucano vale (pedido do Rafa, 2026-10-21): quem recebe a
+ * vez com vez pulada (`skips`) perde 1 turno sem jogar nem comprar (diário: `skipped`). Devendo 2 (Ataque), a pulada gasta
+ * um deles e ele continua na vez; devendo 1, a vez segue pro próximo, que também pode ter vez pulada (pulas em cadeia).
+ * Sempre acaba: cada volta gasta uma pulada. Se todos os outros tinham, as puladas se gastam na ordem e a vez volta.
+ * Com 1 vivo (ou ninguém) não pula: a partida já acabou.
  */
 export function passTo(state: KittensState, next: string | null, owed: number): KittensState {
-  return { ...state, current: next, owed };
+  let s: KittensState = { ...state, current: next, owed };
+  while (s.current !== null && s.alive.length > 1 && Object.hasOwn(s.skips, s.current)) {
+    const who = s.current;
+    const left = s.skips[who]! - 1;
+    const skips = Object.fromEntries(Object.entries(s.skips).filter(([p]) => p !== who));
+    s = logged({ ...s, skips: left > 0 ? { ...skips, [who]: left } : skips }, { t: 'skipped', who });
+    s = s.owed > 1 ? { ...s, owed: s.owed - 1 } : { ...s, current: nextAlive(s, who), owed: 1 };
+  }
+  return s;
+}
+
+/** Par de Tucano: a próxima vez de `p` vai ser pulada (acumula, se já tinha). */
+export function addSkip(s: KittensState, p: string): KittensState {
+  const mine = Object.hasOwn(s.skips, p) ? s.skips[p]! : 0;
+  return { ...s, skips: { ...s.skips, [p]: mine + 1 } };
 }
 
 /** Gasta 1 turno de quem está na vez (comprar, Pular, Cafuné); acabaram os turnos, passa a vez. */
@@ -44,8 +70,9 @@ export function unpeek(s: KittensState, cards: readonly string[]): KittensState 
 }
 
 /**
- * O monte mudou de ordem perto do topo (Embaralhar, Desarme escondendo o tatu, Feitiço pondo a de baixo no topo): ninguém
- * vê mais nada. No Desarme apaga de todos mesmo se o tatu foi pro fundo: apagar só às vezes contaria onde ele foi.
+ * O monte mudou de ordem perto do topo (Embaralhar; Desarme escondendo o tatu e Feitiço pondo a de baixo no topo, menos
+ * pra quem mexeu, que sabe o que fez): ninguém vê mais nada. No Desarme apaga mesmo se o tatu foi pro fundo: apagar só
+ * às vezes contaria onde ele foi.
  */
 export function clearPeeks(s: KittensState): KittensState {
   return Object.keys(s.peeks).length === 0 ? s : { ...s, peeks: {} };
@@ -87,6 +114,7 @@ export function checkWin(state: KittensState): KittensState {
     pending: null,
     choice: null,
     peeks: {},
+    skips: {},
   };
   return winner === null ? ended : logged(ended, { t: 'win', by: winner });
 }
@@ -95,9 +123,10 @@ export function checkWin(state: KittensState): KittensState {
  * `p` sai da partida (explodiu ou caiu de vez): a mão, as cartas na frente dele (Tatu Latidor) e `extraOut` (ex.: o tatu
  * que explodiu) vão pra fora do jogo, e ele deixa de estar cego. Se o monte ficou com mais tatus (contando o que está
  * sendo escondido) que vivos − 1 (quem caiu de vez), um tatu sai também (e sai das espiadas). A espiada de `p` some.
- * Se era a vez de `p`, a vez passa pro próximo vivo com 1 turno (os turnos devidos se perdem).
+ * Se era a vez de `p`, a vez passa pro próximo vivo com 1 turno (os turnos devidos se perdem). `how` entra na fila de
+ * saídas (`exits`) do histórico.
  */
-export function eliminate(state: KittensState, p: string, extraOut: string[] = []): KittensState {
+export function eliminate(state: KittensState, p: string, how: KittensExitHow, extraOut: string[] = []): KittensState {
   const alive = state.alive.filter((x) => x !== p);
   let draw = state.draw;
   let out = [...state.out, ...extraOut, ...(state.hands[p] ?? []), ...(state.front[p] ?? [])];
@@ -113,7 +142,10 @@ export function eliminate(state: KittensState, p: string, extraOut: string[] = [
   const front = (state.front[p]?.length ?? 0) > 0 ? { ...state.front, [p]: [] } : state.front;
   const blind = state.blind.includes(p) ? state.blind.filter((x) => x !== p) : state.blind;
   // A espiada de quem sai some; o tatu tirado do monte sai das espiadas dos outros (a ordem do resto não muda).
-  const base: KittensState = { ...state, alive, draw, out, front, blind, hands: { ...state.hands, [p]: [] } };
+  const exits = [...state.exits, { player: p, how }];
+  // As vezes puladas de quem sai (Tucano) se perdem.
+  const skips = Object.hasOwn(state.skips, p) ? Object.fromEntries(Object.entries(state.skips).filter(([x]) => x !== p)) : state.skips;
+  const base: KittensState = { ...state, alive, draw, out, front, blind, exits, skips, hands: { ...state.hands, [p]: [] } };
   let next = unpeek(dropPeek(base, p), removed !== null ? [removed] : []);
   if (state.current === p) next = passTo(next, nextAlive(next, p), 1);
   return checkWin(next);

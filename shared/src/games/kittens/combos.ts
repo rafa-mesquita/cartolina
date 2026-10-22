@@ -1,7 +1,8 @@
 import type { GameContext } from '../../game';
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf, type KittensCardKind } from './cards';
-import { cure, logged, moveCard, nextAlive, unpeek } from './turn';
+import { barkPair } from './choices';
+import { addSkip, cure, logged, moveCard, nextAlive, spendTurn, unpeek } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 const isKind = (k: KittensCardKind) => (c: string) => kittensKindOf(c) === k;
@@ -25,11 +26,28 @@ function tamandua(state: KittensState, by: string): KittensState {
   return tatus.length > 0 ? logged(next, { t: 'buried', by, tatus: tatus.length }) : next;
 }
 
+/** Chance do par de Preguiça puxar dois (pedido do Rafa, 2026-10-21). */
+export const KITTENS_PREGUICA_DOUBLE = 0.3;
+
 /**
- * Par de Preguiça: puxa um `ask` de um adversário sorteado entre os que têm; ninguém tem, procura no monte (a carta sai
- * das espiadas; o resto do monte não muda de ordem).
+ * Par de Preguiça (`played` = as cartas do par, que já estão no descarte): puxa um `ask`; com 30% de chance, dois
+ * (pedido do Rafa, 2026-10-21). Cada um vem, nessa ordem, da mão de um adversário sorteado entre os que têm, do monte
+ * ou do descarte (sem as cartas do próprio par). Ninguém tem: só um `called` vazio; o segundo que não acha nada não
+ * aparece.
  */
-function preguica(s: KittensState, by: string, ask: KittensCardKind, rng: Rng): KittensState {
+function preguica(s: KittensState, by: string, ask: KittensCardKind, rng: Rng, played: readonly string[]): KittensState {
+  const times = rng() < KITTENS_PREGUICA_DOUBLE ? 2 : 1;
+  let next = callOne(s, by, ask, rng, played);
+  const found = (x: KittensState) => { const ev = x.log.at(-1)!.ev; return ev.t === 'called' && ev.card !== null; };
+  if (times === 2 && found(next)) {
+    const again = callOne(next, by, ask, rng, played);
+    if (found(again)) next = again;
+  }
+  return next;
+}
+
+/** Um puxão da Preguiça: mão de um adversário, monte (a carta sai das espiadas) e, por último, o descarte. */
+function callOne(s: KittensState, by: string, ask: KittensCardKind, rng: Rng, played: readonly string[]): KittensState {
   const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind(ask)));
   if (holders.length > 0) {
     const from = holders[randomInt(rng, holders.length)]!;
@@ -37,7 +55,13 @@ function preguica(s: KittensState, by: string, ask: KittensCardKind, rng: Rng): 
     return logged(moveCard(s, from, by, card), { t: 'called', by, ask, from, card });
   }
   const inDraw = s.draw.filter(isKind(ask));
-  if (inDraw.length === 0) return logged(s, { t: 'called', by, ask, from: null, card: null });
+  if (inDraw.length === 0) {
+    const inPile = s.discard.filter((c) => isKind(ask)(c) && !played.includes(c));
+    if (inPile.length === 0) return logged(s, { t: 'called', by, ask, from: null, card: null });
+    const card = inPile[randomInt(rng, inPile.length)]!;
+    const next = { ...s, discard: s.discard.filter((c) => c !== card), hands: { ...s.hands, [by]: [...s.hands[by]!, card] } };
+    return logged(next, { t: 'called', by, ask, from: null, card, pile: true });
+  }
   const card = inDraw[randomInt(rng, inDraw.length)]!;
   const next = unpeek({ ...s, draw: s.draw.filter((c) => c !== card), hands: { ...s.hands, [by]: [...s.hands[by]!, card] } }, [card]);
   return logged(next, { t: 'called', by, ask, from: null, card });
@@ -64,18 +88,25 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
     case 'mico': {
       // Cada adversário vivo com carta descarta uma, ao mesmo tempo; ninguém com carta, nada acontece.
       const waiting = s.alive.filter((p) => p !== by && s.hands[p]!.length > 0);
-      return waiting.length === 0 ? s : { ...s, choice: { kind: 'mico', by, waiting, deadline } };
+      return waiting.length === 0 ? s : { ...s, choice: { kind: 'mico', by, waiting, discarded: [], deadline } };
     }
     case 'quati':
       return { ...s, choice: { kind: 'quati', who: by, deadline } };
     case 'tamandua':
       return tamandua(s, by);
     case 'preguica':
-      return preguica(s, by, play.ask!, ctx.rng);
+      return preguica(s, by, play.ask!, ctx.rng, play.cards);
     case 'capivara':
       return roda(s, by, ctx.rng);
+    case 'tucano':
+      // Pedido do Rafa (2026-10-21): quem jogou acaba a vez sem comprar, como o Pular (sob ataque, gasta só um dos
+      // turnos), e a próxima vez do alvo é pulada. A pulada entra antes: se o alvo é o próximo, já perde a vez agora.
+      return spendTurn(addSkip(logged(s, { t: 'tucano', by, target: play.target! }), play.target!));
+    case 'latido':
+      // Par de Latidores (pedido do Rafa, 2026-10-21): o alvo escolhido joga um Desarme ou explode. A vez continua.
+      return barkPair(s, by, play.target!, deadline);
     default:
-      return s; // parsePlay só deixa passar par de bicho
+      return s; // parsePlay só deixa passar par de bicho ou de Latidor
   }
 }
 

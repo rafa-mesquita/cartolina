@@ -1,7 +1,7 @@
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf } from './cards';
-import { clearPeeks, cure, eliminate, logged, spendTurn, unpeek } from './turn';
-import type { KittensChoice, KittensState } from './types';
+import { clearPeeks, counted, cure, eliminate, logged, spendTurn, unpeek } from './turn';
+import { KITTENS_CHOICE_MS, type KittensChoice, type KittensState } from './types';
 
 type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K }>;
 
@@ -19,19 +19,27 @@ export function takeCard(s: KittensState, p: string, card: string, draw: string[
   if (kittensKindOf(card) !== 'tatubum') {
     return spendTurn(logged({ ...base, hands: { ...base.hands, [p]: [...hand, card] } }, { t: 'draw', by: p, card }, [p]));
   }
-  if (!hand.some(isKind('cafune'))) return eliminate(logged(base, { t: 'boom', by: p }), p, [card]);
+  if (!hand.some(isKind('cafune'))) return eliminate(logged(base, { t: 'boom', by: p }), p, 'boom', [card]);
   return logged({ ...base, choice: { kind: 'tatu', who: p, tatu: card, deadline } }, { t: 'tatu', by: p });
 }
 
 /**
  * Cafuné: o tatu volta pro monte `position` cartas abaixo do topo (0 = topo, tamanho do monte = fundo). Gasta 1 turno.
- * Apaga as espiadas de todos, em qualquer posição (apagar só quando o tatu cai perto do topo contaria onde ele foi).
+ * Apaga as espiadas dos outros, em qualquer posição (apagar só quando o tatu cai perto do topo contaria onde ele foi).
+ * Quem escondeu sabe onde pôs (pedido do Rafa, 2026-10-21): se tinha espiada, continua com ela, com o tatu no meio se ele
+ * caiu dentro dela (`pos` ≤ tamanho). Sem espiada, não ganha uma nem com o tatu no topo: o olhinho de quem tem espiada é
+ * público, e ele aparecer só nesse caso contaria pra mesa que o tatu está em cima. No "ao acaso" (inclusive quando o
+ * prazo vence ou ele cai) ele também não sabe onde o tatu foi: perde a espiada como os outros.
  */
 export function hideTatu(s: KittensState, c: Choice<'cafune'>, position: number | 'random', rng: Rng): KittensState {
   const pos = position === 'random' ? randomInt(rng, s.draw.length + 1) : position;
   const at = s.draw.length - pos;
   const draw = [...s.draw.slice(0, at), c.tatu, ...s.draw.slice(at)];
-  return spendTurn(logged(clearPeeks({ ...s, draw, choice: null }), { t: 'hid', by: c.who }));
+  const mine = position !== 'random' && Object.hasOwn(s.peeks, c.who) ? s.peeks[c.who]! : [];
+  // Topo primeiro: o tatu fica no índice `pos` (com `pos` cartas acima dele).
+  const known = pos <= mine.length ? [...mine.slice(0, pos), c.tatu, ...mine.slice(pos)] : mine;
+  const next = mine.length > 0 ? { ...s, peeks: { [c.who]: known } } : clearPeeks(s);
+  return spendTurn(logged({ ...next, draw, choice: null }, { t: 'hid', by: c.who }));
 }
 
 /**
@@ -41,7 +49,7 @@ export function hideTatu(s: KittensState, c: Choice<'cafune'>, position: number 
 export function useCafune(s: KittensState, c: Choice<'tatu'>, card: string, deadline: number): KittensState {
   const hands = { ...s.hands, [c.who]: s.hands[c.who]!.filter((x) => x !== card) };
   const choice: Choice<'cafune'> = { kind: 'cafune', who: c.who, tatu: c.tatu, deadline };
-  return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'cafune', by: c.who });
+  return logged(counted({ ...s, hands, discard: [...s.discard, card], choice }, c.who, 'defuses'), { t: 'cafune', by: c.who });
 }
 
 /**
@@ -69,66 +77,143 @@ export function pickFromDiscard(s: KittensState, c: Choice<'cinco'>, card: strin
   return logged({ ...s, discard, hands, choice }, { t: 'picked', by: c.who, card });
 }
 
-/** Par de Mico: `p` (que está na espera) descarta `card` da própria mão, à vista de todos; o efeito da carta não vale. */
-export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, card: string): KittensState {
-  const hands = { ...s.hands, [p]: s.hands[p]!.filter((x) => x !== card) };
+/**
+ * Par de Mico: `p` sai da espera, tendo descartado `card` (null = saiu do jogo sem descartar). A espera vazia fecha o
+ * descarte: se alguma carta foi descartada nele e quem jogou o par continua vivo, ele pega uma delas (pedido do Rafa,
+ * 2026-10-20) na escolha dos 5 diferentes (`from: 'mico'`, 1 carta, prazo `deadline`); senão, a escolha fecha.
+ */
+export function leaveMicoWait(s: KittensState, c: Choice<'mico'>, p: string, card: string | null, deadline: number): KittensState {
   const waiting = c.waiting.filter((x) => x !== p);
-  const choice = waiting.length > 0 ? { ...c, waiting } : null;
-  return logged({ ...s, hands, discard: [...s.discard, card], choice }, { t: 'discarded', by: p, card });
+  const discarded = card === null ? c.discarded : [...c.discarded, card];
+  if (waiting.length > 0) return { ...s, choice: { ...c, waiting, discarded } };
+  const options = discarded.filter((x) => s.discard.includes(x));
+  if (options.length === 0 || !s.alive.includes(c.by)) return { ...s, choice: null };
+  return { ...s, choice: { kind: 'cinco', who: c.by, options, left: 1, deadline, from: 'mico' } };
+}
+
+/**
+ * Par de Mico: `p` (que está na espera) descarta `card` da própria mão, à vista de todos; o efeito da carta não vale.
+ * `deadline` = prazo da pegada de quem jogou, se este for o último descarte.
+ */
+export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, card: string, deadline: number): KittensState {
+  const hands = { ...s.hands, [p]: s.hands[p]!.filter((x) => x !== card) };
+  const next = logged({ ...s, hands, discard: [...s.discard, card] }, { t: 'discarded', by: p, card });
+  return leaveMicoWait(next, c, p, card, deadline);
 }
 
 /**
  * Par de Quati: a carta de cima fica (`keep`) ou vai pro fundo. Todos sabem se foi, ninguém sabe qual. Indo pro fundo,
- * ela sai das espiadas como se fosse comprada (o resto vira o topo, na mesma ordem).
+ * ela sai das espiadas como se fosse comprada (o resto vira o topo, na mesma ordem). Ficando, quem escolheu viu a de
+ * cima (pedido do Rafa, 2026-10-21): sem espiada, ela fica à mostra pra ele; com espiada, ela já é a primeira. Vale
+ * também sem resposta (ele viu a carta na escolha).
  */
 export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): KittensState {
   const top = s.draw.at(-1)!;
-  const next = keep ? s : unpeek({ ...s, draw: [top, ...s.draw.slice(0, -1)] }, [top]);
+  const knew = Object.hasOwn(s.peeks, c.who) || !s.alive.includes(c.who);
+  const seen = knew ? s : { ...s, peeks: { ...s.peeks, [c.who]: [top] } };
+  const next = keep ? seen : unpeek({ ...s, draw: [top, ...s.draw.slice(0, -1)] }, [top]);
   return logged({ ...next, choice: null }, { t: 'delayed', by: c.who, moved: !keep });
 }
 
-/** O Tatu Latidor que `p` tem (na frente primeiro, depois na mão), ou undefined. */
-export function latidoOf(s: KittensState, p: string): string | undefined {
-  return (s.front[p] ?? []).find(isKind('latido')) ?? s.hands[p]?.find(isKind('latido'));
+/** Os Tatus Latidores que `p` tem: os da frente primeiro, depois os da mão. */
+export function latidosOf(s: KittensState, p: string): string[] {
+  return [...(s.front[p] ?? []).filter(isKind('latido')), ...(s.hands[p] ?? []).filter(isKind('latido'))];
 }
 
 /**
- * Tatu Latidor: `who` joga o Desarme `card` pra não explodir. O Desarme e o Latidor dele (da frente ou da mão) vão pro
- * descarte (o que foi jogado já está lá). A vez continua com quem jogou o Latidor.
+ * Quem é o próximo a se defender do Tatu Latidor jogado por `by`: o primeiro vivo depois de `by`, na ordem dos assentos,
+ * que tenha Latidor (na mão ou na frente). `by` nunca é alvo do próprio Latidor. Ninguém: null.
  */
-export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string): KittensState {
-  const latido = latidoOf(s, c.who);
+export function nextBarked(s: KittensState, by: string): string | null {
+  const order = s.players;
+  const start = order.indexOf(by);
+  for (let k = 1; k < order.length; k++) {
+    const p = order[(start + k) % order.length]!;
+    if (p !== by && s.alive.includes(p) && latidosOf(s, p).length > 0) return p;
+  }
+  return null;
+}
+
+/**
+ * Tatu Latidor jogado por `by` (pedido do Rafa, 2026-10-21): todo outro vivo que tenha Latidor se defende, um de cada
+ * vez, na ordem dos assentos a partir de `by`. O próximo da fila (`nextBarked`) com Desarme ganha a escolha `latido`
+ * (prazo `deadline`); sem Desarme, explode na hora (a mão e os Latidores dele pra fora do jogo) e a fila segue. A fila
+ * acaba quando ninguém mais tem Latidor (a escolha fecha e a vez continua com `by`) ou a partida acaba.
+ */
+export function barkNext(s: KittensState, by: string, deadline: number): KittensState {
+  let next: KittensState = { ...s, choice: null };
+  for (;;) {
+    if (next.phase !== 'playing') return next;
+    const target = nextBarked(next, by);
+    if (target === null) return next;
+    next = logged(next, { t: 'barked', by, target });
+    if (next.hands[target]!.some(isKind('cafune'))) return { ...next, choice: { kind: 'latido', who: target, by, deadline } };
+    next = eliminate(logged(next, { t: 'boom', by: target }), target, 'boom');
+  }
+}
+
+/**
+ * Par de Latidores jogado por `by` em `target` (pedido do Rafa, 2026-10-21): o alvo, tenha ou não Latidor, joga um
+ * Desarme (escolha `latido` com `pair`, prazo `deadline`) ou explode na hora. Só ele: não tem fila.
+ */
+export function barkPair(s: KittensState, by: string, target: string, deadline: number): KittensState {
+  const next = logged(s, { t: 'barked', by, target, pair: true });
+  if (next.hands[target]!.some(isKind('cafune'))) return { ...next, choice: { kind: 'latido', who: target, by, deadline, pair: true } };
+  return eliminate(logged(next, { t: 'boom', by: target }), target, 'boom');
+}
+
+/**
+ * Tatu Latidor: `who` joga o Desarme `card` pra não explodir. O Desarme e TODOS os Latidores dele (da frente e da mão)
+ * vão pro descarte: um Desarme basta, mesmo com mais de um Latidor (pedido do Rafa, 2026-10-21). O jogado já está lá.
+ * Depois a fila segue (`barkNext`, prazo `deadline` pro próximo); no fim, a vez continua com quem jogou o Latidor.
+ */
+export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string, deadline: number): KittensState {
+  if (c.pair) {
+    // Par de Latidores: só o Desarme vai pro descarte, e não tem fila.
+    const hand = s.hands[c.who]!.filter((x) => x !== card);
+    const next = counted({ ...s, hands: { ...s.hands, [c.who]: hand }, discard: [...s.discard, card], choice: null }, c.who, 'defuses');
+    return logged(next, { t: 'cafune', by: c.who });
+  }
+  const latidos = latidosOf(s, c.who);
   const mine = s.front[c.who] ?? [];
-  const front = latido !== undefined && mine.includes(latido) ? { ...s.front, [c.who]: mine.filter((x) => x !== latido) } : s.front;
-  const hand = s.hands[c.who]!.filter((x) => x !== card && x !== latido);
-  const discard = [...s.discard, card, ...(latido !== undefined ? [latido] : [])];
-  return logged({ ...s, front, hands: { ...s.hands, [c.who]: hand }, discard, choice: null }, { t: 'cafune', by: c.who });
+  const front = mine.some(isKind('latido')) ? { ...s.front, [c.who]: mine.filter((x) => !latidos.includes(x)) } : s.front;
+  const hand = s.hands[c.who]!.filter((x) => x !== card && !latidos.includes(x));
+  const discard = [...s.discard, card, ...latidos];
+  const next = counted({ ...s, front, hands: { ...s.hands, [c.who]: hand }, discard, choice: null }, c.who, 'defuses');
+  return barkNext(logged(next, { t: 'cafune', by: c.who }), c.by, deadline);
 }
 
 /**
  * Feitiço: `who` fica com a carta de baixo do monte (`keep`: é comprar; Tatubum segue o fluxo do Desarme) ou ela vai pro
- * topo (aí as espiadas de todos se apagam: o topo mudou). Ficando com ela, ela sai das espiadas. Nos dois casos gasta 1 turno (o Tatubum guardado gasta quando o tatu volta pro monte, ou some com a explosão).
- * `deadline` = prazo da escolha do Desarme, se o guardado for Tatubum.
+ * topo. Ficando com ela, ela sai das espiadas. Indo pro topo, as espiadas dos outros se apagam (o topo mudou), e `who`,
+ * que viu a carta (pedido do Rafa, 2026-10-21), passa a ver ela em cima da espiada que já tinha (ou só ela). Vale também
+ * sem resposta: ele viu a carta na escolha. Nos dois casos gasta 1 turno (o Tatubum guardado gasta quando o tatu volta
+ * pro monte, ou some com a explosão). `deadline` = prazo da escolha do Desarme, se o guardado for Tatubum.
  */
 export function conjure(s: KittensState, c: Choice<'feitico'>, keep: boolean, deadline: number): KittensState {
   const bottom = s.draw[0]!;
   const done = logged({ ...s, choice: null }, { t: 'conjured', by: c.who, kept: keep });
   if (keep) return takeCard(done, c.who, bottom, s.draw.slice(1), deadline);
-  return spendTurn(clearPeeks({ ...done, draw: [...s.draw.slice(1), bottom] }));
+  const draw = [...s.draw.slice(1), bottom];
+  if (!s.alive.includes(c.who)) return spendTurn(clearPeeks({ ...done, draw }));
+  // Monte todo na espiada: a de baixo já estava nela (no fim) e só sobe pro começo.
+  const mine = (Object.hasOwn(s.peeks, c.who) ? s.peeks[c.who]! : []).filter((x) => x !== bottom);
+  return spendTurn({ ...done, draw, peeks: { [c.who]: [bottom, ...mine] } });
 }
 
 /**
  * Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica; no Mico, cada um
- * que falta descarta uma; no Favor, dá o que faltar; nos 5 diferentes, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta
- * de baixo vai pro topo, seja qual for).
+ * que falta descarta uma, e a pegada de quem jogou abre com prazo novo; no Favor, dá o que faltar; nos 5 diferentes e
+ * na pegada do Mico, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta de baixo vai pro topo,
+ * seja qual for). `now` = agora (pro prazo da pegada do Mico).
  */
-export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
+export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensState {
   const c = s.choice!;
   switch (c.kind) {
     case 'tatu': {
       // Usa o Desarme e esconde o tatu de uma vez só. (A mão não muda durante a escolha, então sempre há um Desarme.)
       const card = s.hands[c.who]!.find(isKind('cafune'));
-      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, [c.tatu]);
+      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom', [c.tatu]);
       const used = useCafune(s, c, card, c.deadline);
       return hideTatu(used, used.choice as Choice<'cafune'>, 'random', rng);
     }
@@ -156,22 +241,28 @@ export function chooseAtRandom(s: KittensState, rng: Rng): KittensState {
       return next;
     }
     case 'mico': {
-      // Cada um que falta descarta uma carta ao acaso, na ordem da espera.
+      // Cada um que falta descarta uma carta ao acaso, na ordem da espera; o último abre a pegada de quem jogou (com
+      // prazo novo, a partir de agora).
+      const deadline = now + KITTENS_CHOICE_MS;
       let next = s;
       for (const p of c.waiting) {
+        const cur = next.choice as Choice<'mico'>;
         const hand = next.hands[p]!;
-        if (hand.length > 0) next = discardForMico(next, next.choice as Choice<'mico'>, p, hand[randomInt(rng, hand.length)]!);
+        next = hand.length > 0 ? discardForMico(next, cur, p, hand[randomInt(rng, hand.length)]!, deadline) : leaveMicoWait(next, cur, p, null, deadline);
       }
-      return { ...next, choice: null };
+      return next;
     }
     case 'quati':
-      // Sem resposta, a carta fica onde está (nada muda pra ninguém).
+      // Sem resposta, a carta fica onde está (quem escolhia viu a de cima, como se tivesse deixado).
       return delayTop(s, c, true);
     case 'latido': {
-      // A mão não muda durante a escolha (ela só abre pra quem tem Desarme); sem Desarme, explode.
+      // A mão não muda durante a escolha (ela só abre pra quem tem Desarme); sem Desarme, explode. Nos dois casos a
+      // fila do Latidor segue, com prazo novo pro próximo.
+      const deadline = now + KITTENS_CHOICE_MS;
       const card = s.hands[c.who]!.find(isKind('cafune'));
-      if (card === undefined) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who);
-      return defendLatido(s, c, card);
+      if (card !== undefined) return defendLatido(s, c, card, deadline);
+      if (c.pair) return eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom');
+      return barkNext(eliminate(logged({ ...s, choice: null }, { t: 'boom', by: c.who }), c.who, 'boom'), c.by, deadline);
     }
     case 'feitico':
       // A carta SEMPRE vai pro topo: decidir pelo tipo dela (ex.: "fica, a não ser que seja Tatubum") contaria pra quem

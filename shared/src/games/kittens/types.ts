@@ -4,7 +4,26 @@ export const KITTENS_MIN_PLAYERS = 2;
 export const KITTENS_MAX_PLAYERS = 8;
 /** Janela do Nem vem! (decisão do usuário, 2026-10-19): sempre corre, mesmo se ninguém tiver Nem vem!. */
 export const KITTENS_NOPE_MS = 5_000;
-/** Prazo das escolhas pessoais (Desarme, Favor, descarte do Mico, 5 diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
+/**
+ * Espera entre um Nem vem! e o próximo na mesma carta no ar (pedido do Rafa, 2026-10-21): evita dois por engano.
+ * Contada a partir do último Nem vem! aceito (= `pending.resolvesAt - KITTENS_NOPE_MS`); o primeiro não espera.
+ */
+export const KITTENS_NOPE_COOLDOWN_MS = 2_000;
+/** Até quando o próximo Nem vem! na carta no ar tem que esperar (null: pode agora, sem nenhum Nem vem! ainda). */
+export function kittensNopeCooldownUntil(pending: { nopes: readonly unknown[]; resolvesAt: number } | null | undefined): number | null {
+  if (!pending || pending.nopes.length === 0) return null;
+  return pending.resolvesAt - KITTENS_NOPE_MS + KITTENS_NOPE_COOLDOWN_MS;
+}
+/**
+ * 4 bichos diferentes (pedido do Rafa, 2026-10-21): não leva Nem vem!. A carta fica no ar só o tempo de todo mundo ver
+ * (sem contagem), e resolve.
+ */
+export const KITTENS_UNSTOPPABLE_MS = 1_500;
+/** A jogada aceita Nem vem!? Só os 4 bichos diferentes (`cinco`, nome antigo dos 5 diferentes) não aceitam. */
+export function kittensNopable(kind: KittensPlayKind): boolean {
+  return kind !== 'cinco';
+}
+/** Prazo das escolhas pessoais (Desarme, Favor, descarte e pegada do Mico, 4 bichos diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
 export const KITTENS_CHOICE_MS = 30_000;
 /** Quantas entradas do diário ficam no estado. */
 export const KITTENS_LOG_SIZE = 30;
@@ -28,7 +47,7 @@ export type KittensPlayKind =
 export interface KittensPlay {
   kind: KittensPlayKind;
   cards: string[];
-  /** Favor, trio de Favor e Mau-olhado (o par de Mico não tem alvo). */
+  /** Favor, trio de Favor, Mau-olhado e par de Tucano (o par de Mico não tem alvo). */
   target: string | null;
   /** Par de Preguiça: o bicho pedido. */
   ask: KittensCardKind | null;
@@ -57,14 +76,27 @@ export type KittensChoice =
    * trio de Favor (ou a mão toda, se tiver menos). Fecha quando dá todas ou a mão de `who` acaba.
    */
   | { kind: 'favor'; who: string; to: string; left: number; deadline: number }
-  /** `who` pega, uma de cada vez, `left` cartas de `options` (o descarte de antes da jogada de 5 diferentes). */
-  | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number }
-  /** Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par. */
-  | { kind: 'mico'; by: string; waiting: string[]; deadline: number }
+  /**
+   * `who` pega do descarte, uma de cada vez, `left` cartas de `options`: nos 5 diferentes, 2 do descarte de antes da
+   * jogada; no fim do par de Mico (`from: 'mico'`; pedido do Rafa, 2026-10-20), 1 das cartas descartadas nele. `from`
+   * só muda os textos da mesa.
+   */
+  | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number; from?: 'mico' }
+  /**
+   * Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par;
+   * `discarded` = o que já foi descartado nele (público), de onde `by` pega uma quando todos terminam.
+   */
+  | { kind: 'mico'; by: string; waiting: string[]; discarded: string[]; deadline: number }
   /** Par de Quati: `who` vê a carta de cima do monte e decide se ela fica ou vai pro fundo. */
   | { kind: 'quati'; who: string; deadline: number }
-  /** Tatu Latidor: `who` (quem tinha o outro Latidor) joga um Desarme à mão pra não explodir. Pública. */
-  | { kind: 'latido'; who: string; deadline: number }
+  /**
+   * Tatu Latidor jogado por `by`: `who` (um dos que têm Latidor) joga um Desarme à mão pra não explodir. Pública. Os
+   * que têm Latidor se defendem um de cada vez, na ordem dos assentos a partir de `by` (pedido do Rafa, 2026-10-21): a
+   * fila é quem ainda tem Latidor (quem se defende ou explode fica sem nenhum), então basta `by` pra achar o próximo.
+   * Par de Latidores (pedido do Rafa, 2026-10-21; `pair`): `who` é o alvo escolhido (com ou sem Latidor), só ele se
+   * defende e o Desarme vai sozinho pro descarte (os Latidores dele ficam).
+   */
+  | { kind: 'latido'; who: string; by: string; deadline: number; pair?: true }
   /** Feitiço: `who` vê a carta de BAIXO do monte e decide se fica com ela (como se comprasse) ou se ela vai pro topo. */
   | { kind: 'feitico'; who: string; deadline: number };
 
@@ -107,20 +139,30 @@ export type KittensEvent =
   | { t: 'delayed'; by: string; moved: boolean }
   /** Par de Tamanduá: quantos Tatubuns comprados foram pro fundo. */
   | { t: 'buried'; by: string; tatus: number }
-  /** Par de Preguiça: `from` = quem deu, ou null quando veio do monte; `card` null = ninguém tinha, nem o monte. */
-  | { t: 'called'; by: string; ask: KittensCardKind; from: string | null; card: string | null }
+  /**
+   * Par de Preguiça: `from` = quem deu, ou null quando veio do monte (ou do descarte: `pile`); `card` null = ninguém
+   * tinha, nem o monte, nem o descarte.
+   */
+  | { t: 'called'; by: string; ask: KittensCardKind; from: string | null; card: string | null; pile?: true }
   /** Roda de capivara: `from` passou `card` pra `to` (só os dois veem). */
   | { t: 'passed'; from: string; to: string; card: string | null }
   /** Trio: roubou o Desarme `card` de `from` (null quando ninguém tinha). */
   | { t: 'grabbed'; by: string; from: string | null; card: string | null }
-  /** Tatu Latidor: latiu pra `target` (quem tinha o outro Latidor) ou, ninguém tendo, ficou na frente de `by` (`target` null). */
-  | { t: 'barked'; by: string; target: string | null }
+  /**
+   * Tatu Latidor: latiu pra `target` (um dos que têm Latidor; um evento pra cada um, na vez dele de se defender) ou,
+   * ninguém mais tendo, ficou na frente de `by` (`target` null). `pair`: par de Latidores no alvo escolhido.
+   */
+  | { t: 'barked'; by: string; target: string | null; pair?: true }
   /** Mau-olhado: `target` ficou cego (a mão embaralhada e escondida dele até comprar). */
   | { t: 'cursed'; by: string; target: string }
   /** `by` comprou e voltou a ver a própria mão. */
   | { t: 'cured'; by: string }
   /** Feitiço: `by` ficou com a carta de baixo do monte (`kept`) ou mandou ela pro topo. Ninguém vê qual era. */
   | { t: 'conjured'; by: string; kept: boolean }
+  /** Par de Tucano: `by` acabou a vez sem comprar e a próxima vez de `target` vai ser pulada. */
+  | { t: 'tucano'; by: string; target: string }
+  /** A vez chegou em `who`, que tinha vez pulada (Tucano): o turno dele foi gasto sem ele jogar nem comprar. */
+  | { t: 'skipped'; who: string }
   | { t: 'win'; by: string };
 
 export interface KittensLogEntry {
@@ -156,21 +198,56 @@ export interface KittensState {
   /**
    * Espiar (pedido do Rafa, 2026-10-20): o que cada um espiou e ainda está à mostra pra ele, a carta do topo primeiro.
    * Sempre vale `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada): carta comprada ou tirada do monte sai
-   * das espiadas; o monte mudar de ordem perto do topo apaga todas. Espiada vazia não fica. Chave ausente = nada.
+   * das espiadas; o monte mudar de ordem perto do topo apaga todas, menos a de quem mexeu sabendo o que fez (Feitiço,
+   * Desarme, Quati: pedido do Rafa, 2026-10-21), que pode passar de 3 cartas. Espiada vazia não fica. Chave ausente = nada.
    */
   peeks: Record<string, string[]>;
+  /**
+   * Par de Tucano (pedido do Rafa, 2026-10-21): quantas vezes de cada jogador ainda vão ser puladas (público; acumula).
+   * Quando a vez chega em quem tem, um turno dele é gasto sozinho (`passTo`). Só vivos, sempre ≥ 1 (chave ausente = 0);
+   * nunca de quem está na vez.
+   */
+  skips: Record<string, number>;
   log: KittensLogEntry[];
   /** Número da próxima entrada do diário. */
   seq: number;
   winner: string | null;
+  /** Partidas da sala desde o lobby: sobe a cada "começar" e "jogar de novo" (entra no id da partida do histórico). */
+  match: number;
+  /** Quem saiu, na ordem (o vencedor não entra). Zera a cada partida. */
+  exits: KittensExit[];
+  /** Nem vem! e Desarmes de cada jogador nesta partida (chave ausente = nada ainda). Zera a cada partida. */
+  stats: Record<string, KittensPlayerStats>;
+}
+
+/** Como alguém saiu da partida: explodiu (Tatubum, Tatu Latidor ou Feitiço) ou caiu e não voltou em 30 s. */
+export type KittensExitHow = 'boom' | 'left';
+
+export interface KittensExit {
+  player: string;
+  how: KittensExitHow;
+}
+
+/** Contadores da partida por jogador, pro histórico (públicos: tudo isso já aparece no diário). */
+export interface KittensPlayerStats {
+  /** Nem vem! dados (cada `nope` aceito). */
+  nopes: number;
+  /** Desarmes usados (contra o Tatubum comprado ou o Tatu Latidor, inclusive o jogado sozinho no fim do prazo). */
+  defuses: number;
 }
 
 export type KittensAction =
   | { type: 'start' }
   /** `as`: par de 2 Botos, o bicho que o par vale. Quem está cego manda fichas (`?0`…) no lugar dos ids. */
   | { type: 'play'; cards: string[]; target?: string; ask?: KittensCardKind; as?: KittensCardKind }
-  /** `card`: qual Nem vem! usar (opcional; sem ela, o servidor usa um). Quem está cego tem que mandar uma ficha. */
-  | { type: 'nope'; card?: string }
+  /**
+   * `card`: qual Nem vem! usar (opcional; sem ela, o servidor usa um). Quem está cego tem que mandar uma ficha.
+   * `at` e `on` (pedido do Rafa, 2026-10-20) dizem o que o jogador viu ao clicar: `at` = quantos Nem vem! já havia na
+   * carta no ar (`pending.nopes.length`) e `on` = a primeira carta da jogada no ar (`pending.play.cards[0]`; os ids
+   * são únicos). Se a mesa mudou nesse meio-tempo, o Nem vem! chegou atrasado: é recusado e a carta fica na mão.
+   * Opcionais pra clientes antigos (sem eles, vale como antes).
+   */
+  | { type: 'nope'; card?: string; at?: number; on?: string }
   | { type: 'draw' }
   /**
    * Desarme: `card` (o Desarme a jogar, ao comprar um Tatubum ou contra o Tatu Latidor) e depois `position` (0 = topo,
@@ -199,10 +276,12 @@ export interface KittensView {
   blind: string[];
   pending: KittensPending | null;
   choice: KittensChoiceView | null;
-  /** O que você espiou e ainda está à mostra (até 3 de cima, a do topo primeiro); null se nada. */
+  /** O que você espiou e ainda está à mostra (as de cima, a do topo primeiro; pode passar de 3); null se nada. */
   peek: string[] | null;
   /** Quem tem espiada à mostra agora (público; as cartas de cada um, só ele vê), na ordem dos assentos. */
   peekers: string[];
+  /** Vezes que ainda vão ser puladas, por jogador (par de Tucano; público). Sem nada = chave ausente. */
+  skips: Record<string, number>;
   log: { n: number; ev: KittensEvent }[];
   winner: string | null;
 }

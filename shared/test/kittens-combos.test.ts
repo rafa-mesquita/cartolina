@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { settleKittens } from '../src/games/kittens/settle';
-import { KITTENS_CHOICE_MS, type KittensAction, type KittensState } from '../src/games/kittens/types';
+import { KITTENS_CHOICE_MS, KITTENS_UNSTOPPABLE_MS, type KittensAction, type KittensState } from '../src/games/kittens/types';
 import { kittensViewFor } from '../src/games/kittens/view';
 import { T0, act, ctxOf, ids, refuse, table } from './kittens-helpers';
 
@@ -179,10 +179,10 @@ describe('escolha do Favor salva antes do trio de Favor (sem `left`)', () => {
 });
 
 describe('combos', () => {
-  const cinco: KittensAction = { type: 'play', cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] };
+  const cinco: KittensAction = { type: 'play', cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0'] };
   const picks = (s: ReturnType<typeof resolved>) => s.log.filter((e) => e.ev.t === 'picked').map((e) => e.ev);
 
-  it('5 diferentes: pega duas cartas do descarte de antes da jogada, uma de cada vez', () => {
+  it('4 bichos diferentes: pega duas cartas do descarte de antes da jogada, uma de cada vez', () => {
     const s = resolved(cinco, ['ataque-7', 'espiar-7', 'pular-7']);
     expect(s.choice).toEqual({
       kind: 'cinco',
@@ -202,7 +202,7 @@ describe('combos', () => {
     const second = act(first, 'p0', { type: 'choose', card: 'ataque-7' }, at(5000));
     expect(second.choice).toBeNull();
     expect(second.hands.p0).toEqual(expect.arrayContaining(['espiar-7', 'ataque-7']));
-    expect(second.discard).toEqual(['pular-7', 'capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0']);
+    expect(second.discard).toEqual(['pular-7', 'capivara-0', 'mico-0', 'quati-0', 'tamandua-0']);
     expect(picks(second)).toEqual([
       { t: 'picked', by: 'p0', card: 'espiar-7' },
       { t: 'picked', by: 'p0', card: 'ataque-7' },
@@ -210,7 +210,7 @@ describe('combos', () => {
     expect(second).toMatchObject({ current: 'p0', owed: 1 });
   });
 
-  it('5 diferentes com uma só carta no descarte: começa com 1 e fecha ao pegar', () => {
+  it('4 bichos diferentes com uma só carta no descarte: começa com 1 e fecha ao pegar', () => {
     const s = resolved(cinco, ['ataque-7']);
     expect(s.choice).toMatchObject({ kind: 'cinco', options: ['ataque-7'], left: 1 });
     const picked = act(s, 'p0', { type: 'choose', card: 'ataque-7' }, at(5000));
@@ -218,7 +218,7 @@ describe('combos', () => {
     expect(picked.hands.p0).toContain('ataque-7');
   });
 
-  it('5 diferentes: sem resposta, no fim do prazo o que falta sai ao acaso', () => {
+  it('4 bichos diferentes: sem resposta, no fim do prazo o que falta sai ao acaso', () => {
     const s = resolved(cinco, ['ataque-7', 'espiar-7', 'pular-7']);
     const none = settleKittens(s, at(5000 + KITTENS_CHOICE_MS));
     expect(none.choice).toBeNull();
@@ -236,10 +236,38 @@ describe('combos', () => {
     expect(one.hands.p0).toContain('ataque-7');
   });
 
-  it('5 diferentes com o descarte vazio: nada acontece', () => {
-    const s = resolved({ type: 'play', cards: ['capivara-0', 'mico-0', 'quati-0', 'tamandua-0', 'preguica-0'] });
+  it('4 bichos diferentes com o descarte vazio: nada acontece', () => {
+    const s = resolved(cinco);
     expect(s.choice).toBeNull();
     expect(s.current).toBe('p0');
+  });
+
+  it('4 bichos diferentes não aceitam Nem vem!: sem contagem, resolvem em 1,5 s', () => {
+    const s = table({ hands: { ...hands(), p1: ['nemvem-5'] }, discard: ['ataque-7'], draw: ['pular-9', 'mico-9'] });
+    const air = act(s, 'p0', cinco, ctx);
+    expect(air.pending!.resolvesAt).toBe(T0 + KITTENS_UNSTOPPABLE_MS);
+    expect(refuse(air, 'p1', { type: 'nope' }, at(100))).toBe('unstoppable');
+    expect(settleKittens(air, at(KITTENS_UNSTOPPABLE_MS - 1))).toBe(air);
+    const done = settleKittens(air, at(KITTENS_UNSTOPPABLE_MS));
+    expect(done.hands.p1).toEqual(['nemvem-5']);
+    expect(done.choice).toMatchObject({ kind: 'cinco', who: 'p0', options: ['ataque-7'], left: 1 });
+  });
+
+  it('4 bichos diferentes: só bichos (o Boto conta como um a mais), 4 cartas, nenhum repetido', () => {
+    const s = table({
+      hands: { p0: ['capivara-0', 'mico-0', 'quati-0', 'tucano-0', 'preguica-0', 'boto-0', 'boto-1', 'mico-1', 'ataque-0'], p1: [], p2: [] },
+    });
+    const kind = (cards: string[]) => act(s, 'p0', { type: 'play', cards }, ctx).pending!.play.kind;
+    expect(kind(['capivara-0', 'mico-0', 'quati-0', 'tucano-0'])).toBe('cinco');
+    expect(kind(['capivara-0', 'mico-0', 'quati-0', 'boto-0'])).toBe('cinco');
+    for (const cards of [
+      ['capivara-0', 'mico-0', 'quati-0', 'tucano-0', 'preguica-0'], // 5 bichos
+      ['capivara-0', 'mico-0', 'quati-0', 'ataque-0'], // carta de ação
+      ['capivara-0', 'mico-0', 'mico-1', 'quati-0'], // bicho repetido
+      ['capivara-0', 'mico-0', 'boto-0', 'boto-1'], // 2 Botos
+    ]) {
+      expect(refuse(s, 'p0', { type: 'play', cards }, ctx)).toBe('bad_combo');
+    }
   });
 });
 

@@ -1,4 +1,5 @@
 import type { ActionResult, GameContext } from '../../game';
+import { randomInt } from '../../rng';
 import { kittensKindOf } from './cards';
 import {
   conjure,
@@ -14,8 +15,17 @@ import {
 import { kittensDeal } from './deck';
 import { parsePlay, realCard } from './play';
 import { settleKittens } from './settle';
-import { logged } from './turn';
-import { KITTENS_CHOICE_MS, KITTENS_MIN_PLAYERS, KITTENS_NOPE_MS, type KittensAction, type KittensState } from './types';
+import { counted, logged } from './turn';
+import {
+  KITTENS_CHOICE_MS,
+  KITTENS_MIN_PLAYERS,
+  KITTENS_NOPE_MS,
+  KITTENS_UNSTOPPABLE_MS,
+  kittensNopable,
+  kittensNopeCooldownUntil,
+  type KittensAction,
+  type KittensState,
+} from './types';
 
 const fail = (error: string): ActionResult<KittensState> => ({ ok: false, error });
 const ok = (state: KittensState): ActionResult<KittensState> => ({ ok: true, state });
@@ -36,18 +46,27 @@ export function initialKittensState(): KittensState {
     pending: null,
     choice: null,
     peeks: {},
+    skips: {},
     log: [],
     seq: 0,
     winner: null,
+    match: 0,
+    exits: [],
+    stats: {},
   };
 }
 
 /** Partida nova com os ativos (também usada em "jogar de novo"). A sala já limita a 8 pessoas. */
-function startMatch(ctx: GameContext): ActionResult<KittensState> {
+function startMatch(state: KittensState, ctx: GameContext): ActionResult<KittensState> {
   if (ctx.active.length < KITTENS_MIN_PLAYERS) return fail('not_enough_players');
   const players = [...ctx.active];
   const { hands, draw } = kittensDeal(ctx.rng, players);
-  return ok({ ...initialKittensState(), phase: 'playing', players, alive: [...players], hands, draw, current: players[0]!, owed: 1 });
+  // Quem começa é sorteado (pedido do Rafa, 2026-10-20: o host começava sempre); a vez segue a ordem dos assentos.
+  // O sorteio vem depois da distribuição, pra mesma semente dar as mesmas mãos.
+  const first = players[randomInt(ctx.rng, players.length)]!;
+  const stats = Object.fromEntries(players.map((p) => [p, { nopes: 0, defuses: 0 }]));
+  const fresh = { ...initialKittensState(), match: state.match + 1, stats };
+  return ok({ ...fresh, phase: 'playing', players, alive: [...players], hands, draw, current: first, owed: 1 });
 }
 
 /** Por que `p` não pode jogar nem comprar agora (ou null se pode). */
@@ -86,7 +105,7 @@ export function applyKittensAction(
     case 'start':
       if (!isHost) return fail('not_host');
       if (s.phase !== 'lobby') return fail('bad_phase');
-      return startMatch(ctx);
+      return startMatch(s, ctx);
     case 'lobby':
       if (!isHost) return fail('not_host');
       if (s.phase === 'lobby') return fail('bad_phase');
@@ -94,7 +113,7 @@ export function applyKittensAction(
     case 'again':
       if (!isHost) return fail('not_host');
       if (s.phase !== 'gameover') return fail('bad_phase');
-      return startMatch(ctx);
+      return startMatch(s, ctx);
     case 'draw': {
       const e = turnError(s, playerId);
       if (e) return fail(e);
@@ -110,7 +129,7 @@ export function applyKittensAction(
         if (!c.waiting.includes(playerId)) return fail('not_your_choice');
         const card = ownCard(s, playerId, action.card);
         if (card === null) return fail(badOwnCard(s, playerId, action.card));
-        return ok(discardForMico(s, c, playerId, card));
+        return ok(discardForMico(s, c, playerId, card, ctx.now + KITTENS_CHOICE_MS));
       }
       if (c.who !== playerId) return fail('not_your_choice');
       switch (c.kind) {
@@ -147,7 +166,7 @@ export function applyKittensAction(
           if (card === null) return fail(badOwnCard(s, playerId, action.card));
           const desarme = s.blind.includes(playerId) ? s.hands[playerId]!.find((x) => kittensKindOf(x) === 'cafune') : card;
           if (desarme === undefined || kittensKindOf(desarme) !== 'cafune') return fail('bad_choice');
-          return ok(defendLatido(s, c, desarme));
+          return ok(defendLatido(s, c, desarme, ctx.now + KITTENS_CHOICE_MS));
         }
         case 'feitico':
           if (action.keep === undefined) return fail('bad_choice');
@@ -168,7 +187,7 @@ export function applyKittensAction(
       const next: KittensState = {
         ...s,
         hands: { ...s.hands, [playerId]: hand },
-        pending: { by: playerId, play, nopes: [], resolvesAt: ctx.now + KITTENS_NOPE_MS },
+        pending: { by: playerId, play, nopes: [], resolvesAt: ctx.now + (kittensNopable(play.kind) ? KITTENS_NOPE_MS : KITTENS_UNSTOPPABLE_MS) },
       };
       return ok(logged(next, { t: 'play', by: playerId, play: play.kind, target: play.target, ask: play.ask, as: play.as }));
     }
@@ -176,6 +195,15 @@ export function applyKittensAction(
       if (s.phase !== 'playing') return fail('bad_phase');
       if (!s.alive.includes(playerId)) return fail('not_alive');
       if (!s.pending) return fail('nothing_to_nope');
+      if (!kittensNopable(s.pending.play.kind)) return fail('unstoppable');
+      // Nem vem! atrasado (pedido do Rafa, 2026-10-20): dois quase juntos não viram Nem vem! em cima de Nem vem!. Vale
+      // o que chegou primeiro; o outro é recusado, a carta fica na mão e ele tem a janela nova (5 s) pra decidir de novo.
+      // `on` pega outra carta no ar com o mesmo número de Nem vem! (a jogada de antes já resolveu).
+      if (action.on !== undefined && action.on !== s.pending.play.cards[0]) return fail('nope_stale');
+      if (action.at !== undefined && action.at !== s.pending.nopes.length) return fail('nope_late');
+      // Espera de 2 s entre um Nem vem! e outro (pedido do Rafa, 2026-10-21): a carta fica na mão e nada muda.
+      const cooldownUntil = kittensNopeCooldownUntil(s.pending);
+      if (cooldownUntil !== null && ctx.now < cooldownUntil) return fail('nope_cooldown');
       const isNope = (c: string) => kittensKindOf(c) === 'nemvem';
       let card: string | undefined;
       if (action.card === undefined && !s.blind.includes(playerId)) {
@@ -193,7 +221,7 @@ export function applyKittensAction(
         resolvesAt: ctx.now + KITTENS_NOPE_MS,
       };
       const hands = { ...s.hands, [playerId]: s.hands[playerId]!.filter((c) => c !== card) };
-      return ok(logged({ ...s, pending, hands }, { t: 'nope', by: playerId }));
+      return ok(logged(counted({ ...s, pending, hands }, playerId, 'nopes'), { t: 'nope', by: playerId }));
     }
     default:
       return fail('bad_action');

@@ -74,6 +74,51 @@ describe('estado salvo antes das cartas novas (sem front/blind)', () => {
     expect(settleKittens(deepFreeze({ ...rest, alive: ['p0', 'p2'], peek: { who: 'p1', cards: ['pular-9'] } } as unknown as KittensState), ctx).peeks).toEqual({});
   });
 
+  it('par de Mico salvo antes da pegada no fim (sem `discarded`): segue, e quem jogou pega uma das descartadas depois', () => {
+    const s = table({ hands: { p0: ['quati-0'], p1: ['pular-1', 'ataque-1'], p2: ['espiar-2'] }, draw: DRAW, discard: ['mico-0', 'mico-1', 'favor-2'] });
+    // p2 já tinha descartado o Favor antes do deploy: esse não conta.
+    const saved = deepFreeze({ ...s, choice: { kind: 'mico', by: 'p0', waiting: ['p1'], deadline: T0 + 30_000 } } as unknown as KittensState);
+    expect(settleKittens(saved, ctx).choice).toEqual({ kind: 'mico', by: 'p0', waiting: ['p1'], discarded: [], deadline: T0 + 30_000 });
+    expect(kittensViewFor(saved, 'p2').choice).toMatchObject({ kind: 'mico', discarded: [] });
+    expect(kittensNextDeadline(saved)).toBe(T0 + 30_000);
+    const done = act(saved, 'p1', { type: 'choose', card: 'pular-1' }, at(1000));
+    expect(done.choice).toEqual({ kind: 'cinco', who: 'p0', options: ['pular-1'], left: 1, deadline: T0 + 1000 + 30_000, from: 'mico' });
+    // Prazo vencido no formato antigo: o descarte ao acaso também abre a pegada.
+    const late = settleKittens(saved, at(30_000));
+    expect(late.choice).toMatchObject({ kind: 'cinco', who: 'p0', left: 1, from: 'mico' });
+    expect(late.hands.p1).toHaveLength(1);
+  });
+
+  it('estado salvo antes do Tucano (sem `skips`): ninguém tem vez pulada, e o par de Tucano funciona', () => {
+    const { skips: _skips, ...rest } = table({ hands: { p0: ['tucano-0', 'tucano-1'], p1: ['pular-1'], p2: ['espiar-2'] }, draw: DRAW });
+    void _skips;
+    const saved = deepFreeze(rest as KittensState);
+    expect(kittensViewFor(saved, 'p1').skips).toEqual({});
+    expect(settleKittens(saved, ctx).skips).toEqual({});
+    const played = act(saved, 'p0', { type: 'play', cards: ['tucano-0', 'tucano-1'], target: 'p2' }, ctx);
+    const { skips: _s2, ...inAir } = played;
+    void _s2;
+    const done = settleKittens(deepFreeze(inAir as KittensState), at(5000));
+    expect(done).toMatchObject({ current: 'p1', owed: 1, skips: { p2: 1 } });
+  });
+
+  it('defesa do Latidor salva antes da fila (sem `by`): quem jogou é quem está na vez, e a fila segue', () => {
+    const s = table({
+      hands: { p0: ['mico-0'], p1: ['cafune-1', 'latido-1'], p2: ['cafune-2', 'latido-2'] },
+      draw: DRAW,
+      discard: ['latido-0'],
+    });
+    const saved = deepFreeze({ ...s, choice: { kind: 'latido', who: 'p1', deadline: T0 + 30_000 } } as unknown as KittensState);
+    expect(settleKittens(saved, ctx).choice).toEqual({ kind: 'latido', who: 'p1', by: 'p0', deadline: T0 + 30_000 });
+    expect(kittensViewFor(saved, 'p2').choice).toEqual({ kind: 'latido', who: 'p1', by: 'p0', deadline: T0 + 30_000 });
+    const done = act(saved, 'p1', { type: 'choose', card: 'cafune-1' }, at(1000));
+    // Agora o p2 também se defende (todos que têm Latidor).
+    expect(done.choice).toEqual({ kind: 'latido', who: 'p2', by: 'p0', deadline: T0 + 1000 + 30_000 });
+    const last = act(done, 'p2', { type: 'choose', card: 'cafune-2' }, at(2000));
+    expect(last).toMatchObject({ choice: null, current: 'p0', owed: 1 });
+    expect(last.discard).toEqual(['latido-0', 'cafune-1', 'latido-1', 'cafune-2', 'latido-2']);
+  });
+
   it('estado completo não muda: settle sem nada a fazer devolve o mesmo objeto', () => {
     const s = deepFreeze(table({ hands: { p0: ['mico-0'], p1: [], p2: [] }, draw: DRAW }));
     expect(settleKittens(s, ctx)).toBe(s);

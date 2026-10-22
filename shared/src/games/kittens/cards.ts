@@ -17,6 +17,8 @@ export const KITTENS_CARD_KINDS = [
   'quati',
   'tamandua',
   'preguica',
+  // Tucano (pedido do Rafa, 2026-10-21): o 6º bicho; o par pula a vez de alguém.
+  'tucano',
   'boto',
 ] as const;
 export type KittensCardKind = (typeof KITTENS_CARD_KINDS)[number];
@@ -40,6 +42,7 @@ export const KITTENS_CARD_NAMES: Record<KittensCardKind, string> = {
   quati: 'Quati',
   tamandua: 'Tamanduá',
   preguica: 'Preguiça',
+  tucano: 'Tucano',
   boto: 'Boto',
 };
 
@@ -48,13 +51,14 @@ export const KITTENS_ACTION_KINDS = ['ataque', 'pular', 'favor', 'embaralhar', '
 export type KittensActionKind = (typeof KITTENS_ACTION_KINDS)[number];
 
 /**
- * Os 5 bichos: sozinhos não fazem nada; em par, cada um tem efeito próprio (spec "Par de cada bicho"). O Boto (coringa)
- * NÃO está aqui: ele não tem efeito próprio, só faz as vezes de um destes (e o par de Preguiça não pede Boto).
+ * Os 6 bichos (o Tucano entrou em 2026-10-21): sozinhos não fazem nada; em par, cada um tem efeito próprio (spec "Par
+ * de cada bicho"). O Boto (coringa) NÃO está aqui: ele não tem efeito próprio, só faz as vezes de um destes (e o par de
+ * Preguiça não pede Boto).
  */
-export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica'] as const;
+export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano'] as const;
 export type KittensBicho = (typeof KITTENS_BICHOS)[number];
 
-/** O bicho coringa: em par ou trio vale por qualquer bicho; nos 5 diferentes conta como o próprio nome. */
+/** O bicho coringa: em par ou trio vale por qualquer bicho; nos 4 bichos diferentes conta como um bicho a mais. */
 export const KITTENS_WILD = 'boto' as const;
 
 export function kittensIsBicho(kind: KittensCardKind | null): kind is KittensBicho {

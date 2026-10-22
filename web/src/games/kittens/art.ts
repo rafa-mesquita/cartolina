@@ -7,6 +7,7 @@ import ataque from './art/ataque.png';
 import boto from './art/boto.png';
 import cafune from './art/cafune.png';
 import capivara from './art/capivara.png';
+import tucano from './art/tucano.png';
 import embaralhar from './art/embaralhar.png';
 import espiar from './art/espiar.png';
 import favor from './art/favor.png';
@@ -40,6 +41,7 @@ export const ART: Record<KittensCardKind, string> = {
   quati,
   tamandua,
   preguica,
+  tucano,
   boto,
 };
 
