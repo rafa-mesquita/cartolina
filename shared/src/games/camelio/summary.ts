@@ -61,7 +61,7 @@ export function summarizeCamelioHistory(matches: readonly CamelioMatchRecord[]):
     return t;
   };
   for (const m of ordered) {
-    // Mesmo nome duas vezes na partida (não deveria acontecer): conta uma partida só.
+    // A sala só proíbe cor repetida, não nome: dois com o mesmo nome somam juntos (como no Tatubum); na mesma partida, conta uma só.
     const seen = new Set<string>();
     for (const p of m.players) {
       const t = tallyOf(p);

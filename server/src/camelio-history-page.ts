@@ -10,7 +10,7 @@ export async function camelioHistoryPage(db: D1Database, before: number | null):
   return {
     game: 'camelio',
     matches,
-    // Lê até STATS_ROUNDS_CAP partidas: caro demais para repetir a cada "carregar mais".
+    // Lê até CAMELIO_STATS_CAP partidas: caro demais para repetir a cada "carregar mais".
     stats: before === null ? summarizeCamelioHistory(await allCamelioMatches(db)) : null,
     nextBefore: rows.length > HISTORY_PAGE_SIZE ? matches[matches.length - 1]!.playedAt : null,
   };

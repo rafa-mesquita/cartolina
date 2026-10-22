@@ -31,9 +31,9 @@ function Face({ color, big = false }: { color: string; big?: boolean }) {
 function Chip({ card }: { card: CamelioRecordCard }) {
   const label = `${esferas(card.spheres)} ${card.color}${KIND[card.kind]}`;
   return (
-    <i className="cl-hx-chip" style={{ background: HEX[card.color] }} title={label}>
+    <i className="cl-hx-chip" style={{ background: HEX[card.color] }} title={label} role="img" aria-label={label}>
       {card.kind !== 'normal' && <span className={`cl-hx-kind cl-hx-kind-${card.kind}`} aria-hidden="true" />}
-      <span className="cl-hx-num">{card.spheres}</span>
+      <span className="cl-hx-num" aria-hidden="true">{card.spheres}</span>
     </i>
   );
 }
@@ -50,10 +50,10 @@ function MatchCard({ match: m }: { match: CamelioMatchRecord }) {
   const first = m.players[m.winners[0] ?? -1];
   const plays = keyPlays(m);
   const won = new Set(m.winners);
-  // mais pontos primeiro; empate fica na ordem dos assentos (o sort é estável)
+  // mais pontos primeiro; empate: mais esferas na mesa (o desempate do fim do monte); depois a ordem dos assentos (o sort é estável)
   const order = m.players
     .map((p, i) => ({ p, i, final: m.final[i] ?? { colors: [], spheres: 0 } }))
-    .sort((a, b) => b.final.colors.length - a.final.colors.length);
+    .sort((a, b) => b.final.colors.length - a.final.colors.length || b.final.spheres - a.final.spheres);
 
   return (
     <li className="cl-hx-match" aria-label={matchLabel(m, date)}>
@@ -72,7 +72,11 @@ function MatchCard({ match: m }: { match: CamelioMatchRecord }) {
             <Face color={p.color} />
             <b className="cl-hx-name">{p.name}</b>
             <span className="cl-hx-pts">{plural(final.colors.length, 'ponto', 'pontos')}</span>
-            <span className="cl-hx-dots">
+            <span
+              className="cl-hx-dots"
+              role={final.colors.length ? 'img' : undefined}
+              aria-label={final.colors.length ? final.colors.join(', ') : undefined}
+            >
               {final.colors.map((c) => (
                 <i key={c} className="cl-hx-dot" style={{ background: HEX[c] }} title={c} />
               ))}
@@ -140,8 +144,8 @@ function Galera({ stats }: { stats: CamelioStats }) {
       <h2 id={titleId}>a galera</h2>
       <div className="cl-hx-titles">
         <Ticket title="domador" about="mais vitórias" value={stats.domador} unit={['vitória', 'vitórias']} />
-        <Ticket title="sabotador" about="mais estouros causados nos outros" value={stats.sabotador} unit={times} />
-        <Ticket title="palhaço" about="mais estouros na própria mesa" value={stats.palhaco} unit={times} />
+        <Ticket title="sabotador" about="mais estouros e pontos perdidos causados nos outros" value={stats.sabotador} unit={times} />
+        <Ticket title="palhaço" about="mais estouros e pontos perdidos na própria mesa" value={stats.palhaco} unit={times} />
         <Ticket title="Papai Noel" about="mais 5 de bandeja pros outros" value={stats.papaiNoel} unit={times} />
       </div>
       {stats.galera.length > 0 && (

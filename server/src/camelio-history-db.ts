@@ -1,5 +1,9 @@
 import type { CamelioMatchRecord } from '@cartolina/shared';
-import { STATS_ROUNDS_CAP } from './history-db';
+/**
+ * Teto das estatísticas da galera: cada partida guarda todas as jogadas (~10 a 15 KB de JSON), então ler as 5000 do
+ * `STATS_ROUNDS_CAP` dos outros jogos passaria de dezenas de MB por visita. 1000 partidas é muito mais do que a galera joga.
+ */
+export const CAMELIO_STATS_CAP = 1000;
 
 /** Idempotente por (sala, partida): gravar a mesma partida de novo não duplica. */
 export async function insertCamelioMatch(db: D1Database, r: CamelioMatchRecord): Promise<void> {
@@ -28,6 +32,6 @@ export async function listCamelioMatches(db: D1Database, before: number | null, 
 }
 
 /** As partidas mais recentes (até `cap`), pras estatísticas da galera. */
-export async function allCamelioMatches(db: D1Database, cap = STATS_ROUNDS_CAP): Promise<CamelioMatchRecord[]> {
+export async function allCamelioMatches(db: D1Database, cap = CAMELIO_STATS_CAP): Promise<CamelioMatchRecord[]> {
   return listCamelioMatches(db, null, cap);
 }

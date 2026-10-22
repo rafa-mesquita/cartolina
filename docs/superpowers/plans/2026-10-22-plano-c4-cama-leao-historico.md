@@ -960,7 +960,7 @@ não tem histórico.", vazio):
 - `<p className="cl-hx-meta">`: a data (mesmo `Intl.DateTimeFormat` do Tatubum), `N jogadores` e
   `reasonText(m)`;
 - `<h3 className="cl-hx-winner">` com o Critter do primeiro vencedor e `winnersText(m)`;
-- `<ol className="cl-hx-score" aria-label="placar">`: os jogadores em ordem de pontos (desc), com empate na ordem dos
+- `<ol className="cl-hx-score" aria-label="placar">`: os jogadores em ordem de pontos (desc), depois esferas na mesa (desc), depois na ordem dos
   assentos. Cada um mostra:
   - o Critter e o nome;
   - `<span className="cl-hx-pts">{plural(colors.length,'ponto','pontos')}</span>`;

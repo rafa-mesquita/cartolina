@@ -77,7 +77,8 @@ async function playCamelioMatchDirect(page: Page, names: [string, string]): Prom
 test('partida de Cama-Leão terminada aparece no histórico, com os lances', async ({ browser }) => {
   const page = await newPlayer(browser);
   await page.goto('/');
-  const stamp = String(Date.now() % 100_000);
+  // Com zeros à esquerda: "Ana123" não acha "Ana12345" de uma execução antiga no D1 local.
+  const stamp = String(Date.now() % 100_000).padStart(5, '0');
   const names: [string, string] = [`Ana${stamp}`, `Beto${stamp}`];
   const winners = await playCamelioMatchDirect(page, names);
   expect(winners.length).toBeGreaterThan(0);
