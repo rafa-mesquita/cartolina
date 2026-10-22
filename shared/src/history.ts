@@ -1,6 +1,8 @@
 import { pendingCoupRecord, type CoupMatchRecord } from './games/coup/record';
 import { pendingDixitRecord, type DixitRoundRecord } from './games/dixit/record';
 import type { DixitHistoryStats, DixitMatch } from './games/dixit/summary';
+import { pendingKittensRecord, type KittensMatchRecord } from './games/kittens/record';
+import type { KittensStats } from './games/kittens/summary';
 import { GAMES, type GameId } from './games/registry';
 import type { ItoMode, ItoOutcome, ItoState, Theme } from './games/ito/types';
 import { isBotName, type PlayerColor } from './players';
@@ -86,14 +88,23 @@ export interface CoupHistoryResponse {
   nextBefore: number | null;
 }
 
+/** Resposta de `GET /history/kittens`: 20 partidas por página, da mais nova pra mais velha; estatísticas só na primeira. */
+export interface KittensHistoryResponse {
+  game: 'kittens';
+  matches: KittensMatchRecord[];
+  /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
+  stats: KittensStats | null;
+  /** Fim da última partida da página (exclusivo na próxima), ou null se acabou. */
+  nextBefore: number | null;
+}
+
 /** Resposta de `GET /history/:game`, por jogo (todo jogo do registro precisa estar aqui). */
 export interface HistoryResponses {
   ito: HistoryResponse;
   dixit: DixitHistoryResponse;
   /** O Retratim ainda não grava histórico (vem no R4, com o museu): a rota responde 404 antes de chegar aqui. */
   pictures: never;
-  /** O Tatubum também não grava histórico por enquanto (plano próprio): a rota responde 404 antes de chegar aqui. */
-  kittens: never;
+  kittens: KittensHistoryResponse;
   coup: CoupHistoryResponse;
   /** O Cama-Leão ainda não grava histórico (vem no C4): a rota responde 404 antes de chegar aqui. */
   camelio: never;
@@ -192,7 +203,8 @@ export function summarizeHistory(rounds: readonly RoundRecord[]): HistoryStats {
 export type PendingHistoryRecord =
   | { game: 'ito'; key: string; record: RoundRecord }
   | { game: 'dixit'; key: string; record: DixitRoundRecord }
-  | { game: 'coup'; key: string; record: CoupMatchRecord };
+  | { game: 'coup'; key: string; record: CoupMatchRecord }
+  | { game: 'kittens'; key: string; record: KittensMatchRecord };
 
 /** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação ou partida nova. */
 export function pendingHistoryRecord(room: Room, now: number, id: string): PendingHistoryRecord | null {
@@ -208,8 +220,10 @@ export function pendingHistoryRecord(room: Room, now: number, id: string): Pendi
     }
     case 'pictures':
       return null; // histórico e museu do Retratim vêm no R4
-    case 'kittens':
-      return null; // o histórico do Tatubum vem num plano próprio
+    case 'kittens': {
+      const pending = pendingKittensRecord(room, now, id);
+      return pending ? { game: 'kittens', ...pending } : null;
+    }
     case 'coup': {
       const pending = pendingCoupRecord(room, now, id);
       return pending ? { game: 'coup', ...pending } : null;

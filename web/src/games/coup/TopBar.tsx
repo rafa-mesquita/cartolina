@@ -26,10 +26,17 @@ interface Props {
   phone: boolean;
   /** Seu id na partida (`null` = quem assiste). */
   me: string | null;
+  /** A colinha de regras está aberta. */
+  rulesOpen: boolean;
+  /** Abre ou fecha a colinha. */
+  onRules: () => void;
 }
 
-/** Topo da mesa: "CÚPI", o placar da noite ("Beto 2 · você 1", só quem já ganhou) e o som. A faixa vermelha é o fundo do palco. */
-export const TopBar = memo(function TopBar({ wins, nameOf, phone, me }: Props) {
+/**
+ * Topo da mesa: "CÚPI", o placar da noite ("Beto 2 · você 1", só quem já ganhou), "regras" (a colinha) e o som.
+ * A faixa vermelha é o fundo do palco.
+ */
+export const TopBar = memo(function TopBar({ wins, nameOf, phone, me, rulesOpen, onRules }: Props) {
   const who = phone ? shortScore(wins, me, nameOf) : winners(wins).map((p) => `${nameOf(p)} ${wins[p]}`);
   return (
     <header className="cp-top">
@@ -45,6 +52,9 @@ export const TopBar = memo(function TopBar({ wins, nameOf, phone, me }: Props) {
               </span>
             ))}
       </div>
+      <button type="button" className="dx-pill cp-rulesbtn" aria-haspopup="dialog" aria-expanded={rulesOpen} onClick={onRules}>
+        regras
+      </button>
       <SoundPill />
     </header>
   );

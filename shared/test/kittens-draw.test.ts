@@ -74,8 +74,10 @@ describe('Tatubum com Cafuné', () => {
     expect(after.peeks).toEqual({ p0: ['quati-0', 'pular-0'], p1: ['quati-0'] });
     const used = act(after, 'p0', { type: 'choose', card: 'cafune-0' }, ctx);
     expect(used.peeks).toEqual(after.peeks);
-    // Esconder o tatu (em qualquer lugar, até no fundo) apaga a espiada de todos.
-    expect(act(used, 'p0', { type: 'choose', position: 2 }, ctx).peeks).toEqual({});
+    // Esconder o tatu (em qualquer lugar, até no fundo) apaga a espiada dos outros; quem escondeu sabe onde pôs (pedido
+    // do Rafa, 2026-10-21): aqui, no fundo, que estava na espiada dele (o monte todo).
+    expect(act(used, 'p0', { type: 'choose', position: 2 }, ctx).peeks).toEqual({ p0: ['quati-0', 'pular-0', 'tatubum-0'] });
+    expect(act(used, 'p0', { type: 'choose', position: 'random' }, ctx).peeks).toEqual({});
   });
 
   it('jogar o Desarme: ele vai pro descarte e abre a escolha de onde esconder, com prazo novo', () => {

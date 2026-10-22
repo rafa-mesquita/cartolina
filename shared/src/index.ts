@@ -50,13 +50,17 @@ export { coup, coupNextDeadline, coupViewFor } from './games/coup/view';
 export { coupActionSchema } from './games/coup/schema';
 export * from './games/kittens/types';
 export * from './games/kittens/cards';
+export * from './games/kittens/record';
+export * from './games/kittens/summary';
 export {
-  KITTENS_EXTRA_CAFUNES,
+  kittensExtraCafunes,
   KITTENS_HAND_START,
-  KITTENS_LATIDOS,
+  kittensLatidos,
   KITTENS_PACK,
   KITTENS_PACK_SIZE,
   kittensBaseDeck,
+  kittensLatidoCards,
+  kittensPackCards,
   kittensDeal,
   kittensPacksFor,
 } from './games/kittens/deck';

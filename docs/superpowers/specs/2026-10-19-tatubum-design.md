@@ -21,7 +21,7 @@ Decisões do usuário (2026-10-19):
 - **2 a 8 jogadores**, com baralho que cresce com a mesa (§3).
 - **Janela do Nem vem! de 5 s**, fixa, sempre corre, mesmo que ninguém tenha Nem vem! (assim a
   demora não entrega quem tem).
-- **Escolhas pessoais com 30 s** (Favor e par de Mico, Desarme, 5 diferentes, par de Quati, defesa do Tatu Latidor, Feitiço; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
+- **Escolhas pessoais com 30 s** (Favor, par de Mico (o descarte e a pegada no fim), Desarme, 5 diferentes, par de Quati, defesa do Tatu Latidor, Feitiço; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
   escolhe ao acaso (no Quati e no Feitiço, sem acaso: a carta fica / vai pro topo). **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
@@ -45,22 +45,28 @@ Decisões do usuário (2026-10-19):
 
 1. Monta o baralho pelo número de jogadores (§3), sem Tatubuns nem Cafunés.
 2. Cada jogador recebe **1 Cafuné** e mais **7 cartas** do baralho embaralhado (8 na mão).
-3. Entram no monte **2 Cafunés extras** e **um Tatubum a menos que o número de jogadores**; o monte
+3. Entram no monte os **Desarmes extras** (2 com até 4 jogadores, 1 com 5 ou mais) e **um Tatubum a menos que o número de jogadores**; o monte
    é embaralhado.
-4. Começa o primeiro assento, com `owed = 1`.
+4. Quem começa é sorteado (2026-10-20), com `owed = 1`.
 
-Diferença do original: com 5 jogadores o original põe só 1 Cafuné extra; aqui são sempre 2.
+Como no original (pedido do Rafa, 2026-10-21): 2 Desarmes extras com até 4 jogadores e 1 com 5. De 6 a 8 o original não tem regra: 1 extra, seguindo a tendência.
 
 ### Turno
 
 Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada vez, e termina
-**comprando** a carta do topo. Pular e Ataque terminam o turno sem comprar.
+**comprando** a carta do topo. Pular, Ataque e o par de Tucano terminam o turno sem comprar.
 
 - **Turnos devidos** (`owed`): normalmente 1. Comprar, Pular e Cafuné gastam 1; quando chega a 0, a
   vez passa pro próximo vivo com `owed = 1`.
 - Enquanto há **carta no ar** (§4.2), ninguém joga carta nova nem compra; só vale Nem vem!.
 - Enquanto há **escolha em aberto**, o jogo espera essa escolha (ou o prazo).
 - Cafuné sob ataque (`owed ≥ 2`): gasta 1 turno e você continua jogando os que faltam.
+- **Vez pulada** (par de Tucano; pedido do Rafa, 2026-10-21): `skips[p]` = quantas vezes de `p` ainda vão ser
+  puladas. Toda passagem de vez é por `passTo` (`turn.ts`); quando a vez chega em quem tem `skips`, um turno dele é
+  gasto sozinho (`skips` − 1, evento público `{ t: 'skipped', who }`): devendo 2 (Ataque), ele perde um e continua na
+  vez; devendo 1, a vez segue pro próximo vivo, que também pode ter vez pulada (puladas em cadeia). Sempre acaba (cada
+  volta gasta uma pulada): se todos os outros tinham, as puladas se gastam na ordem e a vez volta. Quem sai do jogo
+  perde as puladas; no fim de jogo elas zeram. Vez pulada não entra no histórico (saídas, Nem vem!, Desarmes).
 
 ### Cartas
 
@@ -74,11 +80,11 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): o escolhido te dá **3 cartas** (ver "Combos"; pedido do Rafa, 2026-10-20). | sim |
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
-| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça** | 4 de cada | Sozinhas não fazem nada; só em combo. | (combo sim) |
-| **Tatu Latidor** (id `latido`) | (fora do pacote: **2 na partida**) | Quem tiver o outro Latidor (na mão ou na frente) joga um Desarme ou explode; ninguém tem, o seu fica na sua frente. Ver "Cartas novas". | sim |
+| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano** | 4 de cada | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 (pedido do Rafa). | (combo sim) |
+| **Tatu Latidor** (id `latido`) | (fora do pacote: **2** com 2 jogadores, **3** com 3, depois **n − 1**; nenhum na mão inicial) | Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez; ninguém tem, o seu fica na sua frente. **Par de Latidores:** um adversário escolhido joga um Desarme ou explode. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
 | **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (é comprar) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
-| **Boto** (id `boto`) | 2 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
+| **Boto** (id `boto`) | 4 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
 
 **Ataque, exemplos:** Ana (normal, `owed = 1`) ataca → Bia joga 2. Bia, no 1º dos 2 turnos, ataca →
 Caio joga 4. Caio, no último turno devido (`owed = 1`), ataca → Duda joga 2.
@@ -90,27 +96,37 @@ comprada etc."
 
 - Estado `peeks: Record<jogador, id[]>` (a do topo primeiro). O Espiar põe `peeks[quem] = as 3 de cima` (troca a
   espiada anterior dele). A vez passar **não** apaga nada.
-- Vale sempre `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada, 1 a 3): cada espiada é o topo do monte,
-  na ordem. A simulação aleatória confere isso depois de cada passo. Espiada vazia não fica no estado.
+- Vale sempre `peeks[p] = draw.slice(-k).reverse()` (k = tamanho da espiada, 1 ou mais: passa de 3 quando quem mexe
+  no monte continua vendo o que sabe, abaixo): cada espiada é o topo do monte, na ordem. A simulação aleatória confere
+  isso depois de cada passo. Espiada vazia não fica no estado.
 - O que mexe no monte, um por um (`draw:` em `shared/src/games/kittens`):
   - **Comprar** (compra normal, inclusive comprar um Tatubum): a carta sai de todas as espiadas; o resto continua o topo.
   - **Par de Tamanduá**: as 2 compradas saem; o Tatubum comprado vai pro fundo (embaixo de tudo), então o resto continua
     o topo.
   - **Par de Quati, carta pro fundo**: tratada como compra, sai das espiadas (o resto vira o topo, na mesma ordem).
-    Ficando, nada muda.
+    Ficando (inclusive sem resposta), quem escolheu viu a de cima: sem espiada, ganha `[a de cima]`; com espiada, ela
+    já começa por essa carta e nada muda (pedido do Rafa, 2026-10-21).
   - **Par de Preguiça puxando do monte**: a carta sai das espiadas que a tinham (o resto do monte não muda de ordem).
   - **Tatu tirado do monte quando alguém sai** (`eliminate`): sai das espiadas que o tinham.
   - **Feitiço ficando com a de baixo**: sai das espiadas que a tinham (só se a espiada era o monte inteiro).
   - **Embaralhar**: apaga **todas**.
-  - **Desarme escondendo o tatu** (Cafuné, escolhido ou ao acaso): apaga **todas**, em qualquer posição (até no fundo):
-    apagar só às vezes contaria onde o tatu foi.
-  - **Feitiço pondo a de baixo no topo**: apaga **todas** (o topo mudou).
+  - **Desarme escondendo o tatu** (Cafuné): apaga as dos **outros**, em qualquer posição (até no fundo): apagar só às
+    vezes contaria onde o tatu foi. Quem escondeu, numa posição escolhida, sabe onde pôs (pedido do Rafa, 2026-10-21):
+    com espiada de k cartas e o tatu na posição `pos` (0 = topo, = cartas acima dele) com `pos ≤ k`, o tatu entra na
+    espiada no índice `pos`; com `pos > k`, a espiada fica igual (o topo não mudou). Sem espiada, **não** ganha uma, nem
+    com `pos = 0`: o olhinho (`peekers`) é público, e aparecer só nesse caso contaria pra mesa que o tatu está no topo.
+    No "aleatório" (escolhido, ou o automático do prazo vencido / de quem caiu) ele também não sabe: perde a espiada.
+  - **Feitiço pondo a de baixo no topo** (escolhido ou sem resposta): apaga as dos **outros** (o topo mudou); quem
+    escolheu viu a carta, e a espiada dele vira `[a carta, ...a espiada que ele tinha]` (ou só `[a carta]`; se a
+    espiada já era o monte todo, a carta só sobe pro começo) (pedido do Rafa, 2026-10-21: "o correto seria ver as 4
+    cartas reveladas, porque teoricamente tenho informação de todas").
   - **Distribuir / jogar de novo / lobby / fim de jogo**: sem espiadas.
 - Quem sai da partida (explodiu ou caiu de vez) perde a espiada.
 - Sala salva no meio da partida antes disso tem `peek: { who, cards } | null`: o `compat.ts` converte pra
   `peeks = { [who]: cards }` (ou `{}`), só com o que ainda é o topo e só se `who` está vivo, e tira `peek` do estado.
 - Visão: `peek` = a sua espiada (ou `null`); `peekers` = quem tem espiada agora (público, na ordem dos assentos). Na
-  mesa, a sua fica ao lado do monte (e encolhe conforme as cartas são compradas); nos assentos dos outros, um olhinho.
+  mesa, a sua fica ao lado do monte (e encolhe conforme as cartas são compradas; com mais de 3, as cartas se encavalam
+  no mesmo espaço das 3, no computador e no celular); nos assentos dos outros, um olhinho.
 
 ### Combos
 
@@ -126,11 +142,14 @@ Aceitam Nem vem! (que cancela o combo todo). Regras dos combos redesenhadas pelo
     vivo com carta na mão; `bad_target` sem isso) e não rouba Desarme: o alvo **escolhe 3 cartas** da mão pra te
     dar (a mão toda, se tiver menos), uma de cada vez, no mesmo prazo de 30 s; vencido, as que faltam vão ao acaso.
     Só vocês dois veem quais cartas foram. O Boto não completa (Favor não é bicho).
-- **5 diferentes** (5 nomes diferentes, quaisquer cartas): você escolhe (30 s) **duas cartas** do **descarte
+- **4 bichos diferentes** (pedido do Rafa, 2026-10-21; antes eram 5 nomes diferentes de quaisquer cartas): **só bichos**,
+  4 diferentes; o Boto conta como um bicho a mais (no máximo um). **Não aceita Nem vem!**: a carta fica 1,5 s no ar
+  (`KITTENS_UNSTOPPABLE_MS`, sem contagem, sem botão), o Nem vem! é recusado (`unstoppable`) e ela resolve. O id da
+  jogada continua `cinco`. Você escolhe (30 s) **duas cartas** do **descarte
   como estava antes desta jogada** (pedido do Rafa, 2026-10-20; uma de cada vez, no quadro do descarte). Descarte
   com 1 carta = só ela; vazio = nada. Prazo vencido: o que faltar sai ao acaso.
 - **Quadro do descarte:** um olho ao lado da pilha de descarte abre um quadro com todas as cartas do descarte
-  (qualquer um, a qualquer hora). A escolha dos 5 diferentes acontece nesse quadro.
+  (qualquer um, a qualquer hora). A escolha dos 4 bichos diferentes acontece nesse quadro.
 
 ### Par de cada bicho (pedido do Rafa, 2026-10-20)
 
@@ -138,16 +157,17 @@ Sozinho o bicho continua não fazendo nada.
 
 | Par de… | Pede | Efeito |
 |---|---|---|
-| Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) |
+| Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) **Depois que todos descartam, você pega uma das cartas descartadas nesse par** pra sua mão (30 s, no quadro do descarte; depois, ao acaso); se ninguém descartou nada, ou se você saiu do jogo antes, não pega (pedido do Rafa, 2026-10-20). |
 | Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
-| Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: nada. Todos veem de onde veio. |
+| Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: **pega do descarte** (sem contar as cartas do próprio par; pedido do Rafa, 2026-10-21). Nada em lugar nenhum: nada. **30% de chance de puxar dois** (`KITTENS_PREGUICA_DOUBLE`), cada um na mesma ordem (mão → monte → descarte); o segundo que não acha nada não aparece no diário. Todos veem de onde veio. |
+| Tucano (pedido do Rafa, 2026-10-21) | um adversário vivo (mesmo sem carta) | **A sua vez acaba sem você comprar**, como no Pular (sob ataque, gasta só um dos turnos devidos), e a **próxima vez do alvo é pulada**: ele não joga nem compra. Duas vezes no mesmo alvo pulam duas vezes dele. Todos veem quem vai ser pulado. Rafa: "par: você pula sua vez quando manda ele, não compra e nem joga, e escolhe outro jogador pra pular; ele também não joga nada nem compra, o turno dele é pulado." |
 | Capivara | — | **Todos os outros** vivos passam, ao mesmo tempo, uma carta **ao acaso** pro próximo na ordem da vez (o sentido em que a vez anda). **Você não passa**, mas recebe a do jogador antes de você. Quem está sem carta não passa. Cada um vê só o que deu e o que recebeu. |
 
 Regras de motor:
 - `playKindOf`: 2 iguais só vira `par` se for bicho; 3 iguais de qualquer tipo é `trio`.
-- `parsePlay`: alvo exigido só no Favor, no trio de Favor e no Mau-olhado (`bad_target`); pedido (`ask`) exigido
-  só no par de Preguiça e tem que ser um dos 5 bichos (`bad_ask`). Os outros trios ignoram alvo e pedido. (Quem está
+- `parsePlay`: alvo exigido só no Favor, no trio de Favor, no Mau-olhado e no par de Tucano (`bad_target`); pedido
+  (`ask`) exigido só no par de Preguiça e tem que ser um dos bichos (6, com o Tucano; `bad_ask`). Os outros trios ignoram alvo e pedido. (Quem está
   cego ouve `bad_combo` no lugar desses: ver "Jogar às cegas".)
 - Favor e trio de Favor: a escolha `favor` tem `left` (quantas cartas ainda dar: 1 no Favor sozinho, `min(3, mão do
   alvo)` no trio). Cada `choose { card }` do alvo passa uma carta (evento `gave`, só os dois veem) e o `left` cai; em
@@ -156,7 +176,13 @@ Regras de motor:
 - Par de Mico: escolha `{ kind: 'mico', by, waiting, deadline }` (`waiting` = quem ainda tem que descartar; pública).
   Cada um em `waiting` manda `choose { card }` com uma carta da própria mão; evento público `{ t: 'discarded', by, card }`.
   Prazo vencido: cada um que falta descarta uma ao acaso. Quem sai do jogo sai do `waiting`. `waiting` vazio fecha a escolha.
-- 5 diferentes: a escolha `cinco` ganha `left` (quantas ainda pegar, 2 ou 1); cada `choose { card }` pega uma e o `left` cai;
+  Pegada no fim (pedido do Rafa, 2026-10-20): a escolha guarda `discarded` (o que já foi descartado nela). Quando o
+  `waiting` esvazia (último descarte, prazo vencido ou o último da espera saiu do jogo), se `discarded` não está vazio
+  e `by` está vivo, abre a escolha dos 5 diferentes pra `by`: `{ kind: 'cinco', who: by, options: discarded, left: 1,
+  deadline: now + 30000, from: 'mico' }` (`from` só muda os textos da mesa). Pega com `choose { card }` (evento público
+  `picked`); prazo vencido, uma ao acaso. Senão a escolha fecha sem pegada. A vez continua com `by`. Escolha `mico`
+  salva sem `discarded` (antes da mudança) entra com `[]`.
+- 4 bichos diferentes: a escolha `cinco` ganha `left` (quantas ainda pegar, 2 ou 1); cada `choose { card }` pega uma e o `left` cai;
   em 0 (ou sem opções) a escolha fecha.
 - Escolha nova `{ kind: 'quati', who, deadline }`; na visão, só `who` recebe `card` = a carta de cima.
   Ação: `choose` com `keep: boolean`. Evento `{ t: 'delayed', by, moved }` (público).
@@ -164,8 +190,13 @@ Regras de motor:
   `{ t: 'buried', by, tatus }` (público) quando algum Tatubum vai pro fundo. As 2 compradas saem das
   espiadas (o resto continua à mostra; ver "Espiada à mostra").
 - Preguiça: evento `{ t: 'called', by, ask, from, card }` (público): `from` = quem deu, ou `null` quando
-  veio do monte; `card` = `null` quando ninguém tinha nem estava no monte. A carta tirada do monte sai das espiadas.
+  veio do monte ou do descarte (`pile: true`); `card` = `null` quando não estava em lugar nenhum. A carta tirada do
+  monte sai das espiadas. Puxando dois, dois eventos.
 - Capivara: um `{ t: 'passed', from, to, card }` por passe, com `seenBy` [from, to].
+- Tucano: o alvo tem que ser outro jogador vivo (qualquer tamanho de mão; Boto + Tucano e 2 Botos com `as: 'tucano'`
+  também pedem). Resolvendo: evento público `{ t: 'tucano', by, target }`, `skips[target]` + 1 e `spendTurn` (a pulada
+  entra antes: se o alvo é o próximo, já perde a vez agora). Cancelado (Nem vem! ímpar, quem jogou ou o alvo saiu): nada.
+  Sala salva antes do Tucano não tem `skips`: entra `{}` (`compat.ts`).
 - Trio: evento `{ t: 'grabbed', by, from, card }` (público; `from`/`card` = `null` quando ninguém tinha
   Desarme). O evento antigo `asked` (trio pelo nome) sai.
 
@@ -178,31 +209,45 @@ bicho.
 
 #### Tatu Latidor (`latido`; do "Barking Kitten"; arte: tatu numa casinha de cachorro latindo "AU AU")
 
-- **2 na partida**, qualquer que seja o número de jogadores (entram no baralho uma vez só, fora dos pacotes, e são
-  distribuídos como as outras cartas).
+- **1 por jogador** na partida (pedido do Rafa, 2026-10-21; antes eram sempre 2), fora dos pacotes, e **nenhum na
+  mão inicial**: vão todos pro monte (§3).
 - Jogado sozinho, sem alvo; vai pro ar e aceita Nem vem! (cancelado: vai pro descarte e nada acontece).
-- Ao resolver: se **outro jogador vivo** tem o outro Latidor **na mão ou na frente dele**, esse jogador tem que se
-  defender:
-  - **Tem Desarme:** abre a escolha **pública** `{ kind: 'latido', who, deadline }` (30 s). Ele joga o Desarme à mão
-    (`choose { card: <Desarme> }`): o Desarme vai pro descarte (evento `{ t: 'cafune', by }`, o mesmo do Tatubum) e o
-    Latidor dele (da frente ou da mão) também. O jogado já está no descarte: **os dois Latidores acabam no
-    descarte.** Prazo vencido (ou ele cai de vez): o Desarme vai sozinho. A vez continua com quem jogou o Latidor
-    (a carta não gasta turno).
+- Ao resolver (pedido do Rafa, 2026-10-21): **todo outro jogador vivo** que tem Latidor **na mão ou na frente dele**
+  tem que se defender, **um de cada vez, na ordem dos assentos a partir de quem jogou**. Cada um, na vez dele
+  (evento `{ t: 'barked', by, target }`):
+  - **Tem Desarme:** abre a escolha **pública** `{ kind: 'latido', who, by, deadline }` (30 s; `by` = quem jogou o
+    Latidor). Ele joga o Desarme à mão (`choose { card: <Desarme> }`): o Desarme vai pro descarte (evento
+    `{ t: 'cafune', by }`, o mesmo do Tatubum) e **todos os Latidores dele** (da frente e da mão) também.
+    **(decisão)** Um Desarme basta, mesmo com mais de um Latidor. O jogado já está no descarte. Prazo vencido (ou ele
+    cai de vez): o Desarme vai sozinho. Aí a escolha abre pro próximo da fila, com prazo novo.
   - **Não tem Desarme:** **explode na hora** (sem escolha), como quem compra um Tatubum sem Desarme: sai do jogo, a
-    mão vai pra fora e um Tatubum sai do monte pra manter `vivos − 1`. **(decisão)** O Latidor dele vai **pra fora
-    do jogo junto com a mão** (ou com o que estava na frente dele); só o jogado fica no descarte.
-- Ninguém mais tem o outro: o Latidor jogado sai do descarte e fica **na frente de quem jogou** (estado público
-  `front: Record<jogador, carta[]>`; chave ausente = nada). Quem tem um Latidor na frente é alvo quando o outro for
-  jogado.
-- **(decisão)** Quem jogou já tem o outro Latidor na frente (ou na mão): ele não conta como alvo de si mesmo; o
-  jogado também fica na frente dele e nada acontece.
+    mão vai pra fora e um Tatubum sai do monte pra manter `vivos − 1`. **(decisão)** Os Latidores dele vão **pra
+    fora do jogo junto com a mão** (e com o que estava na frente dele). A fila segue.
+  - **(decisão)** A fila não fica guardada: o próximo é sempre o primeiro vivo depois de quem jogou, na ordem dos
+    assentos, que ainda tem Latidor (quem se defendeu ou explodiu fica sem nenhum, e durante a defesa ninguém joga
+    nem compra). Por isso a escolha só guarda `by`.
+  - Se as explosões deixam 1 vivo, a partida acaba ali (quem jogou vence). Senão, depois do último a vez continua
+    com quem jogou o Latidor (a carta não gasta turno). O jogado fica no descarte.
+- Ninguém mais tem Latidor: o jogado sai do descarte e fica **na frente de quem jogou** (estado público
+  `front: Record<jogador, carta[]>`; chave ausente = nada). Quem tem um Latidor na frente também tem que se defender
+  quando outro for jogado.
+- **(decisão)** Quem jogou e tem outro Latidor na frente (ou na mão) não conta como alvo de si mesmo; se ninguém
+  mais tem, o jogado também fica na frente dele e nada acontece.
 - **(decisão)** A escolha `latido` só abre pra quem tem Desarme, então nunca trava; mesmo assim, se no prazo não
   houver Desarme na mão, ele explode.
 - Quem sai do jogo (explodiu ou caiu de vez) com Latidor na frente: o Latidor vai **pra fora do jogo** com a mão.
 - Quem está cego (Mau-olhado) e tem que se defender não sabe qual ficha é o Desarme: **(decisão)** qualquer ficha da
   própria mão vale, e o servidor joga o Desarme dele.
 - Eventos públicos: `{ t: 'barked', by, target }` (`target` = quem tem que se defender, ou `null` quando foi pra
-  frente de `by`), depois `{ t: 'cafune', by }` ou `{ t: 'boom', by }`.
+  frente de `by`), depois `{ t: 'cafune', by }` ou `{ t: 'boom', by }`; com vários se defendendo, um par desses
+  pra cada um, na ordem da fila.
+- Partida salva antes da fila (sem `by` na escolha `latido`): `compat.ts` completa com `by = current` (o Latidor só
+  sai na vez de quem joga, e a vez fica com ele).
+- **Par de Latidores** (pedido do Rafa, 2026-10-21): 2 Latidores juntos (o Boto não completa) pedem um adversário
+  vivo (`target`, com ou sem Latidor; `bad_target`). Ao resolver: evento `{ t: 'barked', by, target, pair: true }`;
+  com Desarme, abre a escolha pública `{ kind: 'latido', who: target, by, deadline, pair: true }` (30 s) e **só o
+  Desarme** vai pro descarte (os Latidores dele ficam onde estão; sem fila); sem Desarme (ou prazo vencido sem ele),
+  explode. Não gasta a vez. Pode levar Nem vem!.
 
 #### Mau-olhado (`olhado`; do "Curse of the Cat Butt"; arte: tatu botando mau-olhado)
 
@@ -218,7 +263,7 @@ bicho.
   dá pra deduzir, e tudo bem (é o que ele saberia na mesa de verdade, e não ajuda a achar as cartas de antes do
   olhado, que foram embaralhadas):
   - a última ficha é a carta que acabou de chegar quando ele mesmo pediu ou escolheu: **par de Preguiça** (o bicho
-    pedido, se veio), **trio** (um Desarme, se alguém tinha; o `grabbed` é público), **5 diferentes** (a carta que
+    pedido, se veio), **trio** (um Desarme, se alguém tinha; o `grabbed` é público), **4 bichos diferentes** (a carta que
     ele pegou do descarte, que é público);
   - o diário mostra o que **saiu** da mão dele (a carta já não está lá, então não é apagada): **Capivara** (o que
     ele passou ao acaso, só pra ele e pra quem recebeu), **Favor** (o que deu), **par de Mico** e Desarme (público).
@@ -251,7 +296,7 @@ bicho.
   como antes; com ela, tem que ser um Nem vem! da mão, senão `no_nope`/`not_in_hand`). O cego **tem que** mandar
   uma ficha; se não for Nem vem!, `no_nope`. **(decisão)** A recusa ensina ao cego que aquela ficha não era o que
   ele queria (como no par/trio às cegas), o que é aceitável: errar não muda nada no jogo.
-- **Escolhas que não usam a mão** (onde esconder o tatu, 5 diferentes, Quati, Feitiço) funcionam normal; no 5
+- **Escolhas que não usam a mão** (onde esconder o tatu, 4 bichos diferentes, Quati, Feitiço) funcionam normal; no 4
   diferentes ele escolhe pelo id do descarte (que é público).
 - **Voltar a ver:** quando ele **compra** — compra normal (inclusive um Tatubum: vê a mão pra jogar o Desarme), as
   2 do par de Tamanduá, ou ficar com a carta do Feitiço. Evento público `{ t: 'cured', by }` antes do `draw`. Mandar
@@ -280,16 +325,16 @@ bicho.
 
 - 2 por pacote. Sozinho não faz nada; com carta de ação não forma par (`bad_combo`).
 - **Par:** Boto + bicho X = par de X (o efeito é o do X). Boto + Boto = par do bicho declarado no campo novo
-  **`as`** da jogada (um dos 5 bichos; faltando ou inválido → erro novo **`bad_as`**, "Escolha qual bicho o Boto
+  **`as`** da jogada (um dos bichos, o Tucano incluído desde 2026-10-21; faltando ou inválido → erro novo **`bad_as`**, "Escolha qual bicho o Boto
   vira."). Par de Preguiça com Boto continua pedindo `ask`.
 - **Trio:** 3 iguais de qualquer tipo, como antes; o Boto completa **bichos** iguais (Capivara + Capivara + Boto,
   Boto + Boto + Mico); 3 Botos também é trio. Com carta que não é bicho (Ataque + Ataque + Boto) não vale.
-- **5 diferentes:** o Boto conta como o próprio nome (Boto + 4 bichos diferentes vale; 2 Botos repetem o nome).
-- **(decisão)** O pedido da Preguiça (`ask`) continua sendo um dos 5 bichos (Boto não), e um Boto na mão de alguém
+- **4 bichos diferentes:** o Boto conta como um bicho a mais (Boto + 3 bichos diferentes vale; 2 Botos repetem o nome).
+- **(decisão)** O pedido da Preguiça (`ask`) continua sendo um dos bichos (Boto não; o Tucano pode), e um Boto na mão de alguém
   **não conta** como o bicho pedido.
 - `KittensPlay` ganhou `as: KittensCardKind | null`: no par, o bicho que o par vale (sempre, com ou sem Boto); no
   trio, o tipo das iguais (`boto` em 3 Botos); `null` no resto. O evento `play` também leva `as`, pra a tela mostrar
-  "par de Quati (com Boto)". `KITTENS_BICHOS` continua sendo os 5 bichos (o Boto é `KITTENS_WILD`).
+  "par de Quati (com Boto)". `KITTENS_BICHOS` continua sendo os bichos (6 desde o Tucano; o Boto é `KITTENS_WILD`).
 
 #### Motor e segredo
 
@@ -314,6 +359,10 @@ bicho.
   cobertura joga as próprias partidas (não depende da ordem dos testes) e exige, além das cartas novas, ficha com
   outro nome, cego se defendendo do Latidor e Feitiço sem resposta. Rodada pesada (SEEDS = 225: 900 partidas
   normais + 900 arranjadas) passou.
+  Com a fila do Latidor (2026-10-21) ela também confere que quem tem a escolha `latido` está vivo, não é quem jogou e
+  tem Latidor e Desarme, e que quando a fila acaba (partida seguindo) nenhum vivo além de quem jogou tem Latidor; e
+  exige ver a escolha passando de um pro outro e uma explosão no meio da fila. Os jogadores ao acaso com espiada
+  jogam o Feitiço mais vezes (a espiada com mais de 3 cartas ficou rara com o baralho novo).
 
 ### Fim
 
@@ -338,20 +387,23 @@ O monte nunca acaba enquanto há 2+ vivos, porque sempre tem `vivos − 1 ≥ 1`
 
 ## 3. Baralho
 
-Um **pacote** tem **52 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 20
-bichos (5 tipos × 4) e, desde 2026-10-20, 2 Mau-olhado, 2 Feitiço e 2 Boto. Os **2 Tatus Latidores** entram
-**uma vez só por partida**, fora dos pacotes (como no original, que tem só 2), qualquer que seja o número de
-jogadores.
+Um **pacote** tem **58 cartas**: 5 Nem vem!, 4 Ataque, 4 Pular, 4 Favor, 4 Embaralhar, 5 Espiar, 24
+bichos (6 tipos × 4; o Tucano entrou em 2026-10-21, pedido do Rafa) e, desde 2026-10-20, 2 Mau-olhado, 2 Feitiço e
+4 Botos (eram 2 até 2026-10-21). Os **Tatus Latidores** ficam fora dos pacotes: **2 com 2 jogadores, 3 com 3 e n − 1 a partir de 4** (pedido do
+Rafa, 2026-10-21; antes eram sempre 2), e **nenhum vem na mão inicial**: a mão (1 Desarme + 7) sai só dos pacotes, e os Latidores vão pro monte
+junto com o resto dos pacotes, os Desarmes extras e os Tatubuns, tudo embaralhado (`kittensLatidos(n)` = n até 3, n − 1 depois).
 
-| Jogadores | Pacotes | Cartas no baralho antes de distribuir (pacotes + 2 Latidores) | Monte depois de distribuir | Cafunés | Tatubuns |
-|---|---|---|---|---|---|
-| 2 | 1 | 52 + 2 = 54 | 54 − 14 + 2 + 1 = 43 | n + 2 | n − 1 |
-| 3 | 1 | 54 | 54 − 21 + 2 + 2 = 37 | n + 2 | n − 1 |
-| 4 | 1 | 54 | 54 − 28 + 2 + 3 = 31 | n + 2 | n − 1 |
-| 5 | 1 | 54 | 54 − 35 + 2 + 4 = 25 | n + 2 | n − 1 |
-| 6 | 2 | 104 + 2 = 106 | 106 − 42 + 2 + 5 = 71 | n + 2 | n − 1 |
-| 7 | 2 | 106 | 106 − 49 + 2 + 6 = 65 | n + 2 | n − 1 |
-| 8 | 2 | 106 | 106 − 56 + 2 + 7 = 59 | n + 2 | n − 1 |
+Monte = pacotes × 58 − 7n + Latidores + Desarmes extras + (n − 1) Tatubuns.
+
+| Jogadores | Pacotes | Cartas dos pacotes | Latidores | Monte depois de distribuir | Desarmes | Tatubuns |
+|---|---|---|---|---|---|---|
+| 2 | 1 | 58 | 2 | 58 − 14 + 2 + 2 + 1 = 49 | n + 2 | n − 1 |
+| 3 | 1 | 58 | 3 | 58 − 21 + 3 + 2 + 2 = 44 | n + 2 | n − 1 |
+| 4 | 1 | 58 | 3 | 58 − 28 + 3 + 2 + 3 = 38 | n + 2 | n − 1 |
+| 5 | 1 | 58 | 4 | 58 − 35 + 4 + 1 + 4 = 32 | n + 1 | n − 1 |
+| 6 | 2 | 116 | 5 | 116 − 42 + 5 + 1 + 5 = 85 | n + 1 | n − 1 |
+| 7 | 2 | 116 | 6 | 116 − 49 + 6 + 1 + 6 = 80 | n + 1 | n − 1 |
+| 8 | 2 | 116 | 7 | 116 − 56 + 7 + 1 + 7 = 75 | n + 1 | n − 1 |
 
 Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Antes das cartas novas, com 2
 a 5 o baralho era o do jogo original (46).
@@ -365,7 +417,8 @@ a 5 o baralho era o do jogo original (46).
   `boto`), nomes em PT-BR, quem aceita Nem vem! (`KITTENS_ACTION_KINDS`, com as 3 cartas de ação novas), os 5
   bichos (`KITTENS_BICHOS`, sem o Boto) e o coringa (`KITTENS_WILD`), e as fichas do Mau-olhado (`?i`). Cada carta
   física tem id próprio `<tipo>-<n>` (ex.: `ataque-3`) pra animar.
-- `deck.ts`: `kittensBaseDeck(n)` e `kittensDeal(...)` (§3). Os números dos Cafunés são sorteados, pra
+- `deck.ts`: `kittensPackCards(n)` (os pacotes, de onde sai a mão), `kittensLatidos(n)`/`kittensLatidoCards(n)`,
+  `kittensBaseDeck(n)` (pacotes + Latidores) e `kittensDeal(...)` (§3). Os números dos Cafunés são sorteados, pra
   um Cafuné roubado não entregar de quem era.
 - `types.ts`: fases `lobby → playing → gameover`. Estado: `players` (ordem dos assentos), `alive`,
   `hands`, `draw` (monte, topo no fim), `discard`, `out` (fora do jogo), `front` (cartas na frente: Tatu
@@ -374,7 +427,8 @@ a 5 o baralho era o do jogo original (46).
   - `choice`: `{ kind: 'tatu' | 'cafune' | 'favor' | 'cinco' | 'mico' | 'quati' | 'latido' | 'feitico', who, deadline, ... }`
     (o Mico tem `by` e `waiting` no lugar de `who`; o par de Preguiça não precisa de escolha: o bicho vai junto da jogada).
   - `peeks`: `{ [jogador]: cards }`, a espiada de cada um, que fica à mostra entre os turnos; carta comprada ou tirada
-    do monte sai dela, e o monte mudar de ordem perto do topo apaga todas (§2 "Espiada à mostra").
+    do monte sai dela, e o monte mudar de ordem perto do topo apaga todas, menos a de quem mexeu sabendo o que fez
+    (§2 "Espiada à mostra").
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
 - Ações (`schema.ts`, zod): `start`, `play { cards: id[], target?, ask?, as? }`, `nope { card? }`, `draw`,
   `choose { … }` (posição do tatu, carta do Favor/Mico/Desarme, carta do descarte, `keep` do Quati/Feitiço),
@@ -393,8 +447,30 @@ a 5 o baralho era o do jogo original (46).
 1. Uma jogada que aceita Nem vem! entra em `pending` com `resolvesAt = ctx.now + 5000`.
 2. `nope` de qualquer vivo com Nem vem! na mão → a carta sai da mão, entra em `pending.nopes`, e
    `resolvesAt = ctx.now + 5000` de novo.
+   - **Nem vem! atrasado (pedido do Rafa, 2026-10-20).** Antes, dois Nem vem! quase juntos viravam Nem vem! em
+     cima de Nem vem! (o segundo anulava o primeiro sem querer). Agora o `nope` leva o que o jogador viu ao clicar:
+     `at` = quantos Nem vem! já havia na carta no ar (`pending.nopes.length`) e `on` = a primeira carta da jogada no
+     ar (`pending.play.cards[0]`; os ids de carta são únicos, então isso identifica a jogada sem mudar o estado). Vale
+     o que chegou primeiro; se `at` não bate, o servidor recusa com `nope_late` ("Alguém deu Nem vem! antes de você:
+     sua carta voltou pra mão.") e nada muda: a carta fica na mão e a janela é a que o primeiro já reiniciou, então
+     ele tem 5 s pra decidir de novo (agora vendo o Nem vem! do outro, com `at` novo). Se `on` não bate (resolveu e
+     outra carta subiu com o mesmo número de Nem vem!), recusa com `nope_stale`. **(decisão)** `on` em vez de um
+     número de sequência no `pending`: não precisa de compatibilidade com sala salva. `at`/`on` são opcionais: sem
+     eles (site antigo em cache) vale como antes. Mesa (botão, tecla N, arrastar o Nem vem! ou a ficha do cego pra
+     mesa) e bots mandam os dois.
+   - **Espera de 2 s entre um Nem vem! e outro (pedido do Rafa, 2026-10-21).** Mesmo com `at`/`on`, ainda dava pra
+     usar dois Nem vem! por engano (o segundo clique chegava logo depois de o primeiro aparecer). Agora, depois de um
+     Nem vem! aceito, qualquer outro na mesma carta no ar é recusado com `nope_cooldown` ("Espere: acabaram de dar
+     Nem vem! (2 s).") até passarem `KITTENS_NOPE_COOLDOWN_MS` = 2000 ms desse Nem vem!; nada muda (a carta fica na
+     mão, o prazo não mexe). O primeiro Nem vem! de uma jogada não espera. A espera conta sempre do último Nem vem!.
+     Ordem das recusas: `nope_stale` e `nope_late` primeiro (mais específicos), depois `nope_cooldown`.
+     **(decisão)** Sem estado novo: a hora do último Nem vem! é `pending.resolvesAt - KITTENS_NOPE_MS` (só o `nope`
+     mexe no `resolvesAt` depois da jogada), então salas no ar continuam valendo. A mesa (computador e celular) apaga
+     o botão NEM VEM! mostrando quanto falta ("NEM VEM! 2s", "1s", pela hora do servidor); a tecla N e arrastar o
+     Nem vem! (ou a ficha do cego) pra mesa só mostram o aviso "Espere…"; a barrinha continua correndo. Os bots não
+     decidem durante a espera (nem gastam a decisão daquele número de Nem vem!) e voltam a olhar quando ela acaba.
 3. O alarme da sala chama `onPresenceChange` com `ctx.now ≥ resolvesAt` → `resolve.ts` aplica.
-4. Se o efeito pede escolha (Favor, 5 diferentes), abre `choice` com `deadline = now + 30000`.
+4. Se o efeito pede escolha (Favor, 4 bichos diferentes), abre `choice` com `deadline = now + 30000`.
 5. Comprar, Cafuné e explodir **não** passam pela pilha: acontecem na hora.
 
 A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o `now` na mensagem
@@ -461,9 +537,11 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
   arrastar Favor/par de Mico até um adversário já joga nele; arrastar Nem vem! pra mesa com carta no ar dá
   Nem vem!; no Favor que você deve, arrastar a carta pra mesa entrega.
 - Clicar seleciona (a carta sobe); duplo clique joga uma carta sozinha; o botão "JOGAR …" também joga.
-- Favor e par de Mico sem alvo pedem o alvo: os adversários válidos ganham contorno e você clica num deles.
-- Selecionar 2, 3 ou 5 cartas que formam combo mostra o botão "jogar par / trio / 5". No par de
-  Preguiça, aparece a lista dos 5 bichos pra pedir.
+- Favor, Mau-olhado e par de Tucano pedem o alvo (clicar no assento ou arrastar as cartas pra ele): os adversários válidos ganham contorno e você clica num deles.
+- Selecionar 2, 3 ou 4 cartas que formam combo mostra o botão "jogar par / trio / 4 bichos". No par de
+  Preguiça, aparece a lista dos 6 bichos pra pedir.
+- Quem tem vez pulada (Tucano) ganha o selo "PULA" no assento (×2 se tiver duas); o Tucano voa até o alvo e, quando a
+  vez dele é pulada, o assento pisca e o diário diz "X teve a vez pulada".
 - Botão **"comprar"** sempre à vista na sua vez.
 - Selo no topo: "vez da Ana · 2 turnos" quando há ataque acumulado.
 
@@ -484,7 +562,9 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
   Favor, "DÊ 3 CARTAS PRA CAIO", depois "MAIS 2", "MAIS 1"; os outros leem "Bia vai dar 3 cartas pro Caio".
 - **Espiar:** painel só seu com as 3 do topo, na ordem, ao lado do monte; fica lá depois que a vez passa e perde as
   cartas que forem compradas (pedido do Rafa, 2026-10-20). Quem tem espiada ganha um olhinho no assento.
-- **5 diferentes:** painel com o descarte pra escolher.
+- **4 bichos diferentes:** painel com o descarte pra escolher.
+- **Pegada do par de Mico** (pedido do Rafa, 2026-10-20): o mesmo quadro abre pra quem jogou, "PEGUE UMA DAS
+  DESCARTADAS", só com as cartas descartadas no par acesas; os outros leem "Ana vai pegar uma das descartadas…".
 - **Explodiu:** quadro vermelho com **BUM!** pra todos por ~2 s; a cadeira vira fantasminha.
 - **Fim:** quadro "Ana sobreviveu!".
 
@@ -544,10 +624,9 @@ Tudo respeita `prefers-reduced-motion` (sem tremor de tela nem flash; só troca 
 
 ## 6. Arte das cartas
 
-- **18 ilustrações**: as 17 cartas + o verso (as 4 cartas novas de 2026-10-20 ainda sem arte: Tatu Latidor =
-  tatu numa casinha de cachorro latindo "AU AU"; Mau-olhado = tatu botando mau-olhado; Feitiço = tatu feiticeiro
-  com caldeirão puxando uma carta de baixo do monte; Boto = boto-cor-de-rosa. Até lá, sprite de reserva "?" e
-  textos provisórios na mesa). **Pixel art** (sprite de bicho/objeto com contorno
+- **19 ilustrações**: as 18 cartas + o verso, todas do Flow (Tatu Latidor = tatu numa casinha de cachorro latindo;
+  Mau-olhado = tatu botando mau-olhado; Feitiço = tatu feiticeiro com caldeirão; Boto = boto-cor-de-rosa; Tucano =
+  tucano-toco, fundo cobalto `#3b5bc4`). **Pixel art** (sprite de bicho/objeto com contorno
   escuro, poucas cores, fundo liso, como a referência do tatu), sem texto na imagem (o nome da carta
   é desenhado pelo site).
 - Geradas no **Google Flow** (mesmo processo do Diquisti, ver `CLAUDE.md`), prompts em
@@ -591,7 +670,7 @@ Tatubum.
 - **`shared/`** (TDD): baralho por número de jogadores (2, 5, 6, 8); distribuição; comprar,
   Cafuné (todas as posições) e explodir; Ataque acumulando (exemplos da §2) e Pular sob ataque;
   Nem vem! par/ímpar, cadeia reiniciando os 5 s, Nem vem! do próprio autor; cada combo (os 5 pares,
-  trio com e sem Desarme na mesa, 5 diferentes com descarte vazio); prazos das escolhas (acaso no
+  trio com e sem Desarme na mesa, 4 bichos diferentes com descarte vazio); prazos das escolhas (acaso no
   fim); segredos do `viewFor`; presença (queda < 30 s, eliminação, tatu removido, carta no ar de
   quem saiu); vitória por explosão e por queda; `nextDeadline`.
 - **`server/`**: `POST /rooms { game: 'kittens' }`, mão de cada um e erro em PT-BR. O alarme que

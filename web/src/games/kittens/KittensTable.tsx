@@ -1,5 +1,6 @@
 import type { KittensRoomView } from '@cartolina/shared';
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useLayout } from '../../lib/device';
 import { JOIN_ERRORS, type GameConn } from '../../net/connection';
 import { seedOf } from './KittensLobby';
 import { createMesa, type Mesa } from './mesa';
@@ -9,6 +10,7 @@ import './kittens.css';
  * A mesa do Tatubum na sala: o React só monta o <div> (tela toda, `.kittens`) e liga a "ilha" imperativa da mesa
  * (`mesa.ts`, porta do protótipo). Cada visão nova vai por `mesa.update()`; as jogadas saem por `conn.sendAction()`;
  * recusa do servidor vira o toast da mesa. O fundo do cerrado é da própria mesa (sem <Background> aqui).
+ * No celular em pé (`useLayout()` = 'phone') a mesa troca pro layout em coluna (`kt-phone`), sem ser recriada.
  */
 export function KittensTable({ view, conn, serverOffset }: { view: KittensRoomView; conn: GameConn; serverOffset: number }) {
   const root = useRef<HTMLDivElement>(null);
@@ -16,9 +18,12 @@ export function KittensTable({ view, conn, serverOffset }: { view: KittensRoomVi
   // A mesa vive enquanto a sala for a mesma: conexão e relógio entram por ref (sem recriar a mesa a cada render).
   const connRef = useRef(conn);
   const offsetRef = useRef(serverOffset);
+  const layout = useLayout();
+  const layoutRef = useRef(layout);
   useLayoutEffect(() => {
     connRef.current = conn;
     offsetRef.current = serverOffset;
+    layoutRef.current = layout;
   });
 
   const code = view.code;
@@ -27,6 +32,7 @@ export function KittensTable({ view, conn, serverOffset }: { view: KittensRoomVi
       send: (a) => connRef.current.sendAction(a),
       now: () => Date.now() + offsetRef.current,
       seed: seedOf(code),
+      layout: layoutRef.current,
     });
     mesa.current = m;
     return () => {
@@ -34,6 +40,11 @@ export function KittensTable({ view, conn, serverOffset }: { view: KittensRoomVi
       if (mesa.current === m) mesa.current = null;
     };
   }, [code]);
+
+  // Girou/redimensionou a tela: o layout troca na mesma mesa (sem perder a fila de efeitos).
+  useEffect(() => {
+    mesa.current?.setLayout(layout);
+  }, [layout]);
 
   // Roda depois do efeito de cima (mesma ordem da declaração): a mesa já existe na primeira visão.
   useEffect(() => {

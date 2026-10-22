@@ -118,7 +118,7 @@ describe('artes', () => {
       expect(s.h, k).toBeGreaterThan(0);
     }
     expect(Sprites.style).toBe(CARD_STYLE);
-    expect(CARD_STYLE.mico.hint).toBe('par: me dá uma');
+    expect(CARD_STYLE.mico.hint).toBe('par: todos descartam');
   });
 
   it('o tatu do assento muda com a cor do jogador', () => {

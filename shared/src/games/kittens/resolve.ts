@@ -1,28 +1,22 @@
 import type { GameContext } from '../../game';
 import { shuffle } from '../../rng';
-import { kittensKindOf } from './cards';
-import { latidoOf } from './choices';
+import { barkNext, nextBarked } from './choices';
 import { applyPair, applyTrio } from './combos';
 import { kittensIsFavorPlay } from './play';
-import { clearPeeks, eliminate, logged, nextAlive, passTo, spendTurn } from './turn';
+import { clearPeeks, logged, nextAlive, passTo, spendTurn } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 /**
- * Tatu Latidor `card` (já no descarte) jogado por `by`: outro vivo com o outro Latidor (na mão ou na frente) tem que se
- * defender com um Desarme (escolha `latido`); sem Desarme, explode na hora (mão e Latidor dele pra fora do jogo).
- * Ninguém tem: o Latidor sai do descarte e fica na frente de `by`.
+ * Tatu Latidor `card` (já no descarte) jogado por `by`: todo outro vivo com Latidor (na mão ou na frente) tem que se
+ * defender com um Desarme, um de cada vez (`barkNext`); sem Desarme, explode. Ninguém mais tem: o Latidor sai do
+ * descarte e fica na frente de `by`.
  */
 function bark(s: KittensState, by: string, card: string, deadline: number): KittensState {
-  const target = s.alive.find((p) => p !== by && latidoOf(s, p) !== undefined) ?? null;
-  if (target === null) {
+  if (nextBarked(s, by) === null) {
     const front = { ...s.front, [by]: [...(s.front[by] ?? []), card] };
     return logged({ ...s, front, discard: s.discard.filter((c) => c !== card) }, { t: 'barked', by, target: null });
   }
-  const next = logged(s, { t: 'barked', by, target });
-  if (!next.hands[target]!.some((c) => kittensKindOf(c) === 'cafune')) {
-    return eliminate(logged(next, { t: 'boom', by: target }), target);
-  }
-  return { ...next, choice: { kind: 'latido', who: target, deadline } };
+  return barkNext(s, by, deadline);
 }
 
 /** Mau-olhado: a mão de `target` é embaralhada e ele fica cego até comprar (já cego: embaralha de novo). */

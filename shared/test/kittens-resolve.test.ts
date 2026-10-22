@@ -35,8 +35,8 @@ describe('carta no ar', () => {
     expect(canceled).toMatchObject({ pending: null, current: 'p0', owed: 1 });
     expect(canceled.discard).toEqual(['ataque-0', 'nemvem-1']);
     expect(canceled.log.at(-1)!.ev).toEqual({ t: 'resolved', by: 'p0', play: 'ataque', canceled: true });
-    const two = act(one, 'p0', { type: 'nope' }, at(2000));
-    expect(settleKittens(two, at(7000))).toMatchObject({ current: 'p1', owed: 2 });
+    const two = act(one, 'p0', { type: 'nope' }, at(3000));
+    expect(settleKittens(two, at(8000))).toMatchObject({ current: 'p1', owed: 2 });
   });
 
   it('cada Nem vem! empurra o prazo', () => {

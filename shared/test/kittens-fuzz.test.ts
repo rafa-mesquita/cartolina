@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../src/game';
 import { KITTENS_BICHOS, kittensCardId, kittensKindOf } from '../src/games/kittens/cards';
-import { KITTENS_EXTRA_CAFUNES, KITTENS_LATIDOS, kittensBaseDeck } from '../src/games/kittens/deck';
+import { kittensBaseDeck, kittensExtraCafunes, kittensLatidos } from '../src/games/kittens/deck';
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import { settleKittens } from '../src/games/kittens/settle';
 import { tatusIn } from '../src/games/kittens/turn';
-import type { KittensAction, KittensState } from '../src/games/kittens/types';
+import { kittensNopeCooldownUntil, type KittensAction, type KittensPending, type KittensState } from '../src/games/kittens/types';
 import { kittensViewFor } from '../src/games/kittens/view';
 import { mulberry32, type Rng } from '../src/rng';
 import { T0, deepFreeze, everyCard, ids, must } from './kittens-helpers';
 
 /**
  * Simulação aleatória (mas determinística: tudo sai de `mulberry32`) de partidas inteiras. Jogadores ao acaso jogam
- * cartas e combos (inclusive Boto, Latidor, Mau-olhado e Feitiço), dão Nem vem!, compram e escolhem; quem está cego
+ * cartas e combos (inclusive Boto, Latidor, Mau-olhado, Feitiço e Tucano), dão Nem vem!, compram e escolhem; quem está cego
  * joga por ficha; o relógio anda (inclusive além dos prazos de 5 s e 30 s) e de vez em quando alguém cai de vez.
  * Depois de cada passo, as invariantes têm que valer.
  */
@@ -25,7 +25,7 @@ const COVERAGE_SEEDS = 40;
 
 /** Todas as cartas de uma partida com `n` jogadores, em ordem alfabética. */
 function fullDeck(n: number): string[] {
-  const cafunes = Array.from({ length: n + KITTENS_EXTRA_CAFUNES }, (_, i) => kittensCardId('cafune', i));
+  const cafunes = Array.from({ length: n + kittensExtraCafunes(n) }, (_, i) => kittensCardId('cafune', i));
   const tatus = Array.from({ length: n - 1 }, (_, i) => kittensCardId('tatubum', i));
   return [...kittensBaseDeck(n), ...cafunes, ...tatus].sort();
 }
@@ -48,10 +48,18 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
     if (front.some((c) => kittensKindOf(c) !== 'latido')) throw broken(`carta que não é Latidor na frente de ${p}: [${front}]`);
     if (front.length > 0 && s.phase === 'playing' && !s.alive.includes(p)) throw broken(`${p} saiu com [${front}] na frente`);
   }
+  // Histórico: cada um que saiu aparece uma vez nas saídas, nunca o vencedor nem quem está vivo; no fim, todos menos 1.
+  const exited = s.exits.map((e) => e.player);
+  if (new Set(exited).size !== exited.length || exited.some((p) => !s.players.includes(p) || s.alive.includes(p) || p === s.winner)) {
+    throw broken(`saídas inválidas: ${JSON.stringify(s.exits)} (vivos [${s.alive}], vencedor ${s.winner})`);
+  }
+  if (exited.length !== s.players.length - s.alive.length) throw broken(`saídas ${JSON.stringify(s.exits)} com vivos [${s.alive}]`);
+  if (s.phase === 'gameover' && exited.length !== s.players.length - 1) throw broken(`fim de jogo com saídas ${JSON.stringify(s.exits)}`);
   if (s.phase !== 'playing') {
     if (s.pending || s.choice) throw broken('fim de jogo com carta no ar ou escolha aberta');
     if (Object.keys(s.peeks).length > 0) throw broken(`fora de partida com espiadas: ${JSON.stringify(s.peeks)}`);
     if (s.blind.length > 0) throw broken('fim de jogo com gente cega');
+    if (Object.keys(s.skips).length > 0) throw broken(`fora de partida com vez pulada: ${JSON.stringify(s.skips)}`);
     return;
   }
   if (s.blind.some((p) => !s.alive.includes(p)) || new Set(s.blind).size !== s.blind.length) throw broken(`cegos inválidos: [${s.blind}]`);
@@ -61,12 +69,20 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   if (tatus !== s.alive.length - 1) throw broken(`${tatus} tatus no monte com ${s.alive.length} vivos`);
   if (s.current === null || !s.alive.includes(s.current)) throw broken(`vez de ${s.current}, que não está vivo`);
   if (s.owed < 1) throw broken(`vez com ${s.owed} turnos devidos`);
-  // Espiadas (pedido do Rafa, 2026-10-20): só de quem está vivo, de 1 a 3 cartas, e sempre o topo do monte, na ordem
-  // (a do topo primeiro). Se alguma regra deixasse a espiada desatualizada, ela teria que apagar ou cortar.
+  // Tucano (pedido do Rafa, 2026-10-21): vez pulada só de quem está vivo, sempre ≥ 1, e nunca de quem está na vez (a
+  // pulada se gasta quando a vez chega nele).
+  for (const [p, k] of Object.entries(s.skips)) {
+    if (!s.alive.includes(p) || !Number.isInteger(k) || k < 1 || p === s.current) {
+      throw broken(`vez pulada inválida: ${JSON.stringify(s.skips)} (vez de ${s.current})`);
+    }
+  }
+  // Espiadas (pedido do Rafa, 2026-10-20): só de quem está vivo, com 1 carta ou mais (quem mexe no monte sabendo o que
+  // fez pode passar de 3: pedido do Rafa, 2026-10-21), e sempre o topo do monte, na ordem (a do topo primeiro). Se alguma
+  // regra deixasse a espiada desatualizada, ela teria que apagar ou cortar.
   for (const [p, xs] of Object.entries(s.peeks)) {
     if (!s.alive.includes(p)) throw broken(`espiada de ${p}, que não está vivo`);
     const top = s.draw.slice(-xs.length).reverse();
-    if (xs.length < 1 || xs.length > 3 || xs.join() !== top.join()) {
+    if (xs.length < 1 || xs.length > s.draw.length || xs.join() !== top.join()) {
       throw broken(`espiada de ${p} [${xs}] não é o topo do monte [${top}]`);
     }
   }
@@ -136,6 +152,20 @@ function tokensToPlay(r: Rng, size: number): string[] {
   return tokens;
 }
 
+/**
+ * O que quem dá Nem vem! viu na carta no ar (`at`/`on`): quase sempre o que está lá; às vezes um número de Nem vem!
+ * velho (clicou junto com outro) ou outra carta (a de antes); às vezes nada (cliente antigo).
+ */
+function seenAir(r: Rng, pending: KittensPending): { at?: number; on?: string } {
+  const at = pending.nopes.length;
+  const on = pending.play.cards[0]!;
+  const roll = r();
+  if (roll < 0.7) return { at, on };
+  if (roll < 0.82) return { at: at > 0 && r() < 0.6 ? at - 1 : at + 1, on };
+  if (roll < 0.88) return { at, on: 'ataque-0' === on ? 'pular-0' : 'ataque-0' };
+  return {};
+}
+
 /** Uma ação ao acaso de `p` (pode ser inválida: aí é recusada e nada muda). */
 function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const hand = s.hands[p] ?? [];
@@ -158,14 +188,22 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
       if (blind) return { type: 'choose', card: own() };
       return { type: 'choose', card: pick(r, hand.filter((x) => kittensKindOf(x) === 'cafune')) ?? 'cafune-0' };
     }
-    if (c.kind === 'cafune') return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
+    if (c.kind === 'cafune') {
+      // Com espiada, às vezes esconde dentro dela (senão o tatu entrando na espiada de quem escondeu quase nunca aparece).
+      const k = Object.hasOwn(s.peeks, p) ? s.peeks[p]!.length : 0;
+      if (k > 0 && r() < 0.5) return { type: 'choose', position: Math.floor(r() * (k + 1)) };
+      return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
+    }
     if (c.kind === 'favor') return { type: 'choose', card: own() };
     if (c.kind === 'quati' || c.kind === 'feitico') return { type: 'choose', keep: r() < 0.5 };
     // 5 diferentes: uma das opções que ainda estão no descarte.
     return { type: 'choose', card: pick(r, c.options.filter((x) => s.discard.includes(x))) ?? 'ataque-0' };
   }
   const a = r();
-  if (s.pending && a < 0.5) return blind || r() < 0.2 ? { type: 'nope', card: own() } : { type: 'nope' };
+  if (s.pending && a < 0.5) {
+    const base: KittensAction = blind || r() < 0.2 ? { type: 'nope', card: own() } : { type: 'nope' };
+    return { ...base, ...seenAir(r, s.pending) };
+  }
   const extra = { target: pick(r, s.players), ask: pick(r, KITTENS_BICHOS), as: pick(r, KITTENS_BICHOS) };
   // Quem está cego joga às cegas de vez em quando; na maioria das vezes compra (e volta a ver).
   if (blind) return a < 0.3 && hand.length > 0 ? { type: 'play', cards: tokensToPlay(r, hand.length), ...extra } : { type: 'draw' };
@@ -178,6 +216,23 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
   const olhado = hand.find((x) => kittensKindOf(x) === 'olhado');
   const seeing = barking.filter((x) => !s.blind.includes(x));
   if (olhado && seeing.length > 0 && r() < 0.6) return { type: 'play', cards: [olhado], target: pick(r, seeing)! };
+  // Outro com espiada à mostra (público): espia também (senão duas espiadas ao mesmo tempo quase nunca aparecem).
+  const espiar = hand.find((x) => kittensKindOf(x) === 'espiar');
+  if (espiar && Object.keys(s.peeks).some((x) => x !== p) && r() < 0.7) return { type: 'play', cards: [espiar] };
+  // Com a própria espiada à mostra, às vezes joga o Feitiço (senão a espiada com mais de 3 cartas quase nunca aparece).
+  const feitico = hand.find((x) => kittensKindOf(x) === 'feitico');
+  if (feitico && Object.hasOwn(s.peeks, p) && r() < 0.5) return { type: 'play', cards: [feitico] };
+  // Alguém com vez pulada (público): manda o Tucano no vizinho dele (senão as puladas em cadeia quase nunca aparecem).
+  const tucanos = hand.filter((x) => kittensKindOf(x) === 'tucano' || kittensKindOf(x) === 'boto').slice(0, 2);
+  if (tucanos.length === 2 && tucanos.some((x) => kittensKindOf(x) === 'tucano') && r() < 0.7) {
+    const gap = (x: string, y: string) => Math.abs(s.players.indexOf(x) - s.players.indexOf(y));
+    const beside = (x: string, y: string) => gap(x, y) === 1 || gap(x, y) === s.players.length - 1;
+    const near = others.filter((y) => others.some((x) => x !== y && Object.hasOwn(s.skips, x) && beside(x, y)));
+    if (near.length > 0) return { type: 'play', cards: tucanos, target: pick(r, near)!, as: 'tucano' };
+  }
+  // Dois Latidores na mão: às vezes o par num adversário (que joga um Desarme ou explode).
+  const latidos = hand.filter((x) => kittensKindOf(x) === 'latido');
+  if (latidos.length >= 2 && r() < 0.6) return { type: 'play', cards: latidos.slice(0, 2), target: pick(r, others)! };
   const hold = latido !== undefined && seeing.length > 0 && r() < 0.9;
   const playable = hold ? hand.filter((x) => x !== latido) : hand;
   if (a < 0.45 && playable.length > 0) return { type: 'play', cards: cardsToPlay(r, playable), ...extra };
@@ -224,10 +279,37 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
   let s = must(applyKittensAction(initialKittensState(), 'p0', { type: 'start' }, ctx()));
   if (rig) s = rig(s);
   checkInvariants(s, deck, someViewer(s), where);
+  // Histórico: os contadores e as saídas batem com o diário (lido a cada passo, antes de ele perder as entradas velhas).
+  const logNopes = new Map<string, number>();
+  const logDefuses = new Map<string, number>();
+  const logExits: string[] = [];
+  let readUpTo = s.seq;
+  const bump = (m: Map<string, number>, p: string) => m.set(p, (m.get(p) ?? 0) + 1);
+  const checkHistory = () => {
+    for (const { n, ev } of s.log) {
+      if (n < readUpTo) continue;
+      if (ev.t === 'nope') bump(logNopes, ev.by);
+      if (ev.t === 'cafune') bump(logDefuses, ev.by);
+      if (ev.t === 'boom' || ev.t === 'left') logExits.push(`${ev.by}:${ev.t}`);
+    }
+    readUpTo = s.seq;
+    for (const p of players) {
+      const mine = s.stats[p] ?? { nopes: 0, defuses: 0 };
+      if (mine.nopes !== (logNopes.get(p) ?? 0) || mine.defuses !== (logDefuses.get(p) ?? 0)) {
+        throw new Error(`contadores de ${p} ${JSON.stringify(mine)} não batem com o diário\n  ${where()}`);
+      }
+    }
+    if (s.exits.map((e) => `${e.player}:${e.how}`).join() !== logExits.join()) {
+      throw new Error(`saídas ${JSON.stringify(s.exits)} não batem com o diário [${logExits}]\n  ${where()}`);
+    }
+    for (const e of s.exits) seen.add(`exit:${e.how}`);
+    if (Object.values(s.stats).some((x) => x.defuses > 0)) seen.add('stats:defuse');
+  };
   for (let step = 0; s.phase !== 'gameover'; step++) {
     if (step === STEP_CAP) return false;
     const roll = r();
     const c = s.choice;
+    const before = s;
     if (c?.kind === 'latido' && s.blind.includes(c.who)) seen.add('latido:blind');
     /** Prazo ou queda: o servidor resolve; o Feitiço sem resposta sempre manda a carta de baixo pro topo. */
     const settle = () => {
@@ -259,12 +341,35 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
       const p = r() < 0.9 ? (owner !== null && r() < 0.7 ? owner : pick(r, players)!) : 'espectador';
       const action = randomAction(r, s, p);
       if (r() < 0.3) now += Math.floor(r() * 3000);
+      // Nem vem! em horas ao acaso, inclusive bem na beira da espera de 2 s (pedido do Rafa, 2026-10-21).
+      if (action.type === 'nope' && r() < 0.5) now += pick(r, [0, 300, 1000, 1999, 2000, 2001, 2500])!;
+      const cooldownUntil = kittensNopeCooldownUntil(s.pending);
       const res = applyKittensAction(deepFreeze(s), p, action, ctx());
       const alias = cardsOf(action).some(isAlias);
       if (alias) seen.add('alias');
       if (res.ok && alias) throw new Error(`ficha com outro nome aceita: ${p} ${JSON.stringify(action)}\n  ${where()}`);
-      if (!res.ok) continue;
-      if (c?.kind === 'latido' && c.who === p && s.blind.includes(p) && res.state.choice === null) seen.add('latido:blind-defended');
+      if (!res.ok) {
+        if (res.error === 'nope_late' || res.error === 'nope_stale' || res.error === 'nope_cooldown') seen.add(`nope:${res.error}`);
+        if (res.error === 'nope_cooldown' && (cooldownUntil === null || now >= cooldownUntil)) {
+          throw new Error(`Nem vem! recusado fora da espera: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+        }
+        continue;
+      }
+      // Nem vem! aceito com o que o jogador viu: tem que ser o que estava na mesa (senão contaria em cima do outro).
+      if (action.type === 'nope' && action.at !== undefined && action.at !== s.pending?.nopes.length) {
+        throw new Error(`Nem vem! atrasado aceito: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+      }
+      if (action.type === 'nope' && action.on !== undefined && action.on !== s.pending?.play.cards[0]) {
+        throw new Error(`Nem vem! em outra carta aceito: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+      }
+      // Espera de 2 s: nenhum Nem vem! aceito antes de 2 s do último na mesma carta no ar.
+      if (action.type === 'nope' && cooldownUntil !== null) {
+        if (now < cooldownUntil) throw new Error(`Nem vem! aceito na espera: ${p} ${JSON.stringify(action)}\n  ${where()}`);
+        seen.add('nope:after-cooldown');
+      }
+      // Defendeu: a escolha fecha ou passa pro próximo da fila do Latidor.
+      const stillHis = res.state.choice?.kind === 'latido' && res.state.choice.who === p;
+      if (c?.kind === 'latido' && c.who === p && s.blind.includes(p) && !stillHis) seen.add('latido:blind-defended');
       trace.push(`${p} ${JSON.stringify(action)}`);
       s = res.state;
     }
@@ -275,12 +380,71 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     if (s.choice) seen.add(`choice:${s.choice.kind}`);
     // Trio de Favor: o alvo dá até 3 cartas, uma de cada vez (a escolha continua aberta entre uma e outra).
     if (air?.kind === 'trio' && air.as === 'favor') seen.add('trio:favor');
+    // Par de Tucano: quem tem a vez pulada perde o turno quando a vez chega nele (às vezes vários seguidos). Só quem tinha
+    // pulada (de antes ou do Tucano que resolveu agora) é pulado.
+    if (air?.kind === 'par' && air.as === 'tucano') seen.add('tucano:par');
+    const fresh = s.log.filter((e) => e.n >= before.seq).map((e) => e.ev);
+    const skipped = fresh.flatMap((ev) => (ev.t === 'skipped' ? [ev.who] : []));
+    const marked = new Map(Object.entries(before.skips));
+    for (const ev of fresh) if (ev.t === 'tucano') marked.set(ev.target, (marked.get(ev.target) ?? 0) + 1);
+    for (const who of skipped) {
+      const k = marked.get(who) ?? 0;
+      if (k < 1) throw new Error(`${who} foi pulado sem ter vez pulada
+  ${where()}`);
+      marked.set(who, k - 1);
+    }
+    if (new Set(skipped).size >= 2) seen.add('skipped:chain');
+    // A pulada gastou um dos turnos de Ataque e ele continua na vez.
+    if (s.current !== null && skipped.includes(s.current)) seen.add('skipped:owed');
     if (s.choice?.kind === 'favor' && c?.kind === 'favor' && s.choice.left < c.left) seen.add('favor:again');
+    // Tatu Latidor (pedido do Rafa, 2026-10-21): quem se defende tem Latidor e Desarme; a fila passa de um pro outro; e
+    // quando ela acaba (partida seguindo), nenhum vivo além de quem jogou tem Latidor.
+    const lc = s.choice?.kind === 'latido' ? s.choice : null;
+    if (lc) {
+      const has = (k: string) => [...s.hands[lc.who]!, ...(s.front[lc.who] ?? [])].some((x) => kittensKindOf(x) === k);
+      // No par de Latidores o alvo pode não ter Latidor.
+      if (!s.alive.includes(lc.who) || lc.who === lc.by || (!lc.pair && !has('latido')) || !has('cafune')) {
+        throw new Error(`defesa do Latidor inválida: ${JSON.stringify(lc)}\n  ${where()}`);
+      }
+      if (c?.kind === 'latido' && c.who !== lc.who) seen.add('latido:queue');
+    }
+    if (c?.kind === 'latido' && c.pair) seen.add('latido:pair');
+    if (c?.kind === 'latido' && !c.pair && !lc && s.phase === 'playing') {
+      const left = s.alive.filter((x) => x !== c.by && [...s.hands[x]!, ...(s.front[x] ?? [])].some((y) => kittensKindOf(y) === 'latido'));
+      if (left.length > 0) throw new Error(`fila do Latidor acabou com [${left}] ainda com Latidor\n  ${where()}`);
+    }
+    const barks = fresh.flatMap((ev) => (ev.t === 'barked' && ev.target !== null ? [ev.target] : []));
+    if (barks.length >= 2) seen.add('latido:boom-mid');
+    // Par de Mico (pedido do Rafa, 2026-10-20): quando todos descartam, quem jogou pega uma das descartadas.
+    if (s.choice?.kind === 'cinco' && s.choice.from === 'mico') {
+      seen.add('mico:pick');
+      const pick = s.choice;
+      if (pick.left !== 1 || pick.options.some((x) => !s.discard.includes(x)) || !s.alive.includes(pick.who)) {
+        throw new Error(`pegada do Mico inválida: ${JSON.stringify(pick)}\n  ${where()}`);
+      }
+    }
+    if (c?.kind === 'cinco' && c.from === 'mico' && s.choice !== c && s.log.some((e) => e.ev.t === 'picked' && e.ev.by === c.who)) {
+      seen.add('mico:picked');
+    }
     // Espiada que fica à mostra fora da vez de quem espiou, e mais de uma ao mesmo tempo.
     const peekers = Object.keys(s.peeks);
     if (peekers.some((p) => p !== s.current)) seen.add('peek:kept');
     if (peekers.length >= 2) seen.add('peek:many');
+    if (Object.values(s.peeks).some((xs) => xs.length > 3)) seen.add('peek:long');
+    // Quem mexe no monte sabendo o que fez continua vendo (pedido do Rafa, 2026-10-21): Feitiço pondo no topo e Desarme
+    // escondendo o tatu apagam a espiada de todos os outros; quem mexeu fica com a dele (o topo conferido acima).
+    if (c !== null && s.choice !== c && (c.kind === 'feitico' || c.kind === 'cafune')) {
+      const moved = c.kind === 'cafune' || s.log.some((e) => e.n >= before.seq && e.ev.t === 'conjured' && !e.ev.kept);
+      if (moved && peekers.some((p) => p !== c.who)) throw new Error(`espiada de outro sobrou: ${JSON.stringify(s.peeks)}\n  ${where()}`);
+      const mine = Object.hasOwn(s.peeks, c.who) ? s.peeks[c.who]! : [];
+      if (c.kind === 'feitico' && moved && mine[0] === before.draw[0]) seen.add('peek:feitico');
+      if (c.kind === 'cafune' && mine.includes(c.tatu)) seen.add('peek:desarme');
+    }
+    if (c?.kind === 'quati' && s.choice !== c && !Object.hasOwn(before.peeks, c.who) && Object.hasOwn(s.peeks, c.who)) {
+      seen.add('peek:quati');
+    }
     checkInvariants(s, deck, someViewer(s), where);
+    checkHistory();
   }
   return true;
 }
@@ -299,9 +463,12 @@ describe('simulação aleatória do Tatubum', () => {
   });
 
   it('as cartas novas aparecem nas simulações (com as próprias partidas, sem depender da ordem dos testes)', () => {
-    expect(KITTENS_LATIDOS).toBe(2);
+    expect([2, 3, 4, 5, 8].map(kittensLatidos)).toEqual([2, 3, 3, 4, 7]);
     const wanted = [
       'barked',
+      'latido:queue',
+      'latido:pair',
+      'latido:boom-mid',
       'cursed',
       'cured',
       'conjured',
@@ -321,6 +488,24 @@ describe('simulação aleatória do Tatubum', () => {
       'favor:again',
       'peek:kept',
       'peek:many',
+      'peek:long',
+      'peek:feitico',
+      'peek:desarme',
+      'peek:quati',
+      'nope:nope_late',
+      'nope:nope_stale',
+      'nope:nope_cooldown',
+      'nope:after-cooldown',
+      'mico:pick',
+      'mico:picked',
+      'exit:boom',
+      'exit:left',
+      'stats:defuse',
+      'tucano',
+      'tucano:par',
+      'skipped',
+      'skipped:chain',
+      'skipped:owed',
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

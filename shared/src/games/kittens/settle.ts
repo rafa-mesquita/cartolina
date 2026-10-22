@@ -1,9 +1,9 @@
 import type { GameContext } from '../../game';
-import { chooseAtRandom } from './choices';
+import { chooseAtRandom, leaveMicoWait } from './choices';
 import { kittensWithNewFields } from './compat';
 import { resolvePending } from './resolve';
 import { eliminate, logged } from './turn';
-import type { KittensState } from './types';
+import { KITTENS_CHOICE_MS, type KittensState } from './types';
 
 /**
  * `p` caiu e não voltou em 30 s: a escolha dele é feita ao acaso e ele sai como se tivesse explodido (a mão e o que
@@ -13,14 +13,14 @@ function leave(state: KittensState, p: string, ctx: GameContext): KittensState {
   let s = state;
   const c = s.choice;
   if (c?.kind === 'mico') {
-    // Quem estava na espera sai dela (a mão vai pra fora logo abaixo); quem jogou o par pode sair, os outros seguem.
-    const waiting = c.waiting.filter((x) => x !== p);
-    if (waiting.length !== c.waiting.length) s = { ...s, choice: waiting.length > 0 ? { ...c, waiting } : null };
-  } else if (c?.who === p) s = chooseAtRandom(s, ctx.rng);
+    // Quem estava na espera sai dela (a mão vai pra fora logo abaixo; se era o último, quem jogou pega uma das
+    // descartadas); quem jogou o par pode sair, os outros seguem (e aí ninguém pega nada no fim).
+    if (c.waiting.includes(p)) s = leaveMicoWait(s, c, p, null, ctx.now + KITTENS_CHOICE_MS);
+  } else if (c?.who === p) s = chooseAtRandom(s, ctx.rng, ctx.now);
   else if (c?.kind === 'favor' && c.to === p) s = { ...s, choice: null };
   // A escolha ao acaso pode ter feito ele explodir (Desarme que sumiu da mão): já saiu.
   if (s.phase !== 'playing' || !s.alive.includes(p)) return s;
-  return eliminate(logged(s, { t: 'left', by: p }), p);
+  return eliminate(logged(s, { t: 'left', by: p }), p, 'left');
 }
 
 /**
@@ -38,7 +38,7 @@ export function settleKittens(saved: KittensState, ctx: GameContext): KittensSta
     s = leave(s, p, ctx);
   }
   if (s.phase !== 'playing') return s;
-  if (s.choice && ctx.now >= s.choice.deadline) s = chooseAtRandom(s, ctx.rng);
+  if (s.choice && ctx.now >= s.choice.deadline) s = chooseAtRandom(s, ctx.rng, ctx.now);
   if (s.pending && ctx.now >= s.pending.resolvesAt) s = resolvePending(s, ctx);
   return s;
 }
