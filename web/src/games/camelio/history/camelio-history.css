@@ -1,0 +1,203 @@
+/* Histórico do Cama-Leão: o circo da mesa dentro da página do jogo. Tudo escopado em .cl-history, classes cl-hx-.
+ * Lona listrada com a barra de babados no topo, bandeirinhas nas seis cores das esferas, cartões creme com borda
+ * azul-marinho e os títulos da galera como ingressos. */
+.cl-history {
+  --cream: #f7efe0; --canvas: #f3dcd2; --paper: #fffaf0; --red: #c8372d; --red-dark: #9e2a22;
+  --navy: #1f2a4a; --navy-soft: #5a6382; --gold: #e8b23a; --gold-dark: #9a6d10; --line: #e2c9b8;
+  --logo: 'Rye', Georgia, serif; --ui: 'Fredoka', system-ui, sans-serif;
+  position: relative; box-sizing: border-box; width: min(760px, 100%); margin: 6px auto 0; padding: 96px 20px 24px;
+  color: var(--navy); font: 500 16px/1.35 var(--ui);
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 45%, transparent 60%, rgba(158, 42, 34, .12) 100%),
+    repeating-linear-gradient(90deg, var(--cream) 0 44px, var(--canvas) 44px 88px);
+  border: 3px solid var(--navy); border-radius: 20px; overflow: hidden;
+  box-shadow: 0 6px 0 rgba(31, 42, 74, .85), 0 14px 28px rgba(31, 42, 74, .18);
+}
+.cl-history *, .cl-history *::before, .cl-history *::after { box-sizing: border-box; }
+/* a lona: listras vermelho/creme e um babado de meias-luas (cada uma na cor da sua listra) */
+.cl-history::before {
+  content: ''; position: absolute; inset: 0 0 auto; height: 56px; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 0, var(--red) 0 15px, transparent 15.5px) -16px 40px / 64px 16px repeat-x,
+    radial-gradient(circle at 50% 0, var(--paper) 0 15px, transparent 15.5px) 16px 40px / 64px 16px repeat-x,
+    linear-gradient(rgba(31, 42, 74, .22), transparent 16px) 0 0 / 100% 40px no-repeat,
+    repeating-linear-gradient(90deg, var(--red) 0 32px, var(--paper) 32px 64px) 0 0 / 100% 40px no-repeat;
+  filter: drop-shadow(0 3px 0 rgba(31, 42, 74, .22));
+}
+/* bandeirinhas no barbante, nas cores das esferas (verde, amarelo, laranja, vermelho, roxo, azul) */
+.cl-history::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 62px; height: 20px; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='156' height='20'%3E%3Cpath d='M0 1.5h156' stroke='%231f2a4a' stroke-width='1.5' opacity='.6'/%3E%3Cpath d='M3 2h20l-10 16z' fill='%234caf50'/%3E%3Cpath d='M29 2h20l-10 16z' fill='%23f2c230'/%3E%3Cpath d='M55 2h20l-10 16z' fill='%23f08a24'/%3E%3Cpath d='M81 2h20l-10 16z' fill='%23e04848'/%3E%3Cpath d='M107 2h20l-10 16z' fill='%238e5cc7'/%3E%3Cpath d='M133 2h20l-10 16z' fill='%233a8fd8'/%3E%3C/svg%3E") 6px 0 / 156px 20px repeat-x;
+}
+
+.cl-history h2 {
+  margin: 0 0 16px; text-align: center; font: 400 30px/1.1 var(--logo); color: var(--red);
+  text-shadow: 2px 2px 0 var(--gold);
+}
+.cl-history h2::before, .cl-history h2::after {
+  content: '★'; content: '★' / ''; display: inline-block; margin: 0 10px; font: 400 16px/1 var(--ui);
+  color: var(--gold); text-shadow: none; vertical-align: 6px;
+}
+.cl-history h3 { margin: 0; }
+.cl-history p { margin: 0; }
+.cl-history button { font: inherit; cursor: pointer; }
+.cl-history > section + section { margin-top: 30px; }
+.cl-history .cl-hx-muted { color: var(--navy-soft); font-size: 14px; }
+
+.cl-history .cl-hx-face { display: block; flex: none; width: 28px; height: 28px; }
+.cl-history .cl-hx-face.cl-hx-big { width: 44px; height: 44px; }
+
+/* Botão: o mesmo do lobby (pílula vermelha com sombra) */
+.cl-history .cl-hx-btn {
+  border: 0; border-radius: 999px; padding: 12px 26px; background: var(--red); color: var(--cream);
+  font: 600 16px/1 var(--ui); box-shadow: 0 3px 0 var(--red-dark);
+}
+.cl-history .cl-hx-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.cl-history .cl-hx-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--red-dark); }
+.cl-history .cl-hx-btn:disabled { opacity: .6; cursor: default; }
+.cl-history button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.cl-history .cl-hx-more { display: flex; margin: 18px auto 0; }
+.cl-history .cl-hx-error { margin-top: 10px; text-align: center; font-weight: 600; color: var(--red-dark); }
+
+/* ---------- a galera: quatro ingressos e a lista de vitórias ---------- */
+.cl-history .cl-hx-titles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px;
+  /* a sombra vem do grupo: a máscara dos ingressos cortaria a sombra de cada um */
+  filter: drop-shadow(0 3px 0 rgba(31, 42, 74, .3));
+}
+/* ingresso: papel com dois recortes redondos nas laterais e a borda tracejada vermelha por dentro */
+.cl-history .cl-hx-ticket {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 18px 14px;
+  text-align: center; background: var(--paper);
+  -webkit-mask:
+    radial-gradient(circle 10px at 0 50%, transparent 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 10px at 100% 50%, transparent 97%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle 10px at 0 50%, transparent 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 10px at 100% 50%, transparent 97%, #000) right / 51% 100% no-repeat;
+}
+.cl-history .cl-hx-ticket::before {
+  content: ''; position: absolute; inset: 5px; border: 2px dashed var(--red); border-radius: 8px; pointer-events: none;
+}
+.cl-history .cl-hx-ticket h3 { font: 400 22px/1.1 var(--logo); color: var(--red); }
+.cl-history .cl-hx-about { font-size: 13px; line-height: 1.25; color: var(--navy-soft); }
+.cl-history .cl-hx-ticket .cl-hx-muted { margin-top: 4px; }
+.cl-history .cl-hx-holders { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 2px; }
+.cl-history .cl-hx-faces { display: flex; justify-content: center; }
+.cl-history .cl-hx-faces .cl-hx-face { width: 34px; height: 34px; }
+.cl-history .cl-hx-faces .cl-hx-face + .cl-hx-face { margin-left: -8px; }
+.cl-history .cl-hx-holders b { font-weight: 600; font-size: 16px; line-height: 1.2; overflow-wrap: anywhere; }
+.cl-history .cl-hx-count {
+  padding: 3px 10px; border-radius: 999px; background: var(--gold); color: var(--navy); font: 600 13px/1.2 var(--ui);
+}
+
+.cl-history .cl-hx-wins {
+  list-style: none; margin: 18px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;
+}
+/* bichinho à esquerda; nome em cima e as vitórias embaixo */
+.cl-history .cl-hx-wins li {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; padding: 6px 12px 6px 8px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 12px;
+}
+.cl-history .cl-hx-wins .cl-hx-face { grid-row: span 2; width: 32px; height: 32px; }
+.cl-history .cl-hx-wins b { font-weight: 600; line-height: 1.2; min-width: 0; overflow-wrap: anywhere; }
+.cl-history .cl-hx-wins small { font-size: 13px; line-height: 1.2; color: var(--navy-soft); }
+
+/* ---------- partidas ---------- */
+.cl-history .cl-hx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
+/* cartão creme com borda azul-marinho e uma faixinha listrada da lona no alto */
+.cl-history .cl-hx-match {
+  display: flex; flex-direction: column; gap: 10px; padding: 18px 16px 14px;
+  background: repeating-linear-gradient(90deg, var(--red) 0 12px, var(--paper) 12px 24px) 0 0 / 100% 6px no-repeat, var(--paper);
+  border: 2.5px solid var(--navy); border-radius: 16px; box-shadow: 0 4px 0 var(--navy);
+}
+.cl-history .cl-hx-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 13px; color: var(--navy-soft); }
+.cl-history .cl-hx-reason {
+  margin-left: auto; padding: 2px 10px; border: 1.5px solid var(--red); border-radius: 999px; color: var(--red-dark); font-weight: 600;
+}
+.cl-history .cl-hx-winner { display: flex; align-items: center; gap: 10px; font: 600 20px/1.2 var(--ui); overflow-wrap: anywhere; }
+
+.cl-history .cl-hx-score { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.cl-history .cl-hx-score li {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 38px; padding: 4px 10px;
+  border: 1.5px solid transparent; border-radius: 10px;
+}
+.cl-history .cl-hx-score li.cl-hx-won { background: rgba(232, 178, 58, .18); border-color: var(--gold); }
+.cl-history .cl-hx-name { font-weight: 600; font-size: 15px; min-width: 0; overflow-wrap: anywhere; }
+.cl-history .cl-hx-pts { font-size: 13px; color: var(--navy-soft); }
+.cl-history .cl-hx-won .cl-hx-pts { color: var(--gold-dark); font-weight: 600; }
+.cl-history .cl-hx-dots { display: inline-flex; flex-wrap: wrap; gap: 3px; }
+.cl-history .cl-hx-dot {
+  display: block; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--paper);
+  box-shadow: 0 0 0 1px rgba(31, 42, 74, .35);
+}
+.cl-history .cl-hx-spheres { font-size: 13px; color: var(--navy-soft); }
+
+.cl-history .cl-hx-toggle {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 999px;
+  border: 1.5px solid var(--red); background: none; color: var(--red); font: 600 14px/1.2 var(--ui);
+}
+.cl-history .cl-hx-toggle::after { content: '▾'; content: '▾' / ''; font-size: 12px; transition: transform .15s; }
+.cl-history .cl-hx-toggle:hover { background: rgba(200, 55, 45, .08); }
+.cl-history .cl-hx-toggle[aria-expanded='true'] { background: var(--red); color: var(--cream); }
+.cl-history .cl-hx-toggle[aria-expanded='true']::after { transform: rotate(180deg); }
+
+/* linha do tempo: barbante tracejado ligando os lances */
+.cl-history .cl-hx-timeline { position: relative; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cl-history .cl-hx-timeline::before {
+  content: ''; position: absolute; left: 17px; top: 10px; bottom: 10px; border-left: 2px dashed var(--line);
+}
+.cl-history .cl-hx-timeline li {
+  position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 0; border-radius: 10px;
+}
+.cl-history .cl-hx-n {
+  position: relative; flex: none; min-width: 36px; height: 22px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center;
+  font: 600 12px/1 var(--ui); background: var(--navy-soft); color: var(--cream);
+}
+.cl-history .cl-hx-scored { background: rgba(232, 178, 58, .16); }
+.cl-history .cl-hx-scored .cl-hx-n { background: var(--gold); color: var(--navy); }
+.cl-history .cl-hx-scored b { color: var(--gold-dark); }
+.cl-history .cl-hx-bust { background: rgba(200, 55, 45, .09); }
+.cl-history .cl-hx-bust .cl-hx-n { background: var(--red); }
+.cl-history .cl-hx-bust b { color: var(--red-dark); }
+.cl-history .cl-hx-lost { background: rgba(90, 99, 130, .09); }
+.cl-history .cl-hx-lost b { color: var(--navy-soft); }
+/* cartinha: a cor da carta e o número num círculo creme, como o verso da mesa */
+.cl-history .cl-hx-chip {
+  position: relative; flex: none; display: grid; place-items: center; width: 26px; height: 36px; border-radius: 5px;
+  border: 2px solid var(--paper); box-shadow: 0 0 0 1px rgba(31, 42, 74, .4); font-style: normal;
+}
+.cl-history .cl-hx-num {
+  display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--cream);
+  color: var(--navy); font: 600 11px/1 var(--ui); box-shadow: 0 0 0 1.5px var(--navy);
+}
+/* marquinha do tipo (a mesa mostra as duas cores; o registro só guarda a cor jogada, então o bicolor fica neutro) */
+.cl-history .cl-hx-kind {
+  position: absolute; right: -6px; top: -6px; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--paper);
+  box-shadow: 0 0 0 1px rgba(31, 42, 74, .4);
+}
+.cl-history .cl-hx-kind-bicolor { background: linear-gradient(135deg, var(--navy) 50%, var(--cream) 50%); }
+.cl-history .cl-hx-kind-multi { background: conic-gradient(#4caf50, #f2c230, #f08a24, #e04848, #8e5cc7, #3a8fd8, #4caf50); }
+.cl-history .cl-hx-what { display: flex; flex-direction: column; min-width: 0; }
+.cl-history .cl-hx-what span { font-size: 13px; color: var(--navy-soft); }
+.cl-history .cl-hx-what b { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+
+/* ---------- vazio e erro ---------- */
+.cl-history .cl-hx-empty, .cl-history .cl-hx-fail { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0 6px; text-align: center; }
+.cl-history .cl-hx-empty h2, .cl-history .cl-hx-fail h2 { margin: 0; font-size: 24px; }
+.cl-history .cl-hx-empty h2::before, .cl-history .cl-hx-empty h2::after,
+.cl-history .cl-hx-fail h2::before, .cl-history .cl-hx-fail h2::after { display: none; }
+.cl-history .cl-hx-empty p { color: var(--navy-soft); }
+
+@media (max-width: 520px) {
+  .cl-history { padding: 92px 12px 18px; border-radius: 16px; }
+  .cl-history h2 { font-size: 26px; }
+  .cl-history h2::before, .cl-history h2::after { margin: 0 6px; }
+  .cl-history .cl-hx-titles { gap: 10px; }
+  .cl-history .cl-hx-ticket { padding: 14px 14px 12px; }
+  .cl-history .cl-hx-ticket h3 { font-size: 19px; }
+  .cl-history .cl-hx-match { padding: 16px 12px 12px; }
+  .cl-history .cl-hx-reason { margin-left: 0; }
+  .cl-history .cl-hx-winner { font-size: 18px; }
+  .cl-history .cl-hx-wins { grid-template-columns: 1fr; }
+}

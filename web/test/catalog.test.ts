@@ -63,7 +63,7 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.players).toBe('2 a 6 pessoas');
     expect(entry?.playable).toBe(true);
     expect(entry?.mobile).toBe(false);
-    expect(entry?.hasHistory).toBe(false);
+    expect(entry?.hasHistory).toBe(true);
     expect(entry?.rules.length).toBeGreaterThan(0);
   });
 });
