@@ -12,9 +12,10 @@ describe('Cama-Leão no servidor', () => {
     expect(body).toMatchObject({ exists: true, game: 'camelio', phase: 'lobby' });
   });
 
-  it('o histórico do Cama-Leão ainda não existe (vem no Plano C4)', async () => {
+  it('GET /history/camelio responde (o Cama-Leão grava histórico)', async () => {
     const res = await SELF.fetch('https://x/history/camelio');
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { game: string }).game).toBe('camelio');
   });
 
   it('dois jogadores: começa, joga e a vez passa; o topo do monte só mostra o verso', async () => {

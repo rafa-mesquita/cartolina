@@ -1,4 +1,5 @@
 import { GAMES, isGameId, summarizeHistory, type GameId, type HistoryResponse, type HistoryResponseOf } from '@cartolina/shared';
+import { camelioHistoryPage } from './camelio-history-page';
 import { CODE_RE, randomCode } from './codes';
 import { coupHistoryPage } from './coup-history-page';
 import { dixitHistoryPage } from './dixit-history-page';
@@ -90,8 +91,7 @@ async function historyPageOf(env: Env, game: GameId, before: number | null): Pro
     case 'coup':
       return coupHistoryPage(env.DB, before);
     case 'camelio':
-      // sem `recordsHistory` a rota já respondeu 404; o histórico do Cama-Leão vem no C4
-      throw new Error('o Cama-Leão ainda não tem histórico');
+      return camelioHistoryPage(env.DB, before);
     default: {
       const _never: never = game;
       throw new Error(`jogo sem página de histórico: ${String(_never)}`);
