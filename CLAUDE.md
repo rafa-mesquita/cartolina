@@ -12,7 +12,7 @@ No ar: site https://rafa-mesquita.github.io/cartolina/ · servidor https://carto
 | **Retratim** (nosso Pictures) | `pictures` | jogável no computador; histórico/museu ainda não |
 | **Tatubum** (nosso Exploding Kittens) | `kittens` | jogável no computador, com bots também no site publicado; histórico e celular ainda não |
 | **Cúpi** (nosso Coup) | `coup` | jogável no computador e no celular; artes dos 5 personagens do Flow prontas (C3 feito) |
-| **Cama-Leão** (nosso Camelio) | `camelio` | jogável no computador; celular e histórico ainda não |
+| **Cama-Leão** (nosso Camelio) | `camelio` | jogável no computador, com histórico; celular ainda não |
 
 O id interno nunca muda: rotas, banco, registro e testes usam `ito`/`dixit`/`pictures`/`kittens`/`coup`/`camelio`. Só o que o jogador vê usa o nome novo.
 
