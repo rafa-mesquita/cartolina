@@ -1,3 +1,5 @@
+import { pendingCamelioRecord, type CamelioMatchRecord } from './games/camelio/record';
+import type { CamelioStats } from './games/camelio/summary';
 import { pendingCoupRecord, type CoupMatchRecord } from './games/coup/record';
 import { pendingDixitRecord, type DixitRoundRecord } from './games/dixit/record';
 import type { DixitHistoryStats, DixitMatch } from './games/dixit/summary';
@@ -98,6 +100,16 @@ export interface KittensHistoryResponse {
   nextBefore: number | null;
 }
 
+/** Resposta de `GET /history/camelio`: 20 partidas por página, da mais nova pra mais velha; estatísticas só na primeira. */
+export interface CamelioHistoryResponse {
+  game: 'camelio';
+  matches: CamelioMatchRecord[];
+  /** Só na primeira página (sem `before`); nas seguintes vem `null`. */
+  stats: CamelioStats | null;
+  /** Fim da última partida da página (exclusivo na próxima), ou null se acabou. */
+  nextBefore: number | null;
+}
+
 /** Resposta de `GET /history/:game`, por jogo (todo jogo do registro precisa estar aqui). */
 export interface HistoryResponses {
   ito: HistoryResponse;
@@ -106,8 +118,7 @@ export interface HistoryResponses {
   pictures: never;
   kittens: KittensHistoryResponse;
   coup: CoupHistoryResponse;
-  /** O Cama-Leão ainda não grava histórico (vem no C4): a rota responde 404 antes de chegar aqui. */
-  camelio: never;
+  camelio: CamelioHistoryResponse;
 }
 export type HistoryResponseOf<G extends GameId> = HistoryResponses[G];
 
@@ -204,7 +215,8 @@ export type PendingHistoryRecord =
   | { game: 'ito'; key: string; record: RoundRecord }
   | { game: 'dixit'; key: string; record: DixitRoundRecord }
   | { game: 'coup'; key: string; record: CoupMatchRecord }
-  | { game: 'kittens'; key: string; record: KittensMatchRecord };
+  | { game: 'kittens'; key: string; record: KittensMatchRecord }
+  | { game: 'camelio'; key: string; record: CamelioMatchRecord };
 
 /** Registro pendente da sala, se o jogo dela grava histórico (`GAMES[jogo].recordsHistory`) e há revelação ou partida nova. */
 export function pendingHistoryRecord(room: Room, now: number, id: string): PendingHistoryRecord | null {
@@ -228,8 +240,10 @@ export function pendingHistoryRecord(room: Room, now: number, id: string): Pendi
       const pending = pendingCoupRecord(room, now, id);
       return pending ? { game: 'coup', ...pending } : null;
     }
-    case 'camelio':
-      return null; // histórico do Cama-Leão vem no C4
+    case 'camelio': {
+      const pending = pendingCamelioRecord(room, now, id);
+      return pending ? { game: 'camelio', ...pending } : null;
+    }
     default: {
       const _never: never = room.gameId;
       return _never;

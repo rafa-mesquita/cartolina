@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { camelioMatchId, pendingCamelioRecord } from '../src/games/camelio/record';
 import type { CamelioPlay, CamelioState } from '../src/games/camelio/types';
+import { GAMES } from '../src/games/registry';
+import { pendingHistoryRecord } from '../src/history';
 import { PLAYER_COLORS } from '../src/players';
 import { createRoom, joinRoom, type Room } from '../src/room';
 import { C, playing } from './camelio-helpers';
@@ -106,5 +108,13 @@ describe('registro da partida do Cama-Leão', () => {
   it('jogador sem assento: não grava (defesa)', () => {
     const s = { ...over(), players: ['p0', 'p1', 'p9'] };
     expect(pendingCamelioRecord(roomWith(s), 1, 'x')).toBeNull();
+  });
+});
+
+describe('pendingHistoryRecord no Cama-Leão', () => {
+  it('o Cama-Leão grava histórico e o pendente vem marcado com o jogo', () => {
+    expect(GAMES.camelio.recordsHistory).toBe(true);
+    const got = pendingHistoryRecord(roomWith(over()), 9000, 'id-1');
+    expect(got).toMatchObject({ game: 'camelio', key: 'CAMA-500-2', record: { id: 'id-1', winners: [1] } });
   });
 });

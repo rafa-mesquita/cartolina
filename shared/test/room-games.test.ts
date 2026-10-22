@@ -52,7 +52,7 @@ describe('registro de jogos', () => {
     expect(isGameId('kittens')).toBe(true);
     expect(GAMES.coup).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: false, recordsHistory: true });
     expect(isGameId('coup')).toBe(true);
-    expect(GAMES.camelio).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: true, recordsHistory: false });
+    expect(GAMES.camelio).toMatchObject({ minPlayers: 2, maxPlayers: 6, liveCursors: true, recordsHistory: true });
     expect(isGameId('dixit')).toBe(true);
     expect(isGameId('pictures')).toBe(true);
     expect(isGameId('camelio')).toBe(true);

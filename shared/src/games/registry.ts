@@ -111,8 +111,8 @@ export const GAMES: Record<GameId, GameEntry> = {
     maxPlayers: CAMELIO_MAX_PLAYERS,
     // Tudo é aberto na mesa (só o topo do monte é segredo, e o cursor não entrega nada).
     liveCursors: true,
-    // O histórico do Cama-Leão vem no Plano C4.
-    recordsHistory: false,
+    // Cada partida terminada grava em `camelio_matches` (sem bot).
+    recordsHistory: true,
   }),
 };
 

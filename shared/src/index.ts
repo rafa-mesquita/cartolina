@@ -84,4 +84,6 @@ export {
 export { applyCamelioAction, camelioOnPresenceChange, camelioTarget, initialCamelioState } from './games/camelio/rules';
 export { camelio, camelioViewFor } from './games/camelio/view';
 export { camelioActionSchema } from './games/camelio/schema';
+export * from './games/camelio/record';
+export * from './games/camelio/summary';
 export * from './games/registry';
