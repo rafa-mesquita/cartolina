@@ -59,11 +59,15 @@ const OLDER: KittensMatchRecord = {
   perPlayer: perPlayer([ANA, BETO]),
 };
 
-const NO_STATS: KittensStats = { mostWins: [], firstOut: [], nopeKings: [] };
+const NO_STATS: KittensStats = { bestRate: [], mostWins: [], firstOut: [], nopeKings: [] };
 const STATS: KittensStats = {
+  bestRate: [
+    { ...ANA, count: 8, matches: 12, rate: 8 / 12 },
+    { ...BETO, count: 1, matches: 10, rate: 1 / 10 },
+  ],
   mostWins: [
-    { ...ANA, count: 2, matches: 3, rate: 2 / 3 },
-    { ...BETO, count: 1, matches: 4, rate: 1 / 4 },
+    { ...ANA, count: 8, matches: 12, rate: 8 / 12 },
+    { ...BETO, count: 1, matches: 10, rate: 1 / 10 },
   ],
   firstOut: [{ ...CAIO, count: 1, matches: 3, rate: 1 / 3 }],
   nopeKings: [{ ...BETO, count: 10, matches: 4, rate: 2.5 }],
@@ -126,17 +130,27 @@ describe('aba histórico do Tatubum', () => {
     expect(second!.getAttribute('aria-label')).toBe(`${dateText(AT_OLD)} · Ana venceu · jogaram Ana e Beto · saíram Beto (explodiu)`);
   });
 
-  it('estatísticas da galera: três quadros com o top 3; quadro vazio pede mais partidas', async () => {
+  it('estatísticas da galera: quatro quadros com o top 3; quadro vazio pede mais partidas', async () => {
     vi.mocked(api.getHistory).mockResolvedValue(response([NEWER], null, { ...STATS, firstOut: [] }));
     render(<KittensHistory />);
     const galera = (await screen.findByRole('heading', { name: 'a galera' })).closest('section')!;
     const board = (title: string) => within(galera).getByRole('region', { name: title });
-    const wins = board('quem mais vence');
-    expect([...wins.querySelectorAll('li b')].map((b) => b.textContent)).toEqual(['Ana', 'Beto']);
-    expect(within(wins).getByText('67% · 2 de 3 partidas')).toBeTruthy();
-    expect(within(wins).getByText('25% · 1 de 4 partidas')).toBeTruthy();
+    const rate = board('maior % de vitórias');
+    expect([...rate.querySelectorAll('li b')].map((b) => b.textContent)).toEqual(['Ana', 'Beto']);
+    expect(within(rate).getByText('67% · 8 de 12 partidas')).toBeTruthy();
+    expect(within(rate).getByText('10% · 1 de 10 partidas')).toBeTruthy();
+    const wins = board('mais vitórias');
+    expect(within(wins).getByText('8 vitórias em 12 partidas')).toBeTruthy();
+    expect(within(wins).getByText('1 vitória em 10 partidas')).toBeTruthy();
     expect(within(board('quem explode primeiro')).getByText('joguem mais umas partidas')).toBeTruthy();
     expect(within(board('rei do Nem vem!')).getByText('2,5 por partida · 10 em 4 partidas')).toBeTruthy();
+  });
+
+  it('maior % de vitórias vazio: diz que precisa de 10 partidas', async () => {
+    vi.mocked(api.getHistory).mockResolvedValue(response([NEWER], null, { ...STATS, bestRate: [] }));
+    render(<KittensHistory />);
+    const galera = (await screen.findByRole('heading', { name: 'a galera' })).closest('section')!;
+    expect(within(within(galera).getByRole('region', { name: 'maior % de vitórias' })).getByText('só entra quem tem 10 partidas ou mais')).toBeTruthy();
   });
 
   it('quem explode primeiro: "1 vez", "2 vezes"', async () => {

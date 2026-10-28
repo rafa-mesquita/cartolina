@@ -649,8 +649,9 @@ Tatubum.
 - **Aba "histórico"** (`#/kittens/historico`):
   1. **Partidas:** mais novas primeiro, 20 por página + "carregar mais"; data, vencedor com o bichinho, e
      a fila de quem explodiu, na ordem.
-  2. **Estatísticas da galera** (top 3 com bichinho), escolhidas pelo usuário: **quem mais vence**
-     (% de vitórias, mín. 3 partidas), **quem explode primeiro** (vezes que foi o 1º a sair, mín. 3
+  2. **Estatísticas da galera** (top 3 com bichinho), escolhidas pelo usuário: **maior % de vitórias**
+     (mín. 10 partidas) e **mais vitórias** (total, sem mínimo; as duas no lugar do antigo "quem mais vence",
+     pedido do Rafa, 2026-10-28), **quem explode primeiro** (vezes que foi o 1º a sair, mín. 3
      partidas) e **rei do Nem vem!** (média de Nem vem! por partida, mín. 3 partidas).
 - `GET /history/kittens` público, no-cache, mesmo limite por IP dos outros.
 
