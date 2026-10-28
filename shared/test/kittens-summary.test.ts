@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { KittensMatchRecord, KittensPerson } from '../src/games/kittens/record';
-import { KITTENS_STATS_MIN_MATCHES, KITTENS_TOP_PEOPLE, summarizeKittensHistory } from '../src/games/kittens/summary';
+import { KITTENS_RATE_MIN_MATCHES, KITTENS_STATS_MIN_MATCHES, KITTENS_TOP_PEOPLE, summarizeKittensHistory } from '../src/games/kittens/summary';
 import { PLAYER_COLORS } from '../src/players';
 
 const P = (name: string, i: number): KittensPerson => ({ name, color: PLAYER_COLORS[i]! });
@@ -34,36 +34,43 @@ function match(
 const times = (n: number, make: () => KittensMatchRecord) => Array.from({ length: n }, make);
 
 describe('estatísticas da galera do Tatubum', () => {
-  it('pontos de partida: top 3, mínimo de 3 partidas', () => {
+  it('pontos de partida: top 3, mínimo de 3 partidas (10 na % de vitórias)', () => {
     expect(KITTENS_TOP_PEOPLE).toBe(3);
     expect(KITTENS_STATS_MIN_MATCHES).toBe(3);
+    expect(KITTENS_RATE_MIN_MATCHES).toBe(10);
   });
 
   it('sem partidas: quadros vazios', () => {
-    expect(summarizeKittensHistory([])).toEqual({ mostWins: [], firstOut: [], nopeKings: [] });
+    expect(summarizeKittensHistory([])).toEqual({ bestRate: [], mostWins: [], firstOut: [], nopeKings: [] });
   });
 
-  it('quem tem menos de 3 partidas não entra em nenhum quadro', () => {
+  it('quem tem menos de 3 partidas só entra em "mais vitórias" (que não tem mínimo)', () => {
     const s = summarizeKittensHistory([match([ANA, BETO], ANA, [BETO], { Ana: 3 }), match([ANA, BETO], ANA, [BETO], { Ana: 1 })]);
-    expect(s).toEqual({ mostWins: [], firstOut: [], nopeKings: [] });
+    expect(s).toEqual({ bestRate: [], mostWins: [{ name: 'Ana', color: ANA.color, count: 2, matches: 2, rate: 1 }], firstOut: [], nopeKings: [] });
   });
 
-  it('quem mais vence: pela % de vitórias; quem não venceu nenhuma fica de fora', () => {
+  it('maior % de vitórias (só com 10 partidas ou mais) e mais vitórias no geral', () => {
     const ms = [
-      // Ana: 2 de 3; Beto: 1 de 4; Caio: 0 de 3; Duda: 1 de 1 (abaixo do mínimo).
-      match([ANA, BETO, CAIO], ANA, [CAIO, BETO]),
-      match([ANA, BETO, CAIO], ANA, [BETO, CAIO]),
-      match([ANA, BETO, CAIO], BETO, [ANA, CAIO]),
-      match([BETO, DUDA], DUDA, [BETO]),
+      ...times(6, () => match([ANA, BETO, DUDA], ANA, [BETO, DUDA])),
+      ...times(3, () => match([ANA, BETO, DUDA], BETO, [ANA, DUDA])),
+      match([ANA, BETO, DUDA], DUDA, [ANA, BETO]),
+      ...times(9, () => match([CAIO, ELI], CAIO, [ELI])),
     ];
+    // Ana 6 de 10, Beto 3 de 10, Duda 1 de 10; Caio 9 de 9 (fora da %: 9 partidas); Eli 0 de 9.
     const s = summarizeKittensHistory(ms);
-    expect(s.mostWins).toEqual([
-      { name: 'Ana', color: ANA.color, count: 2, matches: 3, rate: 2 / 3 },
-      { name: 'Beto', color: BETO.color, count: 1, matches: 4, rate: 1 / 4 },
+    expect(s.bestRate).toEqual([
+      { name: 'Ana', color: ANA.color, count: 6, matches: 10, rate: 0.6 },
+      { name: 'Beto', color: BETO.color, count: 3, matches: 10, rate: 0.3 },
+      { name: 'Duda', color: DUDA.color, count: 1, matches: 10, rate: 0.1 },
+    ]);
+    expect(s.mostWins.map((e) => [e.name, e.count, e.matches])).toEqual([
+      ['Caio', 9, 9],
+      ['Ana', 6, 10],
+      ['Beto', 3, 10],
     ]);
   });
 
-  it('quem mais vence: empate na % desempata por mais vitórias e depois pelo nome', () => {
+  it('mais vitórias: empate desempata pela % e depois pelo nome', () => {
     const ms = [
       ...times(3, () => match([ANA, BETO], ANA, [BETO])),
       ...times(3, () => match([ANA, BETO], BETO, [ANA])),
@@ -71,7 +78,7 @@ describe('estatísticas da galera do Tatubum', () => {
       ...times(3, () => match([CAIO, DUDA], DUDA, [CAIO])),
       ...times(2, () => match([ELI, ANA], ELI, [ANA])),
     ];
-    // Ana 3/8, Beto 3/6 = 50%, Caio 3/6, Duda 3/6, Eli 2/2 (fora: 2 partidas).
+    // Ana 3/8, Beto 3/6 = 50%, Caio 3/6, Duda 3/6, Eli 2/2 (menos vitórias).
     const s = summarizeKittensHistory(ms);
     expect(s.mostWins.map((e) => [e.name, e.count, e.matches])).toEqual([
       ['Beto', 3, 6],

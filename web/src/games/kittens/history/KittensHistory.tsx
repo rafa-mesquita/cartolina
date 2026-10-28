@@ -62,13 +62,23 @@ function MatchCard({ match: m }: { match: KittensMatchRecord }) {
   );
 }
 
-function Board({ title, rows, detail }: { title: string; rows: KittensStatEntry[]; detail: (e: KittensStatEntry) => string }) {
+function Board({
+  title,
+  rows,
+  detail,
+  empty = 'joguem mais umas partidas',
+}: {
+  title: string;
+  rows: KittensStatEntry[];
+  detail: (e: KittensStatEntry) => string;
+  empty?: string;
+}) {
   const titleId = useId();
   return (
     <section className="kt-hx-board" aria-labelledby={titleId}>
       <h3 id={titleId}>{title}</h3>
       {rows.length === 0 ? (
-        <p className="kt-hx-muted">joguem mais umas partidas</p>
+        <p className="kt-hx-muted">{empty}</p>
       ) : (
         <ol>
           {rows.map((r) => (
@@ -86,14 +96,24 @@ function Board({ title, rows, detail }: { title: string; rows: KittensStatEntry[
   );
 }
 
-/** Três quadros com o top 3 de cada estatística (abaixo do mínimo de partidas, o quadro pede mais partidas). */
+/** Um quadro com o top 3 de cada estatística (abaixo do mínimo de partidas, o quadro pede mais partidas). */
 function GaleraBoards({ stats }: { stats: KittensStats }) {
   const titleId = useId();
   return (
     <section className="kt-hx-galera" aria-labelledby={titleId}>
       <h2 id={titleId}>a galera</h2>
       <div className="kt-hx-boards">
-        <Board title="quem mais vence" rows={stats.mostWins} detail={(e) => `${percent(e.rate)} · ${e.count} de ${plural(e.matches, 'partida', 'partidas')}`} />
+        <Board
+          title="maior % de vitórias"
+          rows={stats.bestRate}
+          detail={(e) => `${percent(e.rate)} · ${e.count} de ${plural(e.matches, 'partida', 'partidas')}`}
+          empty="só entra quem tem 10 partidas ou mais"
+        />
+        <Board
+          title="mais vitórias"
+          rows={stats.mostWins}
+          detail={(e) => `${plural(e.count, 'vitória', 'vitórias')} em ${plural(e.matches, 'partida', 'partidas')}`}
+        />
         <Board
           title="quem explode primeiro"
           rows={stats.firstOut}
