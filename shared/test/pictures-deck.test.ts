@@ -20,22 +20,22 @@ describe('Retratim: constantes e coordenadas', () => {
 });
 
 describe('Retratim: baralho e grade', () => {
-  it('100 fotos com ids p001…p100, únicos e em ordem', () => {
-    expect(PICTURES_DECK).toHaveLength(100);
-    expect(PICTURES_DECK.map((p) => p.id)).toEqual(Array.from({ length: 100 }, (_, i) => `p${String(i + 1).padStart(3, '0')}`));
-    expect(new Set(PICTURES_DECK.map((p) => p.id)).size).toBe(100);
+  it('150 fotos com ids p001…p150, únicos e em ordem', () => {
+    expect(PICTURES_DECK).toHaveLength(150);
+    expect(PICTURES_DECK.map((p) => p.id)).toEqual(Array.from({ length: 150 }, (_, i) => `p${String(i + 1).padStart(3, '0')}`));
+    expect(new Set(PICTURES_DECK.map((p) => p.id)).size).toBe(150);
   });
 
-  it('50 temas, cada um com exatamente 2 fotos (a dupla p001+p002, p003+p004…)', () => {
-    expect(PICTURES_THEMES).toHaveLength(50);
-    expect(new Set(PICTURES_THEMES).size).toBe(50);
+  it('75 temas, cada um com exatamente 2 fotos (a dupla p001+p002, p003+p004…)', () => {
+    expect(PICTURES_THEMES).toHaveLength(75);
+    expect(new Set(PICTURES_THEMES).size).toBe(75);
     for (const [t, theme] of PICTURES_THEMES.entries()) {
       expect(PICTURES_DECK.filter((p) => p.theme === theme).map((p) => p.id)).toEqual([
         `p${String(2 * t + 1).padStart(3, '0')}`,
         `p${String(2 * t + 2).padStart(3, '0')}`,
       ]);
     }
-    expect([PICTURES_THEMES[0], PICTURES_THEMES[49]]).toEqual(['cachorro', 'relogio']);
+    expect([PICTURES_THEMES[0], PICTURES_THEMES[49], PICTURES_THEMES[50], PICTURES_THEMES[74]]).toEqual(['cachorro', 'relogio', 'gamer', 'viagem']);
   });
 
   it('temas são slugs ASCII estáveis e cada um tem nome bonito em português', () => {
@@ -43,7 +43,7 @@ describe('Retratim: baralho e grade', () => {
       expect(t).toMatch(/^[a-z]+(-[a-z]+)*$/);
       expect(PICTURES_THEME_NAMES[t]).toBeTruthy();
     }
-    expect(Object.keys(PICTURES_THEME_NAMES)).toHaveLength(50);
+    expect(Object.keys(PICTURES_THEME_NAMES)).toHaveLength(75);
     expect(PICTURES_THEME_NAMES['chao-da-mata']).toBe('chão da mata');
     expect(PICTURES_THEME_NAMES.onibus).toBe('ônibus');
   });
