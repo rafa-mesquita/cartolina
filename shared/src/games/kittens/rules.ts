@@ -187,7 +187,7 @@ export function applyKittensAction(
       const next: KittensState = {
         ...s,
         hands: { ...s.hands, [playerId]: hand },
-        pending: { by: playerId, play, nopes: [], resolvesAt: ctx.now + (kittensNopable(play.kind) ? KITTENS_NOPE_MS : KITTENS_UNSTOPPABLE_MS) },
+        pending: { by: playerId, play, nopes: [], resolvesAt: ctx.now + (kittensNopable(play) ? KITTENS_NOPE_MS : KITTENS_UNSTOPPABLE_MS) },
       };
       return ok(logged(next, { t: 'play', by: playerId, play: play.kind, target: play.target, ask: play.ask, as: play.as }));
     }
@@ -195,7 +195,7 @@ export function applyKittensAction(
       if (s.phase !== 'playing') return fail('bad_phase');
       if (!s.alive.includes(playerId)) return fail('not_alive');
       if (!s.pending) return fail('nothing_to_nope');
-      if (!kittensNopable(s.pending.play.kind)) return fail('unstoppable');
+      if (!kittensNopable(s.pending.play)) return fail('unstoppable');
       // Nem vem! atrasado (pedido do Rafa, 2026-10-20): dois quase juntos não viram Nem vem! em cima de Nem vem!. Vale
       // o que chegou primeiro; o outro é recusado, a carta fica na mão e ele tem a janela nova (5 s) pra decidir de novo.
       // `on` pega outra carta no ar com o mesmo número de Nem vem! (a jogada de antes já resolveu).

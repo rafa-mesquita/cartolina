@@ -609,6 +609,30 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('trio de Favor no ar (pedido do Rafa, 2026-10-28): sem botão de Nem vem!, sem contagem, e a tecla N não manda nada', () => {
+    const v = midGame('p1');
+    v.game.current = 'p0';
+    v.game.hand = ['nemvem-7', 'mico-7'];
+    v.game.pending = {
+      by: 'p0',
+      play: { kind: 'trio', cards: ['favor-1', 'favor-2', 'favor-3'], target: 'p2', ask: null, as: 'favor' },
+      nopes: [],
+      resolvesAt: Date.now() + 1500,
+    };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#nope')).toBeNull();
+    expect(root.querySelector('#bar')!.innerHTML).toBe('');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n' }));
+    expect(sent).toEqual([]);
+    expect(root.querySelector('#toast')?.textContent).toBe('O trio de Favor não aceita Nem vem!');
+    mesa.destroy();
+  });
+
+  it('a carta do trio de Favor que saiu ao acaso tem texto próprio no diário', () => {
+    expect(mesaSrc).toContain("if (ev.random) return `${n(ev.to)} tirou ${ev.card ? cardNameOf(ev.card) : 'uma carta'} ao acaso ${ev.from === ME ? 'da sua mão' : `da mão de ${n(ev.from)}`}`;");
+  });
+
   it('Nem vem! manda o que você viu (at/on); atrasado, a carta continua na mão e aparece o aviso', () => {
     const v = midGame('p1');
     v.game.current = 'p0';
@@ -1222,9 +1246,9 @@ describe('mesa do Tatubum', () => {
   });
 
   it('zoom do Favor e dos bichos explicam o trio de Favor (só o que a carta faz)', () => {
-    expect(mesaSrc).toContain('<b>Três Favores juntos</b>: o adversário escolhido te dá <b>3 cartas</b>');
-    expect(mesaSrc).toContain('(3 Favores: o adversário escolhido te dá 3 cartas)');
-    expect(mesaSrc).toContain('TRIO de qualquer carta rouba um Desarme (3 FAVORES: o escolhido te dá 3 cartas)');
+    expect(mesaSrc).toContain('<b>Três Favores juntos</b>: você tira <b>3 cartas</b> do adversário escolhido (a mão toda, se tiver menos): <b>uma ao acaso</b>');
+    expect(mesaSrc).toContain('(3 Favores: você tira 3 cartas do adversário escolhido, uma ao acaso e duas que ele escolhe; <b>não aceita Nem vem!</b>)');
+    expect(mesaSrc).toContain('TRIO de qualquer carta rouba um Desarme (3 FAVORES: você tira 3 cartas do escolhido, uma ao acaso, e não aceita Nem vem!)');
   });
 
   it('a dica do Latidor na frente de alguém usa o nome sem escapar', () => {

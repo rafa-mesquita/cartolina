@@ -112,14 +112,19 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
 
 /**
  * Trio: rouba um Desarme de um adversário sorteado entre os que têm (todos veem). Exceção (pedido do Rafa, 2026-10-20):
- * 3 Favores abrem a escolha do Favor pro alvo, que dá 3 cartas (a mão toda, se tiver menos), uma de cada vez. Trio de
- * Favor que estava no ar antes dessa regra (salvo sem alvo) vale como trio comum: rouba um Desarme.
+ * 3 Favores tiram 3 cartas do alvo (a mão toda, se tiver menos). Buff (pedido do Rafa, 2026-10-28): a primeira sai ao
+ * acaso da mão dele (só os dois veem qual) e as outras ele escolhe, uma de cada vez. Trio de Favor que estava no ar antes
+ * da regra de 2026-10-20 (salvo sem alvo) vale como trio comum: rouba um Desarme.
  */
 export function applyTrio(s: KittensState, by: string, play: KittensPlay, ctx: GameContext): KittensState {
   if (play.as === 'favor' && play.target !== null) {
     const who = play.target;
-    const left = Math.min(3, s.hands[who]!.length);
-    return { ...s, choice: { kind: 'favor', who, to: by, left, deadline: ctx.now + KITTENS_CHOICE_MS } };
+    const hand = s.hands[who]!;
+    const card = hand[randomInt(ctx.rng, hand.length)]!;
+    const pulled = logged(moveCard(s, who, by, card), { t: 'gave', from: who, to: by, card, random: true }, [who, by]);
+    const left = Math.min(2, pulled.hands[who]!.length);
+    if (left === 0) return pulled;
+    return { ...pulled, choice: { kind: 'favor', who, to: by, left, deadline: ctx.now + KITTENS_CHOICE_MS } };
   }
   const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind('cafune')));
   if (holders.length === 0) return logged(s, { t: 'grabbed', by, from: null, card: null });

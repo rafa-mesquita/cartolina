@@ -43,7 +43,7 @@ describe('Favor', () => {
   });
 });
 
-describe('trio de Favor: o escolhido te dá 3 cartas (pedido do Rafa, 2026-10-20)', () => {
+describe('trio de Favor: tira 3 cartas do escolhido, uma ao acaso (pedidos do Rafa, 2026-10-20 e 2026-10-28)', () => {
   const FAVORES = ['favor-0', 'favor-1', 'favor-2'];
   const trioHands = () => ({
     p0: [...FAVORES, 'mico-0'],
@@ -65,28 +65,44 @@ describe('trio de Favor: o escolhido te dá 3 cartas (pedido do Rafa, 2026-10-20
     expect(ok.log.at(-1)!.ev).toEqual({ t: 'play', by: 'p0', play: 'trio', target: 'p1', ask: null, as: 'favor' });
   });
 
-  it('o alvo escolhe 3 cartas, uma de cada vez; só os dois veem quais; não rouba Desarme', () => {
+  it('uma sai ao acaso da mão do alvo e ele escolhe as outras 2, uma de cada vez; só os dois veem quais; não rouba Desarme', () => {
     const s = settleKittens(air('p1'), at(5000));
-    expect(s.choice).toEqual({ kind: 'favor', who: 'p1', to: 'p0', left: 3, deadline: T0 + 5000 + KITTENS_CHOICE_MS });
     expect(s.log.some((e) => e.ev.t === 'grabbed')).toBe(false);
-    expect(refuse(s, 'p0', { type: 'choose', card: 'ataque-5' }, at(5000))).toBe('not_your_choice');
-    const one = act(s, 'p1', { type: 'choose', card: 'ataque-5' }, at(6000));
-    expect(one.choice).toEqual({ ...s.choice, left: 2 });
-    const two = act(one, 'p1', { type: 'choose', card: 'cafune-5' }, at(7000));
-    expect(two.choice).toMatchObject({ kind: 'favor', left: 1 });
-    expect(refuse(two, 'p1', { type: 'choose', card: 'cafune-5' }, at(7000))).toBe('bad_choice'); // já deu essa
-    const three = act(two, 'p1', { type: 'choose', card: 'pular-5' }, at(8000));
-    expect(three.choice).toBeNull();
-    expect(three.hands.p1).toEqual(['espiar-5']);
-    expect(three.hands.p0).toEqual(['mico-0', 'ataque-5', 'cafune-5', 'pular-5']);
-    expect(three).toMatchObject({ current: 'p0', owed: 1 });
-    expect(gaves(three).map((e) => [e.ev, e.seenBy])).toEqual([
-      [{ t: 'gave', from: 'p1', to: 'p0', card: 'ataque-5' }, ['p1', 'p0']],
-      [{ t: 'gave', from: 'p1', to: 'p0', card: 'cafune-5' }, ['p1', 'p0']],
-      [{ t: 'gave', from: 'p1', to: 'p0', card: 'pular-5' }, ['p1', 'p0']],
+    const [pulled] = gaves(s);
+    expect(pulled).toMatchObject({ ev: { t: 'gave', from: 'p1', to: 'p0', random: true }, seenBy: ['p1', 'p0'] });
+    const luck = (pulled!.ev as { card: string }).card;
+    expect(trioHands().p1).toContain(luck);
+    expect(s.hands.p1).toHaveLength(3);
+    expect(s.hands.p1).not.toContain(luck);
+    expect(s.hands.p0).toEqual(['mico-0', luck]);
+    expect(s.choice).toEqual({ kind: 'favor', who: 'p1', to: 'p0', left: 2, deadline: T0 + 5000 + KITTENS_CHOICE_MS });
+    expect(kittensViewFor(s, 'p2').log.find((e) => e.ev.t === 'gave')!.ev).toEqual({ t: 'gave', from: 'p1', to: 'p0', card: null, random: true });
+    expect(refuse(s, 'p0', { type: 'choose', card: s.hands.p1![0]! }, at(5000))).toBe('not_your_choice');
+    expect(refuse(s, 'p1', { type: 'choose', card: luck }, at(5000))).toBe('bad_choice'); // já saiu
+    const [a, b, keep] = s.hands.p1!;
+    const one = act(s, 'p1', { type: 'choose', card: a! }, at(6000));
+    expect(one.choice).toEqual({ ...s.choice, left: 1 });
+    const two = act(one, 'p1', { type: 'choose', card: b! }, at(7000));
+    expect(two.choice).toBeNull();
+    expect(two.hands.p1).toEqual([keep]);
+    expect(two.hands.p0).toEqual(['mico-0', luck, a, b]);
+    expect(two).toMatchObject({ current: 'p0', owed: 1 });
+    expect(gaves(two).map((e) => [e.ev, e.seenBy])).toEqual([
+      [{ t: 'gave', from: 'p1', to: 'p0', card: luck, random: true }, ['p1', 'p0']],
+      [{ t: 'gave', from: 'p1', to: 'p0', card: a }, ['p1', 'p0']],
+      [{ t: 'gave', from: 'p1', to: 'p0', card: b }, ['p1', 'p0']],
     ]);
-    expect(kittensViewFor(one, 'p2').log.at(-1)!.ev).toEqual({ t: 'gave', from: 'p1', to: 'p0', card: null });
-    expect(kittensViewFor(one, 'p2').choice).toMatchObject({ kind: 'favor', who: 'p1', left: 2 });
+  });
+
+  it('não aceita Nem vem! (pedido do Rafa, 2026-10-28): fica no ar só o tempo de ver e resolve', () => {
+    const s = act(table({ hands: { ...trioHands(), p2: ['nemvem-2'] }, draw: ['pular-9'] }), 'p0', play('p1'), ctx);
+    expect(s.pending!.resolvesAt).toBe(T0 + KITTENS_UNSTOPPABLE_MS);
+    expect(refuse(s, 'p2', { type: 'nope' }, at(500))).toBe('unstoppable');
+    const done = settleKittens(s, at(KITTENS_UNSTOPPABLE_MS));
+    expect(done.pending).toBeNull();
+    expect(done.hands.p2).toEqual(['nemvem-2']);
+    expect(done.hands.p1).toHaveLength(3);
+    expect(done.choice).toMatchObject({ kind: 'favor', who: 'p1', left: 2 });
   });
 
   it('sem resposta, no fim do prazo as que faltam vão ao acaso', () => {
@@ -96,42 +112,37 @@ describe('trio de Favor: o escolhido te dá 3 cartas (pedido do Rafa, 2026-10-20
     expect(late.hands.p1).toHaveLength(1);
     expect(late.hands.p0).toHaveLength(4);
     expect(gaves(late)).toHaveLength(3);
-    const half = act(s, 'p1', { type: 'choose', card: 'espiar-5' }, at(6000));
+    const half = act(s, 'p1', { type: 'choose', card: s.hands.p1![0]! }, at(6000));
     const rest = settleKittens(half, at(5000 + KITTENS_CHOICE_MS));
     expect(rest.choice).toBeNull();
-    expect(rest.hands.p0).toContain('espiar-5');
+    expect(rest.hands.p0).toContain(s.hands.p1![0]);
     expect(rest.hands.p1).toHaveLength(1);
     expect(gaves(rest)).toHaveLength(3);
   });
 
-  it('alvo com menos de 3 cartas dá a mão toda', () => {
+  it('alvo com menos de 3 cartas perde a mão toda (com 1 carta, ela sai ao acaso e não abre escolha)', () => {
     const s = settleKittens(air('p2'), at(5000));
-    expect(s.choice).toMatchObject({ kind: 'favor', who: 'p2', to: 'p0', left: 1 });
-    const gave = act(s, 'p2', { type: 'choose', card: 'quati-5' }, at(6000));
-    expect(gave.choice).toBeNull();
-    expect(gave.hands.p2).toEqual([]);
-    expect(gave.hands.p0).toContain('quati-5');
-  });
-
-  it('Nem vem! cancela: ninguém dá nada', () => {
-    const s = table({ hands: { ...trioHands(), p2: ['nemvem-2'] }, draw: ['pular-9'] });
-    const noped = act(act(s, 'p0', play('p1'), ctx), 'p2', { type: 'nope' }, at(1000));
-    const done = settleKittens(noped, at(6000));
+    expect(s.choice).toBeNull();
+    expect(s.hands.p2).toEqual([]);
+    expect(s.hands.p0).toContain('quati-5');
+    expect(gaves(s).map((e) => e.ev)).toEqual([{ t: 'gave', from: 'p2', to: 'p0', card: 'quati-5', random: true }]);
+    const two = settleKittens(act(table({ hands: { ...trioHands(), p2: ['quati-5', 'mico-5'] }, draw: ['pular-9'] }), 'p0', play('p2'), ctx), at(5000));
+    expect(two.choice).toMatchObject({ kind: 'favor', who: 'p2', left: 1 });
+    const done = act(two, 'p2', { type: 'choose', card: two.hands.p2![0]! }, at(6000));
     expect(done.choice).toBeNull();
-    expect(done.hands.p1).toHaveLength(4);
-    expect(done.log.at(-1)!.ev).toEqual({ t: 'resolved', by: 'p0', play: 'trio', canceled: true });
+    expect(done.hands.p2).toEqual([]);
   });
 
   it('se o alvo sai, as que faltam vão ao acaso; se quem ia receber sai, a escolha some', () => {
     const s = settleKittens(air('p1'), at(5000));
-    const one = act(s, 'p1', { type: 'choose', card: 'ataque-5' }, at(6000));
+    const one = act(s, 'p1', { type: 'choose', card: s.hands.p1![0]! }, at(6000));
     const gone = settleKittens(one, ctxOf(['p0', 'p2'], { now: T0 + 7000 }));
     expect(gone.choice).toBeNull();
     expect(gone.alive).toEqual(['p0', 'p2']);
     expect(gone.hands.p0).toHaveLength(4);
     const toGone = settleKittens(one, ctxOf(['p1', 'p2'], { now: T0 + 7000 }));
     expect(toGone.choice).toBeNull();
-    expect(toGone.hands.p1).toHaveLength(3);
+    expect(toGone.hands.p1).toHaveLength(2);
   });
 
   it('trio de outra carta continua roubando Desarme', () => {
