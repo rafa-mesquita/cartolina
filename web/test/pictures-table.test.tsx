@@ -4,6 +4,7 @@ import { playPicturesSound } from '../src/games/pictures/sounds';
 import { PicturesTable } from '../src/games/pictures/PicturesTable';
 import { randomWork } from '../src/games/pictures/random';
 import { KIT_NAMES } from '../src/games/pictures/status';
+import { TREMOR_MS } from '../src/games/pictures/TopBar';
 import type { GameConn } from '../src/net/connection';
 import { COORDS, PLAYER_COLORS, joinRoom, type PicturesRoomView } from '@cartolina/shared';
 import { KITS_UI } from '../src/games/pictures/kits';
@@ -183,6 +184,36 @@ describe('mesa do Retratim: montagem', () => {
     rtlAct(() => vi.advanceTimersByTime(20_000));
     expect(screen.getByRole('timer').textContent).toBe('faltam 0:05');
     expect(screen.getByRole('timer').classList.contains('hurry')).toBe(true);
+  });
+
+  it('faltando 10 s a tela treme uma vez (e não repete na mesma contagem)', () => {
+    vi.setSystemTime(1_000_000);
+    const hurried = play(started(3), 'p0', { type: 'hurry' }, 1_000_000);
+    const { container, rerender } = render(<PicturesTable view={picturesView(hurried, 'p0')} conn={conn()} serverOffset={0} />);
+    const stage = container.querySelector('.pc-stage')!;
+    // um segundo por vez: o relógio renderiza a cada batida
+    const wait = (s: number) => {
+      for (let i = 0; i < s; i++) rtlAct(() => vi.advanceTimersByTime(1000));
+    };
+    wait(19);
+    expect(screen.getByRole('timer').textContent).toBe('faltam 0:11');
+    expect(stage.classList.contains('pc-tremor')).toBe(false);
+    wait(1);
+    expect(screen.getByRole('timer').textContent).toBe('faltam 0:10');
+    expect(stage.classList.contains('pc-tremor')).toBe(true);
+    rtlAct(() => vi.advanceTimersByTime(TREMOR_MS));
+    expect(stage.classList.contains('pc-tremor')).toBe(false);
+    // uma visão nova com o mesmo prazo (alguém ficou pronto) não treme de novo
+    rerender(<PicturesTable view={picturesView(play(hurried, 'p1', { type: 'ready', on: true, work: randomWork('laces') }), 'p0')} conn={conn()} serverOffset={0} />);
+    expect(stage.classList.contains('pc-tremor')).toBe(false);
+  });
+
+  it('quem chega com menos de 10 s na contagem não vê a tremida', () => {
+    vi.setSystemTime(1_000_000);
+    const hurried = play(started(3), 'p0', { type: 'hurry' }, 1_000_000 - 25_000);
+    const { container } = render(<PicturesTable view={picturesView(hurried, 'p0')} conn={conn()} serverOffset={0} />);
+    expect(screen.getByRole('timer').textContent).toBe('faltam 0:05');
+    expect(container.querySelector('.pc-stage')!.classList.contains('pc-tremor')).toBe(false);
   });
 
   it('clicar numa foto abre o zoom; ← → passam, a sua tem o selo, Esc fecha', () => {

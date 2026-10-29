@@ -26,6 +26,9 @@ function SoundButton() {
   );
 }
 
+/** Duração da tremida dos 10 s (ms), a mesma da animação `pc-tremor` no CSS. */
+export const TREMOR_MS = 600;
+
 /** Um adesivo "+n" saindo do selinho (revelação). */
 export interface SealPlus {
   id: string;
@@ -60,8 +63,25 @@ export function TopBar({ view, serverOffset, host, onHurry, scores, plus = [] }:
     lastTick.current = key;
     playPicturesSound('tick');
   }, [open, left, g.countdownEndsAt]);
+  // Faltando 10 s, a tela toda dá uma tremida (uma vez por contagem; quem chega depois dos 10 s não vê).
+  const headRef = useRef<HTMLElement>(null);
+  const lastShake = useRef<number | null>(null);
+  useEffect(() => {
+    if (!open || left !== 10 || g.countdownEndsAt === null || lastShake.current === g.countdownEndsAt) return undefined;
+    lastShake.current = g.countdownEndsAt;
+    const stage = headRef.current?.closest<HTMLElement>('.pc-stage');
+    if (!stage) return undefined;
+    stage.classList.remove('pc-tremor');
+    void stage.offsetWidth; // reinicia a animação
+    stage.classList.add('pc-tremor');
+    const t = window.setTimeout(() => stage.classList.remove('pc-tremor'), TREMOR_MS);
+    return () => {
+      clearTimeout(t);
+      stage.classList.remove('pc-tremor');
+    };
+  }, [open, left, g.countdownEndsAt]);
   return (
-    <header className="pc-top">
+    <header ref={headRef} className="pc-top">
       <div className="pc-top-logo">
         Retratim<small>sala {view.code} · cartolina~</small>
       </div>

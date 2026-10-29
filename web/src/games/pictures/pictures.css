@@ -67,6 +67,16 @@
 
 /* ---------- mesa: palco 1440×900 escalado (a largura cresce com a janela) ---------- */
 .pictures .pc-stage { position: absolute; left: 50%; top: 50%; height: 900px; transform-origin: 50% 50%; overflow: hidden; }
+/* faltando 10 s: a tela dá uma tremida (`translate` soma com o `transform` que centraliza e escala o palco) */
+.pictures .pc-stage.pc-tremor { animation: pc-tremor .6s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes pc-tremor {
+  10%, 90% { translate: -2px 0; }
+  20%, 80% { translate: 4px 1px; }
+  30%, 50%, 70% { translate: -7px -1px; }
+  40%, 60% { translate: 7px 1px; }
+  100% { translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .pictures .pc-stage.pc-tremor { animation: none; } }
 .pictures .pc-stage .pc-toast { bottom: 36px; font: 700 14px/1 var(--ui); white-space: nowrap; }
 .pictures.pc-resizing, .pictures.pc-resizing * { cursor: col-resize !important; }
 
