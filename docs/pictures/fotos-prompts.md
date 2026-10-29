@@ -111,3 +111,80 @@ savana; cestinha de pães). Prompts novos (+ fim padrão), baixadas e convertida
 - p082: `an elephant standing in a shallow river, front view, spraying water with its trunk, lush green trees behind.`
 - p094: `a few pao de queijo cheese breads on a small white plate next to a little cup of black coffee on a white marble
   counter, seen from directly above.`
+
+## Mais 50 fotos: p101–p150 (2026-10-29)
+
+O usuário pediu mais 50 fotos com uma lista de 19 ideias (cadeira gamer, computador, máquina registradora, sorvete
+roxo, pêra, frutas, estilingue, catapulta, latinha de suco, caminhonete, caminhão pipa, foguete, binóculos, lupa,
+cidade, fábrica, tubulação, ventilador, cactus). Viraram 13 temas, e mais 12 temas sugeridos e aprovados completam 25
+temas novos (baralho de 75 temas × 2 = 150 fotos). Mesmo projeto, mesmas configurações e mesmo fim padrão de prompt.
+
+| Tema | id | foto | id | foto |
+|---|---|---|---|---|
+| gamer | p101 | cadeira gamer | p102 | computador com teclado colorido |
+| caixa | p103 | máquina registradora | p104 | balança de feira |
+| roxo | p105 | sorvete roxo na casquinha | p106 | cacho de uvas roxas |
+| fruta | p107 | pêra sozinha | p108 | fruteira com várias frutas |
+| arremesso | p109 | estilingue | p110 | catapulta de madeira |
+| suco | p111 | latinha de suco | p112 | jarra de suco com copo |
+| caminhão | p113 | caminhonete | p114 | caminhão-pipa |
+| foguete | p115 | foguete na plataforma | p116 | foguete de brinquedo |
+| de olho | p117 | binóculos | p118 | lupa |
+| urbano | p119 | cidade vista de longe | p120 | fábrica com chaminés |
+| canos | p121 | tubulação industrial | p122 | mangueira de jardim enrolada |
+| vento | p123 | ventilador de mesa | p124 | cata-vento colorido |
+| cacto | p125 | cacto no vaso | p126 | cacto no deserto |
+| instrumento | p127 | violão encostado na parede | p128 | pandeiro |
+| chuva | p129 | guarda-chuva aberto | p130 | galochas amarelas |
+| cozinha | p131 | liquidificador | p132 | panela de pressão |
+| jardim | p133 | regador | p134 | carrinho de mão |
+| ferramenta | p135 | martelo e pregos | p136 | caixa de ferramentas |
+| escola | p137 | lápis de cor | p138 | mochila |
+| banheiro | p139 | escova de dente | p140 | patinho de borracha |
+| ave | p141 | pombo na praça | p142 | passarinho no galho |
+| leitura | p143 | livro aberto | p144 | estante de livros |
+| jogo | p145 | tabuleiro de xadrez | p146 | dados |
+| rodinhas | p147 | skate | p148 | patins |
+| viagem | p149 | mala de viagem | p150 | avião no céu |
+
+### Prompts das p101–p150 (cena)
+
+101 a black and red gaming chair in the corner of a bedroom, three-quarter view · 102 a desktop computer on a desk with
+a monitor showing a plain blue screen and a keyboard with colorful backlit keys, seen from the side · 103 an
+old-fashioned metal cash register on a small shop counter · 104 a red mechanical scale with a round dial holding
+tomatoes at a Brazilian street market stall · 105 a hand holding a purple grape ice cream cone in front of a plain
+wall (+ no faces) · 106 a bunch of purple grapes on a wooden table · 107 a single green pear standing on a kitchen
+counter · 108 a fruit bowl full of bananas, apples, oranges and grapes on a dining table · 109 a wooden slingshot
+lying on a garden table · 110 a small wooden catapult model on a grassy lawn · 111 a cold plain unbranded aluminum
+can of juice with condensation on a cafe table · 112 a glass pitcher of orange juice next to a full glass on a
+kitchen table · 113 a white pickup truck parked on a dirt road in the countryside, side view · 114 a water tanker
+truck parked on a city street, side view · 115 a large white rocket on a launch pad under a blue sky, seen from far
+away · 116 a small plastic toy rocket standing on the floor of a child's bedroom · 117 a pair of black binoculars
+on a wooden railing at a scenic lookout · 118 a magnifying glass lying on a plain wooden desk next to a green leaf ·
+119 a city skyline with many buildings seen from a hill on a clear day · 120 an old brick factory with tall chimneys
+releasing light steam, seen from across a field · 121 a tangle of large metal industrial pipes and valves inside a
+plant · 122 a green garden hose coiled on the grass next to a wall · 123 a white desk fan on a bedside table,
+three-quarter view · 124 a colorful paper pinwheel stuck in a flower pot outdoors · 125 a small round cactus in a
+terracotta pot on a sunny windowsill · 126 a tall cactus standing alone in a dry desert landscape · 127 an acoustic
+guitar leaning against a white wall in a living room · 128 a Brazilian pandeiro tambourine lying on a wooden chair ·
+129 an open red umbrella lying on a wet sidewalk in the rain · 130 a pair of yellow rain boots standing by a front
+door next to a puddle · 131 a blender with a pink smoothie on a kitchen counter · 132 a stainless steel pressure
+cooker on a gas stove · 133 a green watering can on a garden path next to flowers · 134 a metal wheelbarrow full of
+soil in a backyard garden · 135 a hammer and a few nails on a wooden workbench · 136 an open red toolbox full of
+tools on a garage floor · 137 colored pencils spread out on a white table · 138 a blue school backpack on a classroom
+chair · 139 a toothbrush in a glass cup on a bathroom sink · 140 a yellow rubber duck on the edge of a bathtub · 141
+a gray pigeon standing on the pavement of a city square · 142 a small yellow-bellied bird perched on a tree branch ·
+143 an open book lying on a bed in soft light · 144 a wooden bookshelf full of books with no readable titles in a
+living room · 145 a wooden chess board with pieces mid-game on a table · 146 a pair of white dice on a green felt
+table · 147 a skateboard lying on a concrete skatepark ramp · 148 a pair of roller skates on a wooden floor · 149 a
+hard-shell suitcase standing alone in an empty airport hallway · 150 a passenger airplane flying in a clear blue sky,
+seen from the ground.
+
+\* **p115 refeita na hora (2026-10-29):** a primeira deixava o foguete minúsculo na paisagem. Prompt novo: `a tall
+white rocket standing on its launch pad, filling most of the frame, seen from the ground nearby under a clear blue
+sky.` + fim padrão.
+
+**Como baixar sem clique (2026-10-29):** na grade, cada miniatura tem `data-media-id`. Abrindo
+`/project/<projeto>/edit/<mediaId>` num iframe escondido (mesma origem), as imagens do carrossel vêm com o link
+assinado `flow-content.google/image/<mediaId>?Expires…&Signature…`, que o `curl` baixa sem cookie. Depois:
+`npm run pictures:fotos -- <pasta> --from 101` importa só as novas.
