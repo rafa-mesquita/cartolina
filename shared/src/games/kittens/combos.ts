@@ -46,9 +46,14 @@ function preguica(s: KittensState, by: string, ask: KittensCardKind, rng: Rng, p
   return next;
 }
 
-/** Um puxão da Preguiça: mão de um adversário, monte (a carta sai das espiadas) e, por último, o descarte. */
+/**
+ * Um puxão da Preguiça: mão de um adversário, monte (a carta sai das espiadas) e, por último, o descarte. Entre os
+ * adversários que têm o bicho, vem de quem tem mais cartas na mão (pedido do Rafa, 2026-10-28); empate, sorteia.
+ */
 function callOne(s: KittensState, by: string, ask: KittensCardKind, rng: Rng, played: readonly string[]): KittensState {
-  const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind(ask)));
+  const withAsk = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind(ask)));
+  const most = Math.max(0, ...withAsk.map((p) => s.hands[p]!.length));
+  const holders = withAsk.filter((p) => s.hands[p]!.length === most);
   if (holders.length > 0) {
     const from = holders[randomInt(rng, holders.length)]!;
     const card = s.hands[from]!.find(isKind(ask))!;

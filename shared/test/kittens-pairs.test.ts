@@ -245,17 +245,33 @@ describe('par de Tamanduá: compra 2, tatu vai pro fundo, a vez continua', () =>
 });
 
 describe('par de Preguiça: puxa o bicho pedido', () => {
-  it('de um adversário sorteado entre os que têm', () => {
-    const s = resolved(par(['preguica-0', 'preguica-1'], { ask: 'quati' }), {
-      hands: { ...hands(), p1: ['ataque-5', 'quati-7'], p2: ['quati-8'] },
-    });
-    const ev = s.log.at(-1)!.ev;
-    if (ev.t !== 'called') throw new Error('esperava called');
-    expect(['p1', 'p2']).toContain(ev.from);
-    expect(ev.card).toMatch(/^quati-[78]$/);
-    expect(s.hands.p0).toContain(ev.card);
-    expect(s.hands[ev.from!]).not.toContain(ev.card);
-    expect(s.log.at(-1)!.seenBy).toBeNull();
+  it('do adversário com mais cartas na mão entre os que têm (pedido do Rafa, 2026-10-28)', () => {
+    const ask = { ask: 'quati' as const };
+    for (const [p1, p2, from] of [
+      [['quati-7'], ['ataque-5', 'pular-5', 'quati-8'], 'p2'],
+      [['ataque-5', 'pular-5', 'quati-7'], ['quati-8'], 'p1'],
+      // Quem tem mais cartas mas não tem o bicho não conta.
+      [['quati-7'], ['ataque-5', 'pular-5', 'espiar-5'], 'p1'],
+    ] as const) {
+      const s = resolved(par(['preguica-0', 'preguica-1'], ask), { hands: { ...hands(), p1: [...p1], p2: [...p2] } });
+      const ev = s.log.at(-1)!.ev;
+      if (ev.t !== 'called') throw new Error('esperava called');
+      expect(ev.from).toBe(from);
+      expect(s.hands.p0).toContain(ev.card);
+      expect(s.hands[from]).not.toContain(ev.card);
+      expect(s.log.at(-1)!.seenBy).toBeNull();
+    }
+  });
+
+  it('empate no tamanho da mão: sorteia entre os empatados', () => {
+    const froms = new Set<string | null>();
+    for (const r of [0, 0.99]) {
+      const base = table({ hands: { ...hands(), p1: ['ataque-5', 'quati-7'], p2: ['pular-5', 'quati-8'] }, draw: DRAW });
+      const s = settleKittens(act(base, 'p0', par(['preguica-0', 'preguica-1'], { ask: 'quati' }), ctx), { ...at(5000), rng: () => r });
+      const ev = s.log.filter((x) => x.ev.t === 'called').at(0)!.ev;
+      if (ev.t === 'called') froms.add(ev.from);
+    }
+    expect(froms).toEqual(new Set(['p1', 'p2']));
   });
 
   it('ninguém tem: procura no monte; nem no monte: nada', () => {
