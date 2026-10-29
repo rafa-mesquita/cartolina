@@ -19,9 +19,12 @@ export function kittensNopeCooldownUntil(pending: { nopes: readonly unknown[]; r
  * (sem contagem), e resolve.
  */
 export const KITTENS_UNSTOPPABLE_MS = 1_500;
-/** A jogada aceita Nem vem!? Só os 4 bichos diferentes (`cinco`, nome antigo dos 5 diferentes) não aceitam. */
-export function kittensNopable(kind: KittensPlayKind): boolean {
-  return kind !== 'cinco';
+/**
+ * A jogada aceita Nem vem!? Os 4 bichos diferentes (`cinco`, nome antigo dos 5 diferentes) e o trio de Favor (pedido do
+ * Rafa, 2026-10-28) não aceitam.
+ */
+export function kittensNopable(play: Pick<KittensPlay, 'kind' | 'as'>): boolean {
+  return play.kind !== 'cinco' && !(play.kind === 'trio' && play.as === 'favor');
 }
 /** Prazo das escolhas pessoais (Desarme, Favor, descarte e pegada do Mico, 4 bichos diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
 export const KITTENS_CHOICE_MS = 30_000;
@@ -72,8 +75,9 @@ export type KittensChoice =
   /** Quem desarmou escolhe onde o `tatu` volta no monte. */
   | { kind: 'cafune'; who: string; tatu: string; deadline: number }
   /**
-   * `who` (o alvo do Favor) escolhe, uma de cada vez, `left` cartas da mão pra dar pra `to`: 1 no Favor sozinho; 3 no
-   * trio de Favor (ou a mão toda, se tiver menos). Fecha quando dá todas ou a mão de `who` acaba.
+   * `who` (o alvo do Favor) escolhe, uma de cada vez, `left` cartas da mão pra dar pra `to`: 1 no Favor sozinho; 2 no
+   * trio de Favor, depois da que saiu ao acaso (ou o que sobrou da mão, se tiver menos). Fecha quando dá todas ou a mão
+   * de `who` acaba.
    */
   | { kind: 'favor'; who: string; to: string; left: number; deadline: number }
   /**
@@ -131,7 +135,8 @@ export type KittensEvent =
   | { t: 'boom'; by: string }
   /** Caiu e não voltou em 30 s. */
   | { t: 'left'; by: string }
-  | { t: 'gave'; from: string; to: string; card: string | null }
+  /** Favor: `from` deu `card` pra `to` (só os dois veem). `random`: a carta do trio de Favor que saiu ao acaso. */
+  | { t: 'gave'; from: string; to: string; card: string | null; random?: true }
   | { t: 'picked'; by: string; card: string | null }
   /** Par de Mico: `by` descartou `card` (todos veem; o efeito da carta não vale). */
   | { t: 'discarded'; by: string; card: string }

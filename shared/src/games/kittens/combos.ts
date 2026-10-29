@@ -46,9 +46,14 @@ function preguica(s: KittensState, by: string, ask: KittensCardKind, rng: Rng, p
   return next;
 }
 
-/** Um puxão da Preguiça: mão de um adversário, monte (a carta sai das espiadas) e, por último, o descarte. */
+/**
+ * Um puxão da Preguiça: mão de um adversário, monte (a carta sai das espiadas) e, por último, o descarte. Entre os
+ * adversários que têm o bicho, vem de quem tem mais cartas na mão (pedido do Rafa, 2026-10-28); empate, sorteia.
+ */
 function callOne(s: KittensState, by: string, ask: KittensCardKind, rng: Rng, played: readonly string[]): KittensState {
-  const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind(ask)));
+  const withAsk = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind(ask)));
+  const most = Math.max(0, ...withAsk.map((p) => s.hands[p]!.length));
+  const holders = withAsk.filter((p) => s.hands[p]!.length === most);
   if (holders.length > 0) {
     const from = holders[randomInt(rng, holders.length)]!;
     const card = s.hands[from]!.find(isKind(ask))!;
@@ -112,14 +117,19 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
 
 /**
  * Trio: rouba um Desarme de um adversário sorteado entre os que têm (todos veem). Exceção (pedido do Rafa, 2026-10-20):
- * 3 Favores abrem a escolha do Favor pro alvo, que dá 3 cartas (a mão toda, se tiver menos), uma de cada vez. Trio de
- * Favor que estava no ar antes dessa regra (salvo sem alvo) vale como trio comum: rouba um Desarme.
+ * 3 Favores tiram 3 cartas do alvo (a mão toda, se tiver menos). Buff (pedido do Rafa, 2026-10-28): a primeira sai ao
+ * acaso da mão dele (só os dois veem qual) e as outras ele escolhe, uma de cada vez. Trio de Favor que estava no ar antes
+ * da regra de 2026-10-20 (salvo sem alvo) vale como trio comum: rouba um Desarme.
  */
 export function applyTrio(s: KittensState, by: string, play: KittensPlay, ctx: GameContext): KittensState {
   if (play.as === 'favor' && play.target !== null) {
     const who = play.target;
-    const left = Math.min(3, s.hands[who]!.length);
-    return { ...s, choice: { kind: 'favor', who, to: by, left, deadline: ctx.now + KITTENS_CHOICE_MS } };
+    const hand = s.hands[who]!;
+    const card = hand[randomInt(ctx.rng, hand.length)]!;
+    const pulled = logged(moveCard(s, who, by, card), { t: 'gave', from: who, to: by, card, random: true }, [who, by]);
+    const left = Math.min(2, pulled.hands[who]!.length);
+    if (left === 0) return pulled;
+    return { ...pulled, choice: { kind: 'favor', who, to: by, left, deadline: ctx.now + KITTENS_CHOICE_MS } };
   }
   const holders = s.alive.filter((p) => p !== by && s.hands[p]!.some(isKind('cafune')));
   if (holders.length === 0) return logged(s, { t: 'grabbed', by, from: null, card: null });

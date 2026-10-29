@@ -77,7 +77,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Nem vem!** | 5 | Cancela a carta no ar. Pode ser jogado fora da vez, por qualquer vivo (até por quem jogou a carta). Nem vem! em cima de Nem vem! vale. | sim |
 | **Ataque** | 4 | Termina seu turno sem comprar. O próximo vivo joga **2 turnos**, ou, se você estava sob ataque (`owed ≥ 2`), **os seus turnos devidos + 2**. | sim |
 | **Pular** | 4 | Gasta 1 turno sem comprar. | sim |
-| **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): o escolhido te dá **3 cartas** (ver "Combos"; pedido do Rafa, 2026-10-20). | sim |
+| **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): você tira **3 cartas** do escolhido, uma ao acaso, e não aceita Nem vem! (ver "Combos"; pedidos do Rafa, 2026-10-20 e 2026-10-28). | sim |
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
 | **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano** | 4 de cada | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 (pedido do Rafa). | (combo sim) |
@@ -139,9 +139,11 @@ Aceitam Nem vem! (que cancela o combo todo). Regras dos combos redesenhadas pelo
   adversário sorteado **entre os que têm Desarme**. Ninguém tem: não acontece nada. Todos veem quem
   perdeu o Desarme.
   - **Exceção: trio de 3 Favores** (pedido do Rafa, 2026-10-20). Pede **alvo** como o Favor sozinho (adversário
-    vivo com carta na mão; `bad_target` sem isso) e não rouba Desarme: o alvo **escolhe 3 cartas** da mão pra te
-    dar (a mão toda, se tiver menos), uma de cada vez, no mesmo prazo de 30 s; vencido, as que faltam vão ao acaso.
-    Só vocês dois veem quais cartas foram. O Boto não completa (Favor não é bicho).
+    vivo com carta na mão; `bad_target` sem isso) e não rouba Desarme: você tira **3 cartas** dele (a mão toda, se
+    tiver menos). Buff (pedido do Rafa, 2026-10-28): a **primeira sai ao acaso** da mão dele assim que resolve, e as
+    outras (até 2) ele **escolhe**, uma de cada vez, no mesmo prazo de 30 s; vencido, as que faltam vão ao acaso. Só
+    vocês dois veem quais cartas foram. **Não aceita Nem vem!**, como os 4 bichos diferentes (1,5 s no ar, sem
+    contagem, `unstoppable`). O Boto não completa (Favor não é bicho).
 - **4 bichos diferentes** (pedido do Rafa, 2026-10-21; antes eram 5 nomes diferentes de quaisquer cartas): **só bichos**,
   4 diferentes; o Boto conta como um bicho a mais (no máximo um). **Não aceita Nem vem!**: a carta fica 1,5 s no ar
   (`KITTENS_UNSTOPPABLE_MS`, sem contagem, sem botão), o Nem vem! é recusado (`unstoppable`) e ela resolve. O id da
@@ -160,7 +162,7 @@ Sozinho o bicho continua não fazendo nada.
 | Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) **Depois que todos descartam, você pega uma das cartas descartadas nesse par** pra sua mão (30 s, no quadro do descarte; depois, ao acaso); se ninguém descartou nada, ou se você saiu do jogo antes, não pega (pedido do Rafa, 2026-10-20). |
 | Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
-| Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** de um adversário **sorteado entre os que têm**. Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: **pega do descarte** (sem contar as cartas do próprio par; pedido do Rafa, 2026-10-21). Nada em lugar nenhum: nada. **30% de chance de puxar dois** (`KITTENS_PREGUICA_DOUBLE`), cada um na mesma ordem (mão → monte → descarte); o segundo que não acha nada não aparece no diário. Todos veem de onde veio. |
+| Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** do adversário com **mais cartas na mão entre os que têm** (pedido do Rafa, 2026-10-28; empate: sorteado entre eles). Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: **pega do descarte** (sem contar as cartas do próprio par; pedido do Rafa, 2026-10-21). Nada em lugar nenhum: nada. **30% de chance de puxar dois** (`KITTENS_PREGUICA_DOUBLE`), cada um na mesma ordem (mão → monte → descarte); o segundo que não acha nada não aparece no diário. Todos veem de onde veio. |
 | Tucano (pedido do Rafa, 2026-10-21) | um adversário vivo (mesmo sem carta) | **A sua vez acaba sem você comprar**, como no Pular (sob ataque, gasta só um dos turnos devidos), e a **próxima vez do alvo é pulada**: ele não joga nem compra. Duas vezes no mesmo alvo pulam duas vezes dele. Todos veem quem vai ser pulado. Rafa: "par: você pula sua vez quando manda ele, não compra e nem joga, e escolhe outro jogador pra pular; ele também não joga nada nem compra, o turno dele é pulado." |
 | Capivara | — | **Todos os outros** vivos passam, ao mesmo tempo, uma carta **ao acaso** pro próximo na ordem da vez (o sentido em que a vez anda). **Você não passa**, mas recebe a do jogador antes de você. Quem está sem carta não passa. Cada um vê só o que deu e o que recebeu. |
 
@@ -169,8 +171,9 @@ Regras de motor:
 - `parsePlay`: alvo exigido só no Favor, no trio de Favor, no Mau-olhado e no par de Tucano (`bad_target`); pedido
   (`ask`) exigido só no par de Preguiça e tem que ser um dos bichos (6, com o Tucano; `bad_ask`). Os outros trios ignoram alvo e pedido. (Quem está
   cego ouve `bad_combo` no lugar desses: ver "Jogar às cegas".)
-- Favor e trio de Favor: a escolha `favor` tem `left` (quantas cartas ainda dar: 1 no Favor sozinho, `min(3, mão do
-  alvo)` no trio). Cada `choose { card }` do alvo passa uma carta (evento `gave`, só os dois veem) e o `left` cai; em
+- Favor e trio de Favor: a escolha `favor` tem `left` (quantas cartas ainda dar: 1 no Favor sozinho; no trio, `min(2,
+  o que sobrou na mão do alvo)` depois da carta ao acaso, que sai como `gave` com `random: true`; sem sobra, não abre
+  escolha). Cada `choose { card }` do alvo passa uma carta (evento `gave`, só os dois veem) e o `left` cai; em
   0, ou com a mão do alvo vazia, a escolha fecha. Prazo vencido: as que faltam vão ao acaso. O evento `play` do trio
   de Favor sai com `play: 'trio'`, `as: 'favor'` e o `target`. Escolha salva sem `left` (antes da mudança) vale 1.
 - Par de Mico: escolha `{ kind: 'mico', by, waiting, deadline }` (`waiting` = quem ainda tem que descartar; pública).

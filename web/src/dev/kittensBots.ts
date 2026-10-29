@@ -278,7 +278,7 @@ export function decideKittens(
   if (g.pending) {
     const p = g.pending;
     // 4 bichos diferentes: não aceita Nem vem!.
-    if (!kittensNopable(p.play.kind)) return null;
+    if (!kittensNopable(p.play)) return null;
     const key = `nope:${p.by}:${p.play.cards.join(',')}:${p.nopes.length}`;
     if (mem.noped === key) return null;
     // Na espera de 2 s depois de um Nem vem!, nem decide: a decisão desta etapa fica pra quando a espera acabar.
