@@ -386,7 +386,11 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     const fresh = s.log.filter((e) => e.n >= before.seq).map((e) => e.ev);
     const skipped = fresh.flatMap((ev) => (ev.t === 'skipped' ? [ev.who] : []));
     const marked = new Map(Object.entries(before.skips));
-    for (const ev of fresh) if (ev.t === 'tucano') marked.set(ev.target, (marked.get(ev.target) ?? 0) + 1);
+    for (const ev of fresh) if (ev.t === 'tucano' && !ev.duel) marked.set(ev.target, (marked.get(ev.target) ?? 0) + 1);
+    // No 1x1 ninguém tem vez pulada (pedido do Rafa, 2026-11-03).
+    if (s.alive.length <= 2 && Object.keys(s.skips).length > 0) throw new Error(`vez pulada no 1x1
+  ${where()}`);
+    if (fresh.some((ev) => ev.t === 'tucano' && ev.duel)) seen.add('tucano:duel');
     for (const who of skipped) {
       const k = marked.get(who) ?? 0;
       if (k < 1) throw new Error(`${who} foi pulado sem ter vez pulada
@@ -503,9 +507,11 @@ describe('simulação aleatória do Tatubum', () => {
       'stats:defuse',
       'tucano',
       'tucano:par',
+      'tucano:duel',
       'skipped',
       'skipped:chain',
-      'skipped:owed',
+      // 'skipped:owed' (a pulada gasta um dos turnos de Ataque) só aparecia no 1x1, que não pula mais ninguém
+      // (2026-11-03); fica nos testes do Tucano (kittens-tucano.test.ts).
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.

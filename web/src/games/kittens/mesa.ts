@@ -141,7 +141,7 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta do adversário com <b>mais cartas na mão</b> entre os que têm (empate: sorteado). Se ninguém tiver, procura no monte; nem no monte, pega do descarte. Às vezes (30%) puxa <b>dois</b>, cada um nessa mesma ordem.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
-  tucano: '<b>PAR DE TUCANO</b>: escolha um adversário (mesmo sem carta na mão). A sua vez acaba <b>sem você comprar</b> (sob ataque, gasta só um dos turnos), e a <b>próxima vez dele é pulada</b>: quando a vez chegar nele, ele não joga nem compra (se estiver devendo 2 turnos de um Ataque, perde um deles). Duas vezes no mesmo jogador, pula duas vezes.',
+  tucano: '<b>PAR DE TUCANO</b>: escolha um adversário (mesmo sem carta na mão). A sua vez acaba <b>inteira, sem você comprar</b> (mesmo sob ataque: os turnos que você devia se perdem), e a <b>próxima vez dele é pulada</b>: quando a vez chegar nele, ele não joga nem compra (se estiver devendo 2 turnos de um Ataque, perde um deles). Duas vezes no mesmo jogador, pula duas vezes.<br>No <b>1x1</b> (só dois na partida), só a sua vez acaba: ninguém é pulado.',
   boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>4 bichos diferentes</b> conta como um bicho a mais (só um Boto). No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
 };
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
@@ -174,7 +174,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   quati: 'Par: vê a de cima e decide se vai pro fundo.',
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir (às vezes, dois).',
-  tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada.',
+  tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada (no 1x1, só a sua vez acaba).',
   latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente. Par: o adversário escolhido joga um Desarme ou explode.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',
   feitico: 'Você vê a carta de baixo do monte: fica com ela (é comprar) ou põe no topo. Acaba o turno.',
@@ -1906,7 +1906,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'win': return `${n(ev.by)} sobreviveu e venceu!`;
       case 'barked': return ev.target && ev.pair ? `AU AU AU! PAR DE LATIDORES em ${n(ev.target)}: Desarme ou explode!` : ev.target ? `AU AU! ${n(ev.target)} tinha TATU LATIDOR: Desarme ou explode!` : `O TATU LATIDOR ficou na frente de ${n(ev.by)}`;
       case 'cursed': return `${n(ev.target)} ficou CEGO até comprar uma carta`;
-      case 'tucano': return ev.target === ME ? `${n(ev.by)} jogou o TUCANO em você: a sua próxima vez vai ser pulada` : `${n(ev.by)} jogou o TUCANO em ${n(ev.target)}: a próxima vez dele vai ser pulada`;
+      case 'tucano':
+        if (ev.duel) return `${n(ev.by)} jogou o TUCANO: ${ev.by === ME ? 'a sua vez acabou' : 'a vez dele acabou'} sem comprar`;
+        return ev.target === ME ? `${n(ev.by)} jogou o TUCANO em você: a sua próxima vez vai ser pulada` : `${n(ev.by)} jogou o TUCANO em ${n(ev.target)}: a próxima vez dele vai ser pulada`;
       case 'skipped': return `${n(ev.who)} perdeu uma vez (TUCANO)`;
       case 'cured': return `${n(ev.by)} voltou a enxergar`;
       case 'conjured': return ev.kept ? `${n(ev.by)} ficou com a carta de baixo do monte` : `${n(ev.by)} pôs a carta de baixo no topo do monte`;
@@ -2165,6 +2167,15 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         // Par de Tucano: o tucano voa de quem jogou até o alvo, que vai ter a próxima vez pulada.
         say(text);
         Sound.play('skip');
+        if (ev.duel) {
+          // 1x1: só a vez de quem jogou acaba (ninguém é pulado); o tucano aparece em quem jogou.
+          const own = ev.by === ME;
+          const seat = own ? $('#hand') : seatEl(ev.by);
+          const at: At = own ? mineAt(600) : seat ? Fx.box(seat) : anchorOf(ev.by);
+          void Fx.icon(TUCANO_URL, at, { size: own ? 120 : 80, hold: 250 });
+          await Fx.pop(own ? 'SUA VEZ ACABOU!' : 'ACABOU A VEZ!', at, { size: popPx(own ? 34 : 22, 16), hold: 450, color: '#8fb0ff' });
+          break;
+        }
         const mine = ev.target === ME;
         const s = mine ? $('#hand') : seatEl(ev.target);
         const to: At = mine ? mineAt(600) : s ? Fx.box(s) : anchorOf(ev.target);

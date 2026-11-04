@@ -143,8 +143,10 @@ export function eliminate(state: KittensState, p: string, how: KittensExitHow, e
   const blind = state.blind.includes(p) ? state.blind.filter((x) => x !== p) : state.blind;
   // A espiada de quem sai some; o tatu tirado do monte sai das espiadas dos outros (a ordem do resto não muda).
   const exits = [...state.exits, { player: p, how }];
-  // As vezes puladas de quem sai (Tucano) se perdem.
-  const skips = Object.hasOwn(state.skips, p) ? Object.fromEntries(Object.entries(state.skips).filter(([x]) => x !== p)) : state.skips;
+  // As vezes puladas de quem sai (Tucano) se perdem. Sobrando 2 (1x1), as de todo mundo se perdem: pular o outro
+  // devolveria a vez pra quem pulou (pedido do Rafa, 2026-11-03).
+  const skips =
+    alive.length <= 2 ? {} : Object.hasOwn(state.skips, p) ? Object.fromEntries(Object.entries(state.skips).filter(([x]) => x !== p)) : state.skips;
   const base: KittensState = { ...state, alive, draw, out, front, blind, exits, skips, hands: { ...state.hands, [p]: [] } };
   let next = unpeek(dropPeek(base, p), removed !== null ? [removed] : []);
   if (state.current === p) next = passTo(next, nextAlive(next, p), 1);

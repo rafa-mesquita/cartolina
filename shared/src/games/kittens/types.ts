@@ -164,8 +164,11 @@ export type KittensEvent =
   | { t: 'cured'; by: string }
   /** Feitiço: `by` ficou com a carta de baixo do monte (`kept`) ou mandou ela pro topo. Ninguém vê qual era. */
   | { t: 'conjured'; by: string; kept: boolean }
-  /** Par de Tucano: `by` acabou a vez sem comprar e a próxima vez de `target` vai ser pulada. */
-  | { t: 'tucano'; by: string; target: string }
+  /**
+   * Par de Tucano: `by` acabou a vez sem comprar e a próxima vez de `target` vai ser pulada. `duel`: no 1x1, só a vez
+   * de `by` acabou (ninguém é pulado).
+   */
+  | { t: 'tucano'; by: string; target: string; duel?: true }
   /** A vez chegou em `who`, que tinha vez pulada (Tucano): o turno dele foi gasto sem ele jogar nem comprar. */
   | { t: 'skipped'; who: string }
   | { t: 'win'; by: string };
