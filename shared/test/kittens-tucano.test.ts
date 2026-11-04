@@ -85,11 +85,13 @@ describe('par de Tucano: o efeito', () => {
     expect(skippedIn(s, 0)).toEqual(['p1']);
   });
 
-  it('sob ataque, quem joga gasta só um dos turnos devidos (como o Pular)', () => {
-    const s = resolved(mesa({ owed: 2 }), tucano('p1'));
-    expect(s).toMatchObject({ current: 'p0', owed: 1, skips: { p1: 1 } });
-    // Acabou o outro turno: a vez de p1 é pulada.
-    expect(act(s, 'p0', { type: 'draw' }, at(6000))).toMatchObject({ current: 'p2', skips: {} });
+  it('sob ataque, a vez acaba inteira: os turnos devidos se perdem (pedido do Rafa, 2026-11-03)', () => {
+    for (const owed of [2, 4]) {
+      const s = resolved(mesa({ owed }), tucano('p1'));
+      // A vez sai de p0 na hora, e a de p1 é pulada.
+      expect(s).toMatchObject({ current: 'p2', owed: 1, skips: {} });
+      expect(skippedIn(s, 0)).toEqual(['p1']);
+    }
   });
 
   it('alvo devendo 2 turnos (Ataque): a pulada gasta um deles e ele joga o outro', () => {
@@ -133,10 +135,34 @@ describe('par de Tucano: o efeito', () => {
     const s = resolved(mesa({ skips: { p2: 1, p3: 1 } }), tucano('p1'));
     expect(s).toMatchObject({ current: 'p0', owed: 1, skips: {} });
     expect(skippedIn(s, 0)).toEqual(['p1', 'p2', 'p3']);
-    // Com 2 jogadores, o mesmo: a vez volta.
-    const two: KittensState = { ...table({ hands: { p0: ['tucano-0', 'tucano-1'], p1: [] }, draw: DRAW }), skips: {} };
-    const back = settleKittens(act(two, 'p0', tucano('p1'), ctxOf(['p0', 'p1'])), ctxOf(['p0', 'p1'], { now: T0 + 5000 }));
-    expect(back).toMatchObject({ current: 'p0', owed: 1, skips: {} });
+  });
+
+  describe('1x1 (pedido do Rafa, 2026-11-03): só a vez de quem jogou acaba, ninguém é pulado', () => {
+    const P2 = ['p0', 'p1'];
+    const two = (owed?: number): KittensState => ({ ...table({ hands: { p0: ['tucano-0', 'tucano-1'], p1: ['pular-1'] }, draw: DRAW, owed }), skips: {} });
+    const play2 = (s: KittensState) => settleKittens(act(s, 'p0', tucano('p1'), ctxOf(P2)), ctxOf(P2, { now: T0 + 5000 }));
+
+    it('a vez passa pro outro, que joga normal', () => {
+      const s = play2(two());
+      expect(s).toMatchObject({ current: 'p1', owed: 1, skips: {} });
+      expect(s.hands.p0).toEqual([]);
+      expect(s.draw).toEqual(DRAW);
+      expect(skippedIn(s, 0)).toEqual([]);
+      expect(events(s, 0).find((ev) => ev.t === 'tucano')).toEqual({ t: 'tucano', by: 'p0', target: 'p1', duel: true });
+    });
+
+    it('sob ataque, a vez acaba inteira e passa pro outro', () => {
+      expect(play2(two(2))).toMatchObject({ current: 'p1', owed: 1, skips: {} });
+    });
+
+    it('sobrando 2 vivos, as vezes puladas de antes se perdem', () => {
+      const s = resolved(mesa({ hands: { p0: ['tucano-0', 'tucano-1'], p1: ['pular-1'], p2: [], p3: ['espiar-3'] } }), tucano('p3'));
+      expect(s.skips).toEqual({ p3: 1 });
+      const duel = settleKittens(s, ctxOf(['p1', 'p3'], { now: T0 + 6000 }));
+      expect(duel.alive).toEqual(['p1', 'p3']);
+      expect(duel.skips).toEqual({});
+      expect(act(duel, 'p1', { type: 'draw' }, ctxOf(['p1', 'p3'], { now: T0 + 7000 }))).toMatchObject({ current: 'p3' });
+    });
   });
 
   it('Nem vem! cancela: ninguém é pulado e quem jogou continua na vez', () => {
