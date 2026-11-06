@@ -1,5 +1,5 @@
 /**
- * O baralho do Retratim: 50 temas × 2 fotos (decisão do usuário, 2026-10-17; tabela em `docs/pictures/fotos-prompts.md`).
+ * O baralho do Retratim: 75 temas × 2 fotos (50 em 2026-10-17 e mais 25 em 2026-10-29; tabela em `docs/pictures/fotos-prompts.md`).
  * Cada tema é uma "dupla parecida" (às vezes uma pegadinha): p001+p002 são do 1º tema, p003+p004 do 2º, e assim por diante.
  * Os slugs são estáveis (o histórico grava ids de foto, não temas, mas não renomear à toa).
  */
@@ -54,6 +54,32 @@ export const PICTURES_THEMES = [
   'gelado',
   'fazenda',
   'relogio',
+  // mais 25 (2026-10-29, ideias do usuário + sugestões aprovadas): p101…p150
+  'gamer',
+  'caixa',
+  'roxo',
+  'fruta',
+  'arremesso',
+  'suco',
+  'caminhao',
+  'foguete',
+  'de-olho',
+  'urbano',
+  'canos',
+  'vento',
+  'cacto',
+  'instrumento',
+  'chuva',
+  'cozinha',
+  'jardim',
+  'ferramenta',
+  'escola',
+  'banheiro',
+  'ave',
+  'leitura',
+  'jogo',
+  'rodinhas',
+  'viagem',
 ] as const;
 export type PicturesTheme = (typeof PICTURES_THEMES)[number];
 
@@ -109,13 +135,38 @@ export const PICTURES_THEME_NAMES: Record<PicturesTheme, string> = {
   gelado: 'gelado',
   fazenda: 'fazenda',
   relogio: 'relógio',
+  gamer: 'gamer',
+  caixa: 'caixa',
+  roxo: 'roxo',
+  fruta: 'fruta',
+  arremesso: 'arremesso',
+  suco: 'suco',
+  caminhao: 'caminhão',
+  foguete: 'foguete',
+  'de-olho': 'de olho',
+  urbano: 'urbano',
+  canos: 'canos',
+  vento: 'vento',
+  cacto: 'cacto',
+  instrumento: 'instrumento',
+  chuva: 'chuva',
+  cozinha: 'cozinha',
+  jardim: 'jardim',
+  ferramenta: 'ferramenta',
+  escola: 'escola',
+  banheiro: 'banheiro',
+  ave: 'ave',
+  leitura: 'leitura',
+  jogo: 'jogo',
+  rodinhas: 'rodinhas',
+  viagem: 'viagem',
 };
 
 /** Fotos de cada tema. */
 export const PICTURES_PER_THEME = 2;
 
 export interface PicturesPhoto {
-  /** p001…p100; a imagem fica em web/public/pictures/fotos/<id>.webp (e a miniatura em <id>-thumb.webp). */
+  /** p001…p150; a imagem fica em web/public/pictures/fotos/<id>.webp (e a miniatura em <id>-thumb.webp). */
   id: string;
   theme: PicturesTheme;
 }
