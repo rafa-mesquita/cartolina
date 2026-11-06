@@ -90,6 +90,10 @@ function readPlay(s: KittensState, p: string, cards: string[], action: PlayActio
   const parsed = playKindOf(kinds, action.as);
   if (typeof parsed === 'string') return parsed;
   const { kind } = parsed;
+  // Só os bichos da partida (pedido do Rafa, 2026-11-06): dois Botos não viram bicho que ficou de fora.
+  if (kind === 'par' && kittensIsBicho(parsed.as) && !s.bichos.includes(parsed.as)) return 'bad_as';
+  // Par de Sapo só como resposta (ação `sapo`), nunca na própria vez.
+  if (kind === 'par' && parsed.as === 'sapo') return 'sapo_only';
   let target: string | null = null;
   const favor = kittensIsFavorPlay(parsed);
   if (favor || kind === 'olhado' || (kind === 'par' && (parsed.as === 'tucano' || parsed.as === 'latido'))) {
@@ -102,7 +106,7 @@ function readPlay(s: KittensState, p: string, cards: string[], action: PlayActio
   }
   let ask: KittensCardKind | null = null;
   if (kind === 'par' && parsed.as === 'preguica') {
-    if (action.ask === undefined || !kittensIsBicho(action.ask)) return 'bad_ask';
+    if (action.ask === undefined || !kittensIsBicho(action.ask) || !s.bichos.includes(action.ask)) return 'bad_ask';
     ask = action.ask;
   }
   return { kind, cards, target, ask, as: parsed.as };

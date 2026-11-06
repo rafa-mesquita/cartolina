@@ -8,6 +8,9 @@ import boto from './art/boto.png';
 import cafune from './art/cafune.png';
 import capivara from './art/capivara.png';
 import tucano from './art/tucano.png';
+import peixe from './art/peixe.png';
+import onca from './art/onca.png';
+import sapo from './art/sapo.png';
 import embaralhar from './art/embaralhar.png';
 import espiar from './art/espiar.png';
 import favor from './art/favor.png';
@@ -42,6 +45,9 @@ export const ART: Record<KittensCardKind, string> = {
   tamandua,
   preguica,
   tucano,
+  peixe,
+  onca,
+  sapo,
   boto,
 };
 

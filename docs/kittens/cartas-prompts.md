@@ -76,3 +76,11 @@ protótipo (`prototipo/tatubum/sprites.js`) e só refiná-los.
 
 Depois de escolhidas: `npm run kittens:cartas -- <pasta>` (a criar no T3) converte pra
 `web/public/kittens/cards/<tipo>.webp`.
+
+## Bichos novos (2026-11-06): duas opções de cada, o Rafa escolhe
+
+Começo e fim padrão, com o fundo na cor da carta. Peixe-beta `#7fd6e8`, Onça-pintada `#6f9e3f`, Sapo `#c9a6e8`.
+
+- **Peixe-beta:** a siamese betta fish in profile with huge flowing crimson and violet fins and a long fan tail, proud fierce expression, a few small bubbles.
+- **Onça-pintada:** a jaguar with natural body proportions caught mid-leap, front paws reaching forward, mouth open in a roar showing its fangs, intense expressive eyes, tail flowing behind it, golden yellow fur with clear black rosette spots, lively dynamic pose with a touch of cartoon personality. O Rafa recusou a versão parada (sem graça) e a versão de mascote (animada demais).
+- **Sapo:** a small green tree frog standing on its hind legs and holding up a round hand mirror with a wooden frame in both hands, the mirror's shiny glass facing forward with a bright white glint, big orange eyes, confident smile.

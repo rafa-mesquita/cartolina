@@ -86,8 +86,33 @@ function roda(s: KittensState, by: string, rng: Rng): KittensState {
   return passes.reduce((acc, x) => logged(acc, { t: 'passed', ...x }, [x.from, x.to]), { ...s, hands });
 }
 
-/** O efeito de um par de bicho que não foi cancelado (spec "Par de cada bicho"); com Boto, o do bicho em `play.as`. */
-export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: GameContext): KittensState {
+/**
+ * Par de Peixe-beta (pedido do Rafa, 2026-11-06): as 3 de cima entram na espiada de quem jogou, como no Espiar, e abre a
+ * escolha do destino da segunda. Monte com menos de 2: só atualiza a espiada.
+ */
+function peixe(s: KittensState, by: string, deadline: number): KittensState {
+  const cards = s.draw.slice(-3).reverse();
+  if (cards.length === 0) return s;
+  const seen = { ...s, peeks: { ...s.peeks, [by]: cards } };
+  return cards.length < 2 ? seen : { ...seen, choice: { kind: 'peixe', who: by, deadline } };
+}
+
+/**
+ * Par de Onça-pintada (pedido do Rafa, 2026-11-06): vê o topo e o fundo do monte e pega uma carta do descarte de antes da
+ * jogada (`before`), menos Desarme. O topo fica na espiada dele. Sem opção, a escolha abre vazia só pra ele ver as cartas.
+ */
+function onca(s: KittensState, by: string, before: string[], deadline: number): KittensState {
+  const top = s.draw.at(-1);
+  const seen = top === undefined || Object.hasOwn(s.peeks, by) ? s : { ...s, peeks: { ...s.peeks, [by]: [top] } };
+  const options = before.filter((c) => !isKind('cafune')(c));
+  return { ...seen, choice: { kind: 'cinco', who: by, options, left: 1, deadline, from: 'onca' } };
+}
+
+/**
+ * O efeito de um par de bicho que não foi cancelado (spec "Par de cada bicho"); com Boto, o do bicho em `play.as`. `by` =
+ * quem está na vez; `caster` = quem manda a magia (outro, depois de um Sapo). `before` = descarte de antes da jogada.
+ */
+export function applyPair(s: KittensState, by: string, caster: string, play: KittensPlay, before: string[], ctx: GameContext): KittensState {
   const deadline = ctx.now + KITTENS_CHOICE_MS;
   switch (play.as) {
     case 'mico': {
@@ -107,11 +132,16 @@ export function applyPair(s: KittensState, by: string, play: KittensPlay, ctx: G
       // Pedido do Rafa (2026-10-21): quem jogou acaba a vez sem comprar, e a próxima vez do alvo é pulada. A pulada
       // entra antes: se o alvo é o próximo, já perde a vez agora. Desde 2026-11-03 a vez acaba inteira, mesmo sob
       // ataque (os turnos devidos se perdem), e no 1x1 só a sua vez acaba: pular o outro devolveria a vez pra você.
+      // Refletido por um Sapo (2026-11-06): a vez de quem jogou acaba do mesmo jeito, e o alvo pode ser ele mesmo.
       if (s.alive.length === 2) return endTurn(logged(s, { t: 'tucano', by, target: play.target!, duel: true }));
-      return endTurn(addSkip(logged(s, { t: 'tucano', by, target: play.target! }), play.target!));
+      return endTurn(addSkip(logged(s, { t: 'tucano', by: caster, target: play.target! }), play.target!));
     case 'latido':
       // Par de Latidores (pedido do Rafa, 2026-10-21): o alvo escolhido joga um Desarme ou explode. A vez continua.
-      return barkPair(s, by, play.target!, deadline);
+      return barkPair(s, caster, play.target!, deadline);
+    case 'peixe':
+      return peixe(s, by, deadline);
+    case 'onca':
+      return onca(s, by, before, deadline);
     default:
       return s; // parsePlay só deixa passar par de bicho ou de Latidor
   }

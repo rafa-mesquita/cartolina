@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../src/game';
-import { KITTENS_BICHOS, kittensCardId, kittensKindOf } from '../src/games/kittens/cards';
+import { KITTENS_BICHOS, kittensCardId, kittensKindOf, kittensSapoPair, type KittensBicho } from '../src/games/kittens/cards';
 import { kittensBaseDeck, kittensExtraCafunes, kittensLatidos } from '../src/games/kittens/deck';
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import { settleKittens } from '../src/games/kittens/settle';
@@ -24,10 +24,10 @@ const SEEDS = 15;
 const COVERAGE_SEEDS = 40;
 
 /** Todas as cartas de uma partida com `n` jogadores, em ordem alfabética. */
-function fullDeck(n: number): string[] {
+function fullDeck(n: number, bichos: readonly KittensBicho[]): string[] {
   const cafunes = Array.from({ length: n + kittensExtraCafunes(n) }, (_, i) => kittensCardId('cafune', i));
   const tatus = Array.from({ length: n - 1 }, (_, i) => kittensCardId('tatubum', i));
-  return [...kittensBaseDeck(n), ...cafunes, ...tatus].sort();
+  return [...kittensBaseDeck(n, bichos), ...cafunes, ...tatus].sort();
 }
 
 /**
@@ -92,7 +92,14 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   const json = JSON.stringify(kittensViewFor(s, viewer));
   const mine = (kind: string) => viewer !== null && s.choice?.kind === kind && 'who' in s.choice && s.choice.who === viewer;
   const ownPeek = viewer !== null && Object.hasOwn(s.peeks, viewer) ? s.peeks[viewer]! : [];
-  const sees = [...(mine('quati') ? s.draw.slice(-1) : []), ...(mine('feitico') ? s.draw.slice(0, 1) : []), ...ownPeek];
+  const onca = viewer !== null && s.choice?.kind === 'cinco' && s.choice.from === 'onca' && s.choice.who === viewer;
+  const sees = [
+    ...(mine('quati') ? s.draw.slice(-1) : []),
+    ...(mine('feitico') ? s.draw.slice(0, 1) : []),
+    ...(mine('peixe') ? s.draw.slice(-3) : []),
+    ...(onca ? [...s.draw.slice(-1), ...s.draw.slice(0, 1)] : []),
+    ...ownPeek,
+  ];
   const secret = [
     ...s.draw.filter((c) => !sees.includes(c)),
     ...(heldTatu !== null ? [heldTatu] : []),
@@ -196,15 +203,26 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
     }
     if (c.kind === 'favor') return { type: 'choose', card: own() };
     if (c.kind === 'quati' || c.kind === 'feitico') return { type: 'choose', keep: r() < 0.5 };
+    if (c.kind === 'peixe') return { type: 'choose', fate: pick(r, ['keep', 'stay', 'bottom'] as const)! };
+    // Par de Onça sem nada pra pegar: só fecha.
+    if (c.kind === 'cinco' && c.options.length === 0) return { type: 'choose' };
     // 5 diferentes: uma das opções que ainda estão no descarte.
     return { type: 'choose', card: pick(r, c.options.filter((x) => s.discard.includes(x))) ?? 'ataque-0' };
+  }
+  // Magia em cima dele, com par de Sapo na mão: quase sempre reflete (de vez em quando manda um par que não vale).
+  if (s.pending?.play.target === p && r() < 0.8) {
+    const sapo = kittensSapoPair(hand, s.bichos);
+    const on = s.pending.play.cards[0]!;
+    if (sapo) return r() < 0.9 ? { type: 'sapo', cards: sapo, on } : { type: 'sapo', cards: [own(), own()] };
   }
   const a = r();
   if (s.pending && a < 0.5) {
     const base: KittensAction = blind || r() < 0.2 ? { type: 'nope', card: own() } : { type: 'nope' };
     return { ...base, ...seenAir(r, s.pending) };
   }
-  const extra = { target: pick(r, s.players), ask: pick(r, KITTENS_BICHOS), as: pick(r, KITTENS_BICHOS) };
+  // Quase sempre um bicho da partida; às vezes um que ficou de fora (tem que ser recusado).
+  const bicho = () => pick(r, r() < 0.85 ? s.bichos : KITTENS_BICHOS);
+  const extra = { target: pick(r, s.players), ask: bicho(), as: bicho() };
   // Quem está cego joga às cegas de vez em quando; na maioria das vezes compra (e volta a ver).
   if (blind) return a < 0.3 && hand.length > 0 ? { type: 'play', cards: tokensToPlay(r, hand.length), ...extra } : { type: 'draw' };
   // Jogadas com o que é público (senão o cego que tem que se defender do Latidor quase nunca aparece): com alguém com
@@ -241,7 +259,7 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
 
 /** As cartas que a ação aponta na própria mão (pra ver se alguma ficha foi com outro nome). */
 function cardsOf(action: KittensAction): (string | undefined)[] {
-  if (action.type === 'play') return action.cards;
+  if (action.type === 'play' || action.type === 'sapo') return action.cards;
   if (action.type === 'nope' || action.type === 'choose') return [action.card];
   return [];
 }
@@ -276,10 +294,11 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
   const someViewer = (s: KittensState) => (s.blind.length > 0 && r() < 0.5 ? pick(r, s.blind)! : (pick(r, [...players, null]) ?? null));
 
   let s = must(applyKittensAction(initialKittensState(), 'p0', { type: 'start' }, ctx()));
+  if (s.bichos.length !== 6 || new Set(s.bichos).size !== 6) throw new Error(`bichos da partida inválidos: [${s.bichos}]`);
   if (rig) s = rig(s);
   // Os Desarmes que o sorteio tirou (`kittensCafuneCut`) não fazem parte desta partida.
   const dealt = new Set(everyCard(s));
-  const deck = fullDeck(n).filter((c) => kittensKindOf(c) !== 'cafune' || dealt.has(c));
+  const deck = fullDeck(n, s.bichos).filter((c) => kittensKindOf(c) !== 'cafune' || dealt.has(c));
   checkInvariants(s, deck, someViewer(s), where);
   // Histórico: os contadores e as saídas batem com o diário (lido a cada passo, antes de ele perder as entradas velhas).
   const logNopes = new Map<string, number>();
@@ -339,7 +358,9 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     } else {
       // Ação: quase sempre de quem está na vez (ou de quem a escolha aberta espera), às vezes de qualquer um (inclusive
       // quem assiste).
-      const owner = c === null ? s.current : c.kind === 'mico' ? (pick(r, c.waiting) ?? null) : c.who;
+      // (Com magia no ar, muitas vezes o alvo: senão o Sapo quase nunca aparece.)
+      const aimed = s.pending?.play.target ?? null;
+      const owner = aimed !== null && r() < 0.5 ? aimed : c === null ? s.current : c.kind === 'mico' ? (pick(r, c.waiting) ?? null) : c.who;
       const p = r() < 0.9 ? (owner !== null && r() < 0.7 ? owner : pick(r, players)!) : 'espectador';
       const action = randomAction(r, s, p);
       if (r() < 0.3) now += Math.floor(r() * 3000);
@@ -377,6 +398,14 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     }
     for (const e of s.log.slice(-3)) seen.add(e.ev.t === 'play' ? `play:${e.ev.play}` : e.ev.t);
     const air = s.pending?.play;
+    // Par de Sapo: a magia refletida sempre tem quem manda e quem recebe, os dois diferentes.
+    if (s.pending?.caster !== undefined) {
+      if (s.pending.caster === air!.target) throw new Error(`magia refletida em quem mandou: ${JSON.stringify(s.pending)}\n  ${where()}`);
+      seen.add(air!.kind === 'par' ? `sapo:par:${air!.as}` : `sapo:${air!.kind}`);
+      if (s.pending.caster === s.pending.by) seen.add('sapo:volta');
+    }
+    if (s.choice?.kind === 'cinco' && s.choice.from === 'onca') seen.add(s.choice.options.length > 0 ? 'onca:pega' : 'onca:vazia');
+    for (const ev of s.log.filter((x) => x.n >= before.seq).map((x) => x.ev)) if (ev.t === 'fished') seen.add(`peixe:${ev.fate}`);
     if (air && air.cards.some((c) => kittensKindOf(c) === 'boto')) seen.add(`boto:${air.kind}`);
     if (s.blind.length > 0) seen.add('blind');
     if (s.choice) seen.add(`choice:${s.choice.kind}`);
@@ -512,6 +541,17 @@ describe('simulação aleatória do Tatubum', () => {
       'tucano:duel',
       'skipped',
       'skipped:chain',
+      'reflected',
+      'sapo:favor',
+      'sapo:olhado',
+      'sapo:par:tucano',
+      'sapo:par:latido',
+      'sapo:volta',
+      'choice:peixe',
+      'peixe:keep',
+      'peixe:stay',
+      'peixe:bottom',
+      'onca:pega',
       // 'skipped:owed' (a pulada gasta um dos turnos de Ataque) só aparecia no 1x1, que não pula mais ninguém
       // (2026-11-03); fica nos testes do Tucano (kittens-tucano.test.ts).
     ];

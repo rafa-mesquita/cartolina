@@ -1,7 +1,7 @@
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf } from './cards';
 import { clearPeeks, counted, cure, eliminate, logged, spendTurn, unpeek } from './turn';
-import { KITTENS_CHOICE_MS, type KittensChoice, type KittensState } from './types';
+import { KITTENS_CHOICE_MS, type KittensChoice, type KittensFishFate, type KittensState } from './types';
 
 type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K }>;
 
@@ -120,6 +120,25 @@ export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): Ki
   return logged({ ...next, choice: null }, { t: 'delayed', by: c.who, moved: !keep });
 }
 
+/**
+ * Par de Peixe-beta (pedido do Rafa, 2026-11-06): o destino da segunda carta do monte. Ficar com ela não é comprar: a vez
+ * continua, nenhum turno é gasto e quem está cego segue cego; se for Tatubum, é Desarme ou explode, como no Feitiço, e
+ * aí o Desarme gasta o turno como sempre. Indo pro fundo, ela sai das espiadas (o resto continua sendo o topo). O monte
+ * pode ter encolhido durante a escolha (alguém saiu e levou um tatu): sem segunda carta, ela fica como está. `deadline` =
+ * prazo da escolha do Desarme, se ele ficar com um Tatubum.
+ */
+export function fishSecond(s: KittensState, c: Choice<'peixe'>, fate: KittensFishFate, deadline: number): KittensState {
+  const closed = { ...s, choice: null };
+  const second = s.draw.at(-2);
+  if (fate === 'stay' || second === undefined) return logged(closed, { t: 'fished', by: c.who, fate: 'stay' });
+  const rest = s.draw.filter((x) => x !== second);
+  const done = logged(closed, { t: 'fished', by: c.who, fate });
+  if (fate === 'bottom') return unpeek({ ...done, draw: [second, ...rest] }, [second]);
+  if (isKind('tatubum')(second)) return takeCard(done, c.who, second, rest, deadline);
+  const kept = unpeek({ ...done, draw: rest, hands: { ...done.hands, [c.who]: [...done.hands[c.who]!, second] } }, [second]);
+  return logged(kept, { t: 'draw', by: c.who, card: second }, [c.who]);
+}
+
 /** Os Tatus Latidores que `p` tem: os da frente primeiro, depois os da mão. */
 export function latidosOf(s: KittensState, p: string): string[] {
   return [...(s.front[p] ?? []).filter(isKind('latido')), ...(s.hands[p] ?? []).filter(isKind('latido'))];
@@ -210,7 +229,7 @@ export function conjure(s: KittensState, c: Choice<'feitico'>, keep: boolean, de
  * Prazo vencido (ou quem escolhe caiu de vez): o servidor escolhe ao acaso (no Quati, a carta fica; no Mico, cada um
  * que falta descarta uma, e a pegada de quem jogou abre com prazo novo; no Favor, dá o que faltar; nos 5 diferentes e
  * na pegada do Mico, pega o que faltar; no Latidor, o Desarme vai sozinho; no Feitiço, a carta de baixo vai pro topo,
- * seja qual for). `now` = agora (pro prazo da pegada do Mico).
+ * seja qual for; no Peixe-beta, a segunda carta fica onde está). `now` = agora (pro prazo da pegada do Mico).
  */
 export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensState {
   const c = s.choice!;
@@ -273,5 +292,7 @@ export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensS
       // A carta SEMPRE vai pro topo: decidir pelo tipo dela (ex.: "fica, a não ser que seja Tatubum") contaria pra quem
       // assiste o que estava embaixo. Também nunca abre a escolha do Desarme pra quem já saiu.
       return conjure(s, c, false, c.deadline);
+    case 'peixe':
+      return fishSecond(s, c, 'stay', c.deadline);
   }
 }

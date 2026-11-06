@@ -1,6 +1,6 @@
 import type { ActionResult, GameContext } from '../../game';
 import { randomInt, shuffle } from '../../rng';
-import { kittensKindOf } from './cards';
+import { KITTENS_WILD, kittensKindOf } from './cards';
 import {
   conjure,
   defendLatido,
@@ -10,9 +10,10 @@ import {
   hideTatu,
   pickFromDiscard,
   drawTop,
+  fishSecond,
   useCafune,
 } from './choices';
-import { kittensDeal } from './deck';
+import { kittensDeal, kittensDrawBichos } from './deck';
 import { parsePlay, realCard } from './play';
 import { settleKittens } from './settle';
 import { counted, logged } from './turn';
@@ -21,7 +22,9 @@ import {
   KITTENS_MIN_PLAYERS,
   KITTENS_NOPE_MS,
   KITTENS_UNSTOPPABLE_MS,
+  kittensCaster,
   kittensNopable,
+  kittensReflectable,
   kittensNopeCooldownUntil,
   type KittensAction,
   type KittensState,
@@ -42,6 +45,7 @@ export function initialKittensState(): KittensState {
     front: {},
     blind: [],
     blindClock: null,
+    bichos: [],
     current: null,
     owed: 0,
     pending: null,
@@ -60,13 +64,15 @@ export function initialKittensState(): KittensState {
 /** Partida nova com os ativos (também usada em "jogar de novo"). A sala já limita a 8 pessoas. */
 function startMatch(state: KittensState, ctx: GameContext): ActionResult<KittensState> {
   if (ctx.active.length < KITTENS_MIN_PLAYERS) return fail('not_enough_players');
-  const { hands, draw } = kittensDeal(ctx.rng, [...ctx.active]);
+  // Os bichos da partida são sorteados a cada início (pedido do Rafa, 2026-11-06); o Boto e o Latidor entram sempre.
+  const bichos = kittensDrawBichos(ctx.rng);
+  const { hands, draw } = kittensDeal(ctx.rng, [...ctx.active], bichos);
   // A ordem da mesa é sorteada a cada partida (pedido do Rafa, 2026-11-06: era a ordem de entrada na sala), e quem começa
   // também (2026-10-20: o host começava sempre). Os sorteios vêm depois da distribuição, pra mesma semente dar as mesmas mãos.
   const players = shuffle(ctx.rng, ctx.active);
   const first = players[randomInt(ctx.rng, players.length)]!;
   const stats = Object.fromEntries(players.map((p) => [p, { nopes: 0, defuses: 0 }]));
-  const fresh = { ...initialKittensState(), match: state.match + 1, stats };
+  const fresh = { ...initialKittensState(), match: state.match + 1, stats, bichos };
   return ok({ ...fresh, phase: 'playing', players, alive: [...players], hands, draw, current: first, owed: 1 });
 }
 
@@ -156,6 +162,8 @@ export function applyKittensAction(
           return ok(giveFavor(s, c, card));
         }
         case 'cinco':
+          // Par de Onça sem nada pra pegar: ele viu o topo e o fundo e fecha.
+          if (action.card === undefined && c.from === 'onca' && c.options.length === 0) return ok({ ...s, choice: null });
           if (action.card === undefined || !c.options.includes(action.card) || !s.discard.includes(action.card)) {
             return fail('bad_choice');
           }
@@ -174,6 +182,9 @@ export function applyKittensAction(
         case 'feitico':
           if (action.keep === undefined) return fail('bad_choice');
           return ok(conjure(s, c, action.keep, ctx.now + KITTENS_CHOICE_MS));
+        case 'peixe':
+          if (action.fate === undefined) return fail('bad_choice');
+          return ok(fishSecond(s, c, action.fate, ctx.now + KITTENS_CHOICE_MS));
         default: {
           const unhandled: never = c;
           void unhandled;
@@ -225,6 +236,26 @@ export function applyKittensAction(
       };
       const hands = { ...s.hands, [playerId]: s.hands[playerId]!.filter((c) => c !== card) };
       return ok(logged(counted({ ...s, pending, hands }, playerId, 'nopes'), { t: 'nope', by: playerId }));
+    }
+    case 'sapo': {
+      // Par de Sapo (pedido do Rafa, 2026-11-06): o alvo devolve a magia pra quem mandou. A janela recomeça, os Nem vem! de
+      // antes não contam mais, e o novo alvo pode refletir de volta.
+      if (s.phase !== 'playing') return fail('bad_phase');
+      if (!s.alive.includes(playerId)) return fail('not_alive');
+      const air = s.pending;
+      if (!air || air.play.target !== playerId || !kittensReflectable(air.play, s.alive.length) || !s.bichos.includes('sapo')) return fail('sapo_only');
+      if (action.on !== undefined && action.on !== air.play.cards[0]) return fail('nope_stale');
+      if (s.blind.includes(playerId)) return fail('sapo_blind');
+      const { cards } = action;
+      const isPair = cards.length === 2 && new Set(cards).size === 2 && cards.every((c) => kittensKindOf(c) === 'sapo' || kittensKindOf(c) === KITTENS_WILD);
+      if (!isPair) return fail('bad_combo');
+      const mine = s.hands[playerId]!;
+      if (!cards.every((c) => mine.includes(c))) return fail('not_in_hand');
+      const caster = kittensCaster(air);
+      const hands = { ...s.hands, [playerId]: mine.filter((c) => !cards.includes(c)) };
+      const discard = [...s.discard, ...air.nopes.map((n) => n.card), ...cards];
+      const pending = { ...air, caster: playerId, play: { ...air.play, target: caster }, nopes: [], resolvesAt: ctx.now + KITTENS_NOPE_MS };
+      return ok(logged({ ...s, hands, discard, pending }, { t: 'reflected', by: playerId, target: caster }));
     }
     default:
       return fail('bad_action');

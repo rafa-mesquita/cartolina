@@ -18,7 +18,8 @@ function hideCard(ev: KittensEvent): KittensEvent {
 
 /**
  * A escolha como `viewerId` vê: sem o id do tatu que está sendo escondido (com ele, quem assiste poderia saber onde o
- * tatu foi parar); a carta de cima do Quati e a de baixo do Feitiço só pra quem escolhe.
+ * tatu foi parar); a carta de cima do Quati, a de baixo do Feitiço, as 3 de cima do Peixe-beta e o topo e o fundo da
+ * Onça só pra quem escolhe.
  */
 function choiceView(state: KittensState, viewerId: string | null): KittensChoiceView | null {
   const c = state.choice;
@@ -34,6 +35,10 @@ function choiceView(state: KittensState, viewerId: string | null): KittensChoice
       return { ...c, card: mine ? (state.draw.at(-1) ?? null) : null };
     case 'feitico':
       return { ...c, card: mine ? (state.draw[0] ?? null) : null };
+    case 'peixe':
+      return { ...c, cards: mine ? state.draw.slice(-3).reverse() : null };
+    case 'cinco':
+      return c.from === 'onca' && mine ? { ...c, seen: { top: state.draw.at(-1) ?? null, bottom: state.draw[0] ?? null } } : c;
     default:
       return c;
   }
@@ -70,6 +75,7 @@ export function kittensViewFor(saved: KittensState, viewerId: string | null): Ki
     peek: own(state.peeks, viewerId) ?? null,
     peekers: state.players.filter((p) => (own(state.peeks, p)?.length ?? 0) > 0),
     skips: state.skips,
+    bichos: state.bichos,
     log: state.log.map(({ n, ev, seenBy }) => {
       const sees = seenBy === null || (viewerId !== null && seenBy.includes(viewerId));
       const card = 'card' in ev ? ev.card : null;

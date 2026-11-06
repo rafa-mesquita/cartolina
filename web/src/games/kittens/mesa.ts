@@ -10,6 +10,9 @@
 import {
   KITTENS_ACTION_KINDS,
   KITTENS_BICHOS,
+  kittensCaster,
+  kittensReflectable,
+  kittensSapoPair,
   KITTENS_CARD_KINDS,
   KITTENS_CARD_NAMES,
   KITTENS_WILD,
@@ -76,6 +79,9 @@ const PAIR_LABEL: Partial<Record<KittensCardKind, string>> = {
   tamandua: 'PAR DE TAMANDUÁ',
   preguica: 'PAR DE PREGUIÇA',
   tucano: 'PAR DE TUCANO',
+  peixe: 'PAR DE PEIXE-BETA',
+  onca: 'PAR DE ONÇA-PINTADA',
+  sapo: 'PAR DE SAPO',
   latido: 'PAR DE LATIDORES',
   capivara: 'RODA DE CAPIVARA',
 };
@@ -101,7 +107,7 @@ const ACTION_KINDS: readonly string[] = KITTENS_ACTION_KINDS;
 const CARD_COLOR: Record<KittensCardKind, string> = {
   tatubum: '#e4572e', cafune: '#f2c14e', nemvem: '#c86fd4', ataque: '#9aa7bd', pular: '#5aa0e6', favor: '#f29bc0',
   embaralhar: '#8d7ae6', espiar: '#3fa7c9', capivara: '#5cc8b8', mico: '#f4a259', quati: '#c79a6a', tamandua: '#b0b8c8', preguica: '#a8bf6a',
-  tucano: '#3b5bc4', latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
+  tucano: '#3b5bc4', peixe: '#7fd6e8', onca: '#6f9e3f', sapo: '#c9a6e8', latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
 };
 
 /** Pixel art em SVG (um retângulo por pixel): `rows` com uma letra por pixel, `pal` = cor de cada letra. */
@@ -142,6 +148,9 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta do adversário com <b>mais cartas na mão</b> entre os que têm (empate: sorteado). Se ninguém tiver, procura no monte; nem no monte, pega do descarte. Às vezes (30%) puxa <b>dois</b>, cada um nessa mesma ordem.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
   tucano: '<b>PAR DE TUCANO</b>: escolha um adversário (mesmo sem carta na mão). A sua vez acaba <b>inteira, sem você comprar</b> (mesmo sob ataque: os turnos que você devia se perdem), e a <b>próxima vez dele é pulada</b>: quando a vez chegar nele, ele não joga nem compra (se estiver devendo 2 turnos de um Ataque, perde um deles). Duas vezes no mesmo jogador, pula duas vezes.<br>No <b>1x1</b> (só dois na partida), só a sua vez acaba: ninguém é pulado.',
+  peixe: '<b>PAR DE PEIXE-BETA</b>: só você vê as <b>3 cartas de cima</b> do monte e elas ficam à mostra pra você, como no Espiar. Você decide o destino da <b>segunda</b> (30 segundos; depois ela fica onde está): <b>fica com ela</b>, <b>deixa onde está</b> ou <b>manda pro fundo</b>.<br>Ficar com ela não é comprar: a sua vez continua e quem está cego continua cego. Se for Tatubum: Desarme ou explode.',
+  onca: '<b>PAR DE ONÇA-PINTADA</b>: só você vê a <b>carta do topo e a do fundo</b> do monte, e <b>pega uma carta do descarte</b> pra sua mão, menos Desarme (30 segundos; depois vai uma ao acaso). Vale o descarte de antes da jogada. Todo mundo vê qual você pegou. A do topo fica à mostra pra você.',
+  sapo: '<b>PAR DE SAPO</b>: só vale quando <b>você é o alvo</b> de um Favor, Mau-olhado, par de Tucano ou par de Latidores que está no ar. Aparece o botão <b>SAPO!</b>, e o par faz a magia <b>voltar pra quem mandou</b>. Ela fica mais 5 segundos no ar: quem recebeu pode refletir de volta com outro par, e qualquer um pode dar Nem vem!.<br>O par pode ser 2 Sapos, Sapo + Boto ou 2 Botos. Não vale no trio de Favor, no Tucano do 1x1, nem pra quem está cego. Na sua vez, o par de Sapo não faz nada.',
   boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>4 bichos diferentes</b> conta como um bicho a mais (só um Boto). No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
 };
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
@@ -175,12 +184,17 @@ const ABOUT: Record<KittensCardKind, string> = {
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir (às vezes, dois).',
   tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada (no 1x1, só a sua vez acaba).',
+  peixe: 'Par: vê as 3 de cima e fica com a segunda, deixa ela onde está ou manda pro fundo. A vez continua.',
+  onca: 'Par: vê o topo e o fundo do monte e pega uma carta do descarte (menos Desarme).',
+  sapo: 'Par, quando você é o alvo: a magia volta pra quem mandou (Favor, Mau-olhado, par de Tucano, par de Latidores). Vale 2 Sapos, Sapo + Boto ou 2 Botos.',
   latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente. Par: o adversário escolhido joga um Desarme ou explode.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',
   feitico: 'Você vê a carta de baixo do monte: fica com ela ou põe no topo. Acaba o turno. Não cura o Mau-olhado.',
   boto: 'Coringa: com um bicho forma o par dele; dois Botos, o par que você escolher. Completa trios.',
 };
 
+/** Os bichos da partida (antes de começar, e em visão de servidor antigo, sem `bichos`: a pool toda). */
+const bichosOf = (v: KittensView | null | undefined): readonly KittensCardKind[] => (v?.bichos?.length ? v.bichos : KITTENS_BICHOS);
 const TIMER = '<span class="timer" data-timer></span>';
 /** Legendas dos modos de escolha (par de Preguiça pede bicho, par de 2 Botos pede o bicho, Favor e Mau-olhado pedem adversário). */
 const ASK_CAPTION = 'Que bicho você quer puxar?';
@@ -213,6 +227,8 @@ function guessPlay(ids: readonly string[]): PlayGuess | null {
   if (ks.length === 2) {
     if (wild === 2) return { kind: 'par', as: null };
     if (ks.every((k) => k === 'latido')) return { kind: 'par', as: 'latido' };
+    // Par de Sapo só como resposta, pelo botão SAPO!: na sua vez não forma jogada.
+    if (plain[0] === 'sapo') return null;
     return same && kittensIsBicho(plain[0]!) ? { kind: 'par', as: plain[0]! } : null;
   }
   if (ks.length === 3) {
@@ -711,7 +727,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     }
     // Carta que acabou de ir pra frente de alguém (Tatu Latidor) aparece quando o voo chega.
     for (const p of v.players) for (const id of v.front[p] ?? []) if (prev && !(prev.front[p] ?? []).includes(id)) frontHidden.add(id);
-    if (fresh.some((e) => e.ev.t === 'play' || e.ev.t === 'nope')) airHidden = true;
+    if (fresh.some((e) => e.ev.t === 'play' || e.ev.t === 'nope' || e.ev.t === 'reflected')) airHidden = true;
     for (const id of [...selected]) if (!v.hand.includes(id)) selected.delete(id);
     // Cego: as fichas andam quando uma carta sai ou chega, ou quando o Mau-olhado embaralha de novo (a ficha ?2 pode ser
     // outra carta agora, mesmo com a mão do mesmo tamanho): a seleção, a ordem da mão e a jogada pela metade não valem mais.
@@ -836,6 +852,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       case 'cinco':
         // Fim do par de Mico: quem jogou pega uma das descartadas.
         if (c.from === 'mico') return c.who === ME ? `Pegue UMA das descartadas ${TIMER}` : `${nameOf(c.who)} vai pegar uma das descartadas…`;
+        // Par de Onça: pode não ter o que pegar.
+        if (c.from === 'onca' && !c.options.length) return c.who === ME ? `Nada pra pegar do descarte ${TIMER}` : `${nameOf(c.who)} está vendo o topo e o fundo do monte…`;
         if (c.who === ME) return `${c.left === 2 ? 'Pegue DUAS do descarte' : cincoFirst === 2 ? 'Pegue MAIS UMA do descarte' : 'Pegue UMA do descarte'} ${TIMER}`;
         return `${nameOf(c.who)} vai pegar ${c.left === 2 ? 'duas' : cincoFirst === 2 ? 'mais uma' : 'uma'} do descarte…`;
       case 'latido':
@@ -843,6 +861,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         return blindMe() ? `AU AU! Solte uma carta virada no Latidor (vai o seu Desarme) ${TIMER}` : `AU AU! JOGUE O DESARME! ${TIMER}`;
       case 'feitico':
         return c.who === ME ? null : `${nameOf(c.who)} está vendo a carta de baixo do monte…`;
+      case 'peixe':
+        return c.who === ME ? null : `${nameOf(c.who)} está vendo as 3 de cima do monte…`;
       case 'favor': {
         // Favor sozinho: o painel de quem dá basta (e a legenda da jogada fica). Trio de Favor: diz quantas faltam.
         if (favorFirst <= 1) return null;
@@ -1565,6 +1585,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
    * Se alguém deu Nem vem! antes (ou a carta no ar mudou), o servidor recusa: a carta continua na mão (nada sai dela
    * antes da resposta) e o `error()` mostra o aviso; dá pra tentar de novo na janela nova.
    */
+  /** Par de Sapo: a magia no ar volta pra quem mandou. Vai junto a carta que você viu no ar (`on`). */
+  function reflect(cards: string[]): void {
+    const p = view?.pending;
+    if (p) act({ type: 'sapo', cards, on: p.play.cards[0]! });
+  }
   function nope(card?: string): void {
     const p = view?.pending;
     if (!p) return;
@@ -1608,6 +1633,16 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       box.appendChild(b);
     } else if (nopable && blind && v.hand.length) {
       box.appendChild(hint('cego: arraste uma carta virada pra mesa pra tentar um NEM VEM!'));
+    }
+    // Par de Sapo: só pro alvo da magia no ar, e quem está cego não usa.
+    const air = v.pending;
+    const sapo = air && !blind && air.play.target === ME && kittensReflectable(air.play, v.alive.length) ? kittensSapoPair(v.hand, bichosOf(v)) : null;
+    if (sapo) {
+      const b = button('SAPO!', () => reflect(sapo));
+      b.id = 'sapo';
+      // No celular, Nem vem! e Sapo dividem a linha.
+      box.querySelector('#nope')?.classList.add('kt-side');
+      box.appendChild(b);
     }
     const c = v.choice;
     if ((c?.kind === 'tatu' || c?.kind === 'latido') && c.who === ME) {
@@ -1680,14 +1715,18 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (c.kind === 'favor') return `favor:${c.to}:${c.deadline}:${c.left}`;
     if (c.kind === 'quati') return `quati:${c.card ?? ''}:${c.deadline}`;
     if (c.kind === 'feitico') return `feitico:${c.card ?? ''}:${c.deadline}`;
+    if (c.kind === 'peixe') return `peixe:${c.cards?.join(',') ?? ''}:${c.deadline}`;
     return '';
   }
-  /** Painel com os 6 bichos (par de Preguiça: o pedido; 2 Botos: o que eles viram; cego: os dois, ou PULAR). */
-  function bichoPanel(title: string, sub: string, pick: (k: KittensCardKind) => void, skip?: () => void): void {
+  /**
+   * Painel com os bichos da partida (par de Preguiça: o pedido; 2 Botos: o que eles viram, menos o Sapo, que só vale como
+   * resposta; cego: os dois, ou PULAR).
+   */
+  function bichoPanel(title: string, sub: string, pick: (k: KittensCardKind) => void, skip?: () => void, without?: KittensCardKind): void {
     const panel = $('#panel');
     panel.innerHTML = `<h2>${title}</h2><p>${sub}</p><div class="kt-row"></div>`;
     const row = $('#panel .kt-row');
-    KITTENS_BICHOS.forEach((k) => row.appendChild(button(cardName(k), () => pick(k), 'small')));
+    bichosOf(view).filter((k) => k !== without).forEach((k) => row.appendChild(button(cardName(k), () => pick(k), 'small')));
     if (skip) row.appendChild(button('PULAR', skip, 'small'));
     row.appendChild(button('CANCELAR', () => { dropMode(); render(); }, 'small ghost'));
   }
@@ -1712,7 +1751,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       const guess = guessPlay(m.play.cards);
       if (!guess) { mode = null; return; }
       if (m.type === 'ask') bichoPanel('QUE BICHO VOCÊ PUXA?', 'Vem de um adversário que tenha; se ninguém tiver, do monte.', (k) => proceed({ ...m.play, ask: k }, guess));
-      else bichoPanel('QUE BICHO O BOTO VIRA?', 'Os dois Botos viram o par desse bicho e fazem o que ele faz.', (k) => proceed({ ...m.play, as: k }, guess));
+      else bichoPanel('QUE BICHO O BOTO VIRA?', 'Os dois Botos viram o par desse bicho e fazem o que ele faz.', (k) => proceed({ ...m.play, as: k }, guess), undefined, 'sapo');
       return;
     }
     if (!c) return;
@@ -1749,6 +1788,21 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       const row = $('#panel .kt-row');
       row.appendChild(button('FICAR COM ELA', () => act({ type: 'choose', keep: true }), tatu ? 'small' : 'yellow'));
       row.appendChild(button('PÔR NO TOPO', () => act({ type: 'choose', keep: false }), tatu ? 'yellow' : 'small'));
+    } else if (c.kind === 'peixe') {
+      // Só você vê as 3 de cima. A decisão é sobre a segunda; ficar com ela não é comprar (Tatubum: Desarme ou explode).
+      const second = c.cards?.[1] ?? null;
+      const tatu = second !== null && kindOf(second) === 'tatubum';
+      const warn = tatu ? '<p class="kt-warn">A segunda é um TATUBUM! Ficar com ele: Desarme ou explode.</p>' : '';
+      panel.innerHTML = `<h2>O PEIXE-BETA VIU AS 3 DE CIMA ${TIMER}</h2><p>Só você vê. A segunda (em destaque): fica com ela, deixa onde está ou vai pro fundo? A sua vez continua.</p>${warn}<div class="cards"></div><div class="kt-row"></div>`;
+      (c.cards ?? []).forEach((id, i) => {
+        const el = cardEl(id);
+        if (i === 1) el.classList.add('kt-second');
+        $('#panel .cards').appendChild(el);
+      });
+      const row = $('#panel .kt-row');
+      row.appendChild(button('FICAR COM ELA', () => act({ type: 'choose', fate: 'keep' }), tatu ? 'small' : 'yellow'));
+      row.appendChild(button('DEIXAR ONDE ESTÁ', () => act({ type: 'choose', fate: 'stay' }), 'small'));
+      row.appendChild(button('PRO FUNDO', () => act({ type: 'choose', fate: 'bottom' }), tatu ? 'yellow' : 'small'));
     }
     tickTimers();
   }
@@ -1785,20 +1839,34 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     // Aberto pra escolher: fecha sozinho quando a escolha acaba.
     if (!pick && pileForPick) { closePile(true); return; }
     if (pick) pileForPick = true;
-    const key = JSON.stringify([v.discard, pick && pick.options, pick && pick.left]);
+    const key = JSON.stringify([v.discard, pick && pick.options, pick && pick.left, pick && pick.seen]);
     if (key === pileKey && !pile.hidden) return;
     pileKey = key;
     const scroll = pile.querySelector('.grid')?.scrollTop ?? 0;
     const cards = [...v.discard].reverse();
     const mico = pick?.from === 'mico';
+    const onca = pick?.from === 'onca';
     const title = !pick ? 'O DESCARTE'
       : mico ? 'PEGUE UMA DAS DESCARTADAS'
+      : onca ? (pick.options.length ? 'A ONÇA VIU: PEGUE UMA DO DESCARTE' : 'A ONÇA VIU: NADA PRA PEGAR')
       : pick.left === 2 ? 'PEGUE DUAS DO DESCARTE' : cincoFirst === 2 ? 'PEGUE MAIS UMA' : 'PEGUE UMA DO DESCARTE';
     const sub = !pick
       ? `${cards.length} carta${cards.length === 1 ? '' : 's'}, da mais nova pra mais velha.`
       : mico ? 'Clique numa carta acesa: são as que foram descartadas no seu par de Mico.'
+      : onca ? (pick.options.length ? 'Só você vê o topo e o fundo do monte. Clique numa carta acesa pra pegar (Desarme não pode).' : 'Só você vê o topo e o fundo do monte. No descarte não há carta que dê pra pegar.')
       : 'Clique numa carta acesa. As apagadas foram pro descarte depois da sua jogada.';
     pile.innerHTML = `<div class="box"><h2>${title}${pick ? ' ' + TIMER : ''}</h2><p class="psub">${tx(sub)}</p><div class="pbody"><div class="grid"></div><div class="pinfo"></div></div><div class="foot"><div class="note">${phone() ? 'toque fora pra fechar' : 'ESC ou clique fora pra fechar'}</div></div></div>`;
+    if (pick?.seen) {
+      const seen = document.createElement('div');
+      seen.className = 'kt-seen';
+      for (const [label, id] of [['TOPO', pick.seen.top], ['FUNDO', pick.seen.bottom]] as const) {
+        const item = document.createElement('div');
+        item.innerHTML = `<b>${label}</b>`;
+        if (id) item.appendChild(cardEl(id));
+        seen.appendChild(item);
+      }
+      $('#pile .pbody').before(seen);
+    }
     const grid = $('#pile .grid');
     // Ao lado da grade: o que faz a carta que está debaixo do mouse.
     const info = $('#pile .pinfo');
@@ -1821,7 +1889,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       grid.appendChild(el);
     });
     if (!cards.length) grid.innerHTML = '<div class="none">O descarte está vazio.</div>';
-    $('#pile .foot').appendChild(button('FECHAR', () => closePile(), 'small ghost'));
+    // Par de Onça sem nada pra pegar: fechar é dizer que já viu.
+    if (onca && !pick?.options.length) $('#pile .foot').appendChild(button('JÁ VI', () => act({ type: 'choose' }), 'small'));
+    else $('#pile .foot').appendChild(button('FECHAR', () => closePile(), 'small ghost'));
     grid.scrollTop = scroll;
     pile.hidden = false;
     tickTimers();
@@ -1863,6 +1933,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         return `${n(ev.by)} jogou ${label}${ev.target ? ' em ' + n(ev.target) : ''}${ev.ask ? ', pedindo ' + cardName(ev.ask) : ''}`;
       }
       case 'nope': return `${n(ev.by)}: NEM VEM!`;
+      case 'reflected': return `${n(ev.by)} refletiu com o SAPO! Agora a magia é pra ${n(ev.target)}`;
+      case 'fished': return ev.fate === 'keep' ? `${n(ev.by)} ficou com a segunda carta do monte` : ev.fate === 'bottom' ? `${n(ev.by)} mandou a segunda carta pro fundo` : `${n(ev.by)} deixou a segunda carta onde estava`;
       case 'resolved': {
         // "Sua RODA", "Seu PAR": a roda de capivara é a única feminina.
         const whose = (label: string) => (ev.by === ME ? `${label.startsWith('RODA') ? 'Sua' : 'Seu'} ${label}` : `${label} de ${n(ev.by)}`);
@@ -1874,7 +1946,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
           pular: `${n(ev.by)} pulou`,
           embaralhar: `${n(ev.by)} embaralhou o monte`,
           espiar: `${n(ev.by)} espiou o futuro`,
-          favor: `${prevPending?.play.target ? n(prevPending.play.target) : 'alguém'} vai dar uma carta pra ${n(ev.by)}`,
+          favor: `${prevPending?.play.target ? n(prevPending.play.target) : 'alguém'} vai dar uma carta pra ${n(prevPending ? kittensCaster(prevPending) : ev.by)}`,
           latido: `${n(ev.by)} soltou o TATU LATIDOR: AU AU!`,
           olhado: `${whose(PLAY_LABEL.olhado)} pegou!`,
           feitico: `${n(ev.by)} fez um FEITIÇO na carta de baixo do monte`,
@@ -2065,6 +2137,30 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         Sound.play('nope');
         Fx.flash('#e4572e', 140);
         await Fx.stamp(air, 'NEM VEM!');
+        break;
+      }
+      case 'reflected': {
+        // Par de Sapo: o sapo aparece em quem refletiu, o par vai pro descarte e a magia troca de alvo.
+        say(text);
+        airHidden = false;
+        renderTable();
+        Sound.play('nope');
+        Fx.flash('#4f9e4a', 140);
+        const mine = ev.by === ME;
+        const at: At = mine ? mineAt(600) : anchorOf(ev.by);
+        void Fx.icon(ART.sapo, at, { size: mine ? 150 : 110, hold: 350 });
+        await Promise.all(evView.discard.slice(-2).map((id, i) => wait(i * 70).then(() => Fx.fly({ node: cardEl(id), from: at, to: $('#discard'), dur: 420, rot: (i % 2 ? 6 : -5), trail: '#7fd47a' }))));
+        await Fx.stamp(air, 'SAPO!');
+        break;
+      }
+      case 'fished': {
+        // Par de Peixe-beta: indo pro fundo, um verso desce do topo pro fundo do monte; quem ficou com ela voa no `draw`.
+        say(text);
+        Sound.play('card');
+        if (ev.fate === 'bottom') {
+          const deck = $('#deck .stack');
+          await Fx.fly({ node: cardEl(null, { back: true }), from: deck, to: deck, dur: 520 });
+        } else await wait(500);
         break;
       }
       case 'resolved': {
@@ -2748,7 +2844,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   // ---------------------------------------------------------------- galeria das cartas
   $('#cards').onclick = () => {
     const g = $('#gallery');
-    g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Combos: PAR só de bichos (cada um faz uma coisa; o BOTO vale por qualquer bicho) · TRIO de qualquer carta rouba um Desarme (3 FAVORES: você tira 3 cartas do escolhido, uma ao acaso, e não aceita Nem vem!) · 4 BICHOS DIFERENTES (o BOTO conta como um) pega DUAS do descarte e não aceita Nem vem!. As outras jogadas ficam 5 s no ar pra alguém dar Nem vem!. Quem pega MAU-OLHADO joga às cegas até comprar. O olho ao lado do descarte mostra todas as cartas da pilha.</p></div>';
+    g.innerHTML = '<h2>AS CARTAS</h2><div class="grid"></div><div class="foot"><p>Cada partida sorteia 6 bichos; aqui estão os desta partida. O BOTO e o TATU LATIDOR entram sempre. Combos: PAR só de bichos (cada um faz uma coisa; o BOTO vale por qualquer bicho) · TRIO de qualquer carta rouba um Desarme (3 FAVORES: você tira 3 cartas do escolhido, uma ao acaso, e não aceita Nem vem!) · 4 BICHOS DIFERENTES (o BOTO conta como um) pega DUAS do descarte e não aceita Nem vem!. As outras jogadas ficam 5 s no ar pra alguém dar Nem vem!. Quem pega MAU-OLHADO joga às cegas até comprar. O olho ao lado do descarte mostra todas as cartas da pilha.</p></div>';
     // No celular, o jeito de mexer nas cartas com o dedo (no computador é o de sempre: clicar, arrastar, rodinha).
     if (phone()) {
       const how = document.createElement('p');
@@ -2757,7 +2853,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       $('#gallery .grid').before(how);
     }
     const grid = $('#gallery .grid');
-    KITTENS_CARD_KINDS.forEach((k, i) => {
+    const inMatch = bichosOf(view);
+    KITTENS_CARD_KINDS.filter((k) => !kittensIsBicho(k) || inMatch.includes(k)).forEach((k, i) => {
       const item = document.createElement('div');
       item.className = 'item';
       item.appendChild(cardEl(`${k}-${i}`));

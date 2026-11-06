@@ -7,6 +7,10 @@
  */
 import {
   KITTENS_BICHOS,
+  KITTENS_CLASSIC_BICHOS,
+  kittensCaster,
+  kittensReflectable,
+  kittensSapoPair,
   PLAYER_COLORS,
   isKittensRoomView,
   kittensKindOf,
@@ -28,6 +32,8 @@ const RETRY_MS = 4000;
 
 type Rng = () => number;
 const BICHOS: readonly KittensCardKind[] = KITTENS_BICHOS;
+/** Os bichos desta partida (visão de servidor antigo, sem `bichos`: os 6 de sempre). */
+const bichosOf = (g: KittensView): readonly KittensCardKind[] => g.bichos ?? KITTENS_CLASSIC_BICHOS;
 
 /** O que o bot já decidiu (ele mesmo guarda; vive enquanto a partida dura). */
 export interface KittensBotMemory {
@@ -36,9 +42,11 @@ export interface KittensBotMemory {
   /** Chave do turno em andamento e quantas jogadas ele já fez nele. */
   turnKey: string | null;
   playedThisTurn: number;
+  /** Chave do Sapo que ele já considerou (reflete ou não, decide uma vez só por magia em cima dele). */
+  sapo: string | null;
 }
 
-export const newKittensMemory = (): KittensBotMemory => ({ noped: null, turnKey: null, playedThisTurn: 0 });
+export const newKittensMemory = (): KittensBotMemory => ({ noped: null, turnKey: null, playedThisTurn: 0, sapo: null });
 
 const pickOne = <T>(rng: Rng, arr: readonly T[]): T => arr[Math.min(arr.length - 1, Math.floor(rng() * arr.length))]!;
 const between = (rng: Rng, a: number, b: number): number => a + rng() * (b - a);
@@ -64,11 +72,11 @@ interface Play {
  * Par de `b` (com as cartas dadas): Preguiça pede um bicho; Tucano vai num adversário vivo (`opponents`, nunca vazio
  * aqui); `as` só no par de 2 Botos.
  */
-function pairOf(cards: string[], b: KittensCardKind, rng: Rng, botos: boolean, opponents: readonly string[]): Play {
+function pairOf(g: KittensView, cards: string[], b: KittensCardKind, rng: Rng, botos: boolean, opponents: readonly string[]): Play {
   return {
     cards,
     ...(botos ? { as: b } : {}),
-    ...(b === 'preguica' ? { ask: pickOne(rng, BICHOS) } : {}),
+    ...(b === 'preguica' ? { ask: pickOne(rng, bichosOf(g)) } : {}),
     ...(b === 'tucano' ? { target: pickOne(rng, opponents) } : {}),
   };
 }
@@ -79,7 +87,7 @@ function blindPlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng):
   const n = Math.min(g.hand.length, rng() < 0.7 ? 1 : 2);
   const tokens = [...g.hand].sort(() => rng() - 0.5).slice(0, n);
   const opponents = g.alive.filter((p) => p !== me);
-  return { cards: tokens, target: pickOne(rng, opponents), ask: pickOne(rng, BICHOS), as: pickOne(rng, BICHOS) };
+  return { cards: tokens, target: pickOne(rng, opponents), ask: pickOne(rng, bichosOf(g)), as: pickOne(rng, bichosOf(g)) };
 }
 
 /** Uma jogada possível com a mão (ou null). */
@@ -142,12 +150,14 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     // vezes, num adversário vivo (a vez dele é pulada).
     if (b === 'mico' && !targets.length) continue;
     if (b === 'tucano' && rng() >= 0.5) continue;
-    options.push(pairOf(pair, b, rng, false, opponents));
+    // Par de Sapo só como resposta; par de Onça pede descarte pra pegar.
+    if (b === 'sapo' || (b === 'onca' && !g.discard.length)) continue;
+    options.push(pairOf(g, pair, b, rng, false, opponents));
   }
   // Dois Botos: par do bicho que o bot quiser (nunca Mico sem ninguém com carta).
   if (botos.length >= 2) {
-    const b = pickOne(rng, targets.length ? BICHOS : BICHOS.filter((x) => x !== 'mico'));
-    options.push(pairOf(botos.slice(0, 2), b, rng, true, opponents));
+    const usable = bichosOf(g).filter((x) => x !== 'sapo' && (targets.length > 0 || x !== 'mico') && (g.discard.length > 0 || x !== 'onca'));
+    if (usable.length) options.push(pairOf(g, botos.slice(0, 2), pickOne(rng, usable), rng, true, opponents));
   }
   // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme; o Boto completa um par de bicho.
   // Trio de Favor pede alvo com carta na mão: o alvo dá 3 cartas.
@@ -262,13 +272,19 @@ export function decideKittens(
       const keep = c.card === null || kittensKindOf(c.card) !== 'tatubum';
       return { key, delay: between(rng, 900, 1600), action: { type: 'choose', keep } };
     }
+    if (c.kind === 'peixe') {
+      // Fica com a segunda carta, a não ser que seja Tatubum (aí vai pro fundo).
+      const fate = kittensKindOf(c.cards?.[1] ?? '') === 'tatubum' ? 'bottom' : 'keep';
+      return { key, delay: between(rng, 900, 1600), action: { type: 'choose', fate } };
+    }
     if (c.kind === 'latido') {
       // Tatu Latidor (a vez dele na fila de defesa): joga o Desarme (às cegas, qualquer ficha: o servidor acha o Desarme).
       const card = g.blind.includes(me) ? g.hand[0] : g.hand.find((x) => kittensKindOf(x) === 'cafune');
       return card ? { key, delay: between(rng, 1200, 2200), action: { type: 'choose', card } } : null;
     }
-    // 4 bichos diferentes ou a pegada do fim do par de Mico: Desarme, Nem vem! e Ataque primeiro.
-    if (!c.options.length) return null;
+    // 4 bichos diferentes, a pegada do fim do par de Mico ou o par de Onça: Desarme, Nem vem! e Ataque primeiro. Onça sem
+    // nada pra pegar: fecha.
+    if (!c.options.length) return c.from === 'onca' ? { key, delay: between(rng, 900, 1600), action: { type: 'choose' } } : null;
     const pref: KittensCardKind[] = ['cafune', 'nemvem', 'ataque', 'pular', 'espiar'];
     const best = pref.map((k) => c.options.find((x) => kittensKindOf(x) === k)).find(Boolean) ?? pickOne(rng, c.options);
     return { key, delay: between(rng, 900, 1600), action: { type: 'choose', card: best } };
@@ -279,7 +295,16 @@ export function decideKittens(
     const p = g.pending;
     // 4 bichos diferentes: não aceita Nem vem!.
     if (!kittensNopable(p.play)) return null;
-    const key = `nope:${p.by}:${p.play.cards.join(',')}:${p.nopes.length}`;
+    const caster = kittensCaster(p);
+    // Magia em cima dele, com par de Sapo na mão: quase sempre reflete (decide uma vez só por magia).
+    const sapo = p.play.target === me && !g.blind.includes(me) && kittensReflectable(p.play, g.alive.length) ? kittensSapoPair(g.hand, bichosOf(g)) : null;
+    // O descarte na chave separa a mesma magia quando ela volta depois de dois Sapos.
+    const sapoKey = `sapo:${p.by}:${p.play.cards.join(',')}:${caster}:${g.discard.length}`;
+    if (sapo && mem.sapo !== sapoKey) {
+      mem.sapo = sapoKey;
+      if (rng() < 0.7) return { key: sapoKey, delay: between(rng, 800, 3000), action: { type: 'sapo', cards: sapo, on: p.play.cards[0]! } };
+    }
+    const key = `nope:${p.by}:${p.play.cards.join(',')}:${p.nopes.length}${p.caster ? `:${p.caster}` : ''}`;
     if (mem.noped === key) return null;
     // Na espera de 2 s depois de um Nem vem!, nem decide: a decisão desta etapa fica pra quando a espera acabar.
     if (kittensNopeWait(view, now) > 0) return null;
@@ -287,12 +312,12 @@ export function decideKittens(
     if (!g.hand.some((x) => kittensKindOf(x) === 'nemvem')) return null;
     const valendo = p.nopes.length % 2 === 0;
     // Não corta a própria jogada enquanto ela está valendo.
-    if (valendo && p.by === me) return null;
+    if (valendo && caster === me) return null;
     const contraMim = p.play.target === me || (p.play.kind === 'ataque' && nextAlive(g, p.by) === me);
     // Sem motivo, a mesa inteira junta dá Nem vem! em ~30% das jogadas (com 7 bots, não em quase todas).
     let chance = 0.3 / Math.max(1, g.alive.length - 2);
     if (valendo && contraMim) chance = 0.7;
-    if (!valendo && p.by === me) chance = 0.55;
+    if (!valendo && caster === me) chance = 0.55;
     if (rng() > chance) return null;
     // Vai junto o que o bot viu: se outro deu Nem vem! antes (dois juntos), o servidor recusa e a carta fica na mão;
     // a visão nova (outra chave) dá a ele a chance de decidir de novo.

@@ -43,7 +43,7 @@ Decisões do usuário (2026-10-19):
 
 ### Preparação (ao clicar "começar")
 
-1. Monta o baralho pelo número de jogadores (§3), sem Tatubuns nem Cafunés.
+1. Monta o baralho pelo número de jogadores (§3), sem Tatubuns nem Cafunés, com **6 bichos sorteados** da pool de 9 (pedido do Rafa, 2026-11-06; `kittensDrawBichos`, estado `bichos`, público; detalhes em `2026-11-06-tatubum-bichos-sorteados-design.md`). O Boto e o Tatu Latidor entram sempre.
 2. Cada jogador recebe **1 Cafuné** e mais **7 cartas** do baralho embaralhado (8 na mão).
 3. Entram no monte os **Desarmes extras** (2 com até 4 jogadores, 1 com 5 ou mais; cada partida sorteia tirar 0, 1 ou 2 deles, sem avisar ninguém, pedido do Rafa, 2026-11-06, `kittensCafuneCut`) e **um Tatubum a menos que o número de jogadores**; o monte
    é embaralhado.
@@ -80,7 +80,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): você tira **3 cartas** do escolhido, uma ao acaso, e não aceita Nem vem! (ver "Combos"; pedidos do Rafa, 2026-10-20 e 2026-10-28). | sim |
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
-| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano** | 4 de cada | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 (pedido do Rafa). | (combo sim) |
+| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano, Peixe-beta, Onça-pintada, Sapo** | 4 de cada, só os 6 sorteados na partida | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 e o Peixe-beta (`peixe`), a Onça-pintada (`onca`) e o Sapo (`sapo`) em 2026-11-06 (pedidos do Rafa). | (combo sim) |
 | **Tatu Latidor** (id `latido`) | (fora do pacote: **2** com 2 jogadores, **3** com 3, depois **n − 1**; nenhum na mão inicial) | Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez; ninguém tem, o seu fica na sua frente. **Par de Latidores:** um adversário escolhido joga um Desarme ou explode. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
 | **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (não cura o Mau-olhado) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
@@ -164,12 +164,15 @@ Sozinho o bicho continua não fazendo nada.
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
 | Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** do adversário com **mais cartas na mão entre os que têm** (pedido do Rafa, 2026-10-28; empate: sorteado entre eles). Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: **pega do descarte** (sem contar as cartas do próprio par; pedido do Rafa, 2026-10-21). Nada em lugar nenhum: nada. **30% de chance de puxar dois** (`KITTENS_PREGUICA_DOUBLE`), cada um na mesma ordem (mão → monte → descarte); o segundo que não acha nada não aparece no diário. Todos veem de onde veio. |
 | Tucano (pedido do Rafa, 2026-10-21) | um adversário vivo (mesmo sem carta) | **A sua vez acaba sem você comprar**, inteira: mesmo sob ataque os turnos devidos se perdem (pedido do Rafa, 2026-11-03; antes gastava só um, como o Pular), e a **próxima vez do alvo é pulada**: ele não joga nem compra. Duas vezes no mesmo alvo pulam duas vezes dele. Todos veem quem vai ser pulado. **No 1x1** (só 2 vivos; pedido do Rafa, 2026-11-03) só a sua vez acaba: ninguém é pulado (evento `tucano` com `duel: true`), e quando a partida cai pra 2 vivos as vezes puladas que sobravam se perdem. Rafa: "par: você pula sua vez quando manda ele, não compra e nem joga, e escolhe outro jogador pra pular; ele também não joga nada nem compra, o turno dele é pulado." |
+| Peixe-beta (pedido do Rafa, 2026-11-06) | — | Só você vê as **3 de cima**, que ficam na sua espiada, e decide o destino da **segunda** (30 s; escolha `peixe`, `choose { fate }`, evento `fished`): **fica com ela** (não é compra: a vez continua, cego segue cego; Tatubum: Desarme ou explode), **deixa onde está** (também no fim do prazo) ou **manda pro fundo**. Monte com menos de 2: só atualiza a espiada. |
+| Onça-pintada (pedido do Rafa, 2026-11-06) | — | Só você vê o **topo e o fundo** do monte (o topo fica na sua espiada) e **pega uma carta do descarte** de antes da jogada, menos Desarme (30 s; escolha `cinco` com `from: 'onca'`, a visão traz `seen`). Sem opção, só vê e fecha (`choose` sem carta). A pegada é pública. |
+| Sapo (pedido do Rafa, 2026-11-06) | só como resposta (ação `sapo`) | **O alvo** de Favor, Mau-olhado, par de Tucano ou par de Latidores no ar **reflete a magia** pra quem mandou, com 2 Sapos, Sapo + Boto ou 2 Botos (botão SAPO!). O par e os Nem vem! que estavam na jogada vão pro descarte, a contagem zera e a janela recomeça (`pending.caster`, evento `reflected`); o novo alvo pode refletir de volta. Não vale no trio de Favor, no Tucano do 1x1, nem pra quem está cego (`sapo_blind`). Na própria vez o par é recusado (`sapo_only`). Tucano refletido: a vez de quem jogou acaba do mesmo jeito e a próxima vez dele é pulada. Favor refletido em quem está sem carta: a jogada não vale. |
 | Capivara | — | **Todos os outros** vivos passam, ao mesmo tempo, uma carta **ao acaso** pro próximo na ordem da vez (o sentido em que a vez anda). **Você não passa**, mas recebe a do jogador antes de você. Quem está sem carta não passa. Cada um vê só o que deu e o que recebeu. |
 
 Regras de motor:
 - `playKindOf`: 2 iguais só vira `par` se for bicho; 3 iguais de qualquer tipo é `trio`.
 - `parsePlay`: alvo exigido só no Favor, no trio de Favor, no Mau-olhado e no par de Tucano (`bad_target`); pedido
-  (`ask`) exigido só no par de Preguiça e tem que ser um dos bichos (6, com o Tucano; `bad_ask`). Os outros trios ignoram alvo e pedido. (Quem está
+  (`ask`) exigido só no par de Preguiça e tem que ser um dos bichos da partida (`bad_ask`; o mesmo vale pro `as` dos dois Botos, `bad_as`). Os outros trios ignoram alvo e pedido. (Quem está
   cego ouve `bad_combo` no lugar desses: ver "Jogar às cegas".)
 - Favor e trio de Favor: a escolha `favor` tem `left` (quantas cartas ainda dar: 1 no Favor sozinho; no trio, `min(2,
   o que sobrou na mão do alvo)` depois da carta ao acaso, que sai como `gave` com `random: true`; sem sobra, não abre
@@ -342,7 +345,7 @@ bicho.
   **não conta** como o bicho pedido.
 - `KittensPlay` ganhou `as: KittensCardKind | null`: no par, o bicho que o par vale (sempre, com ou sem Boto); no
   trio, o tipo das iguais (`boto` em 3 Botos); `null` no resto. O evento `play` também leva `as`, pra a tela mostrar
-  "par de Quati (com Boto)". `KITTENS_BICHOS` continua sendo os bichos (6 desde o Tucano; o Boto é `KITTENS_WILD`).
+  "par de Quati (com Boto)". `KITTENS_BICHOS` é a pool de bichos (9 desde 2026-11-06; o Boto é `KITTENS_WILD`).
 
 #### Motor e segredo
 
@@ -547,7 +550,7 @@ a cara do Tatubum (fundo do cerrado, botões chanfrados, bichinhos em pixel art 
 - Clicar seleciona (a carta sobe); duplo clique joga uma carta sozinha; o botão "JOGAR …" também joga.
 - Favor, Mau-olhado e par de Tucano pedem o alvo (clicar no assento ou arrastar as cartas pra ele): os adversários válidos ganham contorno e você clica num deles.
 - Selecionar 2, 3 ou 4 cartas que formam combo mostra o botão "jogar par / trio / 4 bichos". No par de
-  Preguiça, aparece a lista dos 6 bichos pra pedir.
+  Preguiça, aparece a lista dos bichos da partida pra pedir.
 - Quem tem vez pulada (Tucano) ganha o selo "PULA" no assento (×2 se tiver duas); o Tucano voa até o alvo e, quando a
   vez dele é pulada, o assento pisca e o diário diz "X teve a vez pulada".
 - Botão **"comprar"** sempre à vista na sua vez.

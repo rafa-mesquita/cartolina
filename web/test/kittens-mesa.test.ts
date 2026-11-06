@@ -1,6 +1,6 @@
 import {
-  KITTENS_BICHOS,
   KITTENS_CARD_NAMES,
+  KITTENS_CLASSIC_BICHOS,
   PLAYER_COLORS,
   createRoom,
   isKittensRoomView,
@@ -10,6 +10,7 @@ import {
   roomView,
   type GameAction,
   type KittensEvent,
+  type KittensPending,
   type KittensRoomView, type KittensState,
   type Room,
 } from '@cartolina/shared';
@@ -72,8 +73,14 @@ function started(n = 3): Room {
   }
   const res = roomAction(room, 'p0', { type: 'start' }, mulberry32(7), 0);
   if (!res.ok) throw new Error(res.error);
-  // Quem começa é sorteado; os testes fixam a vez no p0 (host).
-  return { ...res.room, game: { ...(res.room.game as KittensState), current: 'p0' } };
+  // Quem começa, a ordem da mesa e os bichos são sorteados; os testes fixam a vez no p0 (host), os assentos em ordem e os
+  // 6 bichos de sempre.
+  const players = Array.from({ length: n }, (_, i) => `p${i}`);
+  const game = res.room.game as KittensState;
+  // E nenhum Tatubum no topo: quem compra nos testes não para na escolha do Desarme.
+  const isTatu = (c: string) => c.startsWith('tatubum');
+  const draw = [...game.draw.filter(isTatu), ...game.draw.filter((c) => !isTatu(c))];
+  return { ...res.room, game: { ...game, current: 'p0', players, alive: [...players], bichos: [...KITTENS_CLASSIC_BICHOS], draw } };
 }
 
 function viewOf(room: Room, me: string | null): KittensRoomView {
@@ -253,7 +260,7 @@ describe('mesa do Tatubum', () => {
     const row = root.querySelector('#panel .kt-row');
     expect(row).not.toBeNull();
     const names = [...row!.querySelectorAll('button')].map((b) => b.textContent?.trim());
-    expect(names).toEqual([...KITTENS_BICHOS.map((k) => KITTENS_CARD_NAMES[k].toUpperCase()), 'CANCELAR']);
+    expect(names).toEqual([...KITTENS_CLASSIC_BICHOS.map((k) => KITTENS_CARD_NAMES[k].toUpperCase()), 'CANCELAR']);
     expect(root.querySelector('#caption')?.textContent).toContain('Que bicho');
 
     buttonByText(root, KITTENS_CARD_NAMES.mico.toUpperCase())!.click();
@@ -464,7 +471,7 @@ describe('mesa do Tatubum', () => {
     expect(root.querySelector('#panel h2')?.textContent).toBe('QUE BICHO O BOTO VIRA?');
     expect(root.querySelector('#caption')?.textContent).toContain('Boto vira');
     const names = [...root.querySelectorAll('#panel .kt-row button')].map((b) => b.textContent?.trim());
-    expect(names).toEqual([...KITTENS_BICHOS.map((k) => KITTENS_CARD_NAMES[k].toUpperCase()), 'CANCELAR']);
+    expect(names).toEqual([...KITTENS_CLASSIC_BICHOS.map((k) => KITTENS_CARD_NAMES[k].toUpperCase()), 'CANCELAR']);
     buttonByText(root, 'QUATI')!.click();
     expect(sent).toEqual([{ type: 'play', cards: pair, as: 'quati' }]);
     // Recusou: tenta de novo virando Preguiça; aí vem o painel do bicho puxado.
@@ -861,6 +868,122 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('alvo de uma magia com par de Sapo: o botão SAPO! manda o par e a carta que ele viu no ar', () => {
+    const v = midGame('p1');
+    v.game.bichos = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'sapo'];
+    v.game.current = 'p0';
+    v.game.hand = ['boto-7', 'sapo-7', 'mico-7'];
+    v.game.pending = { by: 'p0', play: { kind: 'favor', cards: ['favor-1'], target: 'p1', ask: null, as: null }, nopes: [], resolvesAt: Date.now() + 5000 };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    root.querySelector<HTMLButtonElement>('#sapo')!.click();
+    expect(sent).toEqual([{ type: 'sapo', cards: ['sapo-7', 'boto-7'], on: 'favor-1' }]);
+    mesa.destroy();
+  });
+
+  it('botão SAPO! não aparece sem par, pra quem não é o alvo, pra cego, no trio de Favor nem no Tucano do 1x1', () => {
+    const bichos = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'sapo'] as const;
+    const button = (patch: Partial<KittensRoomView['game']>): boolean => {
+      const v = midGame('p1');
+      v.game = { ...v.game, bichos: [...bichos], current: 'p0', hand: ['sapo-7', 'sapo-8'], pending: { by: 'p0', play: { kind: 'favor', cards: ['favor-1'], target: 'p1', ask: null, as: null }, nopes: [], resolvesAt: Date.now() + 5000 }, ...patch };
+      const { root, mesa } = mount();
+      mesa.update(toMesa(v));
+      const shown = root.querySelector('#sapo') !== null;
+      mesa.destroy();
+      return shown;
+    };
+    const air = (play: Partial<KittensPending['play']>): KittensPending => ({ by: 'p0', play: { kind: 'favor', cards: ['favor-1'], target: 'p1', ask: null, as: null, ...play }, nopes: [], resolvesAt: Date.now() + 5000 });
+    expect(button({})).toBe(true);
+    expect(button({ hand: ['sapo-7', 'mico-7'] })).toBe(false);
+    expect(button({ pending: air({ target: 'p2' }) })).toBe(false);
+    expect(button({ blind: ['p1'], hand: ['?0', '?1'] })).toBe(false);
+    expect(button({ pending: air({ kind: 'trio', as: 'favor', cards: ['favor-1', 'favor-2', 'favor-3'] }) })).toBe(false);
+    expect(button({ pending: air({ kind: 'par', as: 'tucano', cards: ['tucano-1', 'tucano-2'] }), alive: ['p0', 'p1'] })).toBe(false);
+    expect(button({ pending: air({ kind: 'par', as: 'tucano', cards: ['tucano-1', 'tucano-2'] }) })).toBe(true);
+  });
+
+  it('par de Sapo na sua vez não forma jogada; dois Botos não oferecem virar Sapo', () => {
+    const v = midGame('p0');
+    v.game.current = 'p0';
+    v.game.bichos = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'sapo'];
+    v.game.hand = ['sapo-7', 'sapo-8', 'boto-7', 'boto-8'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    clickCard(root, 'sapo-7');
+    clickCard(root, 'sapo-8');
+    expect(buttonByText(root, 'NÃO FORMA JOGADA')).toBeDefined();
+    clickCard(root, 'sapo-7');
+    clickCard(root, 'sapo-8');
+    clickCard(root, 'boto-7');
+    clickCard(root, 'boto-8');
+    buttonByText(root, 'JOGAR PAR')!.click();
+    const names = [...root.querySelectorAll('#panel .kt-row button')].map((b) => b.textContent);
+    expect(names).toContain('PREGUIÇA');
+    expect(names).not.toContain('SAPO');
+    mesa.destroy();
+  });
+
+  it('painel do Peixe-beta: mostra as 3 de cima e manda o destino da segunda', () => {
+    const v = midGame('p1');
+    v.game.current = 'p1';
+    v.game.choice = { kind: 'peixe', who: 'p1', deadline: Date.now() + 30_000, cards: ['mico-1', 'tatubum-1', 'quati-1'] };
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    const shown = [...root.querySelectorAll<HTMLElement>('#panel .cards .kt-card')];
+    expect(shown.map((c) => c.dataset.id)).toEqual(['mico-1', 'tatubum-1', 'quati-1']);
+    expect(shown[1]!.classList.contains('kt-second')).toBe(true);
+    expect(root.querySelector('#panel .kt-warn')?.textContent).toContain('TATUBUM');
+    buttonByText(root, 'PRO FUNDO')!.click();
+    buttonByText(root, 'DEIXAR ONDE ESTÁ')!.click();
+    buttonByText(root, 'FICAR COM ELA')!.click();
+    expect(sent).toEqual([{ type: 'choose', fate: 'bottom' }, { type: 'choose', fate: 'stay' }, { type: 'choose', fate: 'keep' }]);
+    mesa.destroy();
+  });
+
+  it('par de Onça: o quadro do descarte mostra o topo e o fundo; sem opção, JÁ VI fecha a escolha', async () => {
+    const v = midGame('p1');
+    v.game.current = 'p1';
+    v.game.discard = ['pular-5', 'cafune-5'];
+    const { root, mesa, sent } = mount();
+    mesa.update(toMesa(v));
+    const pick = (options: string[]) => ({ ...v, game: { ...v.game, choice: { kind: 'cinco' as const, who: 'p1', options, left: 1, deadline: Date.now() + 30_000, from: 'onca' as const, seen: { top: 'mico-1', bottom: 'quati-1' } } } });
+    mesa.update(toMesa(pick(['pular-5'])));
+    await vi.advanceTimersByTimeAsync(500);
+    expect([...root.querySelectorAll<HTMLElement>('#pile .kt-seen .kt-card')].map((c) => c.dataset.id)).toEqual(['mico-1', 'quati-1']);
+    root.querySelector<HTMLElement>('#pile .grid .kt-card[data-id="pular-5"]')!.click();
+    expect(sent).toEqual([{ type: 'choose', card: 'pular-5' }]);
+    expect(root.querySelector('#pile .grid .kt-card[data-id="cafune-5"]')!.classList.contains('off')).toBe(true);
+    mesa.update(toMesa(pick([])));
+    await vi.advanceTimersByTimeAsync(500);
+    buttonByText(root, 'JÁ VI')!.click();
+    expect(sent.at(-1)).toEqual({ type: 'choose' });
+    mesa.destroy();
+  });
+
+  it('o diário conta o Sapo e o destino da carta do Peixe-beta; "AS CARTAS" só mostra os bichos da partida', async () => {
+    const v = midGame('p1');
+    v.game.bichos = ['capivara', 'mico', 'quati', 'tamandua', 'peixe', 'sapo'];
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    let n = v.game.log.at(-1)!.n;
+    const next = (...evs: KittensEvent[]) => {
+      v.game = { ...v.game, log: [...v.game.log, ...evs.map((ev) => ({ n: ++n, ev }))] };
+      mesa.update(toMesa(v));
+    };
+    next({ t: 'reflected', by: 'p2', target: 'p0' }, { t: 'fished', by: 'p0', fate: 'bottom' }, { t: 'fished', by: 'p2', fate: 'stay' }, { t: 'fished', by: 'p2', fate: 'keep' });
+    await vi.advanceTimersByTimeAsync(5000);
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('P2 refletiu com o SAPO! Agora a magia é pra P0');
+    expect(log).toContain('P0 mandou a segunda carta pro fundo');
+    expect(log).toContain('P2 deixou a segunda carta onde estava');
+    expect(log).toContain('P2 ficou com a segunda carta do monte');
+    root.querySelector<HTMLElement>('#cards')!.click();
+    const gallery = root.querySelector('#gallery')?.textContent ?? '';
+    for (const name of ['Peixe-beta', 'Sapo', 'Boto', 'Tatu Latidor', 'Capivara']) expect(gallery.toLowerCase()).toContain(name.toLowerCase());
+    for (const name of ['Onça-pintada', 'Preguiça', 'Tucano']) expect(gallery.toLowerCase()).not.toContain(`${name.toLowerCase()}par`);
+    mesa.destroy();
+  });
+
   it('cego na vez: os segundos do lance ficam na faixa dele e no assento, à vista dos outros (pedido do Rafa, 2026-11-06)', () => {
     const blindTurn = (me: string, deadline: number | null) => {
       const v = midGame(me);
@@ -933,7 +1056,7 @@ describe('mesa do Tatubum', () => {
     expect(root.querySelector('#caption')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
     expect(root.querySelector('#panel h2')?.textContent).toBe('SE FOR PREGUIÇA OU BOTO, QUAL BICHO?');
     const names = [...root.querySelectorAll('#panel .kt-row button')].map((b) => b.textContent?.trim());
-    expect(names).toEqual([...KITTENS_BICHOS.map((k) => KITTENS_CARD_NAMES[k].toUpperCase()), 'PULAR', 'CANCELAR']);
+    expect(names).toEqual([...KITTENS_CLASSIC_BICHOS.map((k) => KITTENS_CARD_NAMES[k].toUpperCase()), 'PULAR', 'CANCELAR']);
     buttonByText(root, KITTENS_CARD_NAMES.mico.toUpperCase())!.click();
     expect(sent).toEqual([{ type: 'play', cards: ['?0', '?2'], ask: 'mico', as: 'mico' }]);
     mesa.error('Assim não forma jogada.');

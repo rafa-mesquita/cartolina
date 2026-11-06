@@ -1,7 +1,10 @@
 import { randomInt, shuffle, type Rng } from '../../rng';
-import { kittensCardId, type KittensCardKind } from './cards';
+import { KITTENS_BICHOS, KITTENS_CLASSIC_BICHOS, kittensCardId, type KittensBicho, type KittensCardKind } from './cards';
 
-/** Um pacote: tudo menos Tatubum, Desarme e Tatu Latidor; as cartas do original + as novas de 2026-10-20. */
+/**
+ * Um pacote, sem os bichos da partida (`KITTENS_BICHO_CARDS` de cada um): tudo menos Tatubum, Desarme e Tatu Latidor; as
+ * cartas do original + as novas de 2026-10-20.
+ */
 export const KITTENS_PACK: Partial<Record<KittensCardKind, number>> = {
   nemvem: 5,
   ataque: 4,
@@ -11,16 +14,19 @@ export const KITTENS_PACK: Partial<Record<KittensCardKind, number>> = {
   espiar: 5,
   olhado: 2,
   feitico: 2,
-  capivara: 4,
-  mico: 4,
-  quati: 4,
-  tamandua: 4,
-  preguica: 4,
-  // Tucano: pedido do Rafa, 2026-10-21.
-  tucano: 4,
   boto: 4,
 };
+/** Cartas de cada bicho da partida, por pacote. */
+export const KITTENS_BICHO_CARDS = 4;
+/** Quantos bichos da pool (`KITTENS_BICHOS`) entram em cada partida (pedido do Rafa, 2026-11-06). */
+export const KITTENS_BICHOS_PER_MATCH = 6;
 export const KITTENS_PACK_SIZE = 58;
+
+/** Os bichos de uma partida, sorteados da pool, na ordem da pool. */
+export function kittensDrawBichos(rng: Rng): KittensBicho[] {
+  const drawn = new Set(shuffle(rng, KITTENS_BICHOS).slice(0, KITTENS_BICHOS_PER_MATCH));
+  return KITTENS_BICHOS.filter((b) => drawn.has(b));
+}
 /**
  * Tatu Latidor, fora dos pacotes (pedido do Rafa, 2026-10-21): 2 com 2 jogadores, 3 com 3 e, a partir de 4, um a menos
  * que o número de jogadores. Nenhum vem na mão inicial: vão todos pro monte.
@@ -52,10 +58,14 @@ export function kittensPacksFor(players: number): number {
 }
 
 /** As cartas dos pacotes (sem Tatubum, Cafuné e Tatu Latidor), numeradas por tipo: de onde sai a mão inicial. */
-export function kittensPackCards(players: number): string[] {
+export function kittensPackCards(players: number, bichos: readonly KittensBicho[] = KITTENS_CLASSIC_BICHOS): string[] {
   const packs = kittensPacksFor(players);
+  const counts: [KittensCardKind, number][] = [
+    ...(Object.entries(KITTENS_PACK) as [KittensCardKind, number][]),
+    ...bichos.map((b): [KittensCardKind, number] => [b, KITTENS_BICHO_CARDS]),
+  ];
   const cards: string[] = [];
-  for (const [kind, count] of Object.entries(KITTENS_PACK) as [KittensCardKind, number][]) {
+  for (const [kind, count] of counts) {
     for (let i = 0; i < count * packs; i++) cards.push(kittensCardId(kind, i));
   }
   return cards;
@@ -67,8 +77,8 @@ export function kittensLatidoCards(players: number): string[] {
 }
 
 /** Todas as cartas da partida menos Tatubum e Cafuné: os pacotes mais os Tatus Latidores. */
-export function kittensBaseDeck(players: number): string[] {
-  return [...kittensPackCards(players), ...kittensLatidoCards(players)];
+export function kittensBaseDeck(players: number, bichos: readonly KittensBicho[] = KITTENS_CLASSIC_BICHOS): string[] {
+  return [...kittensPackCards(players, bichos), ...kittensLatidoCards(players)];
 }
 
 export interface KittensDeal {
@@ -83,9 +93,9 @@ export interface KittensDeal {
  * sobraram do sorteio (`kittensCafuneCut`) + (n − 1) Tatubuns. Tamanho do monte = pacotes × 58 − 7n + Latidores + Cafunés
  * extras − corte + (n − 1).
  */
-export function kittensDeal(rng: Rng, players: readonly string[]): KittensDeal {
+export function kittensDeal(rng: Rng, players: readonly string[], bichos: readonly KittensBicho[] = KITTENS_CLASSIC_BICHOS): KittensDeal {
   const n = players.length;
-  const pool = shuffle(rng, kittensPackCards(n));
+  const pool = shuffle(rng, kittensPackCards(n, bichos));
   // Cafunés embaralhados: se `cafune-i` fosse sempre do assento i, um Cafuné roubado (par/Favor) se denunciaria
   // quando jogado, e só os dois envolvidos podem saber qual carta trocou de mão (spec §4.3).
   const cafunes = shuffle(

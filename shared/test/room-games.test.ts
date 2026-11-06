@@ -247,9 +247,10 @@ describe('sala de Tatubum', () => {
   it('o alarme acorda no fim da janela do Nem vem! e o tick resolve a carta', () => {
     let room = step(kittensRoom(3), 'p0', { type: 'start' }, 10);
     const game = room.game as KittensState;
-    // Um Ataque com id próprio na mão de p0, e a vez de p0, pra não depender do sorteio (o rng é compartilhado no
-    // arquivo: mudar o baralho de outro jogo muda quem começa).
-    room = { ...room, game: { ...game, current: 'p0', hands: { ...game.hands, p0: ['ataque-99', ...game.hands.p0!] } } };
+    // Um Ataque com id próprio na mão de p0, a vez de p0 e a ordem da mesa fixa, pra não depender do sorteio (o rng é
+    // compartilhado no arquivo: mudar o baralho de outro jogo muda quem começa e a ordem).
+    const players = ['p0', 'p1', 'p2'];
+    room = { ...room, game: { ...game, current: 'p0', players, alive: players, hands: { ...game.hands, p0: ['ataque-99', ...game.hands.p0!] } } };
     room = step(room, 'p0', { type: 'play', cards: ['ataque-99'] }, 20);
     expect(nextAlarmAt(room, 20)).toBe(20 + KITTENS_NOPE_MS);
     expect(tick(room, 20 + KITTENS_NOPE_MS - 1, rng).game).toBe(room.game);
@@ -258,6 +259,8 @@ describe('sala de Tatubum', () => {
 
   it('erros do Tatubum têm mensagem em português', () => {
     for (const code of [
+      'sapo_only',
+      'sapo_blind',
       'not_alive',
       'card_in_air',
       'waiting_choice',

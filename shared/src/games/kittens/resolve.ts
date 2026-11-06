@@ -4,7 +4,7 @@ import { barkNext, nextBarked } from './choices';
 import { applyPair, applyTrio } from './combos';
 import { kittensIsFavorPlay } from './play';
 import { clearPeeks, logged, nextAlive, passTo, spendTurn } from './turn';
-import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
+import { KITTENS_CHOICE_MS, kittensCaster, type KittensPlay, type KittensState } from './types';
 
 /**
  * Tatu Latidor `card` (já no descarte) jogado por `by`: todo outro vivo com Latidor (na mão ou na frente) tem que se
@@ -26,8 +26,11 @@ function curse(s: KittensState, by: string, target: string, ctx: GameContext): K
   return logged({ ...s, hands, blind }, { t: 'cursed', by, target });
 }
 
-/** O efeito da jogada que não foi cancelada. `before` = descarte de antes da jogada. */
-function applyEffect(s: KittensState, by: string, play: KittensPlay, before: string[], ctx: GameContext): KittensState {
+/**
+ * O efeito da jogada que não foi cancelada. `before` = descarte de antes da jogada. `caster` = quem manda a magia: é `by`,
+ * a não ser que um Sapo tenha refletido (aí é `play.target` quem recebe e `caster` quem ganha).
+ */
+function applyEffect(s: KittensState, by: string, caster: string, play: KittensPlay, before: string[], ctx: GameContext): KittensState {
   const deadline = ctx.now + KITTENS_CHOICE_MS;
   switch (play.kind) {
     case 'ataque':
@@ -43,15 +46,15 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
       return cards.length > 0 ? { ...s, peeks: { ...s.peeks, [by]: cards } } : s;
     }
     case 'favor':
-      return { ...s, choice: { kind: 'favor', who: play.target!, to: by, left: 1, deadline } };
+      return { ...s, choice: { kind: 'favor', who: play.target!, to: caster, left: 1, deadline } };
     case 'latido':
       return bark(s, by, play.cards[0]!, deadline);
     case 'olhado':
-      return curse(s, by, play.target!, ctx);
+      return curse(s, caster, play.target!, ctx);
     case 'feitico':
       return { ...s, choice: { kind: 'feitico', who: by, deadline } };
     case 'par':
-      return applyPair(s, by, play, ctx);
+      return applyPair(s, by, caster, play, before, ctx);
     case 'trio':
       return applyTrio(s, by, play, ctx);
     case 'cinco':
@@ -69,10 +72,11 @@ function applyEffect(s: KittensState, by: string, play: KittensPlay, before: str
 export function resolvePending(s: KittensState, ctx: GameContext): KittensState {
   const p = s.pending!;
   const { by, play } = p;
+  const caster = kittensCaster(p);
   const base: KittensState = { ...s, pending: null, discard: [...s.discard, ...play.cards, ...p.nopes.map((n) => n.card)] };
   const t = play.target;
   const targetOk = t === null || (base.alive.includes(t) && (!kittensIsFavorPlay(play) || (base.hands[t]?.length ?? 0) > 0));
-  const canceled = p.nopes.length % 2 === 1 || !base.alive.includes(by) || !targetOk;
+  const canceled = p.nopes.length % 2 === 1 || !base.alive.includes(by) || !base.alive.includes(caster) || !targetOk;
   const done = logged(base, { t: 'resolved', by, play: play.kind, canceled });
-  return canceled ? done : applyEffect(done, by, play, s.discard, ctx);
+  return canceled ? done : applyEffect(done, by, caster, play, s.discard, ctx);
 }

@@ -29,7 +29,9 @@ function started(n = 3): Room {
   }
   const res = roomAction(room, 'p0', { type: 'start' }, mulberry32(7), 0);
   if (!res.ok) throw new Error(res.error);
-  return { ...res.room, game: { ...(res.room.game as KittensState), current: 'p0' } };
+  // A vez e a ordem da mesa são sorteadas: aqui ficam fixas.
+  const players = Array.from({ length: n }, (_, i) => `p${i}`);
+  return { ...res.room, game: { ...(res.room.game as KittensState), current: 'p0', players, alive: [...players] } };
 }
 
 /** Os 2 Tatus Latidores vão pras mãos de p0 e p1 (saem de onde estavam: mãos ou monte). */
@@ -189,6 +191,53 @@ describe('decisão do bot do Tatubum', () => {
   it('trio de Favor no ar contra ele: nunca dá Nem vem!', () => {
     const pending = { by: 'p0', play: { kind: 'trio' as const, cards: ['favor-1', 'favor-2', 'favor-3'], target: 'p1', ask: null, as: 'favor' as const }, nopes: [], resolvesAt: 9000 };
     expect(decideKittens(p1View(['nemvem-5', 'mico-1'], { pending }), newKittensMemory(), () => 0)).toBeNull();
+  });
+
+  it('magia em cima dele com par de Sapo: reflete uma vez só, e decide de novo se ela voltar', () => {
+    const bichos = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'sapo'] as const;
+    const v = p1View(['sapo-1', 'boto-1', 'mico-1'], { pending: inAir('p0', 'p1'), bichos: [...bichos] });
+    const mem = newKittensMemory();
+    const d = decideKittens(v, mem, () => 0)!;
+    expect(d.action).toEqual({ type: 'sapo', cards: ['sapo-1', 'boto-1'], on: 'favor-1' });
+    expect(decideKittens(v, mem, () => 0.99)).toBeNull();
+    // Refletiram de volta pra ele: outra etapa.
+    const back = p1View(['sapo-1', 'boto-1'], { pending: { ...inAir('p0', 'p1'), caster: 'p0' }, bichos: [...bichos], discard: [...v.game.discard, 'sapo-8', 'sapo-9', 'boto-8', 'boto-9'] });
+    expect(decideKittens(back, mem, () => 0)!.action).toMatchObject({ type: 'sapo' });
+  });
+
+  it('sem Sapo: não reflete nem cego, nem magia em outro, nem Sapo fora da partida', () => {
+    const bichos = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'sapo'] as const;
+    const action = (game: Parameters<typeof p1View>[1], hand = ['sapo-1', 'sapo-2']) => decideKittens(p1View(hand, { pending: inAir('p0', 'p1'), bichos: [...bichos], ...game }), newKittensMemory(), () => 0)?.action;
+    expect(action({ pending: inAir('p0', 'p2') })).not.toMatchObject({ type: 'sapo' });
+    expect(action({ blind: ['p1'] }, ['?0', '?1'])).not.toMatchObject({ type: 'sapo' });
+    expect(action({ bichos: ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano'] }, ['boto-1', 'boto-2'])).not.toMatchObject({ type: 'sapo' });
+    expect(action({}, ['sapo-1', 'mico-1'])).not.toMatchObject({ type: 'sapo' });
+  });
+
+  it('na vez dele, par de Sapo não vira jogada', () => {
+    const v = p1View(['sapo-1', 'sapo-2'], { current: 'p1', bichos: ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'sapo'] });
+    expect(decideKittens(v, newKittensMemory(), () => 0)?.action).toEqual({ type: 'draw' });
+  });
+
+  it('Preguiça só pede bicho da partida', () => {
+    const bichos = ['mico', 'quati', 'tamandua', 'preguica', 'peixe', 'onca'] as const;
+    for (const roll of [0, 0.3, 0.49]) {
+      const v = p1View(['preguica-1', 'preguica-2'], { current: 'p1', bichos: [...bichos] });
+      const action = decideKittens(v, newKittensMemory(), () => roll)!.action;
+      if (action.type === 'play') expect(bichos).toContain(action.ask);
+    }
+  });
+
+  it('Peixe-beta: fica com a segunda, a não ser que seja Tatubum', () => {
+    const choice = (cards: string[]) => ({ kind: 'peixe' as const, who: 'p1', deadline: 9000, cards });
+    expect(decideKittens(p1View(['mico-1'], { current: 'p1', choice: choice(['pular-1', 'quati-1']) }), newKittensMemory(), () => 0)!.action).toEqual({ type: 'choose', fate: 'keep' });
+    expect(decideKittens(p1View(['mico-1'], { current: 'p1', choice: choice(['pular-1', 'tatubum-1']) }), newKittensMemory(), () => 0)!.action).toEqual({ type: 'choose', fate: 'bottom' });
+  });
+
+  it('Onça: pega uma das opções; sem opção, fecha a escolha', () => {
+    const choice = (options: string[]) => ({ kind: 'cinco' as const, who: 'p1', options, left: 1, deadline: 9000, from: 'onca' as const });
+    expect(decideKittens(p1View(['mico-1'], { current: 'p1', choice: choice(['ataque-1', 'favor-1']) }), newKittensMemory(), () => 0)!.action).toEqual({ type: 'choose', card: 'ataque-1' });
+    expect(decideKittens(p1View(['mico-1'], { current: 'p1', choice: choice([]) }), newKittensMemory(), () => 0)!.action).toEqual({ type: 'choose' });
   });
 
   it('4 bichos diferentes no ar: nunca dá Nem vem!', () => {
