@@ -122,15 +122,31 @@ describe('Feitiço: a carta de baixo do monte', () => {
     expect(everyCard(after)).toEqual(everyCard(s));
   });
 
-  it('ficar com a carta conta como comprar: o Mau-olhado passa', () => {
+  it('ficar com a carta não cura o Mau-olhado (pedido do Rafa, 2026-11-06): continua cego e a carta vira ficha', () => {
     // p0 ficou cego enquanto escolhia (montado à mão: a escolha não depende de ver a mão).
     const blind = (): KittensState => ({ ...conjuring(), blind: ['p0'] });
     expect(kittensViewFor(blind(), 'p0').choice).toMatchObject({ kind: 'feitico', card: 'quati-9' });
     const s = act(blind(), 'p0', { type: 'choose', keep: true }, at(6000));
-    expect(s.blind).toEqual([]);
-    expect(s.log.map((e) => e.ev.t).slice(-3)).toEqual(['conjured', 'cured', 'draw']);
-    expect(kittensViewFor(s, 'p0').hand).toEqual(['mico-0', 'quati-9']);
-    // Mandar pro topo não é comprar: continua cego.
+    expect(s.blind).toEqual(['p0']);
+    expect(s.log.map((e) => e.ev.t).slice(-2)).toEqual(['conjured', 'draw']);
+    expect(s.hands.p0).toEqual(['mico-0', 'quati-9']);
+    expect(kittensViewFor(s, 'p0').hand).toEqual(['?0', '?1']);
+    // Mandar pro topo também não: continua cego.
     expect(act(blind(), 'p0', { type: 'choose', keep: false }, at(6000)).blind).toEqual(['p0']);
+  });
+
+  it('cego guarda o Tatubum com Desarme na mão: qualquer ficha joga o Desarme, e ele continua cego', () => {
+    const c = conjuring();
+    const s: KittensState = { ...c, blind: ['p0'], draw: ['tatubum-0', ...c.draw.slice(1)], hands: { ...c.hands, p0: ['mico-0', 'cafune-0'] } };
+    const open = act(s, 'p0', { type: 'choose', keep: true }, at(6000));
+    expect(open.choice).toMatchObject({ kind: 'tatu', who: 'p0', tatu: 'tatubum-0' });
+    expect(open.blind).toEqual(['p0']);
+    const used = act(open, 'p0', { type: 'choose', card: '?0' }, at(7000));
+    expect(used.choice).toMatchObject({ kind: 'cafune', who: 'p0' });
+    expect(used.hands.p0).toEqual(['mico-0']);
+    expect(used.blind).toEqual(['p0']);
+    // Sem Desarme: explode.
+    const none = { ...s, hands: { ...s.hands, p0: ['mico-0'] } };
+    expect(act(none, 'p0', { type: 'choose', keep: true }, at(6000)).alive).not.toContain('p0');
   });
 });

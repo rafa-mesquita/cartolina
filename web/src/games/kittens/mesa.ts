@@ -155,7 +155,7 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, só você.<br>Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Se quem muda a ordem é você, continua vendo o que sabe: a carta que você põe no topo com o Feitiço (em cima das que você já via) ou deixa no topo com o Quati fica à mostra pra você; escondendo o tatu com o Desarme (sem ser ao acaso), a sua espiada continua, com o tatu nela se ele cair no meio ou logo abaixo dela.<br>Pode levar Nem vem!.',
   latido: 'Tem <b>um por jogador</b> na partida, e nenhum vem na mão inicial: estão todos no monte. Quando você joga um, <b>todo mundo que tiver Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b>, um de cada vez, na ordem da vez a partir de você (30 segundos cada, senão vai sozinho). O Desarme e <b>todos os Latidores dele</b> vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém mais tiver Latidor, o seu fica <b>na sua frente</b>, à vista de todos: quando outro for jogado, você também tem que se defender.<br>Não gasta a sua vez. Pode levar Nem vem!.<br><b>PAR DE LATIDORES</b>: escolha um adversário (com ou sem Latidor); só ele tem que <b>jogar um Desarme</b> (30 segundos, senão vai sozinho), e os Latidores dele ficam onde estão. Sem Desarme, <b>explode</b>. Não gasta a sua vez.',
   olhado: 'Escolha um adversário (mesmo sem carta na mão): a mão dele é <b>embaralhada</b> e ele <b>fica cego</b>, vendo só o verso das próprias cartas, até <b>comprar</b> uma carta.<br>Cego, ele joga às cegas: escolhe cartas viradas sem saber quais são (se não formarem jogada, voltam pra mão). Na vez dele, tem <b>50 segundos</b> pra cada lance; acabou o tempo, ele compra.<br>Pode levar Nem vem!.',
-  feitico: 'Só você vê a <b>carta de baixo</b> do monte e escolhe (30 segundos):<br><b>FICAR COM ELA</b>: é como comprar (se for Tatubum, é comprar o Tatubum: Desarme ou explode).<br><b>PÔR NO TOPO</b>: ela vai pra cima do monte.<br>Nos dois casos <b>acaba o seu turno</b>. Se o tempo acabar, ela vai pro topo.<br>Pode levar Nem vem!.',
+  feitico: 'Só você vê a <b>carta de baixo</b> do monte e escolhe (30 segundos):<br><b>FICAR COM ELA</b>: ela vai pra sua mão, mas quem está cego <b>continua cego</b> (se for Tatubum: Desarme ou explode).<br><b>PÔR NO TOPO</b>: ela vai pra cima do monte.<br>Nos dois casos <b>acaba o seu turno</b>. Se o tempo acabar, ela vai pro topo.<br>Pode levar Nem vem!.',
 };
 const detailOf = (k: KittensCardKind): string => DETAIL[k] ?? `Sozinho não faz nada.<br>${PAIR_DETAIL[k] ?? ''}${COMBO_TEXT}`;
 
@@ -177,7 +177,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada (no 1x1, só a sua vez acaba).',
   latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente. Par: o adversário escolhido joga um Desarme ou explode.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',
-  feitico: 'Você vê a carta de baixo do monte: fica com ela (é comprar) ou põe no topo. Acaba o turno.',
+  feitico: 'Você vê a carta de baixo do monte: fica com ela ou põe no topo. Acaba o turno. Não cura o Mau-olhado.',
   boto: 'Coringa: com um bicho forma o par dele; dois Botos, o par que você escolher. Completa trios.',
 };
 
@@ -826,7 +826,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!c || view?.phase !== 'playing') return null;
     switch (c.kind) {
       case 'tatu':
-        return c.who === ME ? `JOGUE O DESARME! ${TIMER}` : `${nameOf(c.who)} está desarmando…`;
+        if (c.who !== ME) return `${nameOf(c.who)} está desarmando…`;
+        return blindMe() ? `Solte uma carta virada no tatu (vai o seu Desarme) ${TIMER}` : `JOGUE O DESARME! ${TIMER}`;
       case 'cafune':
         return c.who === ME ? null : `${nameOf(c.who)} está escondendo o tatu no monte…`;
       case 'mico':
@@ -1743,7 +1744,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       // Só você vê a carta de baixo do monte. Ficar com ela é comprar (Tatubum: é comprar o Tatubum).
       const tatu = c.card !== null && kindOf(c.card) === 'tatubum';
       const warn = tatu ? '<p class="kt-warn">É um TATUBUM! Ficar com ele é comprar o Tatubum: Desarme ou explode.</p>' : '';
-      panel.innerHTML = `<h2>O FEITIÇO PUXOU DO FUNDO: ${TIMER}</h2><p>Só você vê. Fica com ela (é como comprar) ou põe no topo do monte? Os dois acabam o seu turno.</p>${warn}<div class="cards"></div><div class="kt-row"></div>`;
+      panel.innerHTML = `<h2>O FEITIÇO PUXOU DO FUNDO: ${TIMER}</h2><p>Só você vê. Fica com ela ou põe no topo do monte? Os dois acabam o seu turno.</p>${warn}<div class="cards"></div><div class="kt-row"></div>`;
       if (c.card) $('#panel .cards').appendChild(cardEl(c.card));
       const row = $('#panel .kt-row');
       row.appendChild(button('FICAR COM ELA', () => act({ type: 'choose', keep: true }), tatu ? 'small' : 'yellow'));

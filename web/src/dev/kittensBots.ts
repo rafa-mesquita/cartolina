@@ -243,7 +243,7 @@ export function decideKittens(
           : `choice:${c.kind}:${c.deadline}`;
     if (c.kind === 'tatu') {
       // Comprou o Tatubum: joga o Desarme depois de uma pausa dramática.
-      const cafune = g.hand.find((x) => kittensKindOf(x) === 'cafune');
+      const cafune = g.blind.includes(me) ? g.hand[0] : g.hand.find((x) => kittensKindOf(x) === 'cafune');
       return cafune ? { key, delay: between(rng, 1200, 2200), action: { type: 'choose', card: cafune } } : null;
     }
     if (c.kind === 'cafune') {

@@ -83,7 +83,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano** | 4 de cada | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 (pedido do Rafa). | (combo sim) |
 | **Tatu Latidor** (id `latido`) | (fora do pacote: **2** com 2 jogadores, **3** com 3, depois **n − 1**; nenhum na mão inicial) | Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez; ninguém tem, o seu fica na sua frente. **Par de Latidores:** um adversário escolhido joga um Desarme ou explode. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
-| **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (é comprar) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
+| **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (não cura o Mau-olhado) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
 | **Boto** (id `boto`) | 4 | Bicho **coringa**: sozinho não faz nada; em par ou trio vale por qualquer bicho. Ver "Cartas novas". | (combo sim) |
 
 **Ataque, exemplos:** Ana (normal, `owed = 1`) ataca → Bia joga 2. Bia, no 1º dos 2 turnos, ataca →
@@ -305,9 +305,10 @@ bicho.
   ele queria (como no par/trio às cegas), o que é aceitável: errar não muda nada no jogo.
 - **Escolhas que não usam a mão** (onde esconder o tatu, 4 bichos diferentes, Quati, Feitiço) funcionam normal; no 4
   diferentes ele escolhe pelo id do descarte (que é público).
-- **Voltar a ver:** quando ele **compra** — compra normal (inclusive um Tatubum: vê a mão pra jogar o Desarme), as
-  2 do par de Tamanduá, ou ficar com a carta do Feitiço. Evento público `{ t: 'cured', by }` antes do `draw`. Mandar
-  a carta do Feitiço pro topo não é comprar.
+- **Voltar a ver:** quando ele **compra** — compra normal (inclusive um Tatubum: vê a mão pra jogar o Desarme) ou as
+  2 do par de Tamanduá. Evento público `{ t: 'cured', by }` antes do `draw`. A carta do **Feitiço não cura**, nem
+  guardada nem indo pro topo (pedido do Rafa, 2026-11-06): ele continua cego. Se guardar um Tatubum e tiver Desarme,
+  qualquer ficha vale, como no Latidor, e o servidor joga o Desarme dele.
 - Quem sai do jogo deixa de estar cego; no fim de jogo ninguém fica cego.
 - Eventos públicos: `{ t: 'cursed', by, target }` e `{ t: 'cured', by }`.
 
@@ -353,8 +354,8 @@ bicho.
   pelo settle) e `kittensViewFor`; `kittensNextDeadline` não lê os campos. Estado completo passa pelo mesmo objeto.
   Testado em `kittens-compat.test.ts` (lobby, partida, carta no ar, pelo módulo).
 - Ações: `play.as?`, `nope.card?`; fichas `?i` são ids de até 32 caracteres, então o schema não muda pra elas.
-- `takeCard` (`choices.ts`) junta "comprar" (compra normal e Feitiço): cura o cego, Tatubum abre o Desarme ou
-  explode, outra carta vai pra mão e gasta o turno.
+- `takeCard` (`choices.ts`) junta o que a compra e o Feitiço têm em comum: Tatubum abre o Desarme ou explode, outra
+  carta vai pra mão e gasta o turno. `drawTop` é a compra normal: cura o cego e chama o `takeCard`.
 - `eliminate` manda pra fora também as cartas na frente e tira da lista de cegos; `checkWin` zera os cegos.
 - A simulação aleatória (`kittens-fuzz.test.ts`) joga as cartas novas, responde as escolhas novas e põe cegos jogando
   por ficha; confere a cada passo: cartas conservadas (contando as da frente), só Latidor na frente de vivos,
