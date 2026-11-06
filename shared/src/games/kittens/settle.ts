@@ -1,5 +1,5 @@
 import type { GameContext } from '../../game';
-import { chooseAtRandom, leaveMicoWait, takeCard } from './choices';
+import { chooseAtRandom, drawTop, leaveMicoWait } from './choices';
 import { kittensWithNewFields } from './compat';
 import { resolvePending } from './resolve';
 import { eliminate, logged } from './turn';
@@ -37,7 +37,7 @@ function blindClock(s: KittensState, ctx: GameContext): KittensState {
   if (ctx.now < clock.deadline) return s;
   const late = logged({ ...s, blindClock: null }, { t: 'blind_timeout', by: who });
   // O próximo também pode estar cego: o relógio dele já sai ligado, pro alarme da sala saber.
-  return blindClock(takeCard(late, who, s.draw.at(-1)!, s.draw.slice(0, -1), ctx.now + KITTENS_CHOICE_MS), ctx);
+  return blindClock(drawTop(late, who, ctx.now + KITTENS_CHOICE_MS), ctx);
 }
 
 /**

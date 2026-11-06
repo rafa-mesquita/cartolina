@@ -9,7 +9,7 @@ import {
   giveFavor,
   hideTatu,
   pickFromDiscard,
-  takeCard,
+  drawTop,
   useCafune,
 } from './choices';
 import { kittensDeal } from './deck';
@@ -119,7 +119,7 @@ export function applyKittensAction(
       const e = turnError(s, playerId);
       if (e) return fail(e);
       // Compra a de cima (cura o Mau-olhado). Tatubum: com Desarme, abre a escolha de jogá-lo; sem, explode.
-      return ok(takeCard(s, playerId, s.draw.at(-1)!, s.draw.slice(0, -1), ctx.now + KITTENS_CHOICE_MS));
+      return ok(drawTop(s, playerId, ctx.now + KITTENS_CHOICE_MS));
     }
     case 'choose': {
       if (s.phase !== 'playing') return fail('bad_phase');
@@ -135,10 +135,12 @@ export function applyKittensAction(
       if (c.who !== playerId) return fail('not_your_choice');
       switch (c.kind) {
         case 'tatu': {
+          // Cego que ficou com o Tatubum do Feitiço não sabe qual ficha é o Desarme: como no Latidor, qualquer ficha vale.
           const card = ownCard(s, playerId, action.card);
           if (card === null) return fail(badOwnCard(s, playerId, action.card));
-          if (kittensKindOf(card) !== 'cafune') return fail('bad_choice');
-          return ok(useCafune(s, c, card, ctx.now + KITTENS_CHOICE_MS));
+          const desarme = s.blind.includes(playerId) ? s.hands[playerId]!.find((x) => kittensKindOf(x) === 'cafune') : card;
+          if (desarme === undefined || kittensKindOf(desarme) !== 'cafune') return fail('bad_choice');
+          return ok(useCafune(s, c, desarme, ctx.now + KITTENS_CHOICE_MS));
         }
         case 'cafune': {
           const { position } = action;

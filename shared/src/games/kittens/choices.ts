@@ -8,19 +8,24 @@ type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K 
 const isKind = (k: string) => (c: string) => kittensKindOf(c) === k;
 
 /**
- * `p` pega `card`, que acabou de sair do monte (`draw` = o monte sem ela): é "comprar" (cura o Mau-olhado). Tatubum: com
+ * `p` pega `card`, que acabou de sair do monte (`draw` = o monte sem ela). Tatubum: com
  * Desarme, abre a escolha de jogá-lo (prazo `deadline`; a carta fica na mão até lá); sem, explode. Outra carta: vai pra
  * mão (só `p` vê qual) e gasta 1 turno. Usado pela compra normal e pelo Feitiço. A carta sai das espiadas (o resto do
  * monte não mudou de ordem: o que sobra de cada espiada continua sendo o topo).
  */
 export function takeCard(s: KittensState, p: string, card: string, draw: string[], deadline: number): KittensState {
-  const base = cure(unpeek({ ...s, draw }, [card]), p);
+  const base = unpeek({ ...s, draw }, [card]);
   const hand = base.hands[p]!;
   if (kittensKindOf(card) !== 'tatubum') {
     return spendTurn(logged({ ...base, hands: { ...base.hands, [p]: [...hand, card] } }, { t: 'draw', by: p, card }, [p]));
   }
   if (!hand.some(isKind('cafune'))) return eliminate(logged(base, { t: 'boom', by: p }), p, 'boom', [card]);
   return logged({ ...base, choice: { kind: 'tatu', who: p, tatu: card, deadline } }, { t: 'tatu', by: p });
+}
+
+/** Compra a carta de cima do monte: cura o Mau-olhado (a carta do Feitiço não cura; pedido do Rafa, 2026-11-06). */
+export function drawTop(s: KittensState, p: string, deadline: number): KittensState {
+  return takeCard(cure(s, p), p, s.draw.at(-1)!, s.draw.slice(0, -1), deadline);
 }
 
 /**
@@ -184,7 +189,7 @@ export function defendLatido(s: KittensState, c: Choice<'latido'>, card: string,
 }
 
 /**
- * Feitiço: `who` fica com a carta de baixo do monte (`keep`: é comprar; Tatubum segue o fluxo do Desarme) ou ela vai pro
+ * Feitiço: `who` fica com a carta de baixo do monte (`keep`: não cura quem está cego; Tatubum segue o fluxo do Desarme) ou ela vai pro
  * topo. Ficando com ela, ela sai das espiadas. Indo pro topo, as espiadas dos outros se apagam (o topo mudou), e `who`,
  * que viu a carta (pedido do Rafa, 2026-10-21), passa a ver ela em cima da espiada que já tinha (ou só ela). Vale também
  * sem resposta: ele viu a carta na escolha. Nos dois casos gasta 1 turno (o Tatubum guardado gasta quando o tatu volta
