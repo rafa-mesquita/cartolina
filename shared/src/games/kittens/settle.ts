@@ -1,9 +1,9 @@
 import type { GameContext } from '../../game';
-import { chooseAtRandom, leaveMicoWait } from './choices';
+import { chooseAtRandom, leaveMicoWait, takeCard } from './choices';
 import { kittensWithNewFields } from './compat';
 import { resolvePending } from './resolve';
 import { eliminate, logged } from './turn';
-import { KITTENS_CHOICE_MS, type KittensState } from './types';
+import { KITTENS_BLIND_MS, KITTENS_CHOICE_MS, type KittensState } from './types';
 
 /**
  * `p` caiu e não voltou em 30 s: a escolha dele é feita ao acaso e ele sai como se tivesse explodido (a mão e o que
@@ -24,8 +24,25 @@ function leave(state: KittensState, p: string, ctx: GameContext): KittensState {
 }
 
 /**
+ * O relógio de quem está cego (`KITTENS_BLIND_MS`): corre na vez dele, com nada no ar e nenhuma escolha aberta, e recomeça
+ * quando algo entra no diário. Vencido, ele compra a carta de cima, como se tivesse clicado no monte.
+ */
+function blindClock(s: KittensState, ctx: GameContext): KittensState {
+  const who = s.current;
+  if (s.phase !== 'playing' || who === null || !s.blind.includes(who) || s.pending || s.choice) {
+    return s.blindClock ? { ...s, blindClock: null } : s;
+  }
+  const clock = s.blindClock;
+  if (!clock || clock.seq !== s.seq) return { ...s, blindClock: { seq: s.seq, deadline: ctx.now + KITTENS_BLIND_MS } };
+  if (ctx.now < clock.deadline) return s;
+  const late = logged({ ...s, blindClock: null }, { t: 'blind_timeout', by: who });
+  // O próximo também pode estar cego: o relógio dele já sai ligado, pro alarme da sala saber.
+  return blindClock(takeCard(late, who, s.draw.at(-1)!, s.draw.slice(0, -1), ctx.now + KITTENS_CHOICE_MS), ctx);
+}
+
+/**
  * Presença e prazos. Roda antes de cada ação, a cada `tick` da sala e no alarme. Ordem: quem caiu de vez sai;
- * escolha vencida é feita ao acaso; carta no ar vencida resolve. Devolve o MESMO objeto quando nada muda (estado
+ * escolha vencida é feita ao acaso; carta no ar vencida resolve; lance de quem está cego vencido vira compra. Devolve o MESMO objeto quando nada muda (estado
  * salvo antes das cartas novas ganha `front`/`blind` vazios, e aí volta um objeto novo).
  */
 export function settleKittens(saved: KittensState, ctx: GameContext): KittensState {
@@ -40,5 +57,5 @@ export function settleKittens(saved: KittensState, ctx: GameContext): KittensSta
   if (s.phase !== 'playing') return s;
   if (s.choice && ctx.now >= s.choice.deadline) s = chooseAtRandom(s, ctx.rng, ctx.now);
   if (s.pending && ctx.now >= s.pending.resolvesAt) s = resolvePending(s, ctx);
-  return s;
+  return blindClock(s, ctx);
 }

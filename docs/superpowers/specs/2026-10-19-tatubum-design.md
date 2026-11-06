@@ -276,6 +276,10 @@ bicho.
 - **Visão do cego:** `hand` = `['?0', '?1', …]`; nenhum id da própria mão aparece pra ele, nem no diário (qualquer
   evento cuja carta esteja hoje na mão dele chega com `card: null`, inclusive o que ele mesmo comprou antes e o que
   acabou de receber). Os outros veem quem está cego (`blind`), mas não a ordem.
+- **Prazo do cego** (pedido do Rafa, 2026-11-06): na vez dele, com nada no ar e nenhuma escolha aberta, quem está cego tem
+  **50 s** (`KITTENS_BLIND_MS`, `blindClock` no estado, `blindDeadline` na visão, público) pra cada lance. Jogada
+  recusada não devolve o tempo; jogada que vale recomeça. Acabou: evento `blind_timeout` e ele compra a carta de cima,
+  como numa compra normal (cura o Mau-olhado; Tatubum segue o fluxo do Desarme).
 - **Jogar às cegas:** quem está cego manda **fichas** em tudo que aponta carta da própria mão: `play.cards`,
   `nope.card`, `choose.card` (Favor, descarte do Mico, Desarme). O servidor troca a ficha pela carta de verdade e
   valida como sempre. Cego mandando id de verdade (ou nada onde precisa de carta) → erro novo **`blind_pick`**

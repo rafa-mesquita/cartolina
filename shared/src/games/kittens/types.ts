@@ -26,6 +26,11 @@ export const KITTENS_UNSTOPPABLE_MS = 1_500;
 export function kittensNopable(play: Pick<KittensPlay, 'kind' | 'as'>): boolean {
   return play.kind !== 'cinco' && !(play.kind === 'trio' && play.as === 'favor');
 }
+/**
+ * Quem está cego tem 50 s pra cada lance (pedido do Rafa, 2026-11-06: tentar todas as combinações às cegas estava
+ * arrastando a partida). Jogada recusada não devolve o tempo; acabou, ele compra.
+ */
+export const KITTENS_BLIND_MS = 50_000;
 /** Prazo das escolhas pessoais (Desarme, Favor, descarte e pegada do Mico, 4 bichos diferentes, Quati, Latidor, Feitiço); depois o servidor escolhe. */
 export const KITTENS_CHOICE_MS = 30_000;
 /** Quantas entradas do diário ficam no estado. */
@@ -162,6 +167,8 @@ export type KittensEvent =
   | { t: 'cursed'; by: string; target: string }
   /** `by` comprou e voltou a ver a própria mão. */
   | { t: 'cured'; by: string }
+  /** `by` estava cego e acabou o tempo do lance: compra a carta de cima (os eventos da compra vêm logo depois). */
+  | { t: 'blind_timeout'; by: string }
   /** Feitiço: `by` ficou com a carta de baixo do monte (`kept`) ou mandou ela pro topo. Ninguém vê qual era. */
   | { t: 'conjured'; by: string; kept: boolean }
   /**
@@ -198,6 +205,11 @@ export interface KittensState {
    * fichas `?0…`: a ficha `?i` é `hands[p][i]`. Cartas que chegam depois vão pro fim. Sai da lista quando ele compra.
    */
   blind: string[];
+  /**
+   * Prazo do lance de quem está cego e na vez, com nada no ar. `seq` = o `seq` do diário quando o prazo começou: tudo que
+   * vale entra no diário e recomeça o prazo; jogada recusada não entra. Estado salvo antes disso não tem o campo.
+   */
+  blindClock: { seq: number; deadline: number } | null;
   current: string | null;
   /** Turnos que `current` ainda deve, contando o atual. */
   owed: number;
@@ -282,6 +294,8 @@ export interface KittensView {
   front: Record<string, string[]>;
   /** Quem está cego pelo Mau-olhado (a ordem das fichas não aparece). */
   blind: string[];
+  /** Até quando quem está cego e na vez pode fazer o lance; depois ele compra. null = sem prazo correndo. */
+  blindDeadline: number | null;
   pending: KittensPending | null;
   choice: KittensChoiceView | null;
   /** O que você espiou e ainda está à mostra (as de cima, a do topo primeiro; pode passar de 3); null se nada. */
