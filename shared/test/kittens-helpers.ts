@@ -1,4 +1,5 @@
 import type { ActionResult, GameContext } from '../src/game';
+import { KITTENS_BICHOS, type KittensBicho } from '../src/games/kittens/cards';
 import { applyKittensAction, initialKittensState } from '../src/games/kittens/rules';
 import type { KittensAction, KittensState } from '../src/games/kittens/types';
 import { mulberry32 } from '../src/rng';
@@ -71,11 +72,13 @@ export function table(opts: {
   owed?: number;
   front?: Record<string, string[]>;
   blind?: string[];
+  bichos?: KittensBicho[];
 }): KittensState {
   const players = Object.keys(opts.hands);
   return {
     ...initialKittensState(),
     phase: 'playing',
+    bichos: opts.bichos ?? [...KITTENS_BICHOS],
     players,
     alive: [...players],
     hands: opts.hands,

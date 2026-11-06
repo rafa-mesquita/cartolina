@@ -19,6 +19,10 @@ export const KITTENS_CARD_KINDS = [
   'preguica',
   // Tucano (pedido do Rafa, 2026-10-21): o 6º bicho; o par pula a vez de alguém.
   'tucano',
+  // Bichos novos (pedido do Rafa, 2026-11-06).
+  'peixe',
+  'onca',
+  'sapo',
   'boto',
 ] as const;
 export type KittensCardKind = (typeof KITTENS_CARD_KINDS)[number];
@@ -43,6 +47,9 @@ export const KITTENS_CARD_NAMES: Record<KittensCardKind, string> = {
   tamandua: 'Tamanduá',
   preguica: 'Preguiça',
   tucano: 'Tucano',
+  peixe: 'Peixe-beta',
+  onca: 'Onça-pintada',
+  sapo: 'Sapo',
   boto: 'Boto',
 };
 
@@ -51,18 +58,31 @@ export const KITTENS_ACTION_KINDS = ['ataque', 'pular', 'favor', 'embaralhar', '
 export type KittensActionKind = (typeof KITTENS_ACTION_KINDS)[number];
 
 /**
- * Os 6 bichos (o Tucano entrou em 2026-10-21): sozinhos não fazem nada; em par, cada um tem efeito próprio (spec "Par
- * de cada bicho"). O Boto (coringa) NÃO está aqui: ele não tem efeito próprio, só faz as vezes de um destes (e o par de
- * Preguiça não pede Boto).
+ * A pool de bichos: cada partida usa 6 deles, sorteados (pedido do Rafa, 2026-11-06; `kittensDrawBichos`). Sozinhos não
+ * fazem nada; em par, cada um tem efeito próprio (spec "Par de cada bicho"). O Boto (coringa) NÃO está aqui: ele não tem
+ * efeito próprio, só faz as vezes de um destes (e o par de Preguiça não pede Boto). Ele entra em toda partida.
  */
-export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano'] as const;
+export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano', 'peixe', 'onca', 'sapo'] as const;
 export type KittensBicho = (typeof KITTENS_BICHOS)[number];
+
+/** Os 6 bichos de antes do sorteio: os de uma partida salva sem `bichos`. */
+export const KITTENS_CLASSIC_BICHOS: readonly KittensBicho[] = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano'];
 
 /** O bicho coringa: em par ou trio vale por qualquer bicho; nos 4 bichos diferentes conta como um bicho a mais. */
 export const KITTENS_WILD = 'boto' as const;
 
 export function kittensIsBicho(kind: KittensCardKind | null): kind is KittensBicho {
   return kind !== null && (KITTENS_BICHOS as readonly string[]).includes(kind);
+}
+
+/**
+ * As 2 cartas que formam o par de Sapo numa mão (Sapos primeiro, depois Botos), ou null. Sem o Sapo entre os bichos da
+ * partida, os Botos não viram Sapo.
+ */
+export function kittensSapoPair(hand: readonly string[], bichos: readonly KittensCardKind[]): string[] | null {
+  if (!bichos.includes('sapo')) return null;
+  const pair = [...hand.filter((c) => kittensKindOf(c) === 'sapo'), ...hand.filter((c) => kittensKindOf(c) === KITTENS_WILD)].slice(0, 2);
+  return pair.length === 2 ? pair : null;
 }
 
 export function kittensCardId(kind: KittensCardKind, n: number): string {

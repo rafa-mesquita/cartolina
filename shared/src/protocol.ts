@@ -100,6 +100,8 @@ export const ERROR_CODES = [
   'nope_stale',
   'nope_cooldown',
   'unstoppable',
+  'sapo_only',
+  'sapo_blind',
   'not_your_choice',
   'bad_choice',
   // Cúpi (`not_your_turn` e `bad_target` já vêm do Tatubum)
@@ -167,6 +169,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   nope_stale: 'A carta no ar mudou: seu Nem vem! voltou pra mão.',
   nope_cooldown: 'Espere: acabaram de dar Nem vem! (2 s).',
   unstoppable: 'Essa jogada não aceita Nem vem!',
+  sapo_only: 'O par de Sapo só reflete magia jogada em você.',
+  sapo_blind: 'Cego não usa o Sapo.',
   not_your_choice: 'Essa escolha não é sua.',
   bad_choice: 'Escolha inválida.',
   not_enough_coins: 'Faltam moedas pra essa ação.',

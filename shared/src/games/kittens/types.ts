@@ -1,4 +1,4 @@
-import type { KittensCardKind } from './cards';
+import type { KittensBicho, KittensCardKind } from './cards';
 
 export const KITTENS_MIN_PLAYERS = 2;
 export const KITTENS_MAX_PLAYERS = 8;
@@ -13,6 +13,22 @@ export const KITTENS_NOPE_COOLDOWN_MS = 2_000;
 export function kittensNopeCooldownUntil(pending: { nopes: readonly unknown[]; resolvesAt: number } | null | undefined): number | null {
   if (!pending || pending.nopes.length === 0) return null;
   return pending.resolvesAt - KITTENS_NOPE_MS + KITTENS_NOPE_COOLDOWN_MS;
+}
+/**
+ * Quem manda a magia no ar agora. `by` é sempre quem está na vez e jogou a carta; depois de um Sapo, quem refletiu é quem
+ * manda (pedido do Rafa, 2026-11-06).
+ */
+export function kittensCaster(pending: { by: string; caster?: string }): string {
+  return pending.caster ?? pending.by;
+}
+/**
+ * O par de Sapo reflete esta jogada? Favor, Mau-olhado, par de Tucano e par de Latidores, que têm um alvo só. O trio de
+ * Favor é imparável. No Tucano do 1x1 ninguém é pulado (`alive` = quantos estão vivos), então não há o que refletir.
+ */
+export function kittensReflectable(play: Pick<KittensPlay, 'kind' | 'as' | 'target'>, alive: number): boolean {
+  if (play.target === null) return false;
+  if (play.kind === 'favor' || play.kind === 'olhado') return true;
+  return play.kind === 'par' && (play.as === 'latido' || (play.as === 'tucano' && alive > 2));
 }
 /**
  * 4 bichos diferentes (pedido do Rafa, 2026-10-21): não leva Nem vem!. A carta fica no ar só o tempo de todo mundo ver
@@ -68,7 +84,10 @@ export interface KittensPlay {
 
 /** Carta no ar: resolve em `resolvesAt`; cada Nem vem! empurra o prazo (spec §4.2). */
 export interface KittensPending {
+  /** Quem está na vez e jogou a carta. Não muda ao refletir. */
   by: string;
+  /** Depois de um Sapo: quem manda a magia agora (`kittensCaster`). Sem o campo, é `by`. */
+  caster?: string;
   play: KittensPlay;
   nopes: { by: string; card: string }[];
   resolvesAt: number;
@@ -87,10 +106,11 @@ export type KittensChoice =
   | { kind: 'favor'; who: string; to: string; left: number; deadline: number }
   /**
    * `who` pega do descarte, uma de cada vez, `left` cartas de `options`: nos 5 diferentes, 2 do descarte de antes da
-   * jogada; no fim do par de Mico (`from: 'mico'`; pedido do Rafa, 2026-10-20), 1 das cartas descartadas nele. `from`
-   * só muda os textos da mesa.
+   * jogada; no fim do par de Mico (`from: 'mico'`; pedido do Rafa, 2026-10-20), 1 das cartas descartadas nele; no par de
+   * Onça (`from: 'onca'`; pedido do Rafa, 2026-11-06), 1 do descarte de antes da jogada, menos Desarme (`options` pode vir
+   * vazio: ele só vê o topo e o fundo e fecha). `from` muda os textos da mesa e, na Onça, o que a visão mostra.
    */
-  | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number; from?: 'mico' }
+  | { kind: 'cinco'; who: string; options: string[]; left: number; deadline: number; from?: 'mico' | 'onca' }
   /**
    * Par de Mico: cada um de `waiting` descarta uma carta da própria mão, ao mesmo tempo. `by` = quem jogou o par;
    * `discarded` = o que já foi descartado nele (público), de onde `by` pega uma quando todos terminam.
@@ -107,7 +127,12 @@ export type KittensChoice =
    */
   | { kind: 'latido'; who: string; by: string; deadline: number; pair?: true }
   /** Feitiço: `who` vê a carta de BAIXO do monte e decide se fica com ela (como se comprasse) ou se ela vai pro topo. */
-  | { kind: 'feitico'; who: string; deadline: number };
+  | { kind: 'feitico'; who: string; deadline: number }
+  /** Par de Peixe-beta: `who` vê as 3 de cima e decide o destino da segunda (`KittensFishFate`). */
+  | { kind: 'peixe'; who: string; deadline: number };
+
+/** O que o par de Peixe-beta faz com a segunda carta do monte: fica com ela, deixa onde está ou manda pro fundo. */
+export type KittensFishFate = 'keep' | 'stay' | 'bottom';
 
 /** Escolha como os jogadores veem: sem o id do tatu escondido; a carta de cima do Quati e a de baixo do Feitiço só pra quem escolhe. */
 export type KittensChoiceView =
@@ -117,7 +142,11 @@ export type KittensChoiceView =
   | { kind: 'quati'; who: string; deadline: number; card: string | null }
   /** `card` = a carta de baixo do monte, só pra quem escolhe (null pros outros). */
   | { kind: 'feitico'; who: string; deadline: number; card: string | null }
-  | Extract<KittensChoice, { kind: 'favor' | 'cinco' | 'mico' | 'latido' }>;
+  /** `cards` = as 3 de cima, a do topo primeiro, só pra quem escolhe (null pros outros). */
+  | { kind: 'peixe'; who: string; deadline: number; cards: string[] | null }
+  /** `seen`: no par de Onça, a carta do topo e a do fundo do monte, só pra quem escolhe. */
+  | (Extract<KittensChoice, { kind: 'cinco' }> & { seen?: { top: string | null; bottom: string | null } })
+  | Extract<KittensChoice, { kind: 'favor' | 'mico' | 'latido' }>;
 
 /** Espiar no formato antigo (um só por vez, até 2026-10-20): só o `compat.ts` lê isso, de sala salva no meio da partida. */
 export interface KittensPeek {
@@ -176,6 +205,10 @@ export type KittensEvent =
    * de `by` acabou (ninguém é pulado).
    */
   | { t: 'tucano'; by: string; target: string; duel?: true }
+  /** Par de Sapo: `by` refletiu a magia no ar, que agora vale pra `target`. */
+  | { t: 'reflected'; by: string; target: string }
+  /** Par de Peixe-beta: o que `by` fez com a segunda carta do monte (todos veem o destino, ninguém vê a carta). */
+  | { t: 'fished'; by: string; fate: KittensFishFate }
   /** A vez chegou em `who`, que tinha vez pulada (Tucano): o turno dele foi gasto sem ele jogar nem comprar. */
   | { t: 'skipped'; who: string }
   | { t: 'win'; by: string };
@@ -228,6 +261,8 @@ export interface KittensState {
    * nunca de quem está na vez.
    */
   skips: Record<string, number>;
+  /** Os bichos desta partida, sorteados da pool (`kittensDrawBichos`). O Boto e o Latidor entram sempre e não contam aqui. */
+  bichos: KittensBicho[];
   log: KittensLogEntry[];
   /** Número da próxima entrada do diário. */
   seq: number;
@@ -260,6 +295,8 @@ export type KittensAction =
   | { type: 'start' }
   /** `as`: par de 2 Botos, o bicho que o par vale. Quem está cego manda fichas (`?0`…) no lugar dos ids. */
   | { type: 'play'; cards: string[]; target?: string; ask?: KittensCardKind; as?: KittensCardKind }
+  /** O alvo reflete a magia no ar com um par de Sapo (`kittensSapoPair`). `on` = a primeira carta que ele viu no ar. */
+  | { type: 'sapo'; cards: string[]; on?: string }
   /**
    * `card`: qual Nem vem! usar (opcional; sem ela, o servidor usa um). Quem está cego tem que mandar uma ficha.
    * `at` e `on` (pedido do Rafa, 2026-10-20) dizem o que o jogador viu ao clicar: `at` = quantos Nem vem! já havia na
@@ -273,7 +310,7 @@ export type KittensAction =
    * Desarme: `card` (o Desarme a jogar, ao comprar um Tatubum ou contra o Tatu Latidor) e depois `position` (0 = topo,
    * tamanho do monte = fundo, ou 'random'); Favor, descarte do Mico e 5 diferentes: `card`; Quati e Feitiço: `keep`.
    */
-  | { type: 'choose'; card?: string; position?: number | 'random'; keep?: boolean }
+  | { type: 'choose'; card?: string; position?: number | 'random'; keep?: boolean; fate?: KittensFishFate }
   | { type: 'again' }
   | { type: 'lobby' };
 
@@ -304,6 +341,8 @@ export interface KittensView {
   peekers: string[];
   /** Vezes que ainda vão ser puladas, por jogador (par de Tucano; público). Sem nada = chave ausente. */
   skips: Record<string, number>;
+  /** Os bichos desta partida (público). */
+  bichos: KittensBicho[];
   log: { n: number; ev: KittensEvent }[];
   winner: string | null;
 }

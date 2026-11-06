@@ -1,7 +1,8 @@
+import { KITTENS_CLASSIC_BICHOS } from './cards';
 import type { KittensExit, KittensExitHow, KittensPeek, KittensState } from './types';
 
 /** Campos que versões anteriores não salvavam (sala guardada no Durable Object no meio de uma partida, no deploy). */
-type NewFields = 'front' | 'blind' | 'peeks' | 'match' | 'exits' | 'stats' | 'skips';
+type NewFields = 'front' | 'blind' | 'peeks' | 'match' | 'exits' | 'stats' | 'skips' | 'bichos';
 
 /** Estado como pode ter sido salvo por versões anteriores: sem os campos novos, e com o Espiar antigo (`peek`). */
 type SavedKittensState = Omit<KittensState, NewFields> & Partial<Pick<KittensState, NewFields>> & { peek?: KittensPeek | null };
@@ -47,6 +48,7 @@ function exitsOf(old: SavedKittensState): KittensExit[] {
  * O Tucano (2026-10-21) trouxe `skips`: entra vazio (ninguém tinha vez pulada).
  * A defesa do Latidor de antes da fila (2026-10-21) não tem `by` (quem jogou o Latidor): era sempre quem está na vez
  * (o Latidor só sai na vez de quem joga, e a vez fica com ele), então `by` = `current`.
+ * O sorteio de bichos (2026-11-06) trouxe `bichos`: partida salva antes dele usa os 6 de sempre.
  * Devolve o MESMO objeto quando o estado já está completo. Aplicado nas portas de entrada do motor
  * (`applyKittensAction`, `settleKittens`, `kittensViewFor`) e no registro do histórico.
  */
@@ -59,7 +61,7 @@ export function kittensWithNewFields(state: KittensState): KittensState {
   const oldHistory = old.match === undefined || old.exits === undefined || old.stats === undefined;
   const oldSkips = old.skips === undefined;
   const oldLatido = c?.kind === 'latido' && (c as Partial<typeof c>).by === undefined;
-  if (old.front !== undefined && old.blind !== undefined && !oldFavor && !oldMico && !oldPeek && !oldHistory && !oldSkips && !oldLatido) {
+  if (old.front !== undefined && old.blind !== undefined && old.bichos !== undefined && !oldFavor && !oldMico && !oldPeek && !oldHistory && !oldSkips && !oldLatido) {
     return state;
   }
   const choice = oldFavor
@@ -82,5 +84,6 @@ export function kittensWithNewFields(state: KittensState): KittensState {
     exits: old.exits ?? exitsOf(old),
     stats: old.stats ?? {},
     skips: old.skips ?? {},
+    bichos: old.bichos ?? [...KITTENS_CLASSIC_BICHOS],
   };
 }

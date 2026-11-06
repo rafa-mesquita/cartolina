@@ -62,7 +62,12 @@ function started(n = 3): Room {
   }
   const res = roomAction(room, 'p0', { type: 'start' }, mulberry32(7), 0);
   if (!res.ok) throw new Error(res.error);
-  return { ...res.room, game: { ...(res.room.game as KittensState), current: 'p0' } };
+  // A vez e a ordem da mesa são sorteadas: aqui ficam fixas, sem Tatubum no topo (quem compra não para no Desarme).
+  const players = Array.from({ length: n }, (_, i) => `p${i}`);
+  const game = res.room.game as KittensState;
+  const isTatu = (c: string) => c.startsWith('tatubum');
+  const draw = [...game.draw.filter(isTatu), ...game.draw.filter((c) => !isTatu(c))];
+  return { ...res.room, game: { ...game, current: 'p0', players, alive: [...players], draw } };
 }
 
 function viewOf(room: Room, me: string | null): KittensRoomView {
