@@ -1640,6 +1640,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (sapo) {
       const b = button('SAPO!', () => reflect(sapo));
       b.id = 'sapo';
+      // No celular, Nem vem! e Sapo dividem a linha.
+      box.querySelector('#nope')?.classList.add('kt-side');
       box.appendChild(b);
     }
     const c = v.choice;
@@ -1851,7 +1853,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     const sub = !pick
       ? `${cards.length} carta${cards.length === 1 ? '' : 's'}, da mais nova pra mais velha.`
       : mico ? 'Clique numa carta acesa: são as que foram descartadas no seu par de Mico.'
-      : onca ? 'Só você vê o topo e o fundo do monte. Clique numa carta acesa pra pegar (Desarme não pode).'
+      : onca ? (pick.options.length ? 'Só você vê o topo e o fundo do monte. Clique numa carta acesa pra pegar (Desarme não pode).' : 'Só você vê o topo e o fundo do monte. No descarte não há carta que dê pra pegar.')
       : 'Clique numa carta acesa. As apagadas foram pro descarte depois da sua jogada.';
     pile.innerHTML = `<div class="box"><h2>${title}${pick ? ' ' + TIMER : ''}</h2><p class="psub">${tx(sub)}</p><div class="pbody"><div class="grid"></div><div class="pinfo"></div></div><div class="foot"><div class="note">${phone() ? 'toque fora pra fechar' : 'ESC ou clique fora pra fechar'}</div></div></div>`;
     if (pick?.seen) {

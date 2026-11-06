@@ -510,6 +510,10 @@
 .kittens .kt-mesa #stage.kt-phone #actions.kt-tight .kt-btn > span { font-size: 8px; padding: 0 6px; }
 .kittens .kt-mesa #stage.kt-phone #actions .kt-hint { width: 100%; font-size: 19px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kittens .kt-mesa #stage.kt-phone #nope.kt-btn { flex-basis: 100%; height: 64px; }
+.kittens .kt-mesa #stage.kt-phone #nope.kt-btn.kt-side { flex-basis: 0; }
+.kittens .kt-mesa #stage.kt-phone #sapo.kt-btn { flex: 1 1 0; height: 64px; }
+.kittens .kt-mesa #stage.kt-phone #pile .kt-seen { margin-bottom: 4px; }
+.kittens .kt-mesa #stage.kt-phone #pile .kt-seen .kt-card { zoom: .6; }
 .kittens .kt-mesa #stage.kt-phone #actions.kt-longhint .kt-hint { white-space: normal; font-size: 16px; line-height: 16px; }
 .kittens .kt-mesa #stage.kt-phone #actions.kt-longhint .kt-btn { height: 44px; }
 /* folhas: fundo escuro + diário, zoom, painéis, descarte, galeria e fim por cima */
