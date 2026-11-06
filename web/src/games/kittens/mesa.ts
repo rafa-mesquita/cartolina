@@ -107,7 +107,7 @@ const ACTION_KINDS: readonly string[] = KITTENS_ACTION_KINDS;
 const CARD_COLOR: Record<KittensCardKind, string> = {
   tatubum: '#e4572e', cafune: '#f2c14e', nemvem: '#c86fd4', ataque: '#9aa7bd', pular: '#5aa0e6', favor: '#f29bc0',
   embaralhar: '#8d7ae6', espiar: '#3fa7c9', capivara: '#5cc8b8', mico: '#f4a259', quati: '#c79a6a', tamandua: '#b0b8c8', preguica: '#a8bf6a',
-  tucano: '#3b5bc4', peixe: '#c23b5a', onca: '#d9913b', sapo: '#4f9e4a', latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
+  tucano: '#3b5bc4', peixe: '#7fd6e8', onca: '#6f9e3f', sapo: '#c9a6e8', latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
 };
 
 /** Pixel art em SVG (um retângulo por pixel): `rows` com uma letra por pixel, `pal` = cor de cada letra. */

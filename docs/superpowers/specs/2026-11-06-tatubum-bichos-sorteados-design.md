@@ -66,8 +66,8 @@ Pedido do Rafa, 2026-11-06. Aprovado por ele na conversa. O desenho geral do jog
 
 ## Artes
 
-- As artes vêm do Google Flow, com **duas opções por bicho** pro Rafa escolher (Sapo segurando um espelho). Até lá, arte
-  provisória, e o PR só vai pro ar com as finais.
+- As artes vêm do Google Flow, com **duas opções por bicho** pro Rafa escolher (Sapo segurando um espelho). Prompts em
+  `docs/kittens/cartas-prompts.md`.
 
 ## Bots
 
