@@ -1,5 +1,5 @@
 import type { ActionResult, GameContext } from '../../game';
-import { randomInt } from '../../rng';
+import { randomInt, shuffle } from '../../rng';
 import { kittensKindOf } from './cards';
 import {
   conjure,
@@ -60,10 +60,10 @@ export function initialKittensState(): KittensState {
 /** Partida nova com os ativos (também usada em "jogar de novo"). A sala já limita a 8 pessoas. */
 function startMatch(state: KittensState, ctx: GameContext): ActionResult<KittensState> {
   if (ctx.active.length < KITTENS_MIN_PLAYERS) return fail('not_enough_players');
-  const players = [...ctx.active];
-  const { hands, draw } = kittensDeal(ctx.rng, players);
-  // Quem começa é sorteado (pedido do Rafa, 2026-10-20: o host começava sempre); a vez segue a ordem dos assentos.
-  // O sorteio vem depois da distribuição, pra mesma semente dar as mesmas mãos.
+  const { hands, draw } = kittensDeal(ctx.rng, [...ctx.active]);
+  // A ordem da mesa é sorteada a cada partida (pedido do Rafa, 2026-11-06: era a ordem de entrada na sala), e quem começa
+  // também (2026-10-20: o host começava sempre). Os sorteios vêm depois da distribuição, pra mesma semente dar as mesmas mãos.
+  const players = shuffle(ctx.rng, ctx.active);
   const first = players[randomInt(ctx.rng, players.length)]!;
   const stats = Object.fromEntries(players.map((p) => [p, { nopes: 0, defuses: 0 }]));
   const fresh = { ...initialKittensState(), match: state.match + 1, stats };

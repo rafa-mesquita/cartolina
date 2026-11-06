@@ -19,8 +19,6 @@ describe('começar', () => {
     expect(ids(3)).toContain(state.current);
     expect(state).toMatchObject({
       phase: 'playing',
-      players: ids(3),
-      alive: ids(3),
       owed: 1,
       pending: null,
       choice: null,
@@ -29,14 +27,23 @@ describe('começar', () => {
       discard: [],
       out: [],
     });
+    expect([...state.players].sort()).toEqual(ids(3));
+    expect(state.alive).toEqual(state.players);
     for (const p of ids(3)) expect(state.hands[p]).toHaveLength(8);
-    expect(state.draw).toHaveLength(58 + 3 - 21 + 2 + 2); // pacote + 1 Latidor por jogador − mãos + Desarmes extras + tatus
+    // pacote + 1 Latidor por jogador − mãos + Desarmes extras (0 a 2, sorteados) + tatus
+    expect(state.draw.length).toBeGreaterThanOrEqual(58 + 3 - 21 + 2);
+    expect(state.draw.length).toBeLessThanOrEqual(58 + 3 - 21 + 2 + 2);
     for (const p of ids(3)) expect(state.hands[p]!.some((c) => c.startsWith('latido'))).toBe(false);
   });
 
   it('quem começa é sorteado: não é sempre o host (cada um começa em alguma semente)', () => {
     const firsts = new Set(Array.from({ length: 40 }, (_, i) => started(4, i + 1).state.current));
     expect([...firsts].sort()).toEqual(ids(4));
+  });
+
+  it('a ordem da mesa é sorteada, não a de entrada na sala (pedido do Rafa, 2026-11-06)', () => {
+    const orders = new Set(Array.from({ length: 40 }, (_, i) => started(4, i + 1).state.players.join()));
+    expect(orders.size).toBeGreaterThan(5);
   });
 
   it('o sorteio de quem começa não muda a distribuição das cartas', () => {

@@ -3,6 +3,7 @@ import { KITTENS_CARD_KINDS, KITTENS_CARD_NAMES, kittensCardId, kittensKindOf, k
 import {
   KITTENS_PACK_SIZE,
   kittensBaseDeck,
+  kittensCafuneCut,
   kittensDeal,
   kittensExtraCafunes,
   kittensLatidoCards,
@@ -78,9 +79,9 @@ describe('baralho', () => {
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  // Desarmes extras no monte como no original: 2 com até 4 jogadores, 1 a partir de 5.
+  // Desarmes extras no monte como no original (2 com até 4 jogadores, 1 a partir de 5), menos o corte do sorteio.
   it.each([
-    // monte = pacotes × 58 + Latidores − 7 por jogador + Desarmes extras + (n − 1) tatus
+    // monte = pacotes × 58 + Latidores − 7 por jogador + Desarmes extras − corte + (n − 1) tatus
     [2, 49, 2],
     [3, 44, 2],
     [4, 38, 2],
@@ -89,20 +90,31 @@ describe('baralho', () => {
     [8, 75, 1],
   ])('com %i jogadores: 1 Desarme + 7 na mão, sem Latidor; monte com %i cartas, %i Desarme(s), os Latidores e n − 1 tatus', (n, drawSize, extras) => {
     const players = ps(n);
-    for (const seed of [1, 7, 42]) {
+    const cuts = new Set<number>();
+    for (let seed = 1; seed <= 40; seed++) {
       const { hands, draw } = kittensDeal(mulberry32(seed), players);
+      const cut = extras - count(draw, 'cafune');
+      cuts.add(cut);
       for (const p of players) {
         expect(hands[p]).toHaveLength(8);
         expect(count(hands[p]!, 'cafune')).toBe(1);
         expect(count(hands[p]!, 'tatubum')).toBe(0);
         expect(count(hands[p]!, 'latido')).toBe(0);
       }
-      expect(draw).toHaveLength(drawSize);
+      expect(draw).toHaveLength(drawSize - cut);
       expect(count(draw, 'tatubum')).toBe(n - 1);
-      expect(count(draw, 'cafune')).toBe(extras);
       expect(count(draw, 'latido')).toBe(kittensLatidos(n));
       const all = [...Object.values(hands).flat(), ...draw];
       expect(new Set(all).size).toBe(all.length);
+    }
+    // Pedido do Rafa (2026-11-06): normal, −1 ou −2, nunca tirando da mão inicial (com 1 extra, normal ou −1).
+    expect([...cuts].sort()).toEqual(extras === 2 ? [0, 1, 2] : [0, 1]);
+  });
+
+  it('o corte de Desarmes é sorteado de 0 até o que o monte tem, no máximo 2', () => {
+    for (const [n, top] of [[2, 2], [4, 2], [5, 1], [8, 1]] as const) {
+      expect(kittensCafuneCut(() => 0, n)).toBe(0);
+      expect(kittensCafuneCut(() => 0.999, n)).toBe(top);
     }
   });
 
@@ -118,7 +130,9 @@ describe('baralho', () => {
     const players = ps(5);
     const { hands, draw } = kittensDeal(mulberry32(7), players);
     const all = [...Object.values(hands).flat(), ...draw].sort();
-    const cafunes = Array.from({ length: 5 + kittensExtraCafunes(5) }, (_, i) => `cafune-${i}`);
+    const cafunes = all.filter((c) => kittensKindOf(c) === 'cafune');
+    expect(cafunes.length).toBeGreaterThanOrEqual(5);
+    expect(cafunes.length).toBeLessThanOrEqual(5 + kittensExtraCafunes(5));
     const tatus = Array.from({ length: 4 }, (_, i) => `tatubum-${i}`);
     expect(all).toEqual([...kittensBaseDeck(5), ...cafunes, ...tatus].sort());
   });
@@ -131,9 +145,9 @@ describe('baralho', () => {
     // Com alguma semente o p0 não fica com o cafune-0.
     expect([1, 2, 3, 4, 5].some((seed) => cafunesOf(kittensDeal(mulberry32(seed), players).hands.p0!)[0] !== 'cafune-0')).toBe(true);
     for (const p of players) expect(cafunesOf(hands[p]!)).toHaveLength(1);
-    expect(cafunesOf(draw)).toHaveLength(2);
-    const all = [...players.flatMap((p) => cafunesOf(hands[p]!)), ...cafunesOf(draw)].sort();
-    expect(all).toEqual(Array.from({ length: 6 }, (_, i) => `cafune-${i}`));
+    expect(cafunesOf(draw).length).toBeLessThanOrEqual(2);
+    const all = [...players.flatMap((p) => cafunesOf(hands[p]!)), ...cafunesOf(draw)];
+    expect(new Set(all).size).toBe(all.length);
   });
 
   it('mesma semente, mesma distribuição', () => {

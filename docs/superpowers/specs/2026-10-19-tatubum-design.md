@@ -45,9 +45,9 @@ Decisões do usuário (2026-10-19):
 
 1. Monta o baralho pelo número de jogadores (§3), sem Tatubuns nem Cafunés.
 2. Cada jogador recebe **1 Cafuné** e mais **7 cartas** do baralho embaralhado (8 na mão).
-3. Entram no monte os **Desarmes extras** (2 com até 4 jogadores, 1 com 5 ou mais) e **um Tatubum a menos que o número de jogadores**; o monte
+3. Entram no monte os **Desarmes extras** (2 com até 4 jogadores, 1 com 5 ou mais; cada partida sorteia tirar 0, 1 ou 2 deles, sem avisar ninguém, pedido do Rafa, 2026-11-06, `kittensCafuneCut`) e **um Tatubum a menos que o número de jogadores**; o monte
    é embaralhado.
-4. Quem começa é sorteado (2026-10-20), com `owed = 1`.
+4. A ordem da mesa é sorteada a cada partida, inclusive em "jogar de novo" (pedido do Rafa, 2026-11-06: era a ordem de entrada na sala). Quem começa também é sorteado (2026-10-20), com `owed = 1`.
 
 Como no original (pedido do Rafa, 2026-10-21): 2 Desarmes extras com até 4 jogadores e 1 com 5. De 6 a 8 o original não tem regra: 1 extra, seguindo a tendência.
 

@@ -102,7 +102,7 @@ describe('histórico do Tatubum no servidor', () => {
     // A partida vem direto do D1: a página 1 do histórico pode estar cheia de partidas de outros testes.
     const row = await env.DB.prepare('SELECT record_json FROM kittens_matches WHERE room_code = ?').bind(code).first<{ record_json: string }>();
     const match = JSON.parse(row!.record_json) as KittensMatchRecord;
-    expect(match.players.map((p) => p.name)).toEqual(['P0', 'P1']);
+    expect([...match.players.map((p) => p.name)].sort()).toEqual(['P0', 'P1']);
     expect(match.exits).toHaveLength(1);
     expect(match.exits[0]!.how).toBe('boom');
     const loser = match.exits[0]!.who.name;
