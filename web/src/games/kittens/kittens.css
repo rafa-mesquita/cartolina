@@ -158,6 +158,7 @@
 /* Par de Tucano: quem vai ter a vez pulada (no assento e na faixa da sua mão); o assento pisca quando a vez é pulada */
 .kittens .kt-mesa .kt-seat .kt-skip { position: absolute; right: -6px; top: 0; z-index: 3; padding: 4px 6px; background: #3b5bc4; color: #fff3e0; font-family: var(--px); font-size: 9px; white-space: nowrap;
   box-shadow: 0 -2px 0 #050510, 0 2px 0 #050510, -2px 0 0 #050510, 2px 0 0 #050510, 3px 4px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa .kt-seat .kt-blindclock { position: absolute; left: -6px; top: 34px; z-index: 3; padding: 4px 6px; background: #5b3f9e; color: #fff3e0; font-family: var(--px); font-size: 9px; white-space: nowrap; }
 .kittens .kt-mesa .kt-seat.kt-skipped, .kittens .kt-mesa #hand.kt-skipped { animation: kt-skipflash .3s steps(2) 3; }
 @keyframes kt-skipflash { 50% { background: rgba(59,91,196,.55); } }
 .kittens .kt-mesa .kt-tucano { width: 90px; image-rendering: pixelated; }

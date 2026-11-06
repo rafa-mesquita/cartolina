@@ -64,6 +64,7 @@ export function kittensViewFor(saved: KittensState, viewerId: string | null): Ki
     out: state.out,
     front: Object.fromEntries(state.players.map((p) => [p, own(state.front, p) ?? []])),
     blind: state.blind,
+    blindDeadline: state.blindClock?.deadline ?? null,
     pending: state.pending,
     choice: choiceView(state, viewerId),
     peek: own(state.peeks, viewerId) ?? null,
@@ -79,10 +80,10 @@ export function kittensViewFor(saved: KittensState, viewerId: string | null): Ki
   };
 }
 
-/** Prazo da carta no ar ou da escolha aberta (nunca os dois ao mesmo tempo). */
+/** Prazo da carta no ar, da escolha aberta (nunca os dois ao mesmo tempo) ou do lance de quem está cego. */
 export function kittensNextDeadline(state: KittensState): number | null {
   if (state.phase !== 'playing') return null;
-  return state.pending?.resolvesAt ?? state.choice?.deadline ?? null;
+  return state.pending?.resolvesAt ?? state.choice?.deadline ?? state.blindClock?.deadline ?? null;
 }
 
 export const kittens: GameModule<KittensState, KittensAction, KittensView> = {

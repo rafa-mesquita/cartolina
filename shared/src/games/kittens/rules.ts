@@ -41,6 +41,7 @@ export function initialKittensState(): KittensState {
     out: [],
     front: {},
     blind: [],
+    blindClock: null,
     current: null,
     owed: 0,
     pending: null,

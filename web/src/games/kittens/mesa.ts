@@ -154,7 +154,7 @@ const DETAIL: Partial<Record<KittensCardKind, string>> = {
   embaralhar: 'Embaralha o monte inteiro.<br>Pode levar Nem vem!.',
   espiar: 'Você vê as <b>3 cartas de cima</b> do monte, só você.<br>Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem.<br>Se quem muda a ordem é você, continua vendo o que sabe: a carta que você põe no topo com o Feitiço (em cima das que você já via) ou deixa no topo com o Quati fica à mostra pra você; escondendo o tatu com o Desarme (sem ser ao acaso), a sua espiada continua, com o tatu nela se ele cair no meio ou logo abaixo dela.<br>Pode levar Nem vem!.',
   latido: 'Tem <b>um por jogador</b> na partida, e nenhum vem na mão inicial: estão todos no monte. Quando você joga um, <b>todo mundo que tiver Tatu Latidor</b> (na mão ou na frente dele) tem que <b>jogar um Desarme</b>, um de cada vez, na ordem da vez a partir de você (30 segundos cada, senão vai sozinho). O Desarme e <b>todos os Latidores dele</b> vão pro descarte. Sem Desarme, <b>explode</b>.<br>Se ninguém mais tiver Latidor, o seu fica <b>na sua frente</b>, à vista de todos: quando outro for jogado, você também tem que se defender.<br>Não gasta a sua vez. Pode levar Nem vem!.<br><b>PAR DE LATIDORES</b>: escolha um adversário (com ou sem Latidor); só ele tem que <b>jogar um Desarme</b> (30 segundos, senão vai sozinho), e os Latidores dele ficam onde estão. Sem Desarme, <b>explode</b>. Não gasta a sua vez.',
-  olhado: 'Escolha um adversário (mesmo sem carta na mão): a mão dele é <b>embaralhada</b> e ele <b>fica cego</b>, vendo só o verso das próprias cartas, até <b>comprar</b> uma carta.<br>Cego, ele joga às cegas: escolhe cartas viradas sem saber quais são (se não formarem jogada, voltam pra mão).<br>Pode levar Nem vem!.',
+  olhado: 'Escolha um adversário (mesmo sem carta na mão): a mão dele é <b>embaralhada</b> e ele <b>fica cego</b>, vendo só o verso das próprias cartas, até <b>comprar</b> uma carta.<br>Cego, ele joga às cegas: escolhe cartas viradas sem saber quais são (se não formarem jogada, voltam pra mão). Na vez dele, tem <b>50 segundos</b> pra cada lance; acabou o tempo, ele compra.<br>Pode levar Nem vem!.',
   feitico: 'Só você vê a <b>carta de baixo</b> do monte e escolhe (30 segundos):<br><b>FICAR COM ELA</b>: é como comprar (se for Tatubum, é comprar o Tatubum: Desarme ou explode).<br><b>PÔR NO TOPO</b>: ela vai pra cima do monte.<br>Nos dois casos <b>acaba o seu turno</b>. Se o tempo acabar, ela vai pro topo.<br>Pode levar Nem vem!.',
 };
 const detailOf = (k: KittensCardKind): string => DETAIL[k] ?? `Sozinho não faz nada.<br>${PAIR_DETAIL[k] ?? ''}${COMBO_TEXT}`;
@@ -948,6 +948,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       const fan = Array.from({ length: shown }, (_, j) => `<i style="rotate:${(j - (shown - 1) / 2) * 9}deg"></i>`).join('');
       // Mau-olhado: o olho roxo no canto de quem está cego.
       const cursed = !dead && v.blind.includes(p) ? `<div class="kt-cursed" title="${nameOf(p)} está cego (Mau-olhado) até comprar">${CURSE_SVG}</div>` : '';
+      // Cego na vez: os segundos que faltam pro lance (acabou, ele compra), à vista de todos.
+      const blindClock = !dead && v.current === p && v.blindDeadline != null ? `<div class="kt-blindclock" data-timer title="Tempo do lance de ${nameOf(p)}"></div>` : '';
       // Espiar: o olhinho no canto de quem tem espiada à mostra (as cartas, só ele vê).
       const peeked = !dead && v.peekers.includes(p) ? `<div class="kt-peeked" title="${nameOf(p)} espiou o topo do monte">${EYE_SVG}</div>` : '';
       // Ataque acumulado: quantos turnos quem está na vez ainda joga, grande no assento.
@@ -955,7 +957,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       // Par de Tucano: quantas vezes dele ainda vão ser puladas.
       const skips = dead ? 0 : skipsOf(v, p);
       const skip = skips > 0 ? `<div class="kt-skip" title="${nameOf(p)} vai ter ${skips === 1 ? 'a próxima vez pulada' : `as próximas ${skips} vezes puladas`} (Tucano)">PULA${skips > 1 ? ` ×${skips}` : ''}</div>` : '';
-      el.innerHTML = `${order}${cursed}${peeked}${owed}${skip}<img class="tatu kt-critter" alt="">
+      el.innerHTML = `${order}${cursed}${blindClock}${peeked}${owed}${skip}<img class="tatu kt-critter" alt="">
         <div class="who">${nameOf(p)}</div>
         ${dead ? '<div class="count out">FORA</div>' : `<div class="count"><span class="fan">${fan}</span><b>${n}</b></div>`}${chip}`;
       // Tatu Latidor na frente dele (à vista de todos), pequenininho ao lado do bichinho.
@@ -1135,8 +1137,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!view || destroyed) return;
     renderBar();
     if (nopeWaitSecs() !== nopeWaitShown) renderActions();
-    const c = view.choice;
-    const left = c ? Math.max(0, Math.ceil((c.deadline - opts.now()) / 1000)) + 's' : '';
+    const until = view.choice?.deadline ?? view.blindDeadline;
+    const left = until != null ? Math.max(0, Math.ceil((until - opts.now()) / 1000)) + 's' : '';
     wrap.querySelectorAll('[data-timer]').forEach((t) => { t.textContent = left; });
   }
 
@@ -1217,7 +1219,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (blind) {
       const tag = document.createElement('div');
       tag.className = 'kt-blindtag';
-      tag.innerHTML = `${CURSE_SVG}<b>VOCÊ ESTÁ CEGO!</b><span>compre uma carta pra voltar a ver</span>`;
+      const clock = v.current === ME && v.blindDeadline != null ? ` ${TIMER}` : '';
+      tag.innerHTML = `${CURSE_SVG}<b>VOCÊ ESTÁ CEGO!${clock}</b><span>compre uma carta pra voltar a ver</span>`;
       tags.appendChild(tag);
     }
     // Par de Tucano: a sua próxima vez vai ser pulada (nunca junto com a faixa do Ataque: quem tem vez pulada não está na vez).
@@ -1911,6 +1914,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         return ev.target === ME ? `${n(ev.by)} jogou o TUCANO em você: a sua próxima vez vai ser pulada` : `${n(ev.by)} jogou o TUCANO em ${n(ev.target)}: a próxima vez dele vai ser pulada`;
       case 'skipped': return `${n(ev.who)} perdeu uma vez (TUCANO)`;
       case 'cured': return `${n(ev.by)} voltou a enxergar`;
+      case 'blind_timeout': return `Acabou o tempo: ${n(ev.by)} vai comprar`;
       case 'conjured': return ev.kept ? `${n(ev.by)} ficou com a carta de baixo do monte` : `${n(ev.by)} pôs a carta de baixo no topo do monte`;
     }
     return '';
@@ -2201,6 +2205,12 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         void Fx.icon(TUCANO_URL, at, { size: mine ? 120 : 80, hold: 250 });
         await Fx.pop('PULOU!', at, { size: popPx(mine ? 40 : 26, 18), hold: 400, color: '#8fb0ff' });
         if (view.current === ME && !view.pending && !view.choice) say(yourTurn());
+        break;
+      }
+      case 'blind_timeout': {
+        say(text);
+        Sound.play('error');
+        await wait(500);
         break;
       }
       case 'cured': {

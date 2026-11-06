@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { kittensTokenIndex } from '../src/games/kittens/cards';
 import { settleKittens } from '../src/games/kittens/settle';
-import { KITTENS_CHOICE_MS, type KittensState } from '../src/games/kittens/types';
-import { kittensViewFor } from '../src/games/kittens/view';
+import { KITTENS_BLIND_MS, KITTENS_CHOICE_MS, type KittensState } from '../src/games/kittens/types';
+import { kittensNextDeadline, kittensViewFor } from '../src/games/kittens/view';
 import { T0, act, ctxOf, everyCard, ids, refuse, table, tokenOf } from './kittens-helpers';
 
 const ctx = ctxOf(ids(3));
@@ -232,5 +232,82 @@ describe('Mau-olhado: voltar a ver', () => {
     const late = settleKittens(favor, at(11_000 + KITTENS_CHOICE_MS));
     expect(late.hands.p1).toHaveLength(6);
     expect(late.blind).toEqual(['p1']);
+  });
+});
+
+describe('prazo do cego: 50 s pra cada lance (pedido do Rafa, 2026-11-06)', () => {
+  const P = ['p0', 'p1', 'p2'];
+  const when = (ms: number) => ctxOf(P, { now: T0 + ms });
+  const DECK = ['espiar-9', 'embaralhar-9', 'pular-9'];
+  const blindTable = (opts: { hands?: Record<string, string[]>; draw?: string[]; blind?: string[] } = {}) =>
+    table({ hands: opts.hands ?? { p0: ['mico-0', 'quati-0', 'pular-0'], p1: ['pular-1'], p2: ['espiar-2'] }, draw: opts.draw ?? DECK, blind: opts.blind ?? ['p0'] });
+  const started = (s = blindTable()) => settleKittens(s, when(0));
+
+  it('o relógio liga na vez de quem está cego e aparece pra todos; quem enxerga não tem prazo', () => {
+    const s = started();
+    expect(s.blindClock).toEqual({ seq: s.seq, deadline: T0 + KITTENS_BLIND_MS });
+    expect(kittensNextDeadline(s)).toBe(T0 + KITTENS_BLIND_MS);
+    for (const viewer of ['p0', 'p1', null]) expect(kittensViewFor(s, viewer).blindDeadline).toBe(T0 + KITTENS_BLIND_MS);
+    // Cego fora da vez não tem relógio.
+    expect(started(blindTable({ blind: ['p1'] })).blindClock).toBeNull();
+    expect(started(blindTable({ blind: [] })).blindClock).toBeNull();
+  });
+
+  it('settle sem novidade devolve o mesmo objeto, e jogada recusada não devolve o tempo', () => {
+    const s = started();
+    expect(settleKittens(s, when(10_000))).toBe(s);
+    expect(refuse(s, 'p0', { type: 'play', cards: ['?0', '?1'] }, when(20_000))).toBe('bad_combo');
+    expect(settleKittens(s, when(KITTENS_BLIND_MS - 1)).blindClock).toEqual(s.blindClock);
+  });
+
+  it('acabou o tempo: compra a carta de cima, volta a ver e a vez passa', () => {
+    const s = settleKittens(started(), when(KITTENS_BLIND_MS));
+    expect(s.blind).toEqual([]);
+    expect(s.hands.p0).toHaveLength(4);
+    expect(s.hands.p0).toContain('pular-9');
+    expect(s.draw).toEqual(['espiar-9', 'embaralhar-9']);
+    expect(s).toMatchObject({ current: 'p1', owed: 1, blindClock: null });
+    const evs = s.log.map((e) => e.ev.t);
+    expect(evs.indexOf('blind_timeout')).toBeGreaterThanOrEqual(0);
+    expect(evs.indexOf('blind_timeout')).toBeLessThan(evs.indexOf('draw'));
+  });
+
+  it('o tempo acaba e a carta de cima é Tatubum: sem Desarme explode; com Desarme abre a escolha', () => {
+    const boom = settleKittens(started(blindTable({ draw: [...DECK, 'tatubum-0'] })), when(KITTENS_BLIND_MS));
+    expect(boom.alive).toEqual(['p1', 'p2']);
+    const hands = { p0: ['cafune-0', 'mico-0'], p1: ['pular-1'], p2: ['espiar-2'] };
+    const saved = settleKittens(started(blindTable({ hands, draw: [...DECK, 'tatubum-0'] })), when(KITTENS_BLIND_MS));
+    expect(saved.alive).toEqual(P);
+    expect(saved.choice).toMatchObject({ kind: 'tatu', who: 'p0' });
+    expect(saved.blindClock).toBeNull();
+  });
+
+  it('o próximo também cego: o relógio dele já sai ligado', () => {
+    const s = settleKittens(started(blindTable({ blind: ['p0', 'p1'] })), when(KITTENS_BLIND_MS));
+    expect(s.current).toBe('p1');
+    expect(s.blindClock).toEqual({ seq: s.seq, deadline: T0 + 2 * KITTENS_BLIND_MS });
+  });
+
+  it('jogada que vale: o relógio para com a carta no ar e recomeça quando ela resolve', () => {
+    const hands = { p0: ['espiar-0', 'mico-0'], p1: ['pular-1'], p2: ['espiar-2'] };
+    const s = started(blindTable({ hands }));
+    const air = settleKittens(act(s, 'p0', { type: 'play', cards: ['?0'] }, when(40_000)), when(40_000));
+    expect(air.pending).not.toBeNull();
+    expect(air.blindClock).toBeNull();
+    const after = settleKittens(air, when(45_000));
+    expect(after.pending).toBeNull();
+    expect(after.current).toBe('p0');
+    expect(after.blindClock).toEqual({ seq: after.seq, deadline: T0 + 45_000 + KITTENS_BLIND_MS });
+  });
+
+  it('comprou antes do tempo: o relógio some', () => {
+    const s = act(started(), 'p0', { type: 'draw' }, when(1000));
+    expect(settleKittens(s, when(1000)).blindClock).toBeNull();
+  });
+
+  it('sala salva sem o relógio: ganha um na hora, sem erro', () => {
+    const { blindClock: _gone, ...old } = blindTable();
+    void _gone;
+    expect(settleKittens(old as KittensState, when(0)).blindClock).toMatchObject({ deadline: T0 + KITTENS_BLIND_MS });
   });
 });

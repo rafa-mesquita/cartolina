@@ -861,6 +861,24 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('cego na vez: os segundos do lance ficam na faixa dele e no assento, à vista dos outros (pedido do Rafa, 2026-11-06)', () => {
+    const blindTurn = (me: string, deadline: number | null) => {
+      const v = midGame(me);
+      v.game.current = 'p1';
+      v.game.blind = ['p1'];
+      v.game.blindDeadline = deadline;
+      const { root, mesa } = mount();
+      mesa.update(toMesa(v));
+      vi.advanceTimersByTime(200);
+      const texts = [root.textContent ?? '', root.querySelector('.kt-seat[data-p="p1"] .kt-blindclock')?.textContent ?? null] as const;
+      mesa.destroy();
+      return texts;
+    };
+    expect(blindTurn('p1', Date.now() + 50_000)[0]).toContain('VOCÊ ESTÁ CEGO! 50s');
+    expect(blindTurn('p2', Date.now() + 50_000)[1]).toBe('50s');
+    expect(blindTurn('p2', null)[1]).toBeNull();
+  });
+
   it('cego com 1 ficha: JOGAR ÀS CEGAS pergunta o alvo (adversário ou SEM ALVO); solta num assento vai com o alvo', () => {
     const v = midGame('p1');
     v.game.blind = ['p1'];
