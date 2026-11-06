@@ -266,7 +266,6 @@ function blindBark(s: KittensState): KittensState {
 function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: (s: KittensState) => KittensState): boolean {
   const r = mulberry32(seed * 7919 + n);
   const players = ids(n);
-  const deck = fullDeck(n);
   let active = [...players];
   let now = T0;
   let rngSeed = seed * 1000;
@@ -278,6 +277,9 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
 
   let s = must(applyKittensAction(initialKittensState(), 'p0', { type: 'start' }, ctx()));
   if (rig) s = rig(s);
+  // Os Desarmes que o sorteio tirou (`kittensCafuneCut`) não fazem parte desta partida.
+  const dealt = new Set(everyCard(s));
+  const deck = fullDeck(n).filter((c) => kittensKindOf(c) !== 'cafune' || dealt.has(c));
   checkInvariants(s, deck, someViewer(s), where);
   // Histórico: os contadores e as saídas batem com o diário (lido a cada passo, antes de ele perder as entradas velhas).
   const logNopes = new Map<string, number>();

@@ -1,4 +1,4 @@
-import { shuffle, type Rng } from '../../rng';
+import { randomInt, shuffle, type Rng } from '../../rng';
 import { kittensCardId, type KittensCardKind } from './cards';
 
 /** Um pacote: tudo menos Tatubum, Desarme e Tatu Latidor; as cartas do original + as novas de 2026-10-20. */
@@ -38,6 +38,14 @@ export function kittensExtraCafunes(players: number): number {
   return players <= 4 ? 2 : 1;
 }
 
+/**
+ * Quantos Desarmes extras saem da partida (pedido do Rafa, 2026-11-06): cada partida sorteia 0, 1 ou 2, sem avisar ninguém
+ * e só do monte (todo mundo continua começando com o seu). Com 5 ou mais só há 1 extra: 0 ou 1.
+ */
+export function kittensCafuneCut(rng: Rng, players: number): number {
+  return randomInt(rng, Math.min(2, kittensExtraCafunes(players)) + 1);
+}
+
 /** Com 8 a mão inicial gasta 56 cartas: a partir de 6 jogadores entram 2 pacotes. */
 export function kittensPacksFor(players: number): number {
   return players >= 6 ? 2 : 1;
@@ -71,8 +79,9 @@ export interface KittensDeal {
 
 /**
  * Preparação (spec §2): 1 Cafuné + 7 cartas dos pacotes pra cada um (nenhum Latidor na mão inicial: pedido do Rafa,
- * 2026-10-21); no monte, embaralhados, o resto dos pacotes + os Latidores (`kittensLatidos`) + os Cafunés extras + (n − 1)
- * Tatubuns. Tamanho do monte = pacotes × 58 − 7n + Latidores + Cafunés extras + (n − 1).
+ * 2026-10-21); no monte, embaralhados, o resto dos pacotes + os Latidores (`kittensLatidos`) + os Cafunés extras que
+ * sobraram do sorteio (`kittensCafuneCut`) + (n − 1) Tatubuns. Tamanho do monte = pacotes × 58 − 7n + Latidores + Cafunés
+ * extras − corte + (n − 1).
  */
 export function kittensDeal(rng: Rng, players: readonly string[]): KittensDeal {
   const n = players.length;
@@ -88,7 +97,7 @@ export function kittensDeal(rng: Rng, players: readonly string[]): KittensDeal {
     hands[p] = [cafunes[i]!, ...pool.slice(i * KITTENS_HAND_START, (i + 1) * KITTENS_HAND_START)];
   });
   const rest = pool.slice(n * KITTENS_HAND_START);
-  const extras = cafunes.slice(n);
+  const extras = cafunes.slice(n + kittensCafuneCut(rng, n));
   const tatus = Array.from({ length: n - 1 }, (_, i) => kittensCardId('tatubum', i));
   return { hands, draw: shuffle(rng, [...rest, ...kittensLatidoCards(n), ...extras, ...tatus]) };
 }
