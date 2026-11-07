@@ -10,6 +10,7 @@ import {
   kittensLatidos,
   kittensPackCards,
   kittensPacksFor,
+  kittensDrawStart,
 } from '../src/games/kittens/deck';
 import { mulberry32 } from '../src/rng';
 
@@ -47,11 +48,13 @@ describe('cartas do Tatubum', () => {
 describe('baralho', () => {
   it('um pacote tem 58 cartas (as 46 do original + 2 Mau-olhado, 2 Feitiço, 4 Botos e 4 Tucanos); Latidores fora dos pacotes: 2, 3 e depois n − 1', () => {
     expect(KITTENS_PACK_SIZE).toBe(58);
-    expect(kittensPackCards(5)).toHaveLength(KITTENS_PACK_SIZE);
+    // A partida abre 2 pacotes; o primeiro entra inteiro.
+    const pack = kittensPackCards(5).filter((c) => Number(c.slice(c.lastIndexOf('-') + 1)) < (c.startsWith('nemvem') || c.startsWith('espiar') ? 5 : c.startsWith('olhado') || c.startsWith('feitico') ? 2 : 4));
+    expect(pack).toHaveLength(KITTENS_PACK_SIZE);
     expect(count(kittensPackCards(5), 'latido')).toBe(0);
     expect([2, 3, 4, 5, 6, 7, 8].map(kittensLatidos)).toEqual([2, 3, 3, 4, 5, 6, 7]);
     expect(kittensLatidoCards(3)).toEqual(['latido-0', 'latido-1', 'latido-2']);
-    const deck = kittensBaseDeck(5);
+    const deck = [...pack, ...kittensLatidoCards(5)];
     expect(deck).toHaveLength(KITTENS_PACK_SIZE + 4);
     expect(count(deck, 'nemvem')).toBe(5);
     expect(count(deck, 'ataque')).toBe(4);
@@ -69,8 +72,8 @@ describe('baralho', () => {
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  it('2 pacotes a partir de 6 jogadores; os Latidores continuam n − 1', () => {
-    expect([2, 5, 6, 8].map(kittensPacksFor)).toEqual([1, 1, 2, 2]);
+  it('a partida abre 2 pacotes (o segundo só em parte); os Latidores continuam n − 1', () => {
+    expect([2, 3, 5, 6, 8].map(kittensPacksFor)).toEqual([2, 2, 2, 2, 2]);
     const deck = kittensBaseDeck(6);
     expect(deck).toHaveLength(2 * KITTENS_PACK_SIZE + 5);
     expect(count(deck, 'latido')).toBe(5);
@@ -79,16 +82,17 @@ describe('baralho', () => {
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  // Desarmes extras no monte como no original (2 com até 4 jogadores, 1 a partir de 5), menos o corte do sorteio.
+  // Monte depois da distribuição (pedido do Rafa, 2026-11-07): 49 com 2 e +3 por jogador, qualquer que seja o corte de
+  // Desarmes; os extras como no original (2 com até 4 jogadores, 1 a partir de 5).
   it.each([
-    // monte = pacotes × 58 + Latidores − 7 por jogador + Desarmes extras − corte + (n − 1) tatus
     [2, 49, 2],
-    [3, 44, 2],
-    [4, 38, 2],
-    [5, 32, 1],
-    [6, 85, 1],
-    [8, 75, 1],
-  ])('com %i jogadores: 1 Desarme + 7 na mão, sem Latidor; monte com %i cartas, %i Desarme(s), os Latidores e n − 1 tatus', (n, drawSize, extras) => {
+    [3, 52, 2],
+    [4, 55, 2],
+    [5, 58, 1],
+    [6, 61, 1],
+    [8, 67, 1],
+  ])('com %i jogadores: 1 Desarme + 7 na mão, sem Latidor; monte com %i cartas, até %i Desarme(s), os Latidores e n − 1 tatus', (n, drawSize, extras) => {
+    expect(kittensDrawStart(n)).toBe(drawSize);
     const players = ps(n);
     const cuts = new Set<number>();
     for (let seed = 1; seed <= 40; seed++) {
@@ -101,7 +105,11 @@ describe('baralho', () => {
         expect(count(hands[p]!, 'tatubum')).toBe(0);
         expect(count(hands[p]!, 'latido')).toBe(0);
       }
-      expect(draw).toHaveLength(drawSize - cut);
+      expect(draw).toHaveLength(drawSize);
+      // O primeiro pacote entra inteiro: nenhum tipo fica com menos cartas que o normal.
+      const all1 = [...Object.values(hands).flat(), ...draw];
+      expect(count(all1, 'nemvem')).toBeGreaterThanOrEqual(5);
+      expect(count(all1, 'boto')).toBeGreaterThanOrEqual(4);
       expect(count(draw, 'tatubum')).toBe(n - 1);
       expect(count(draw, 'latido')).toBe(kittensLatidos(n));
       const all = [...Object.values(hands).flat(), ...draw];
@@ -126,15 +134,17 @@ describe('baralho', () => {
     expect(where).not.toEqual([draw.length - 3, draw.length - 2, draw.length - 1]);
   });
 
-  it('a distribuição usa o pacote todo: mão + monte = pacotes + Latidores + Desarmes + tatus', () => {
+  it('a distribuição sai dos pacotes abertos: tudo que não é Desarme nem tatu está em kittensBaseDeck, sem repetir', () => {
     const players = ps(5);
     const { hands, draw } = kittensDeal(mulberry32(7), players);
-    const all = [...Object.values(hands).flat(), ...draw].sort();
+    const all = [...Object.values(hands).flat(), ...draw];
+    expect(new Set(all).size).toBe(all.length);
     const cafunes = all.filter((c) => kittensKindOf(c) === 'cafune');
     expect(cafunes.length).toBeGreaterThanOrEqual(5);
     expect(cafunes.length).toBeLessThanOrEqual(5 + kittensExtraCafunes(5));
-    const tatus = Array.from({ length: 4 }, (_, i) => `tatubum-${i}`);
-    expect(all).toEqual([...kittensBaseDeck(5), ...cafunes, ...tatus].sort());
+    expect(all.filter((c) => kittensKindOf(c) === 'tatubum')).toHaveLength(4);
+    const base = new Set(kittensBaseDeck(5));
+    for (const c of all) if (kittensKindOf(c) !== 'cafune' && kittensKindOf(c) !== 'tatubum') expect(base.has(c)).toBe(true);
   });
 
   it('os Cafunés são embaralhados: o id não diz de quem era (um Cafuné roubado não se denuncia)', () => {

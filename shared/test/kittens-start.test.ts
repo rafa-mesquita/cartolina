@@ -31,8 +31,7 @@ describe('começar', () => {
     expect(state.alive).toEqual(state.players);
     for (const p of ids(3)) expect(state.hands[p]).toHaveLength(8);
     // pacote + 1 Latidor por jogador − mãos + Desarmes extras (0 a 2, sorteados) + tatus
-    expect(state.draw.length).toBeGreaterThanOrEqual(58 + 3 - 21 + 2);
-    expect(state.draw.length).toBeLessThanOrEqual(58 + 3 - 21 + 2 + 2);
+    expect(state.draw).toHaveLength(52); // 49 com 2 jogadores, +3 por jogador a mais (pedido do Rafa, 2026-11-07)
     for (const p of ids(3)) expect(state.hands[p]!.some((c) => c.startsWith('latido'))).toBe(false);
   });
 

@@ -28,19 +28,22 @@ describe('sorteio dos bichos (pedido do Rafa, 2026-11-06)', () => {
     expect([...seen].sort()).toEqual([...KITTENS_BICHOS].sort());
   });
 
-  it('o pacote continua com 58 cartas, só com os bichos da partida, e o Boto entra sempre', () => {
+  it('cada pacote continua com 58 cartas, só com os bichos da partida, e o Boto entra sempre', () => {
     const bichos = kittensDrawBichos(mulberry32(3));
-    const pack = kittensPackCards(4, bichos);
-    expect(pack).toHaveLength(KITTENS_PACK_SIZE);
-    expect(countOf(pack, 'boto')).toBe(4);
-    for (const b of KITTENS_BICHOS) expect(countOf(pack, b)).toBe(bichos.includes(b) ? 4 : 0);
+    const packs = kittensPackCards(4, bichos);
+    expect(packs).toHaveLength(2 * KITTENS_PACK_SIZE);
+    expect(countOf(packs, 'boto')).toBe(8);
+    for (const b of KITTENS_BICHOS) expect(countOf(packs, b)).toBe(bichos.includes(b) ? 8 : 0);
   });
 
   it('a distribuição usa os bichos pedidos, e o Latidor entra sempre', () => {
     const bichos = kittensDrawBichos(mulberry32(5));
     const { hands, draw } = kittensDeal(mulberry32(5), ids(4), bichos);
     const all = [...Object.values(hands).flat(), ...draw];
-    for (const b of KITTENS_BICHOS) expect(countOf(all, b)).toBe(bichos.includes(b) ? 4 : 0);
+    for (const b of KITTENS_BICHOS) {
+      if (bichos.includes(b)) expect(countOf(all, b)).toBeGreaterThanOrEqual(4);
+      else expect(countOf(all, b)).toBe(0);
+    }
     expect(countOf(all, 'latido')).toBe(3);
   });
 

@@ -404,20 +404,23 @@ bichos (6 tipos × 4; o Tucano entrou em 2026-10-21, pedido do Rafa) e, desde 20
 Rafa, 2026-10-21; antes eram sempre 2), e **nenhum vem na mão inicial**: a mão (1 Desarme + 7) sai só dos pacotes, e os Latidores vão pro monte
 junto com o resto dos pacotes, os Desarmes extras e os Tatubuns, tudo embaralhado (`kittensLatidos(n)` = n até 3, n − 1 depois).
 
-Monte = pacotes × 58 − 7n + Latidores + Desarmes extras + (n − 1) Tatubuns.
+**Monte depois de distribuir = 49 + 3 × (n − 2)** (pedido do Rafa, 2026-11-07: com 1 pacote o monte encolhia com mais
+gente, 44 com 3 e 32 com 5). A partida abre **2 pacotes**: o primeiro entra inteiro e do segundo entra, ao acaso, só o
+que falta pras mãos e pro monte depois dos Latidores, dos Desarmes extras que sobraram do corte e dos Tatubuns
+(`kittensDrawStart`, `kittensDeal`). Assim cada tipo tem pelo menos o seu número de cartas, às vezes um pouco mais. O
+corte de Desarmes não muda o tamanho do monte: outras cartas do segundo pacote ocupam o lugar.
 
-| Jogadores | Pacotes | Cartas dos pacotes | Latidores | Monte depois de distribuir | Desarmes | Tatubuns |
-|---|---|---|---|---|---|---|
-| 2 | 1 | 58 | 2 | 58 − 14 + 2 + 2 + 1 = 49 | n + 2 | n − 1 |
-| 3 | 1 | 58 | 3 | 58 − 21 + 3 + 2 + 2 = 44 | n + 2 | n − 1 |
-| 4 | 1 | 58 | 3 | 58 − 28 + 3 + 2 + 3 = 38 | n + 2 | n − 1 |
-| 5 | 1 | 58 | 4 | 58 − 35 + 4 + 1 + 4 = 32 | n + 1 | n − 1 |
-| 6 | 2 | 116 | 5 | 116 − 42 + 5 + 1 + 5 = 85 | n + 1 | n − 1 |
-| 7 | 2 | 116 | 6 | 116 − 49 + 6 + 1 + 6 = 80 | n + 1 | n − 1 |
-| 8 | 2 | 116 | 7 | 116 − 56 + 7 + 1 + 7 = 75 | n + 1 | n − 1 |
+| Jogadores | Monte depois de distribuir | Desarmes (antes do corte) | Tatubuns |
+|---|---|---|---|
+| 2 | 49 | n + 2 | n − 1 |
+| 3 | 52 | n + 2 | n − 1 |
+| 4 | 55 | n + 2 | n − 1 |
+| 5 | 58 | n + 1 | n − 1 |
+| 6 | 61 | n + 1 | n − 1 |
+| 7 | 64 | n + 1 | n − 1 |
+| 8 | 67 | n + 1 | n − 1 |
 
-Com 8 jogadores a mão inicial gasta 56 cartas, por isso 2 pacotes a partir de 6. Antes das cartas novas, com 2
-a 5 o baralho era o do jogo original (46).
+Antes de 2026-11-07: 1 pacote até 5 jogadores (49, 44, 38, 32) e 2 a partir de 6 (85, 80, 75).
 
 ## 4. Arquitetura
 
