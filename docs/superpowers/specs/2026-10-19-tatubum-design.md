@@ -404,23 +404,16 @@ bichos (6 tipos × 4; o Tucano entrou em 2026-10-21, pedido do Rafa) e, desde 20
 Rafa, 2026-10-21; antes eram sempre 2), e **nenhum vem na mão inicial**: a mão (1 Desarme + 7) sai só dos pacotes, e os Latidores vão pro monte
 junto com o resto dos pacotes, os Desarmes extras e os Tatubuns, tudo embaralhado (`kittensLatidos(n)` = n até 3, n − 1 depois).
 
-**Monte depois de distribuir = 49 + 3 × (n − 2)** (pedido do Rafa, 2026-11-07: com 1 pacote o monte encolhia com mais
-gente, 44 com 3 e 32 com 5). A partida abre **2 pacotes**: o primeiro entra inteiro e do segundo entra, ao acaso, só o
-que falta pras mãos e pro monte depois dos Latidores, dos Desarmes extras que sobraram do corte e dos Tatubuns
-(`kittensDrawStart`, `kittensDeal`). Assim cada tipo tem pelo menos o seu número de cartas, às vezes um pouco mais. O
-corte de Desarmes não muda o tamanho do monte: outras cartas do segundo pacote ocupam o lugar.
+**Monte depois de distribuir = 40 cartas, com qualquer número de jogadores** (pedido do Rafa, 2026-11-07, `KITTENS_DRAW_START`;
+com 1 pacote o monte encolhia com mais gente, e +3 por jogador deixou o monte grande demais). A partida abre o
+número de pacotes que precisa (1 com 2 ou 3 jogadores, 2 a partir de 4): os pacotes entram inteiros e do último entra,
+ao acaso, só o que falta pras mãos e pro monte depois dos Latidores, dos Desarmes extras que sobraram do corte e dos
+Tatubuns (`kittensDrawStart`, `kittensDeal`). Com 1 pacote alguns tipos ficam com menos cartas; com 2, cada tipo tem
+pelo menos o seu número. O corte de Desarmes não muda o tamanho do monte: outras cartas ocupam o lugar. Desarmes extras:
+n + 2 até 4 jogadores, n + 1 a partir de 5 (antes do corte). Tatubuns: n − 1.
 
-| Jogadores | Monte depois de distribuir | Desarmes (antes do corte) | Tatubuns |
-|---|---|---|---|
-| 2 | 49 | n + 2 | n − 1 |
-| 3 | 52 | n + 2 | n − 1 |
-| 4 | 55 | n + 2 | n − 1 |
-| 5 | 58 | n + 1 | n − 1 |
-| 6 | 61 | n + 1 | n − 1 |
-| 7 | 64 | n + 1 | n − 1 |
-| 8 | 67 | n + 1 | n − 1 |
-
-Antes de 2026-11-07: 1 pacote até 5 jogadores (49, 44, 38, 32) e 2 a partir de 6 (85, 80, 75).
+Histórico: até 2026-11-07, 1 pacote até 5 jogadores (49, 44, 38, 32) e 2 a partir de 6 (85, 80, 75); no mesmo dia, por
+algumas horas, 49 + 3 por jogador a mais.
 
 ## 4. Arquitetura
 
