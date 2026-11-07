@@ -72,8 +72,8 @@ describe('baralho', () => {
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  it('a partida abre 2 pacotes (o segundo só em parte); os Latidores continuam n − 1', () => {
-    expect([2, 3, 5, 6, 8].map(kittensPacksFor)).toEqual([2, 2, 2, 2, 2]);
+  it('a partida abre 1 pacote com 2 ou 3 jogadores e 2 a partir de 4 (o último só em parte); os Latidores continuam n − 1', () => {
+    expect([2, 3, 4, 5, 6, 8].map(kittensPacksFor)).toEqual([1, 1, 2, 2, 2, 2]);
     const deck = kittensBaseDeck(6);
     expect(deck).toHaveLength(2 * KITTENS_PACK_SIZE + 5);
     expect(count(deck, 'latido')).toBe(5);
@@ -82,15 +82,15 @@ describe('baralho', () => {
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  // Monte depois da distribuição (pedido do Rafa, 2026-11-07): 49 com 2 e +3 por jogador, qualquer que seja o corte de
-  // Desarmes; os extras como no original (2 com até 4 jogadores, 1 a partir de 5).
+  // Monte depois da distribuição (pedido do Rafa, 2026-11-07): sempre 40, qualquer que seja o corte de Desarmes; os
+  // extras como no original (2 com até 4 jogadores, 1 a partir de 5).
   it.each([
-    [2, 49, 2],
-    [3, 52, 2],
-    [4, 55, 2],
-    [5, 58, 1],
-    [6, 61, 1],
-    [8, 67, 1],
+    [2, 40, 2],
+    [3, 40, 2],
+    [4, 40, 2],
+    [5, 40, 1],
+    [6, 40, 1],
+    [8, 40, 1],
   ])('com %i jogadores: 1 Desarme + 7 na mão, sem Latidor; monte com %i cartas, até %i Desarme(s), os Latidores e n − 1 tatus', (n, drawSize, extras) => {
     expect(kittensDrawStart(n)).toBe(drawSize);
     const players = ps(n);
@@ -106,10 +106,12 @@ describe('baralho', () => {
         expect(count(hands[p]!, 'latido')).toBe(0);
       }
       expect(draw).toHaveLength(drawSize);
-      // O primeiro pacote entra inteiro: nenhum tipo fica com menos cartas que o normal.
+      // Com 2 pacotes o primeiro entra inteiro: nenhum tipo fica com menos cartas que o normal.
       const all1 = [...Object.values(hands).flat(), ...draw];
-      expect(count(all1, 'nemvem')).toBeGreaterThanOrEqual(5);
-      expect(count(all1, 'boto')).toBeGreaterThanOrEqual(4);
+      if (kittensPacksFor(n) >= 2) {
+        expect(count(all1, 'nemvem')).toBeGreaterThanOrEqual(5);
+        expect(count(all1, 'boto')).toBeGreaterThanOrEqual(4);
+      }
       expect(count(draw, 'tatubum')).toBe(n - 1);
       expect(count(draw, 'latido')).toBe(kittensLatidos(n));
       const all = [...Object.values(hands).flat(), ...draw];

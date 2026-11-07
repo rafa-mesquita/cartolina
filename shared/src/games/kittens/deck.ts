@@ -52,13 +52,15 @@ export function kittensCafuneCut(rng: Rng, players: number): number {
   return randomInt(rng, Math.min(2, kittensExtraCafunes(players)) + 1);
 }
 
+/** Tamanho do monte logo depois da distribuição, com qualquer número de jogadores (pedido do Rafa, 2026-11-07). */
+export const KITTENS_DRAW_START = 40;
+
 /**
- * Tamanho do monte logo depois da distribuição (pedido do Rafa, 2026-11-07: com mais gente o monte encolhia, 44 com 3 e 32
- * com 5): 49 com 2 jogadores e +3 por jogador a mais. Os pacotes completam o que faltar depois dos Latidores, dos
- * Desarmes extras que sobraram do corte e dos Tatubuns.
+ * Tamanho do monte logo depois da distribuição: sempre `KITTENS_DRAW_START` (antes encolhia com mais gente, 44 com 3 e 32
+ * com 5). Os pacotes completam o que faltar depois dos Latidores, dos Desarmes extras que sobraram do corte e dos Tatubuns.
  */
-export function kittensDrawStart(players: number): number {
-  return 49 + 3 * (players - 2);
+export function kittensDrawStart(_players: number): number {
+  return KITTENS_DRAW_START;
 }
 
 /** Quantos pacotes a partida abre: o bastante pras mãos e pro monte, mesmo com o corte máximo de Desarmes. */
@@ -108,7 +110,7 @@ export interface KittensDeal {
  * Preparação (spec §2): 1 Cafuné + 7 cartas dos pacotes pra cada um (nenhum Latidor na mão inicial: pedido do Rafa,
  * 2026-10-21); no monte, embaralhados, os Latidores (`kittensLatidos`) + os Cafunés extras que sobraram do sorteio
  * (`kittensCafuneCut`) + (n − 1) Tatubuns + cartas dos pacotes até o monte ter `kittensDrawStart(n)`. Os pacotes entram
- * inteiros e só o último é sorteado em parte, então cada tipo tem o seu número de cartas (ou um pouco mais).
+ * inteiros e só o último é sorteado em parte: com 2 ou 3 jogadores basta 1 pacote, e alguns tipos ficam com menos cartas.
  */
 export function kittensDeal(rng: Rng, players: readonly string[], bichos: readonly KittensBicho[] = KITTENS_CLASSIC_BICHOS): KittensDeal {
   const n = players.length;
