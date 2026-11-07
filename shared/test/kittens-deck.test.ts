@@ -72,25 +72,26 @@ describe('baralho', () => {
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  it('a partida abre 1 pacote com 2 ou 3 jogadores e 2 a partir de 4 (o último só em parte); os Latidores continuam n − 1', () => {
-    expect([2, 3, 4, 5, 6, 8].map(kittensPacksFor)).toEqual([1, 1, 2, 2, 2, 2]);
+  it('a partida abre 1 pacote com 2 ou 3 jogadores, 2 com 4 ou 5 e 3 de 6 a 8 (o último só em parte); os Latidores continuam n − 1', () => {
+    expect([2, 3, 4, 5, 6, 7, 8].map(kittensPacksFor)).toEqual([1, 1, 2, 2, 3, 3, 3]);
     const deck = kittensBaseDeck(6);
-    expect(deck).toHaveLength(2 * KITTENS_PACK_SIZE + 5);
+    expect(deck).toHaveLength(3 * KITTENS_PACK_SIZE + 5);
     expect(count(deck, 'latido')).toBe(5);
-    expect(count(deck, 'boto')).toBe(8);
-    expect(count(deck, 'tucano')).toBe(8);
+    expect(count(deck, 'boto')).toBe(12);
+    expect(count(deck, 'tucano')).toBe(12);
     expect(new Set(deck).size).toBe(deck.length);
   });
 
-  // Monte depois da distribuição (pedido do Rafa, 2026-11-07): sempre 40, qualquer que seja o corte de Desarmes; os
-  // extras como no original (2 com até 4 jogadores, 1 a partir de 5).
+  // Monte depois da distribuição (pedidos do Rafa, 2026-11-07): 40 de 2 a 5 jogadores e o de antes de 6 a 8, qualquer que
+  // seja o corte de Desarmes; os extras como no original (2 com até 4 jogadores, 1 a partir de 5).
   it.each([
     [2, 40, 2],
     [3, 40, 2],
     [4, 40, 2],
     [5, 40, 1],
-    [6, 40, 1],
-    [8, 40, 1],
+    [6, 85, 1],
+    [7, 80, 1],
+    [8, 75, 1],
   ])('com %i jogadores: 1 Desarme + 7 na mão, sem Latidor; monte com %i cartas, até %i Desarme(s), os Latidores e n − 1 tatus', (n, drawSize, extras) => {
     expect(kittensDrawStart(n)).toBe(drawSize);
     const players = ps(n);
