@@ -404,9 +404,10 @@ bichos (6 tipos × 4; o Tucano entrou em 2026-10-21, pedido do Rafa) e, desde 20
 Rafa, 2026-10-21; antes eram sempre 2), e **nenhum vem na mão inicial**: a mão (1 Desarme + 7) sai só dos pacotes, e os Latidores vão pro monte
 junto com o resto dos pacotes, os Desarmes extras e os Tatubuns, tudo embaralhado (`kittensLatidos(n)` = n até 3, n − 1 depois).
 
-**Monte depois de distribuir = 40 cartas, com qualquer número de jogadores** (pedido do Rafa, 2026-11-07, `KITTENS_DRAW_START`;
-com 1 pacote o monte encolhia com mais gente, e +3 por jogador deixou o monte grande demais). A partida abre o
-número de pacotes que precisa (1 com 2 ou 3 jogadores, 2 a partir de 4): os pacotes entram inteiros e do último entra,
+**Monte depois de distribuir = 40 cartas de 2 a 5 jogadores, e 85, 80 e 75 com 6, 7 e 8** (pedidos do Rafa, 2026-11-07,
+`KITTENS_DRAW_START`, `kittensDrawStart`; com 1 pacote o monte encolhia com mais gente, +3 por jogador deixou o monte
+grande demais, e 40 com 6 a 8 ficou pouco, então de 6 a 8 voltou o tamanho de antes). A partida abre o número de pacotes
+que precisa (1 com 2 ou 3 jogadores, 2 com 4 ou 5, 3 de 6 a 8): os pacotes entram inteiros e do último entra,
 ao acaso, só o que falta pras mãos e pro monte depois dos Latidores, dos Desarmes extras que sobraram do corte e dos
 Tatubuns (`kittensDrawStart`, `kittensDeal`). Com 1 pacote alguns tipos ficam com menos cartas; com 2, cada tipo tem
 pelo menos o seu número. O corte de Desarmes não muda o tamanho do monte: outras cartas ocupam o lugar. Desarmes extras:
