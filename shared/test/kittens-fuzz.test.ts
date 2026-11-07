@@ -298,7 +298,10 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
   if (rig) s = rig(s);
   // Os Desarmes que o sorteio tirou (`kittensCafuneCut`) não fazem parte desta partida.
   const dealt = new Set(everyCard(s));
-  const deck = fullDeck(n, s.bichos).filter((c) => kittensKindOf(c) !== 'cafune' || dealt.has(c));
+  // E do último pacote aberto só entra o que falta pro monte (`kittensDrawStart`).
+  const deck = fullDeck(n, s.bichos).filter((c) => dealt.has(c));
+  if (deck.length !== dealt.size) throw new Error(`carta fora dos pacotes no começo
+  ${where()}`);
   checkInvariants(s, deck, someViewer(s), where);
   // Histórico: os contadores e as saídas batem com o diário (lido a cada passo, antes de ele perder as entradas velhas).
   const logNopes = new Map<string, number>();
