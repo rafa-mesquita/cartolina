@@ -144,7 +144,7 @@ const TUCANO_URL = 'data:image/svg+xml;utf8,' + encodeURIComponent(TUCANO_SVG);
 const COMBO_TEXT = '<br><b>TRIO</b> (3 cartas iguais de qualquer tipo): você rouba um <b>Desarme</b> de um adversário que tenha (3 Favores: você tira 3 cartas do adversário escolhido, uma ao acaso e duas que ele escolhe; <b>não aceita Nem vem!</b>).<br><b>4 BICHOS DIFERENTES</b> (só bichos; o Boto conta como um): você pega <b>duas cartas</b> que quiser do descarte (do jeito que ele estava antes da jogada), uma de cada vez, no quadro do descarte. <b>Não aceita Nem vem!</b>.<br>Par e trio podem levar Nem vem! (menos o trio de Favor).';
 const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   mico: '<b>PAR DE MICO</b>: <b>todo mundo, menos você, descarta uma carta</b> à escolha, todos ao mesmo tempo (30 segundos; depois vai uma ao acaso). O efeito da carta descartada não vale, e todos veem o que foi pro descarte.<br>Depois <b>você pega uma das cartas descartadas</b> pra sua mão, no quadro do descarte (30 segundos; depois vai uma ao acaso).',
-  quati: '<b>PAR DE QUATI</b>: só você vê a carta de cima do monte e decide se ela fica em cima ou vai pro fundo. Todo mundo sabe se foi pro fundo, ninguém sabe qual era.',
+  quati: '<b>PAR DE QUATI</b>: só você vê a <b>carta do topo e a do fundo</b> do monte e escolhe uma coisa (30 segundos; depois o monte fica como está):<br><b>COMPRAR A DE CIMA</b>: é a compra normal, e a sua vez acaba.<br><b>COMPRAR A DE BAIXO</b>: ela vai pra sua mão e a sua vez acaba; quem está cego continua cego.<br><b>DEIXAR COMO ESTÁ</b>: o monte não muda e a sua vez continua; a de cima fica à mostra pra você.<br>Se a carta comprada for Tatubum: Desarme ou explode.',
   tamandua: '<b>PAR DE TAMANDUÁ</b>: você compra 2 cartas de cima. Se vier <b>Tatubum</b>, ele vai pro fundo do monte sem você gastar Desarme. A vez continua: depois você ainda compra normalmente.',
   preguica: '<b>PAR DE PREGUIÇA</b>: diga um bicho; você puxa essa carta do adversário com <b>mais cartas na mão</b> entre os que têm (empate: sorteado). Se ninguém tiver, procura no monte; nem no monte, pega do descarte. Às vezes (30%) puxa <b>dois</b>, cada um nessa mesma ordem.',
   capivara: '<b>RODA DE CAPIVARA</b>: todo mundo, menos você, passa uma carta ao acaso pro próximo da vez. Você recebe a do jogador antes de você.',
@@ -182,7 +182,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   espiar: 'Você vê as 3 cartas de cima do monte, só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem; se quem mexe é você (Feitiço, Desarme, Quati), continua vendo o que sabe.',
   capivara: 'Par: todo mundo, menos você, passa uma carta pro próximo.',
   mico: 'Par: todo mundo, menos você, descarta uma carta (o efeito não vale); depois você pega uma delas.',
-  quati: 'Par: vê a de cima e decide se vai pro fundo.',
+  quati: 'Par: vê o topo e o fundo do monte e compra uma delas, ou deixa como está.',
   tamandua: 'Par: compra 2; Tatubum vai pro fundo. A vez continua.',
   preguica: 'Par: puxa o bicho que você pedir (às vezes, dois).',
   tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada (no 1x1, só a sua vez acaba).',
@@ -864,6 +864,8 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         return blindMe() ? `AU AU! Solte uma carta virada no Latidor (vai o seu Desarme) ${TIMER}` : `AU AU! JOGUE O DESARME! ${TIMER}`;
       case 'feitico':
         return c.who === ME ? null : `${nameOf(c.who)} está vendo a carta de baixo do monte…`;
+      case 'quati':
+        return c.who === ME ? null : `${nameOf(c.who)} está vendo o topo e o fundo do monte…`;
       case 'peixe':
         return c.who === ME ? null : `${nameOf(c.who)} está vendo as 3 de cima do monte…`;
       case 'favor': {
@@ -1716,7 +1718,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     if (!c || !choiceIsMine(c)) return '';
     if (c.kind === 'cafune') return `cafune:${c.who}:${c.deadline}:${v.drawCount}`;
     if (c.kind === 'favor') return `favor:${c.to}:${c.deadline}:${c.left}`;
-    if (c.kind === 'quati') return `quati:${c.card ?? ''}:${c.deadline}`;
+    if (c.kind === 'quati') return `quati:${c.seen?.top ?? ''}:${c.seen?.bottom ?? ''}:${c.deadline}`;
     if (c.kind === 'feitico') return `feitico:${c.card ?? ''}:${c.deadline}`;
     if (c.kind === 'peixe') return `peixe:${c.cards?.join(',') ?? ''}:${c.deadline}`;
     return '';
@@ -1777,11 +1779,28 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       const more = favorFirst > 1 ? ' Uma de cada vez.' : '';
       panel.innerHTML = `<h2>${favorGiveTitle(c.to, c.left)} ${TIMER}</h2><p>${tx('Clique numa carta da sua mão pra dar.')}${more}</p>`;
     } else if (c.kind === 'quati') {
-      panel.innerHTML = `<h2>A CARTA DE CIMA ${TIMER}</h2><p>Só você vê. Fica em cima ou vai pro fundo?</p><div class="cards"></div><div class="kt-row"></div>`;
-      if (c.card) $('#panel .cards').appendChild(cardEl(c.card));
+      // Só você vê o topo e o fundo do monte. Comprar qualquer uma acaba a vez; deixar como está, a vez continua.
+      const tatu = (id: string | undefined) => id !== undefined && kindOf(id) === 'tatubum';
+      const top = c.seen?.top;
+      const bottom = c.seen?.bottom;
+      const warn = tatu(top) || tatu(bottom) ? '<p class="kt-warn">Tem TATUBUM aí! Comprar o Tatubum: Desarme ou explode.</p>' : '';
+      panel.innerHTML = `<h2>O QUATI VIU O TOPO E O FUNDO ${TIMER}</h2><p>Só você vê. Comprar uma delas acaba a sua vez; deixar como está, a vez continua.</p>${warn}<div class="cards"></div><div class="kt-row"></div>`;
+      const cards = $('#panel .cards');
+      for (const [id, label] of [[top, 'TOPO'], [bottom, 'FUNDO']] as const) {
+        if (!id) continue;
+        const slot = document.createElement('div');
+        slot.className = 'kt-slot';
+        slot.appendChild(cardEl(id));
+        const tag = document.createElement('div');
+        tag.className = 'kt-slotlabel';
+        tag.textContent = label;
+        slot.appendChild(tag);
+        cards.appendChild(slot);
+      }
       const row = $('#panel .kt-row');
-      row.appendChild(button('FICA EM CIMA', () => act({ type: 'choose', keep: true }), 'small'));
-      row.appendChild(button('PRO FUNDO', () => act({ type: 'choose', keep: false }), 'yellow'));
+      row.appendChild(button('COMPRAR A DE CIMA', () => act({ type: 'choose', quati: 'top' }), tatu(top) ? 'small' : 'yellow'));
+      row.appendChild(button('COMPRAR A DE BAIXO', () => act({ type: 'choose', quati: 'bottom' }), 'small'));
+      row.appendChild(button('DEIXAR COMO ESTÁ', () => act({ type: 'choose', quati: 'stay' }), 'small ghost'));
     } else if (c.kind === 'feitico') {
       // Só você vê a carta de baixo do monte. Ficar com ela é comprar (Tatubum: é comprar o Tatubum).
       const tatu = c.card !== null && kindOf(c.card) === 'tatubum';
@@ -1978,6 +1997,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         if (ev.random) return `${n(ev.to)} tirou ${ev.card ? cardNameOf(ev.card) : 'uma carta'} ao acaso ${ev.from === ME ? 'da sua mão' : `da mão de ${n(ev.from)}`}`;
         return ev.card ? `${n(ev.from)} deu ${cardNameOf(ev.card)} pra ${n(ev.to)}` : `${n(ev.from)} deu uma carta pra ${n(ev.to)}`;
       case 'picked': return `${n(ev.by)} pegou ${ev.card ? cardNameOf(ev.card) : 'uma carta'} do descarte`;
+      case 'quati': return ev.pick === 'stay' ? `${n(ev.by)} deixou o monte como estava` : `${n(ev.by)} comprou a carta ${ev.pick === 'top' ? 'de cima' : 'de baixo'} (QUATI)`;
       case 'delayed': return ev.moved ? `${n(ev.by)} mandou a carta de cima pro fundo` : `${n(ev.by)} deixou a carta de cima onde estava`;
       case 'buried': return `${n(ev.by)} mandou ${ev.tatus === 1 ? 'um TATUBUM' : 'dois TATUBUNS'} pro fundo!`;
       case 'called':
@@ -2501,6 +2521,13 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         if (card) { arriving.delete(card); handCard(card)?.classList.remove('arriving'); }
         // 4 bichos diferentes e trio de Favor: a escolha continua aberta ("MAIS UMA", "MAIS 2 CARTAS").
         if (ev.t === 'picked' || ev.t === 'gave') sayChoice();
+        break;
+      }
+      case 'quati': {
+        // Par de Quati: a compra (se houve) voa no `draw` que vem logo depois.
+        say(text);
+        Sound.play('card');
+        await wait(ev.pick === 'stay' ? 500 : 300);
         break;
       }
       case 'delayed':

@@ -284,7 +284,7 @@ export const CARD_STYLE: Record<KittensCardKind, { band: string; hint: string }>
   espiar: { band: '#2f8f8f', hint: 'vê as 3 de cima' },
   capivara: { band: '#3b8a4a', hint: 'par: roda' },
   mico: { band: '#3b8a4a', hint: 'par: todos descartam' },
-  quati: { band: '#3b8a4a', hint: 'par: vê a de cima' },
+  quati: { band: '#3b8a4a', hint: 'par: topo ou fundo' },
   tamandua: { band: '#3b8a4a', hint: 'par: compra 2' },
   preguica: { band: '#3b8a4a', hint: 'par: puxa um bicho' },
   tucano: { band: '#3b8a4a', hint: 'par: pula alguém' },

@@ -34,6 +34,12 @@ Pedido do Rafa, 2026-11-06. Aprovado por ele na conversa. O desenho geral do jog
 - Sem opção no descarte: ele só vê as cartas e fecha. Sem resposta em 30 s, a carta é sorteada entre as opções.
 - A pegada é pública, como nos 4 bichos diferentes. As cartas vistas só ele vê.
 
+## Quati novo (pedido do Rafa, 2026-11-08)
+
+- O par de Quati agora mostra o **topo e o fundo** do monte a quem jogou, que compra a de cima (compra normal), compra a de
+  baixo (acaba a vez sem curar o cego) ou deixa como está (a vez continua). Detalhes na tabela "Par de cada bicho" de
+  `2026-10-19-tatubum-design.md`.
+
 ## Pombo-correio (par; pedido do Rafa, 2026-11-08)
 
 - Até **5 cartas** (`KITTENS_POMBO_CARDS`) sorteadas do descarte de **antes da jogada** (sem as cartas do próprio par,

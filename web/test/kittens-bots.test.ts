@@ -330,12 +330,12 @@ describe('decisão do bot do Tatubum', () => {
     expect(decideKittens(v, mem, () => 0)!.action).toEqual({ type: 'draw' });
   });
 
-  it('escolha do Quati: manda Tatubum pro fundo e deixa o resto', () => {
-    const choice = (card: string) => ({ kind: 'quati' as const, who: 'p1', deadline: 9000, card });
-    const tatu = p1View([], { current: 'p1', choice: choice('tatubum-0') });
-    expect(decideKittens(tatu, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', keep: false });
-    const calm = p1View([], { current: 'p1', choice: choice('pular-0') });
-    expect(decideKittens(calm, newKittensMemory(), () => 0.5)!.action).toEqual({ type: 'choose', keep: true });
+  it('escolha do Quati: compra a de cima; se for Tatubum, a de baixo; as duas Tatubum, deixa como está', () => {
+    const choice = (top: string, bottom: string) => ({ kind: 'quati' as const, who: 'p1', deadline: 9000, seen: { top, bottom } });
+    const pick = (top: string, bottom: string) => decideKittens(p1View([], { current: 'p1', choice: choice(top, bottom) }), newKittensMemory(), () => 0.5)!.action;
+    expect(pick('pular-0', 'tatubum-1')).toEqual({ type: 'choose', quati: 'top' });
+    expect(pick('tatubum-0', 'pular-0')).toEqual({ type: 'choose', quati: 'bottom' });
+    expect(pick('tatubum-0', 'tatubum-1')).toEqual({ type: 'choose', quati: 'stay' });
   });
 
   it('par de Capivara vai sem alvo; par de Preguiça pede um bicho; trio vai sem alvo', () => {

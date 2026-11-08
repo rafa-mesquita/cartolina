@@ -266,9 +266,15 @@ export function decideKittens(
       const cheap = g.hand.filter((x) => BICHOS.includes(kittensKindOf(x) as KittensCardKind));
       return { key, delay: between(rng, 1000, 2000), action: { type: 'choose', card: pickOne(rng, cheap.length ? cheap : g.hand) } };
     }
-    if (c.kind === 'quati' || c.kind === 'feitico') {
-      // Quati: fica, a não ser que a de cima seja Tatubum (aí vai pro fundo). Feitiço: fica com a de baixo, a não ser
-      // que seja Tatubum (aí vai pro topo).
+    if (c.kind === 'quati') {
+      // Quati: compra a de cima, a não ser que seja Tatubum; aí compra a de baixo, se ela não for; as duas Tatubum,
+      // deixa como está (e foge com outra carta, se tiver).
+      const tatu = (id: string | undefined) => kittensKindOf(id ?? '') === 'tatubum';
+      const quati = !tatu(c.seen?.top) ? 'top' : !tatu(c.seen?.bottom) ? 'bottom' : 'stay';
+      return { key, delay: between(rng, 900, 1600), action: { type: 'choose', quati } };
+    }
+    if (c.kind === 'feitico') {
+      // Feitiço: fica com a de baixo, a não ser que seja Tatubum (aí vai pro topo).
       const keep = c.card === null || kittensKindOf(c.card) !== 'tatubum';
       return { key, delay: between(rng, 900, 1600), action: { type: 'choose', keep } };
     }

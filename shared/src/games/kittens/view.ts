@@ -31,8 +31,10 @@ function choiceView(state: KittensState, viewerId: string | null): KittensChoice
       const { kind, who, deadline } = c;
       return { kind, who, deadline };
     }
-    case 'quati':
-      return { ...c, card: mine ? (state.draw.at(-1) ?? null) : null };
+    case 'quati': {
+      const top = state.draw.at(-1);
+      return { ...c, seen: mine && top !== undefined ? { top, bottom: state.draw[0]! } : null };
+    }
     case 'feitico':
       return { ...c, card: mine ? (state.draw[0] ?? null) : null };
     case 'peixe':

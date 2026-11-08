@@ -28,6 +28,7 @@ export const kittensActionSchema = z.discriminatedUnion('type', [
     position: z.union([z.number().int().min(0).max(200), z.literal('random')]).optional(),
     keep: z.boolean().optional(),
     fate: z.enum(['keep', 'stay', 'bottom']).optional(),
+    quati: z.enum(['top', 'bottom', 'stay']).optional(),
   }),
   z.object({ type: z.literal('again') }),
   z.object({ type: z.literal('lobby') }),

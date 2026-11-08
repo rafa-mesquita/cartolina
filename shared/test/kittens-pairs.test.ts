@@ -390,56 +390,106 @@ describe('trio: rouba um Desarme', () => {
   });
 });
 
-describe('par de Quati: a carta de cima fica ou vai pro fundo', () => {
+describe('par de Quati (novo, pedido do Rafa, 2026-11-08): vê o topo e o fundo, compra uma ou deixa', () => {
   const fuca = () => resolved(par(['quati-0', 'quati-1']));
+  // DRAW: topo = 'pular-9' (fim do array), fundo = 'cafune-9'.
 
-  it('abre a escolha; só quem jogou vê a carta de cima', () => {
+  it('abre a escolha; só quem jogou vê o topo e o fundo', () => {
     const s = fuca();
     expect(s.choice).toEqual({ kind: 'quati', who: 'p0', deadline: T0 + 5000 + KITTENS_CHOICE_MS });
-    expect(kittensViewFor(s, 'p0').choice).toEqual({ ...s.choice, card: 'pular-9' });
-    expect(kittensViewFor(s, 'p1').choice).toEqual({ ...s.choice, card: null });
-    expect(kittensViewFor(s, null).choice).toEqual({ ...s.choice, card: null });
-    expect(JSON.stringify(kittensViewFor(s, 'p1'))).not.toContain('"pular-9"');
+    expect(kittensViewFor(s, 'p0').choice).toEqual({ ...s.choice, seen: { top: 'pular-9', bottom: 'cafune-9' } });
+    expect(kittensViewFor(s, 'p1').choice).toEqual({ ...s.choice, seen: null });
+    expect(kittensViewFor(s, null).choice).toEqual({ ...s.choice, seen: null });
+    const other = JSON.stringify(kittensViewFor(s, 'p1'));
+    expect(other).not.toContain('"pular-9"');
+    expect(other).not.toContain('"cafune-9"');
   });
 
-  it('FUNDO: vai pro fundo; todos sabem que foi, ninguém sabe qual', () => {
-    const s = act(fuca(), 'p0', { type: 'choose', keep: false }, at(5000));
-    expect(s.draw).toEqual(['pular-9', 'cafune-9', 'embaralhar-9']);
-    expect(s).toMatchObject({ choice: null, current: 'p0', owed: 1 });
-    expect(s.log.at(-1)).toMatchObject({ ev: { t: 'delayed', by: 'p0', moved: true }, seenBy: null });
+  it('COMPRAR A DE CIMA: é a compra normal; a vez acaba', () => {
+    const s = act(fuca(), 'p0', { type: 'choose', quati: 'top' }, at(5000));
+    expect(s.draw).toEqual(['cafune-9', 'embaralhar-9']);
+    expect(s.hands.p0).toContain('pular-9');
+    expect(s).toMatchObject({ choice: null, current: 'p1', owed: 1 });
+    expect(s.log.map((e) => e.ev.t).slice(-2)).toEqual(['quati', 'draw']);
+    expect(s.log.at(-2)).toMatchObject({ ev: { t: 'quati', by: 'p0', pick: 'top' }, seenBy: null });
   });
 
-  it('FICA: nada muda no monte', () => {
-    const s = act(fuca(), 'p0', { type: 'choose', keep: true }, at(5000));
+  it('COMPRAR A DE BAIXO: vai pra mão e a vez acaba; o resto do monte não muda', () => {
+    const s = act(fuca(), 'p0', { type: 'choose', quati: 'bottom' }, at(5000));
+    expect(s.draw).toEqual(['embaralhar-9', 'pular-9']);
+    expect(s.hands.p0).toContain('cafune-9');
+    expect(s).toMatchObject({ choice: null, current: 'p1', owed: 1 });
+    expect(s.log.at(-2)!.ev).toEqual({ t: 'quati', by: 'p0', pick: 'bottom' });
+    expect(s.log.at(-1)).toMatchObject({ ev: { t: 'draw', by: 'p0', card: 'cafune-9' }, seenBy: ['p0'] });
+  });
+
+  it('DEIXAR COMO ESTÁ: nada muda no monte, a vez continua e a de cima fica à mostra pra ele', () => {
+    const s = act(fuca(), 'p0', { type: 'choose', quati: 'stay' }, at(5000));
     expect(s.draw).toEqual(DRAW);
-    expect(s.log.at(-1)!.ev).toEqual({ t: 'delayed', by: 'p0', moved: false });
+    expect(s).toMatchObject({ choice: null, current: 'p0', owed: 1 });
+    expect(s.peeks).toEqual({ p0: ['pular-9'] });
+    expect(s.log.at(-1)!.ev).toEqual({ t: 'quati', by: 'p0', pick: 'stay' });
   });
 
-  it('sem resposta, a carta fica; só quem jogou escolhe', () => {
+  it('sob ataque, comprar gasta um dos turnos, como a compra normal', () => {
+    const s = act(resolved(par(['quati-0', 'quati-1']), { owed: 2 }), 'p0', { type: 'choose', quati: 'bottom' }, at(5000));
+    expect(s).toMatchObject({ current: 'p0', owed: 1 });
+  });
+
+  it('Tatubum comprado (de cima ou de baixo): Desarme ou explode', () => {
+    const tatuTop = resolved(par(['quati-0', 'quati-1']), { draw: ['pular-9', 'tatubum-0'] });
+    const boom = act(tatuTop, 'p0', { type: 'choose', quati: 'top' }, at(5000));
+    expect(boom.alive).not.toContain('p0');
+    const tatuBottom = resolved(par(['quati-0', 'quati-1']), { draw: ['tatubum-0', 'pular-9'], hands: { ...hands(), p0: [...hands().p0!, 'cafune-0'] } });
+    const defuse = act(tatuBottom, 'p0', { type: 'choose', quati: 'bottom' }, at(5000));
+    expect(defuse.choice).toMatchObject({ kind: 'tatu', who: 'p0', tatu: 'tatubum-0' });
+  });
+
+  it('monte com 1 carta: topo e fundo são a mesma, e comprar qualquer uma compra ela', () => {
+    for (const quati of ['top', 'bottom'] as const) {
+      const s = resolved(par(['quati-0', 'quati-1']), { draw: ['pular-9'] });
+      expect(kittensViewFor(s, 'p0').choice).toMatchObject({ seen: { top: 'pular-9', bottom: 'pular-9' } });
+      const got = act(s, 'p0', { type: 'choose', quati }, at(5000));
+      expect(got.draw).toEqual([]);
+      expect(got.hands.p0).toContain('pular-9');
+    }
+  });
+
+  it('cego: comprar a de cima cura; comprar a de baixo não cura (como a carta do Feitiço)', () => {
+    const blind = (): KittensState => ({ ...fuca(), blind: ['p0'] });
+    expect(act(blind(), 'p0', { type: 'choose', quati: 'top' }, at(5000)).blind).toEqual([]);
+    expect(act(blind(), 'p0', { type: 'choose', quati: 'bottom' }, at(5000)).blind).toEqual(['p0']);
+    expect(act(blind(), 'p0', { type: 'choose', quati: 'stay' }, at(5000)).blind).toEqual(['p0']);
+  });
+
+  it('sem resposta, o monte fica como está; só quem jogou escolhe; `keep` antigo não vale mais', () => {
     expect(refuse(fuca(), 'p0', { type: 'choose' }, at(5000))).toBe('bad_choice');
-    expect(refuse(fuca(), 'p1', { type: 'choose', keep: false }, at(5000))).toBe('not_your_choice');
+    expect(refuse(fuca(), 'p0', { type: 'choose', keep: true }, at(5000))).toBe('bad_choice');
+    expect(refuse(fuca(), 'p1', { type: 'choose', quati: 'top' }, at(5000))).toBe('not_your_choice');
     const late = settleKittens(fuca(), at(5000 + KITTENS_CHOICE_MS));
     expect(late.draw).toEqual(DRAW);
     expect(late.choice).toBeNull();
-    expect(late.log.at(-1)!.ev).toEqual({ t: 'delayed', by: 'p0', moved: false });
+    expect(late.current).toBe('p0');
+    expect(late.log.at(-1)!.ev).toEqual({ t: 'quati', by: 'p0', pick: 'stay' });
   });
 
-  it('mandar pro fundo tira a carta da espiada (como se fosse comprada); ficar não muda nada', () => {
+  it('comprar tira a carta da espiada (o resto continua); deixar não muda a espiada', () => {
     const s = resolved(par(['quati-0', 'quati-1']), { peek: ['pular-9', 'embaralhar-9', 'cafune-9'] });
-    expect(act(s, 'p0', { type: 'choose', keep: false }, at(5000)).peeks).toEqual({ p0: ['embaralhar-9', 'cafune-9'] });
-    expect(act(s, 'p0', { type: 'choose', keep: true }, at(5000)).peeks).toEqual({ p0: ['pular-9', 'embaralhar-9', 'cafune-9'] });
+    expect(act(s, 'p0', { type: 'choose', quati: 'top' }, at(5000)).peeks).toEqual({ p0: ['embaralhar-9', 'cafune-9'] });
+    expect(act(s, 'p0', { type: 'choose', quati: 'bottom' }, at(5000)).peeks).toEqual({ p0: ['pular-9', 'embaralhar-9'] });
+    expect(act(s, 'p0', { type: 'choose', quati: 'stay' }, at(5000)).peeks).toEqual({ p0: ['pular-9', 'embaralhar-9', 'cafune-9'] });
   });
 
-  it('FICA sem espiada: quem escolheu viu a de cima, e ela fica à mostra só pra ele (pedido do Rafa, 2026-10-21)', () => {
+  it('DEIXAR sem espiada: quem escolheu viu a de cima, e ela fica à mostra só pra ele (como na Onça)', () => {
     const s = { ...fuca(), peeks: { p1: ['pular-9', 'embaralhar-9'] } };
-    const kept = act(s, 'p0', { type: 'choose', keep: true }, at(5000));
+    const kept = act(s, 'p0', { type: 'choose', quati: 'stay' }, at(5000));
     expect(kept.peeks).toEqual({ p1: ['pular-9', 'embaralhar-9'], p0: ['pular-9'] });
     expect(kittensViewFor(kept, 'p0')).toMatchObject({ peek: ['pular-9'], peekers: ['p0', 'p1'] });
     expect(kittensViewFor(kept, 'p2')).toMatchObject({ peek: null, peekers: ['p0', 'p1'] });
     expect(JSON.stringify(kittensViewFor(kept, 'p2'))).not.toContain('"pular-9"');
-    // Sem resposta, a carta fica: ele viu ela na escolha do mesmo jeito.
+    // Sem resposta, o monte fica: ele viu a de cima na escolha do mesmo jeito.
     expect(settleKittens(fuca(), at(5000 + KITTENS_CHOICE_MS)).peeks).toEqual({ p0: ['pular-9'] });
-    // FUNDO: a carta saiu do topo; nada fica à mostra pra ele.
-    expect(act(fuca(), 'p0', { type: 'choose', keep: false }, at(5000)).peeks).toEqual({});
+    // Comprou a de cima: ela saiu do monte; nada fica à mostra pra ele.
+    expect(act(fuca(), 'p0', { type: 'choose', quati: 'top' }, at(5000)).peeks).toEqual({});
   });
 });

@@ -4,7 +4,7 @@ import { KITTENS_WILD, kittensKindOf } from './cards';
 import {
   conjure,
   defendLatido,
-  delayTop,
+  quatiPick,
   discardForMico,
   giveFavor,
   hideTatu,
@@ -169,8 +169,8 @@ export function applyKittensAction(
           }
           return ok(pickFromDiscard(s, c, action.card));
         case 'quati':
-          if (action.keep === undefined) return fail('bad_choice');
-          return ok(delayTop(s, c, action.keep));
+          if (action.quati === undefined) return fail('bad_choice');
+          return ok(quatiPick(s, c, action.quati, ctx.now + KITTENS_CHOICE_MS));
         case 'latido': {
           // Quem está cego não sabe qual ficha é o Desarme: qualquer ficha da mão vale, e o servidor joga o Desarme dele.
           const card = ownCard(s, playerId, action.card);

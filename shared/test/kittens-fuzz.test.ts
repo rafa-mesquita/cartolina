@@ -94,7 +94,7 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   const ownPeek = viewer !== null && Object.hasOwn(s.peeks, viewer) ? s.peeks[viewer]! : [];
   const onca = viewer !== null && s.choice?.kind === 'cinco' && s.choice.from === 'onca' && s.choice.who === viewer;
   const sees = [
-    ...(mine('quati') ? s.draw.slice(-1) : []),
+    ...(mine('quati') ? [...s.draw.slice(-1), ...s.draw.slice(0, 1)] : []),
     ...(mine('feitico') ? s.draw.slice(0, 1) : []),
     ...(mine('peixe') ? s.draw.slice(-3) : []),
     ...(onca ? [...s.draw.slice(-1), ...s.draw.slice(0, 1)] : []),
@@ -204,7 +204,8 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
       return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
     }
     if (c.kind === 'favor') return { type: 'choose', card: own() };
-    if (c.kind === 'quati' || c.kind === 'feitico') return { type: 'choose', keep: r() < 0.5 };
+    if (c.kind === 'quati') return { type: 'choose', quati: pick(r, ['top', 'bottom', 'stay'] as const)! };
+    if (c.kind === 'feitico') return { type: 'choose', keep: r() < 0.5 };
     if (c.kind === 'peixe') return { type: 'choose', fate: pick(r, ['keep', 'stay', 'bottom'] as const)! };
     // Par de Onça sem nada pra pegar: só fecha.
     if (c.kind === 'cinco' && c.options.length === 0) return { type: 'choose' };
@@ -498,6 +499,8 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     if (c?.kind === 'quati' && s.choice !== c && !Object.hasOwn(before.peeks, c.who) && Object.hasOwn(s.peeks, c.who)) {
       seen.add('peek:quati');
     }
+    // Quati novo (pedido do Rafa, 2026-11-08): compra a de cima, a de baixo ou deixa.
+    for (const ev of s.log.filter((x) => x.n >= before.seq).map((x) => x.ev)) if (ev.t === 'quati') seen.add(`quati:${ev.pick}`);
     checkInvariants(s, deck, someViewer(s), where, mailed);
     checkHistory();
   }
@@ -547,6 +550,9 @@ describe('simulação aleatória do Tatubum', () => {
       'peek:feitico',
       'peek:desarme',
       'peek:quati',
+      'quati:top',
+      'quati:bottom',
+      'quati:stay',
       'nope:nope_late',
       'nope:nope_stale',
       'nope:nope_cooldown',

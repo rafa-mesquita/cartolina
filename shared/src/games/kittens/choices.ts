@@ -1,7 +1,7 @@
 import { randomInt, type Rng } from '../../rng';
 import { kittensKindOf } from './cards';
 import { clearPeeks, counted, cure, eliminate, logged, spendTurn, unpeek } from './turn';
-import { KITTENS_CHOICE_MS, type KittensChoice, type KittensFishFate, type KittensState } from './types';
+import { KITTENS_CHOICE_MS, type KittensChoice, type KittensFishFate, type KittensQuatiPick, type KittensState } from './types';
 
 type Choice<K extends KittensChoice['kind']> = Extract<KittensChoice, { kind: K }>;
 
@@ -107,17 +107,21 @@ export function discardForMico(s: KittensState, c: Choice<'mico'>, p: string, ca
 }
 
 /**
- * Par de Quati: a carta de cima fica (`keep`) ou vai pro fundo. Todos sabem se foi, ninguém sabe qual. Indo pro fundo,
- * ela sai das espiadas como se fosse comprada (o resto vira o topo, na mesma ordem). Ficando, quem escolheu viu a de
- * cima (pedido do Rafa, 2026-10-21): sem espiada, ela fica à mostra pra ele; com espiada, ela já é a primeira. Vale
- * também sem resposta (ele viu a carta na escolha).
+ * Par de Quati (pedido do Rafa, 2026-11-08): quem jogou viu o topo e o fundo do monte e escolhe uma coisa.
+ * - `top`: compra a de cima, igual à compra normal (`drawTop`: cura o cego, gasta o turno; Tatubum: Desarme ou explode).
+ * - `bottom`: compra a de baixo, sem curar o cego (como a carta guardada pelo Feitiço); gasta o turno; Tatubum idem.
+ * - `stay`: o monte fica como está e a vez continua. Ele viu a de cima: sem espiada, ela fica à mostra pra ele (como na
+ *   Onça); com espiada, ela já é a primeira. Também é o que vale sem resposta.
+ * Com 1 carta no monte, topo e fundo são a mesma: comprar qualquer uma é comprar ela. `deadline` = prazo da escolha do
+ * Desarme, se vier Tatubum.
  */
-export function delayTop(s: KittensState, c: Choice<'quati'>, keep: boolean): KittensState {
-  const top = s.draw.at(-1)!;
-  const knew = Object.hasOwn(s.peeks, c.who) || !s.alive.includes(c.who);
-  const seen = knew ? s : { ...s, peeks: { ...s.peeks, [c.who]: [top] } };
-  const next = keep ? seen : unpeek({ ...s, draw: [top, ...s.draw.slice(0, -1)] }, [top]);
-  return logged({ ...next, choice: null }, { t: 'delayed', by: c.who, moved: !keep });
+export function quatiPick(s: KittensState, c: Choice<'quati'>, pick: KittensQuatiPick, deadline: number): KittensState {
+  const done = logged({ ...s, choice: null }, { t: 'quati', by: c.who, pick });
+  const top = s.draw.at(-1);
+  if (top === undefined || !s.alive.includes(c.who)) return done;
+  if (pick === 'top') return drawTop(done, c.who, deadline);
+  if (pick === 'bottom') return takeCard(done, c.who, s.draw[0]!, s.draw.slice(1), deadline);
+  return Object.hasOwn(s.peeks, c.who) ? done : { ...done, peeks: { ...done.peeks, [c.who]: [top] } };
 }
 
 /**
@@ -277,8 +281,8 @@ export function chooseAtRandom(s: KittensState, rng: Rng, now: number): KittensS
       return next;
     }
     case 'quati':
-      // Sem resposta, a carta fica onde está (quem escolhia viu a de cima, como se tivesse deixado).
-      return delayTop(s, c, true);
+      // Sem resposta, o monte fica como está (quem escolhia viu a de cima, como se tivesse deixado).
+      return quatiPick(s, c, 'stay', c.deadline);
     case 'latido': {
       // A mão não muda durante a escolha (ela só abre pra quem tem Desarme); sem Desarme, explode. Nos dois casos a
       // fila do Latidor segue, com prazo novo pro próximo.
