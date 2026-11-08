@@ -523,6 +523,52 @@ describe('mesa do Tatubum', () => {
     other.mesa.destroy();
   });
 
+  it.each(['desktop', 'phone'] as const)('Quati novo (%s): o painel mostra o topo e o fundo e os 3 botões mandam `quati`', (layout) => {
+    const v = midGame('p1');
+    v.game.choice = { kind: 'quati', who: 'p1', deadline: Date.now() + 30_000, seen: { top: 'tatubum-9', bottom: 'pular-9' } };
+    const { root, mesa, sent } = mount();
+    if (layout === 'phone') mesa.setLayout('phone');
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#panel h2')?.textContent).toContain('O QUATI VIU O TOPO E O FUNDO');
+    expect([...root.querySelectorAll('#panel .cards .kt-card')].map((el) => el.getAttribute('data-id'))).toEqual(['tatubum-9', 'pular-9']);
+    expect([...root.querySelectorAll('#panel .kt-slotlabel')].map((el) => el.textContent)).toEqual(['TOPO', 'FUNDO']);
+    expect(root.querySelector('#panel .kt-warn')?.textContent).toContain('TATUBUM');
+    buttonByText(root, 'COMPRAR A DE CIMA')!.click();
+    buttonByText(root, 'COMPRAR A DE BAIXO')!.click();
+    buttonByText(root, 'DEIXAR COMO ESTÁ')!.click();
+    expect(sent).toEqual([
+      { type: 'choose', quati: 'top' },
+      { type: 'choose', quati: 'bottom' },
+      { type: 'choose', quati: 'stay' },
+    ]);
+    mesa.destroy();
+    // Os outros só veem que alguém está escolhendo (sem as cartas).
+    const w = midGame('p2');
+    w.game.choice = { kind: 'quati', who: 'p1', deadline: Date.now() + 30_000, seen: null };
+    const other = mount();
+    other.mesa.update(toMesa(w));
+    expect(other.root.querySelector('#panel')?.innerHTML).toBe('');
+    expect(other.root.querySelector('#caption')?.textContent).toContain('P1 está vendo o topo e o fundo do monte');
+    other.mesa.destroy();
+  });
+
+  it('Quati novo: o diário diz o que foi feito', async () => {
+    const v = midGame('p1');
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    let n = v.game.log.at(-1)!.n;
+    for (const pick of ['top', 'bottom', 'stay'] as const) {
+      v.game = { ...v.game, log: [...v.game.log, { n: ++n, ev: { t: 'quati', by: 'p0', pick } }] };
+      mesa.update(toMesa(v));
+      await vi.advanceTimersByTimeAsync(1500);
+    }
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('P0 comprou a carta de cima (QUATI)');
+    expect(log).toContain('P0 comprou a carta de baixo (QUATI)');
+    expect(log).toContain('P0 deixou o monte como estava');
+    mesa.destroy();
+  });
+
   it('Tatu Latidor: o Latidor grande late e quem tem que se defender joga o Desarme à mão', () => {
     const v = midGame('p1');
     v.game.hand = ['cafune-90', ...v.game.hand.filter((id) => !id.startsWith('cafune'))];
@@ -806,6 +852,28 @@ describe('mesa do Tatubum', () => {
     expect(root.querySelector('#front')?.textContent).toContain('NA SUA FRENTE');
     expect(root.querySelector('.kt-seat[data-p="p2"] .kt-front .kt-card[data-id="latido-0"]')).not.toBeNull();
     expect(root.querySelector('.kt-seat[data-p="p0"] .kt-front')).toBeNull();
+    mesa.destroy();
+  });
+
+  it('Pombo-correio (pedido do Rafa, 2026-11-08): as cartas voam do descarte pro monte e o diário diz quantas', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    let n = v.game.log.at(-1)!.n;
+    const next = (patch: Partial<KittensRoomView['game']>, ...evs: KittensEvent[]) => {
+      v.game = { ...v.game, ...patch, log: [...v.game.log, ...evs.map((ev) => ({ n: ++n, ev }))] };
+      mesa.update(toMesa(v));
+    };
+    next({ drawCount: v.game.drawCount + 3 }, { t: 'mailed', by: 'p0', kinds: ['ataque', 'favor', 'nemvem'] });
+    await vi.advanceTimersByTimeAsync(3000);
+    next({}, { t: 'mailed', by: 'p2', kinds: [] });
+    await vi.advanceTimersByTimeAsync(3000);
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('O POMBO-CORREIO levou 3 cartas do descarte pro monte (uma no topo)');
+    expect(log).toContain('O POMBO-CORREIO de P2 voltou vazio: o descarte estava vazio');
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
     mesa.destroy();
   });
 

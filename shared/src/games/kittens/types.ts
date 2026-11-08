@@ -116,7 +116,10 @@ export type KittensChoice =
    * `discarded` = o que já foi descartado nele (público), de onde `by` pega uma quando todos terminam.
    */
   | { kind: 'mico'; by: string; waiting: string[]; discarded: string[]; deadline: number }
-  /** Par de Quati: `who` vê a carta de cima do monte e decide se ela fica ou vai pro fundo. */
+  /**
+   * Par de Quati (novo desde 2026-11-08): `who` vê a carta do topo e a do fundo do monte e compra uma delas ou deixa o
+   * monte como está (`KittensQuatiPick`).
+   */
   | { kind: 'quati'; who: string; deadline: number }
   /**
    * Tatu Latidor jogado por `by`: `who` (um dos que têm Latidor) joga um Desarme à mão pra não explodir. Pública. Os
@@ -133,13 +136,15 @@ export type KittensChoice =
 
 /** O que o par de Peixe-beta faz com a segunda carta do monte: fica com ela, deixa onde está ou manda pro fundo. */
 export type KittensFishFate = 'keep' | 'stay' | 'bottom';
+/** Par de Quati: comprar a de cima (`top`), comprar a de baixo (`bottom`) ou deixar o monte como está (`stay`). */
+export type KittensQuatiPick = 'top' | 'bottom' | 'stay';
 
 /** Escolha como os jogadores veem: sem o id do tatu escondido; a carta de cima do Quati e a de baixo do Feitiço só pra quem escolhe. */
 export type KittensChoiceView =
   | { kind: 'tatu'; who: string; deadline: number }
   | { kind: 'cafune'; who: string; deadline: number }
-  /** `card` = a carta de cima, só pra quem escolhe (null pros outros). */
-  | { kind: 'quati'; who: string; deadline: number; card: string | null }
+  /** `seen` = a carta do topo e a do fundo do monte, só pra quem escolhe (null pros outros). */
+  | { kind: 'quati'; who: string; deadline: number; seen: { top: string; bottom: string } | null }
   /** `card` = a carta de baixo do monte, só pra quem escolhe (null pros outros). */
   | { kind: 'feitico'; who: string; deadline: number; card: string | null }
   /** `cards` = as 3 de cima, a do topo primeiro, só pra quem escolhe (null pros outros). */
@@ -174,8 +179,10 @@ export type KittensEvent =
   | { t: 'picked'; by: string; card: string | null }
   /** Par de Mico: `by` descartou `card` (todos veem; o efeito da carta não vale). */
   | { t: 'discarded'; by: string; card: string }
-  /** Par de Quati: a carta de cima foi pro fundo (`moved`) ou ficou. Ninguém vê qual era. */
+  /** Par de Quati antigo (até 2026-11-08): a carta de cima foi pro fundo (`moved`) ou ficou. Só em diários salvos antes. */
   | { t: 'delayed'; by: string; moved: boolean }
+  /** Par de Quati: o que `by` fez (comprou a de cima, a de baixo, ou deixou o monte como estava). A compra vem no `draw`. */
+  | { t: 'quati'; by: string; pick: KittensQuatiPick }
   /** Par de Tamanduá: quantos Tatubuns comprados foram pro fundo. */
   | { t: 'buried'; by: string; tatus: number }
   /**
@@ -209,6 +216,12 @@ export type KittensEvent =
   | { t: 'reflected'; by: string; target: string }
   /** Par de Peixe-beta: o que `by` fez com a segunda carta do monte (todos veem o destino, ninguém vê a carta). */
   | { t: 'fished'; by: string; fate: KittensFishFate }
+  /**
+   * Par de Pombo-correio: cartas destes tipos saíram do descarte e voltaram pro monte (públicos, em ordem alfabética: a
+   * ordem não diz qual foi pro topo). Só os tipos: o id de uma carta que está no monte não aparece pra ninguém. Vazio = o
+   * descarte estava vazio.
+   */
+  | { t: 'mailed'; by: string; kinds: KittensCardKind[] }
   /** A vez chegou em `who`, que tinha vez pulada (Tucano): o turno dele foi gasto sem ele jogar nem comprar. */
   | { t: 'skipped'; who: string }
   | { t: 'win'; by: string };
@@ -308,9 +321,10 @@ export type KittensAction =
   | { type: 'draw' }
   /**
    * Desarme: `card` (o Desarme a jogar, ao comprar um Tatubum ou contra o Tatu Latidor) e depois `position` (0 = topo,
-   * tamanho do monte = fundo, ou 'random'); Favor, descarte do Mico e 5 diferentes: `card`; Quati e Feitiço: `keep`.
+   * tamanho do monte = fundo, ou 'random'); Favor, descarte do Mico e 5 diferentes: `card`; Feitiço: `keep`; Peixe-beta:
+   * `fate`; Quati: `quati`.
    */
-  | { type: 'choose'; card?: string; position?: number | 'random'; keep?: boolean; fate?: KittensFishFate }
+  | { type: 'choose'; card?: string; position?: number | 'random'; keep?: boolean; fate?: KittensFishFate; quati?: KittensQuatiPick }
   | { type: 'again' }
   | { type: 'lobby' };
 

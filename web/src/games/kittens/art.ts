@@ -10,6 +10,7 @@ import capivara from './art/capivara.png';
 import tucano from './art/tucano.png';
 import peixe from './art/peixe.png';
 import onca from './art/onca.png';
+import pombo from './art/pombo.png';
 import sapo from './art/sapo.png';
 import embaralhar from './art/embaralhar.png';
 import espiar from './art/espiar.png';
@@ -48,6 +49,7 @@ export const ART: Record<KittensCardKind, string> = {
   peixe,
   onca,
   sapo,
+  pombo,
   boto,
 };
 

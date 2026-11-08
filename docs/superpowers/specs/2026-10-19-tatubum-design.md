@@ -22,7 +22,7 @@ Decisões do usuário (2026-10-19):
 - **Janela do Nem vem! de 5 s**, fixa, sempre corre, mesmo que ninguém tenha Nem vem! (assim a
   demora não entrega quem tem).
 - **Escolhas pessoais com 30 s** (Favor, par de Mico (o descarte e a pegada no fim), Desarme, 5 diferentes, par de Quati, defesa do Tatu Latidor, Feitiço; no par de Preguiça o bicho vai junto da jogada); acabou o tempo, o servidor
-  escolhe ao acaso (no Quati e no Feitiço, sem acaso: a carta fica / vai pro topo). **O turno em si não tem tempo.**
+  escolhe ao acaso (no Quati e no Feitiço, sem acaso: o monte fica como está / a carta vai pro topo). **O turno em si não tem tempo.**
 - **Ataque acumula** (regra das edições novas, §2).
 - **Cartas ilustradas no Google Flow**, uma arte por tipo de carta (§6).
 - Identidade **pixel art, paleta "noite no cerrado"** (§5.4). Primeiro foi escolhido o "gibi"
@@ -43,7 +43,7 @@ Decisões do usuário (2026-10-19):
 
 ### Preparação (ao clicar "começar")
 
-1. Monta o baralho pelo número de jogadores (§3), sem Tatubuns nem Cafunés, com **6 bichos sorteados** da pool de 9 (pedido do Rafa, 2026-11-06; `kittensDrawBichos`, estado `bichos`, público; detalhes em `2026-11-06-tatubum-bichos-sorteados-design.md`). O Boto e o Tatu Latidor entram sempre.
+1. Monta o baralho pelo número de jogadores (§3), sem Tatubuns nem Cafunés, com **6 bichos sorteados** da pool de 10 (pedido do Rafa, 2026-11-06; o 10º, Pombo-correio, em 2026-11-08; `kittensDrawBichos`, estado `bichos`, público; detalhes em `2026-11-06-tatubum-bichos-sorteados-design.md`). O Boto e o Tatu Latidor entram sempre.
 2. Cada jogador recebe **1 Cafuné** e mais **7 cartas** do baralho embaralhado (8 na mão).
 3. Entram no monte os **Desarmes extras** (2 com até 4 jogadores, 1 com 5 ou mais; cada partida sorteia tirar 0, 1 ou 2 deles, sem avisar ninguém, pedido do Rafa, 2026-11-06, `kittensCafuneCut`) e **um Tatubum a menos que o número de jogadores**; o monte
    é embaralhado.
@@ -80,7 +80,7 @@ Na sua vez você joga **quantas cartas quiser** (inclusive nenhuma), uma de cada
 | **Favor** | 4 | Escolha um adversário vivo com carta na mão: **ele** escolhe uma carta pra te dar (30 s). **Três Favores juntos** (trio de Favor): você tira **3 cartas** do escolhido, uma ao acaso, e não aceita Nem vem! (ver "Combos"; pedidos do Rafa, 2026-10-20 e 2026-10-28). | sim |
 | **Embaralhar** | 4 | Embaralha o monte (`ctx.rng`). | sim |
 | **Espiar** | 5 | Você vê as 3 cartas do topo (ou menos, se o monte tiver menos), só você. Elas ficam à mostra pra você até serem compradas ou o monte mudar de ordem, mesmo depois que a vez passa; espiar de novo troca pelas 3 de agora. Várias pessoas podem ter espiada ao mesmo tempo (pedido do Rafa, 2026-10-20; ver "Espiada à mostra" abaixo). | sim |
-| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano, Peixe-beta, Onça-pintada, Sapo** | 4 de cada, só os 6 sorteados na partida | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21 e o Peixe-beta (`peixe`), a Onça-pintada (`onca`) e o Sapo (`sapo`) em 2026-11-06 (pedidos do Rafa). | (combo sim) |
+| **Capivara, Mico-leão, Quati, Tamanduá, Preguiça, Tucano, Peixe-beta, Onça-pintada, Sapo, Pombo-correio** | 4 de cada, só os 6 sorteados na partida | Sozinhas não fazem nada; só em combo. O Tucano (id `tucano`) entrou em 2026-10-21, o Peixe-beta (`peixe`), a Onça-pintada (`onca`) e o Sapo (`sapo`) em 2026-11-06 e o Pombo-correio (`pombo`) em 2026-11-08 (pedidos do Rafa). | (combo sim) |
 | **Tatu Latidor** (id `latido`) | (fora do pacote: **2** com 2 jogadores, **3** com 3, depois **n − 1**; nenhum na mão inicial) | Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez; ninguém tem, o seu fica na sua frente. **Par de Latidores:** um adversário escolhido joga um Desarme ou explode. Ver "Cartas novas". | sim |
 | **Mau-olhado** (id `olhado`) | 2 | Um adversário vivo fica **cego** (mão embaralhada e escondida dele) até comprar. Ver "Cartas novas". | sim |
 | **Feitiço** (id `feitico`) | 2 | Só você vê a **carta de baixo** do monte: fica com ela (não cura o Mau-olhado) ou ela vai pro topo. Acaba o turno. Ver "Cartas novas". | sim |
@@ -103,7 +103,7 @@ comprada etc."
   - **Comprar** (compra normal, inclusive comprar um Tatubum): a carta sai de todas as espiadas; o resto continua o topo.
   - **Par de Tamanduá**: as 2 compradas saem; o Tatubum comprado vai pro fundo (embaixo de tudo), então o resto continua
     o topo.
-  - **Par de Quati, carta pro fundo**: tratada como compra, sai das espiadas (o resto vira o topo, na mesma ordem).
+  - **Par de Quati, compra da de cima ou da de baixo** (Quati novo, 2026-11-08): é compra, a carta sai das espiadas (o resto continua, na mesma ordem).
     Ficando (inclusive sem resposta), quem escolheu viu a de cima: sem espiada, ganha `[a de cima]`; com espiada, ela
     já começa por essa carta e nada muda (pedido do Rafa, 2026-10-21).
   - **Par de Preguiça puxando do monte**: a carta sai das espiadas que a tinham (o resto do monte não muda de ordem).
@@ -160,11 +160,12 @@ Sozinho o bicho continua não fazendo nada.
 | Par de… | Pede | Efeito |
 |---|---|---|
 | Mico-leão | — | **Cada adversário** vivo com carta **descarta uma carta à escolha dele**, todos ao mesmo tempo (30 s; depois, ao acaso). O efeito da carta descartada não vale. As cartas vão à mostra pro descarte. (Pedido do Rafa, 2026-10-20: antes era igual ao Favor.) **Depois que todos descartam, você pega uma das cartas descartadas nesse par** pra sua mão (30 s, no quadro do descarte; depois, ao acaso); se ninguém descartou nada, ou se você saiu do jogo antes, não pega (pedido do Rafa, 2026-10-20). |
-| Quati | — | Só você vê a **carta de cima** do monte e escolhe se ela **fica no topo** ou **vai pro fundo** (30 s; sem escolha, fica). Todos sabem se foi pro fundo, ninguém sabe qual era. |
+| Quati (novo desde 2026-11-08, pedido do Rafa) | — | Só você vê a **carta do topo e a do fundo** do monte e escolhe uma coisa (30 s; sem escolha, **deixa como está**): **comprar a de cima** (compra normal: cura o cego, acaba a vez; Tatubum: Desarme ou explode), **comprar a de baixo** (vai pra mão e acaba a vez, mas **não cura o cego**, como a carta guardada pelo Feitiço; Tatubum idem) ou **deixar como está** (o monte não muda, a vez continua, e a de cima fica na sua espiada se você não tinha uma, como na Onça). Monte com 1 carta: topo e fundo são a mesma. Escolha `choose { quati: 'top' \| 'bottom' \| 'stay' }` (`quatiPick`), evento público `{ t: 'quati', by, pick }` (a compra vem num `draw`, só pra quem comprou). A escolha salva no meio do deploy tem o mesmo formato e passa a valer como a nova (`compat.ts`); `delayed`, do Quati antigo (de cima pro fundo ou fica), só aparece em diários antigos. |
 | Tamanduá | — | Você **compra 2 cartas** de cima (1, se o monte só tiver 1). Cada **Tatubum** comprado assim **vai pro fundo do monte** sem gastar Desarme; as outras vão pra sua mão (só você vê). **A vez continua**: você ainda pode jogar e, no fim, compra normalmente. Todos sabem quantos Tatubuns foram pro fundo. |
 | Preguiça | um bicho (pelo nome) | Você puxa uma carta **desse bicho** do adversário com **mais cartas na mão entre os que têm** (pedido do Rafa, 2026-10-28; empate: sorteado entre eles). Ninguém tem: você **procura no monte** e pega uma dele (sem ver o resto). Nem no monte: **pega do descarte** (sem contar as cartas do próprio par; pedido do Rafa, 2026-10-21). Nada em lugar nenhum: nada. **30% de chance de puxar dois** (`KITTENS_PREGUICA_DOUBLE`), cada um na mesma ordem (mão → monte → descarte); o segundo que não acha nada não aparece no diário. Todos veem de onde veio. |
 | Tucano (pedido do Rafa, 2026-10-21) | um adversário vivo (mesmo sem carta) | **A sua vez acaba sem você comprar**, inteira: mesmo sob ataque os turnos devidos se perdem (pedido do Rafa, 2026-11-03; antes gastava só um, como o Pular), e a **próxima vez do alvo é pulada**: ele não joga nem compra. Duas vezes no mesmo alvo pulam duas vezes dele. Todos veem quem vai ser pulado. **No 1x1** (só 2 vivos; pedido do Rafa, 2026-11-03) só a sua vez acaba: ninguém é pulado (evento `tucano` com `duel: true`), e quando a partida cai pra 2 vivos as vezes puladas que sobravam se perdem. Rafa: "par: você pula sua vez quando manda ele, não compra e nem joga, e escolhe outro jogador pra pular; ele também não joga nada nem compra, o turno dele é pulado." |
 | Peixe-beta (pedido do Rafa, 2026-11-06) | — | Só você vê as **3 de cima**, que ficam na sua espiada, e decide o destino da **segunda** (30 s; escolha `peixe`, `choose { fate }`, evento `fished`): **fica com ela** (não é compra: a vez continua, cego segue cego; Tatubum: Desarme ou explode), **deixa onde está** (também no fim do prazo) ou **manda pro fundo**. Monte com menos de 2: só atualiza a espiada. |
+| Pombo-correio (pedido do Rafa, 2026-11-08) | — | Até **5 cartas** sorteadas do descarte de antes da jogada voltam pro monte: **uma, sorteada, no topo** e as outras em posições sorteadas. Ninguém vê qual foi pro topo, nem quem jogou; o diário (`mailed`) diz só os tipos, em ordem alfabética. As espiadas de todos somem (o monte mudou). Descarte vazio: nada. A vez continua. Detalhes em `2026-11-06-tatubum-bichos-sorteados-design.md`. |
 | Onça-pintada (pedido do Rafa, 2026-11-06) | — | Só você vê o **topo e o fundo** do monte (o topo fica na sua espiada) e **pega uma carta do descarte** de antes da jogada, menos Desarme (30 s; escolha `cinco` com `from: 'onca'`, a visão traz `seen`). Sem opção, só vê e fecha (`choose` sem carta). A pegada é pública. |
 | Sapo (pedido do Rafa, 2026-11-06) | só como resposta (ação `sapo`) | **O alvo** de Favor, Mau-olhado, par de Tucano ou par de Latidores no ar **reflete a magia** pra quem mandou, com 2 Sapos, Sapo + Boto ou 2 Botos (botão SAPO!). O par e os Nem vem! que estavam na jogada vão pro descarte, a contagem zera e a janela recomeça (`pending.caster`, evento `reflected`); o novo alvo pode refletir de volta. Não vale no trio de Favor, no Tucano do 1x1, nem pra quem está cego (`sapo_blind`). Na própria vez o par é recusado (`sapo_only`). Tucano refletido: a vez de quem jogou acaba do mesmo jeito e a próxima vez dele é pulada. Favor refletido em quem está sem carta: a jogada não vale. |
 | Capivara | — | **Todos os outros** vivos passam, ao mesmo tempo, uma carta **ao acaso** pro próximo na ordem da vez (o sentido em que a vez anda). **Você não passa**, mas recebe a do jogador antes de você. Quem está sem carta não passa. Cada um vê só o que deu e o que recebeu. |
@@ -345,7 +346,7 @@ bicho.
   **não conta** como o bicho pedido.
 - `KittensPlay` ganhou `as: KittensCardKind | null`: no par, o bicho que o par vale (sempre, com ou sem Boto); no
   trio, o tipo das iguais (`boto` em 3 Botos); `null` no resto. O evento `play` também leva `as`, pra a tela mostrar
-  "par de Quati (com Boto)". `KITTENS_BICHOS` é a pool de bichos (9 desde 2026-11-06; o Boto é `KITTENS_WILD`).
+  "par de Quati (com Boto)". `KITTENS_BICHOS` é a pool de bichos (9 desde 2026-11-06, 10 desde 2026-11-08; o Boto é `KITTENS_WILD`).
 
 #### Motor e segredo
 
@@ -439,7 +440,7 @@ algumas horas, 49 + 3 por jogador a mais.
     (§2 "Espiada à mostra").
   - `log`: últimas 30 entradas, com o que cada um pode ler (§4.3).
 - Ações (`schema.ts`, zod): `start`, `play { cards: id[], target?, ask?, as? }`, `nope { card? }`, `draw`,
-  `choose { … }` (posição do tatu, carta do Favor/Mico/Desarme, carta do descarte, `keep` do Quati/Feitiço),
+  `choose { … }` (posição do tatu, carta do Favor/Mico/Desarme, carta do descarte, `keep` do Feitiço, `fate` do Peixe-beta, `quati` do Quati),
   `again`, `lobby`. Quem está cego manda fichas `?i` no lugar dos ids da mão.
 - `rules.ts`: `applyKittensAction` (valida turno, posse das cartas, combo, alvo); `settle.ts`:
   `settleKittens`, que é o `onPresenceChange` (presença e prazos) e roda antes de cada ação.
@@ -498,7 +499,7 @@ A sala genérica não muda: o Retratim já trouxe `ctx.now`, `nextDeadline` e o 
 - Cafuné: a posição do tatu só quem escondeu sabe; os outros leem "Ana escondeu o tatu".
 - `choice`: quem escolhe vê as opções; os outros veem quem está escolhendo e o relógio. No Cafuné, a
   visão não leva o id do tatu (junto com o tatu tirado do monte quando alguém cai, ele entregaria a
-  posição). A carta de cima do Quati e a de baixo do Feitiço só pra quem escolhe; a escolha do Latidor é pública.
+  posição). O topo e o fundo do Quati e a de baixo do Feitiço só pra quem escolhe; a escolha do Latidor é pública.
 - Cartas na frente (`front`, o Tatu Latidor): públicas.
 - Mau-olhado: todos sabem quem está cego (`blind`); o cego vê fichas `?0…` no lugar da mão e nenhum id da própria mão
   (nem no diário: evento com carta que está na mão dele chega com `card: null`).

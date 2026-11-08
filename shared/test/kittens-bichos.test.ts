@@ -14,8 +14,8 @@ const at = (ms: number) => ctxOf(ids(3), { now: T0 + ms });
 const countOf = (cards: readonly string[], kind: string) => cards.filter((c) => kittensKindOf(c) === kind).length;
 
 describe('sorteio dos bichos (pedido do Rafa, 2026-11-06)', () => {
-  it('a pool tem 9 bichos e cada partida usa 6, sem repetir, na ordem da pool', () => {
-    expect(KITTENS_BICHOS).toHaveLength(9);
+  it('a pool tem 10 bichos e cada partida usa 6, sem repetir, na ordem da pool', () => {
+    expect(KITTENS_BICHOS).toHaveLength(10);
     expect(KITTENS_BICHOS_PER_MATCH).toBe(6);
     const seen = new Set<string>();
     for (let seed = 1; seed <= 60; seed++) {

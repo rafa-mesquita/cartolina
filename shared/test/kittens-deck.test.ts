@@ -27,7 +27,7 @@ describe('cartas do Tatubum', () => {
     expect(kittensKindOf('xadrez-1')).toBeNull();
     expect(kittensKindOf('ataque')).toBeNull();
     expect(kittensKindOf('?0')).toBeNull();
-    expect(KITTENS_CARD_KINDS).toHaveLength(21);
+    expect(KITTENS_CARD_KINDS).toHaveLength(22);
   });
 
   it('as cartas novas têm nome em português', () => {

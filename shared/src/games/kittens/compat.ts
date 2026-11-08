@@ -49,6 +49,10 @@ function exitsOf(old: SavedKittensState): KittensExit[] {
  * A defesa do Latidor de antes da fila (2026-10-21) não tem `by` (quem jogou o Latidor): era sempre quem está na vez
  * (o Latidor só sai na vez de quem joga, e a vez fica com ele), então `by` = `current`.
  * O sorteio de bichos (2026-11-06) trouxe `bichos`: partida salva antes dele usa os 6 de sempre.
+ * O Quati novo (2026-11-08) não muda o estado: a escolha `quati` salva no meio continua `{ kind, who, deadline }` e
+ * passa a valer como a nova (topo e fundo à vista, comprar uma ou deixar). Quem estava escolhendo recarrega a página
+ * depois do deploy de qualquer jeito, e o prazo vencido deixa o monte como está, igual ao "fica" antigo. Diário salvo
+ * com `delayed` continua sendo mostrado.
  * Devolve o MESMO objeto quando o estado já está completo. Aplicado nas portas de entrada do motor
  * (`applyKittensAction`, `settleKittens`, `kittensViewFor`) e no registro do histórico.
  */

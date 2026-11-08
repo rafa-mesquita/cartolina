@@ -34,7 +34,7 @@ function fullDeck(n: number, bichos: readonly KittensBicho[]): string[] {
  * Confere as invariantes depois de um passo; `where` descreve a partida e os últimos passos (vai na mensagem de erro).
  * Comparações à mão em vez de `expect`: são dezenas de milhares de passos e o teste tem que ser rápido.
  */
-function checkInvariants(s: KittensState, deck: string[], viewer: string | null, where: () => string): void {
+function checkInvariants(s: KittensState, deck: string[], viewer: string | null, where: () => string, mailed: ReadonlySet<string> = new Set()): void {
   const broken = (what: string) => new Error(`${what}\n  ${where()}`);
   // Nenhuma carta some nem se duplica, em qualquer fase (contando as cartas na frente dos jogadores).
   const cards = everyCard(s);
@@ -94,14 +94,16 @@ function checkInvariants(s: KittensState, deck: string[], viewer: string | null,
   const ownPeek = viewer !== null && Object.hasOwn(s.peeks, viewer) ? s.peeks[viewer]! : [];
   const onca = viewer !== null && s.choice?.kind === 'cinco' && s.choice.from === 'onca' && s.choice.who === viewer;
   const sees = [
-    ...(mine('quati') ? s.draw.slice(-1) : []),
+    ...(mine('quati') ? [...s.draw.slice(-1), ...s.draw.slice(0, 1)] : []),
     ...(mine('feitico') ? s.draw.slice(0, 1) : []),
     ...(mine('peixe') ? s.draw.slice(-3) : []),
     ...(onca ? [...s.draw.slice(-1), ...s.draw.slice(0, 1)] : []),
     ...ownPeek,
   ];
+  // Carta que já esteve no descarte (público) e voltou pro monte com o Pombo-correio (`mailed`): o id dela pode ter
+  // aparecido no diário antes de voltar; a posição no monte continua secreta.
   const secret = [
-    ...s.draw.filter((c) => !sees.includes(c)),
+    ...s.draw.filter((c) => !sees.includes(c) && !mailed.has(c)),
     ...(heldTatu !== null ? [heldTatu] : []),
     ...(viewer !== null && s.blind.includes(viewer) ? s.hands[viewer]! : []),
   ];
@@ -202,7 +204,8 @@ function randomAction(r: Rng, s: KittensState, p: string): KittensAction {
       return { type: 'choose', position: r() < 0.2 ? 'random' : Math.floor(r() * (s.draw.length + 2)) };
     }
     if (c.kind === 'favor') return { type: 'choose', card: own() };
-    if (c.kind === 'quati' || c.kind === 'feitico') return { type: 'choose', keep: r() < 0.5 };
+    if (c.kind === 'quati') return { type: 'choose', quati: pick(r, ['top', 'bottom', 'stay'] as const)! };
+    if (c.kind === 'feitico') return { type: 'choose', keep: r() < 0.5 };
     if (c.kind === 'peixe') return { type: 'choose', fate: pick(r, ['keep', 'stay', 'bottom'] as const)! };
     // Par de Onça sem nada pra pegar: só fecha.
     if (c.kind === 'cinco' && c.options.length === 0) return { type: 'choose' };
@@ -302,7 +305,9 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
   const deck = fullDeck(n, s.bichos).filter((c) => dealt.has(c));
   if (deck.length !== dealt.size) throw new Error(`carta fora dos pacotes no começo
   ${where()}`);
-  checkInvariants(s, deck, someViewer(s), where);
+  /** Cartas que voltaram do descarte pro monte com o Pombo-correio (o id delas já foi público). */
+  const mailed = new Set<string>();
+  checkInvariants(s, deck, someViewer(s), where, mailed);
   // Histórico: os contadores e as saídas batem com o diário (lido a cada passo, antes de ele perder as entradas velhas).
   const logNopes = new Map<string, number>();
   const logDefuses = new Map<string, number>();
@@ -408,6 +413,19 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
       if (s.pending.caster === s.pending.by) seen.add('sapo:volta');
     }
     if (s.choice?.kind === 'cinco' && s.choice.from === 'onca') seen.add(s.choice.options.length > 0 ? 'onca:pega' : 'onca:vazia');
+    // Par de Pombo-correio (pedido do Rafa, 2026-11-08): até 5 do descarte de antes voltam pro monte, uma no topo; as
+    // espiadas somem; a vez continua.
+    for (const ev of s.log.filter((x) => x.n >= before.seq).map((x) => x.ev)) {
+      if (ev.t !== 'mailed') continue;
+      // A ação deste passo pode ter comprado a do topo logo depois (o settle resolve o par antes da ação).
+      const back = before.discard.filter((c) => !s.discard.includes(c));
+      if (back.some((c) => !s.draw.includes(c) && !Object.values(s.hands).some((h) => h.includes(c)))) throw new Error(`pombo: carta do descarte sumiu [${back}]
+  ${where()}`);
+      for (const c of back) mailed.add(c);
+      if (back.length !== ev.kinds.length || back.length > 5) throw new Error(`pombo: voltaram [${back}], evento ${JSON.stringify(ev)}\n  ${where()}`);
+      if (Object.keys(s.peeks).length > 0) throw new Error(`pombo: espiada sobrou ${JSON.stringify(s.peeks)}\n  ${where()}`);
+      seen.add(ev.kinds.length ? 'pombo' : 'pombo:vazio');
+    }
     for (const ev of s.log.filter((x) => x.n >= before.seq).map((x) => x.ev)) if (ev.t === 'fished') seen.add(`peixe:${ev.fate}`);
     if (air && air.cards.some((c) => kittensKindOf(c) === 'boto')) seen.add(`boto:${air.kind}`);
     if (s.blind.length > 0) seen.add('blind');
@@ -481,7 +499,9 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
     if (c?.kind === 'quati' && s.choice !== c && !Object.hasOwn(before.peeks, c.who) && Object.hasOwn(s.peeks, c.who)) {
       seen.add('peek:quati');
     }
-    checkInvariants(s, deck, someViewer(s), where);
+    // Quati novo (pedido do Rafa, 2026-11-08): compra a de cima, a de baixo ou deixa.
+    for (const ev of s.log.filter((x) => x.n >= before.seq).map((x) => x.ev)) if (ev.t === 'quati') seen.add(`quati:${ev.pick}`);
+    checkInvariants(s, deck, someViewer(s), where, mailed);
     checkHistory();
   }
   return true;
@@ -530,6 +550,9 @@ describe('simulação aleatória do Tatubum', () => {
       'peek:feitico',
       'peek:desarme',
       'peek:quati',
+      'quati:top',
+      'quati:bottom',
+      'quati:stay',
       'nope:nope_late',
       'nope:nope_stale',
       'nope:nope_cooldown',
@@ -555,6 +578,7 @@ describe('simulação aleatória do Tatubum', () => {
       'peixe:stay',
       'peixe:bottom',
       'onca:pega',
+      'pombo',
       // 'skipped:owed' (a pulada gasta um dos turnos de Ataque) só aparecia no 1x1, que não pula mais ninguém
       // (2026-11-03); fica nos testes do Tucano (kittens-tucano.test.ts).
     ];
