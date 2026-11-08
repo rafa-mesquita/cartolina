@@ -150,13 +150,13 @@ function choosePlay(g: KittensView, me: string, mem: KittensBotMemory, rng: Rng)
     // vezes, num adversário vivo (a vez dele é pulada).
     if (b === 'mico' && !targets.length) continue;
     if (b === 'tucano' && rng() >= 0.5) continue;
-    // Par de Sapo só como resposta; par de Onça pede descarte pra pegar.
-    if (b === 'sapo' || (b === 'onca' && !g.discard.length)) continue;
+    // Par de Sapo só como resposta; pares de Onça e de Pombo-correio pedem descarte.
+    if (b === 'sapo' || ((b === 'onca' || b === 'pombo') && !g.discard.length)) continue;
     options.push(pairOf(g, pair, b, rng, false, opponents));
   }
   // Dois Botos: par do bicho que o bot quiser (nunca Mico sem ninguém com carta).
   if (botos.length >= 2) {
-    const usable = bichosOf(g).filter((x) => x !== 'sapo' && (targets.length > 0 || x !== 'mico') && (g.discard.length > 0 || x !== 'onca'));
+    const usable = bichosOf(g).filter((x) => x !== 'sapo' && (targets.length > 0 || x !== 'mico') && (g.discard.length > 0 || (x !== 'onca' && x !== 'pombo')));
     if (usable.length) options.push(pairOf(g, botos.slice(0, 2), pickOne(rng, usable), rng, true, opponents));
   }
   // Trio de qualquer carta (menos Desarme: não troca 3 por 1) rouba um Desarme; o Boto completa um par de bicho.

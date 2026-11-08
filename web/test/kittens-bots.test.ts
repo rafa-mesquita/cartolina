@@ -234,6 +234,13 @@ describe('decisão do bot do Tatubum', () => {
     expect(decideKittens(p1View(['mico-1'], { current: 'p1', choice: choice(['pular-1', 'tatubum-1']) }), newKittensMemory(), () => 0)!.action).toEqual({ type: 'choose', fate: 'bottom' });
   });
 
+  it('Pombo-correio: joga o par com descarte; com o descarte vazio, não joga (compra)', () => {
+    const bichos = ['mico', 'quati', 'tamandua', 'preguica', 'peixe', 'pombo'] as const;
+    const v = (discard: string[]) => p1View(['pombo-1', 'pombo-2'], { current: 'p1', bichos: [...bichos], discard });
+    expect(decideKittens(v(['ataque-1']), newKittensMemory(), () => 0)!.action).toEqual({ type: 'play', cards: ['pombo-1', 'pombo-2'] });
+    expect(decideKittens(v([]), newKittensMemory(), () => 0)!.action).toEqual({ type: 'draw' });
+  });
+
   it('Onça: pega uma das opções; sem opção, fecha a escolha', () => {
     const choice = (options: string[]) => ({ kind: 'cinco' as const, who: 'p1', options, left: 1, deadline: 9000, from: 'onca' as const });
     expect(decideKittens(p1View(['mico-1'], { current: 'p1', choice: choice(['ataque-1', 'favor-1']) }), newKittensMemory(), () => 0)!.action).toEqual({ type: 'choose', card: 'ataque-1' });
@@ -499,7 +506,8 @@ describe('decisão do bot do Tatubum', () => {
         }
       }
     }
-    expect([...seen].sort()).toEqual(['choose', 'draw', 'nope', 'play']);
+    // O Sapo (resposta, quando o bot é alvo) depende dos bichos sorteados: pode aparecer ou não.
+    expect([...seen].filter((t) => t !== 'sapo').sort()).toEqual(['choose', 'draw', 'nope', 'play']);
     expect([...news].sort()).toEqual(['boto', 'choice:feitico', 'choice:latido', 'feitico', 'latido', 'olhado', 'tucano']);
     void blindTries;
   });

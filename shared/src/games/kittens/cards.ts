@@ -23,6 +23,8 @@ export const KITTENS_CARD_KINDS = [
   'peixe',
   'onca',
   'sapo',
+  // Pombo-correio (pedido do Rafa, 2026-11-08).
+  'pombo',
   'boto',
 ] as const;
 export type KittensCardKind = (typeof KITTENS_CARD_KINDS)[number];
@@ -50,6 +52,7 @@ export const KITTENS_CARD_NAMES: Record<KittensCardKind, string> = {
   peixe: 'Peixe-beta',
   onca: 'Onça-pintada',
   sapo: 'Sapo',
+  pombo: 'Pombo-correio',
   boto: 'Boto',
 };
 
@@ -62,7 +65,7 @@ export type KittensActionKind = (typeof KITTENS_ACTION_KINDS)[number];
  * fazem nada; em par, cada um tem efeito próprio (spec "Par de cada bicho"). O Boto (coringa) NÃO está aqui: ele não tem
  * efeito próprio, só faz as vezes de um destes (e o par de Preguiça não pede Boto). Ele entra em toda partida.
  */
-export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano', 'peixe', 'onca', 'sapo'] as const;
+export const KITTENS_BICHOS = ['capivara', 'mico', 'quati', 'tamandua', 'preguica', 'tucano', 'peixe', 'onca', 'sapo', 'pombo'] as const;
 export type KittensBicho = (typeof KITTENS_BICHOS)[number];
 
 /** Os 6 bichos de antes do sorteio: os de uma partida salva sem `bichos`. */

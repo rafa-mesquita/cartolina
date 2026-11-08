@@ -1,8 +1,8 @@
 import type { GameContext } from '../../game';
-import { randomInt, type Rng } from '../../rng';
+import { randomInt, shuffle, type Rng } from '../../rng';
 import { kittensKindOf, type KittensCardKind } from './cards';
 import { barkPair } from './choices';
-import { addSkip, cure, logged, moveCard, nextAlive, passTo, spendTurn, unpeek } from './turn';
+import { addSkip, clearPeeks, cure, logged, moveCard, nextAlive, passTo, spendTurn, unpeek } from './turn';
 import { KITTENS_CHOICE_MS, type KittensPlay, type KittensState } from './types';
 
 const isKind = (k: KittensCardKind) => (c: string) => kittensKindOf(c) === k;
@@ -108,6 +108,26 @@ function onca(s: KittensState, by: string, before: string[], deadline: number): 
   return { ...seen, choice: { kind: 'cinco', who: by, options, left: 1, deadline, from: 'onca' } };
 }
 
+/** Quantas cartas do descarte o par de Pombo-correio manda de volta pro monte. */
+export const KITTENS_POMBO_CARDS = 5;
+
+/**
+ * Par de Pombo-correio (pedido do Rafa, 2026-11-08): até `KITTENS_POMBO_CARDS` cartas sorteadas do descarte de antes da
+ * jogada (`before`) voltam pro monte. Uma delas, sorteada, vai pro topo; as outras, pra posições sorteadas. Ninguém sabe
+ * qual foi pro topo, nem quem jogou. O monte mudou de ordem: as espiadas de todos somem, como no Embaralhar. A vez continua.
+ */
+function pombo(s: KittensState, by: string, before: string[], rng: Rng): KittensState {
+  const sent = shuffle(rng, before).slice(0, KITTENS_POMBO_CARDS);
+  if (sent.length === 0) return logged(s, { t: 'mailed', by, kinds: [] });
+  const [top, ...rest] = sent;
+  const draw = [...s.draw];
+  for (const card of rest) draw.splice(randomInt(rng, draw.length + 1), 0, card);
+  draw.push(top!);
+  const gone = new Set(sent);
+  const next = clearPeeks({ ...s, draw, discard: s.discard.filter((c) => !gone.has(c)) });
+  return logged(next, { t: 'mailed', by, kinds: sent.map((c) => kittensKindOf(c)!).sort() });
+}
+
 /**
  * O efeito de um par de bicho que não foi cancelado (spec "Par de cada bicho"); com Boto, o do bicho em `play.as`. `by` =
  * quem está na vez; `caster` = quem manda a magia (outro, depois de um Sapo). `before` = descarte de antes da jogada.
@@ -142,6 +162,8 @@ export function applyPair(s: KittensState, by: string, caster: string, play: Kit
       return peixe(s, by, deadline);
     case 'onca':
       return onca(s, by, before, deadline);
+    case 'pombo':
+      return pombo(s, by, before, ctx.rng);
     default:
       return s; // parsePlay só deixa passar par de bicho ou de Latidor
   }

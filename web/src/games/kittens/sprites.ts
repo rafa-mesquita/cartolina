@@ -291,6 +291,7 @@ export const CARD_STYLE: Record<KittensCardKind, { band: string; hint: string }>
   peixe: { band: '#3b8a4a', hint: 'par: vê as 3 de cima' },
   onca: { band: '#3b8a4a', hint: 'par: pega do descarte' },
   sapo: { band: '#3b8a4a', hint: 'par: reflete magia' },
+  pombo: { band: '#3b8a4a', hint: 'par: descarte pro monte' },
   latido: { band: '#b5653a', hint: 'late pros outros' },
   olhado: { band: '#5b3f9e', hint: 'deixa alguém cego' },
   feitico: { band: '#2f8f6b', hint: 'a de baixo do monte' },

@@ -82,6 +82,7 @@ const PAIR_LABEL: Partial<Record<KittensCardKind, string>> = {
   peixe: 'PAR DE PEIXE-BETA',
   onca: 'PAR DE ONÇA-PINTADA',
   sapo: 'PAR DE SAPO',
+  pombo: 'PAR DE POMBO-CORREIO',
   latido: 'PAR DE LATIDORES',
   capivara: 'RODA DE CAPIVARA',
 };
@@ -107,7 +108,7 @@ const ACTION_KINDS: readonly string[] = KITTENS_ACTION_KINDS;
 const CARD_COLOR: Record<KittensCardKind, string> = {
   tatubum: '#e4572e', cafune: '#f2c14e', nemvem: '#c86fd4', ataque: '#9aa7bd', pular: '#5aa0e6', favor: '#f29bc0',
   embaralhar: '#8d7ae6', espiar: '#3fa7c9', capivara: '#5cc8b8', mico: '#f4a259', quati: '#c79a6a', tamandua: '#b0b8c8', preguica: '#a8bf6a',
-  tucano: '#3b5bc4', peixe: '#7fd6e8', onca: '#6f9e3f', sapo: '#c9a6e8', latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
+  tucano: '#3b5bc4', peixe: '#7fd6e8', onca: '#6f9e3f', sapo: '#c9a6e8', pombo: '#ef9a8a', latido: '#b5653a', olhado: '#5b3f9e', feitico: '#2f8f6b', boto: '#d65d8f',
 };
 
 /** Pixel art em SVG (um retângulo por pixel): `rows` com uma letra por pixel, `pal` = cor de cada letra. */
@@ -151,6 +152,7 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   peixe: '<b>PAR DE PEIXE-BETA</b>: só você vê as <b>3 cartas de cima</b> do monte e elas ficam à mostra pra você, como no Espiar. Você decide o destino da <b>segunda</b> (30 segundos; depois ela fica onde está): <b>fica com ela</b>, <b>deixa onde está</b> ou <b>manda pro fundo</b>.<br>Ficar com ela não é comprar: a sua vez continua e quem está cego continua cego. Se for Tatubum: Desarme ou explode.',
   onca: '<b>PAR DE ONÇA-PINTADA</b>: só você vê a <b>carta do topo e a do fundo</b> do monte, e <b>pega uma carta do descarte</b> pra sua mão, menos Desarme (30 segundos; depois vai uma ao acaso). Vale o descarte de antes da jogada. Todo mundo vê qual você pegou. A do topo fica à mostra pra você.',
   sapo: '<b>PAR DE SAPO</b>: só vale quando <b>você é o alvo</b> de um Favor, Mau-olhado, par de Tucano ou par de Latidores que está no ar. Aparece o botão <b>SAPO!</b>, e o par faz a magia <b>voltar pra quem mandou</b>. Ela fica mais 5 segundos no ar: quem recebeu pode refletir de volta com outro par, e qualquer um pode dar Nem vem!.<br>O par pode ser 2 Sapos, Sapo + Boto ou 2 Botos. Não vale no trio de Favor, no Tucano do 1x1, nem pra quem está cego. Na sua vez, o par de Sapo não faz nada.',
+  pombo: '<b>PAR DE POMBO-CORREIO</b>: até <b>5 cartas</b> sorteadas do descarte voltam pro monte. Uma delas, sorteada, vai pro <b>topo</b>; as outras vão pra lugares sorteados. Ninguém vê qual foi pro topo, nem você. Vale o descarte de antes da jogada. As espiadas de todo mundo somem, porque o monte mudou. A sua vez continua.',
   boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>4 bichos diferentes</b> conta como um bicho a mais (só um Boto). No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
 };
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
@@ -186,6 +188,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada (no 1x1, só a sua vez acaba).',
   peixe: 'Par: vê as 3 de cima e fica com a segunda, deixa ela onde está ou manda pro fundo. A vez continua.',
   onca: 'Par: vê o topo e o fundo do monte e pega uma carta do descarte (menos Desarme).',
+  pombo: 'Par: até 5 cartas do descarte voltam pro monte, uma no topo (ninguém vê qual). A vez continua.',
   sapo: 'Par, quando você é o alvo: a magia volta pra quem mandou (Favor, Mau-olhado, par de Tucano, par de Latidores). Vale 2 Sapos, Sapo + Boto ou 2 Botos.',
   latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente. Par: o adversário escolhido joga um Desarme ou explode.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',
@@ -1934,6 +1937,11 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       }
       case 'nope': return `${n(ev.by)}: NEM VEM!`;
       case 'reflected': return `${n(ev.by)} refletiu com o SAPO! Agora a magia é pra ${n(ev.target)}`;
+      case 'mailed': {
+        const k = ev.kinds.length;
+        if (k === 0) return `O POMBO-CORREIO de ${n(ev.by)} voltou vazio: o descarte estava vazio`;
+        return `O POMBO-CORREIO levou ${k === 1 ? 'uma carta' : `${k} cartas`} do descarte pro monte (${k === 1 ? 'no topo' : 'uma no topo'})`;
+      }
       case 'fished': return ev.fate === 'keep' ? `${n(ev.by)} ficou com a segunda carta do monte` : ev.fate === 'bottom' ? `${n(ev.by)} mandou a segunda carta pro fundo` : `${n(ev.by)} deixou a segunda carta onde estava`;
       case 'resolved': {
         // "Sua RODA", "Seu PAR": a roda de capivara é a única feminina.
@@ -2151,6 +2159,15 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
         void Fx.icon(ART.sapo, at, { size: mine ? 150 : 110, hold: 350 });
         await Promise.all(evView.discard.slice(-2).map((id, i) => wait(i * 70).then(() => Fx.fly({ node: cardEl(id), from: at, to: $('#discard'), dur: 420, rot: (i % 2 ? 6 : -5), trail: '#7fd47a' }))));
         await Fx.stamp(air, 'SAPO!');
+        break;
+      }
+      case 'mailed': {
+        // Par de Pombo-correio: as cartas voam do descarte pro monte (todos viram quais saíram; a posição ninguém vê).
+        say(text);
+        Sound.play('shuffle');
+        const deck = $('#deck .stack');
+        await Promise.all(ev.kinds.map((k, i) => wait(i * 90).then(() => Fx.fly({ node: cardEl(`${k}-pombo`), from: $('#discard'), to: deck, dur: 480, flipTo: cardEl(null, { back: true }), trail: '#ef9a8a' }))));
+        if (!ev.kinds.length) await wait(500);
         break;
       }
       case 'fished': {

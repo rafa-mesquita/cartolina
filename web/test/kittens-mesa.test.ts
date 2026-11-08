@@ -809,6 +809,28 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
+  it('Pombo-correio (pedido do Rafa, 2026-11-08): as cartas voam do descarte pro monte e o diário diz quantas', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const v = midGame('p1');
+    const { root, mesa } = mount();
+    mesa.update(toMesa(v));
+    let n = v.game.log.at(-1)!.n;
+    const next = (patch: Partial<KittensRoomView['game']>, ...evs: KittensEvent[]) => {
+      v.game = { ...v.game, ...patch, log: [...v.game.log, ...evs.map((ev) => ({ n: ++n, ev }))] };
+      mesa.update(toMesa(v));
+    };
+    next({ drawCount: v.game.drawCount + 3 }, { t: 'mailed', by: 'p0', kinds: ['ataque', 'favor', 'nemvem'] });
+    await vi.advanceTimersByTimeAsync(3000);
+    next({}, { t: 'mailed', by: 'p2', kinds: [] });
+    await vi.advanceTimersByTimeAsync(3000);
+    const log = root.querySelector('#log')?.textContent ?? '';
+    expect(log).toContain('O POMBO-CORREIO levou 3 cartas do descarte pro monte (uma no topo)');
+    expect(log).toContain('O POMBO-CORREIO de P2 voltou vazio: o descarte estava vazio');
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+    mesa.destroy();
+  });
+
   it('efeitos das cartas novas rodam e vão pro diário (latido, olhado, cura, feitiço, par com Boto)', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const v = midGame('p1');

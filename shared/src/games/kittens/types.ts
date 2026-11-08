@@ -209,6 +209,12 @@ export type KittensEvent =
   | { t: 'reflected'; by: string; target: string }
   /** Par de Peixe-beta: o que `by` fez com a segunda carta do monte (todos veem o destino, ninguém vê a carta). */
   | { t: 'fished'; by: string; fate: KittensFishFate }
+  /**
+   * Par de Pombo-correio: cartas destes tipos saíram do descarte e voltaram pro monte (públicos, em ordem alfabética: a
+   * ordem não diz qual foi pro topo). Só os tipos: o id de uma carta que está no monte não aparece pra ninguém. Vazio = o
+   * descarte estava vazio.
+   */
+  | { t: 'mailed'; by: string; kinds: KittensCardKind[] }
   /** A vez chegou em `who`, que tinha vez pulada (Tucano): o turno dele foi gasto sem ele jogar nem comprar. */
   | { t: 'skipped'; who: string }
   | { t: 'win'; by: string };
