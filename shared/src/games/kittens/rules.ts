@@ -71,7 +71,7 @@ function startMatch(state: KittensState, ctx: GameContext): ActionResult<Kittens
   // também (2026-10-20: o host começava sempre). Os sorteios vêm depois da distribuição, pra mesma semente dar as mesmas mãos.
   const players = shuffle(ctx.rng, ctx.active);
   const first = players[randomInt(ctx.rng, players.length)]!;
-  const stats = Object.fromEntries(players.map((p) => [p, { nopes: 0, defuses: 0 }]));
+  const stats = Object.fromEntries(players.map((p) => [p, { nopes: 0, defuses: 0, targeted: 0 }]));
   const fresh = { ...initialKittensState(), match: state.match + 1, stats, bichos };
   return ok({ ...fresh, phase: 'playing', players, alive: [...players], hands, draw, current: first, owed: 1 });
 }
@@ -203,7 +203,9 @@ export function applyKittensAction(
         hands: { ...s.hands, [playerId]: hand },
         pending: { by: playerId, play, nopes: [], resolvesAt: ctx.now + (kittensNopable(play) ? KITTENS_NOPE_MS : KITTENS_UNSTOPPABLE_MS) },
       };
-      return ok(logged(next, { t: 'play', by: playerId, play: play.kind, target: play.target, ask: play.ask, as: play.as }));
+      // Estatística do alvo (pedido do Rafa, 2026-11-09): conta na hora em que a magia é mandada.
+      const aimed = play.target !== null ? counted(next, play.target, 'targeted') : next;
+      return ok(logged(aimed, { t: 'play', by: playerId, play: play.kind, target: play.target, ask: play.ask, as: play.as }));
     }
     case 'nope': {
       if (s.phase !== 'playing') return fail('bad_phase');
@@ -255,7 +257,7 @@ export function applyKittensAction(
       const hands = { ...s.hands, [playerId]: mine.filter((c) => !cards.includes(c)) };
       const discard = [...s.discard, ...air.nopes.map((n) => n.card), ...cards];
       const pending = { ...air, caster: playerId, play: { ...air.play, target: caster }, nopes: [], resolvesAt: ctx.now + KITTENS_NOPE_MS };
-      return ok(logged({ ...s, hands, discard, pending }, { t: 'reflected', by: playerId, target: caster }));
+      return ok(logged(counted({ ...s, hands, discard, pending }, caster, 'targeted'), { t: 'reflected', by: playerId, target: caster }));
     }
     default:
       return fail('bad_action');

@@ -22,8 +22,11 @@ export interface KittensMatchRecord {
   /** Quem saiu, na ordem (1º, 2º…): explodiu (`boom`) ou caiu e não voltou (`left`). O vencedor não entra. */
   exits: { who: KittensPerson; how: KittensExitHow }[];
   winner: KittensPerson;
-  /** Nem vem! dados e Desarmes usados por cada um, na ordem dos assentos. */
-  perPlayer: { who: KittensPerson; nopes: number; defuses: number }[];
+  /**
+   * Nem vem! dados, Desarmes usados e vezes que foi alvo de magia por cada um, na ordem dos assentos. `targeted` só
+   * existe nas partidas gravadas desde 2026-11-09.
+   */
+  perPlayer: { who: KittensPerson; nopes: number; defuses: number; targeted?: number }[];
 }
 
 /** Id da partida: muda a cada partida (`match`) e a cada sessão que sai do lobby (`runStartedAt`). */
@@ -74,7 +77,7 @@ export function pendingKittensRecord(room: Room, now: number, id: string): { key
       winner,
       perPlayer: players.map(({ id: p, who }) => {
         const mine = Object.hasOwn(state.stats, p) ? state.stats[p]! : { nopes: 0, defuses: 0 };
-        return { who, nopes: mine.nopes, defuses: mine.defuses };
+        return { who, nopes: mine.nopes, defuses: mine.defuses, targeted: mine.targeted ?? 0 };
       }),
     },
   };

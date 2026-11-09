@@ -36,7 +36,7 @@ function over(): KittensState {
       { player: 'p2', how: 'boom' },
       { player: 'p0', how: 'left' },
     ],
-    stats: { p0: { nopes: 2, defuses: 0 }, p1: { nopes: 1, defuses: 2 } },
+    stats: { p0: { nopes: 2, defuses: 0, targeted: 3 }, p1: { nopes: 1, defuses: 2 } },
   };
 }
 
@@ -57,9 +57,9 @@ describe('Tatubum: registro da partida pro histórico', () => {
         winner: BETO,
         // Quem não tem contador (Caio) entra com zero.
         perPlayer: [
-          { who: ANA, nopes: 2, defuses: 0 },
-          { who: BETO, nopes: 1, defuses: 2 },
-          { who: CAIO, nopes: 0, defuses: 0 },
+          { who: ANA, nopes: 2, defuses: 0, targeted: 3 },
+          { who: BETO, nopes: 1, defuses: 2, targeted: 0 },
+          { who: CAIO, nopes: 0, defuses: 0, targeted: 0 },
         ],
       },
     });

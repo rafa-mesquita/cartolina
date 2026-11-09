@@ -302,6 +302,12 @@ export interface KittensPlayerStats {
   nopes: number;
   /** Desarmes usados (contra o Tatubum comprado ou o Tatu Latidor, inclusive o jogado sozinho no fim do prazo). */
   defuses: number;
+  /**
+   * Vezes que foi alvo de uma magia (pedido do Rafa, 2026-11-09): escolhido numa jogada com alvo (Favor, trio de Favor,
+   * Mau-olhado, par de Tucano, par de Latidores), com ou sem Nem vem! depois, ou quem recebeu a magia de volta pelo Sapo.
+   * Sala salva antes não tem: conta de 0.
+   */
+  targeted?: number;
 }
 
 export type KittensAction =

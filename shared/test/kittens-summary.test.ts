@@ -18,6 +18,7 @@ function match(
   exits: KittensPerson[],
   nopes: Record<string, number> = {},
   playedAt = ++seq,
+  targeted?: Record<string, number>,
 ): KittensMatchRecord {
   return {
     id: `m${playedAt}`,
@@ -27,7 +28,12 @@ function match(
     players,
     exits: exits.map((who) => ({ who, how: 'boom' })),
     winner,
-    perPlayer: players.map((who) => ({ who, nopes: nopes[who.name] ?? 0, defuses: 0 })),
+    perPlayer: players.map((who) => ({
+      who,
+      nopes: nopes[who.name] ?? 0,
+      defuses: 0,
+      ...(targeted ? { targeted: targeted[who.name] ?? 0 } : {}),
+    })),
   };
 }
 
@@ -41,12 +47,12 @@ describe('estatísticas da galera do Tatubum', () => {
   });
 
   it('sem partidas: quadros vazios', () => {
-    expect(summarizeKittensHistory([])).toEqual({ bestRate: [], mostWins: [], firstOut: [], nopeKings: [] });
+    expect(summarizeKittensHistory([])).toEqual({ bestRate: [], mostWins: [], firstOut: [], nopeKings: [], targeted: [] });
   });
 
   it('quem tem menos de 3 partidas só entra em "mais vitórias" (que não tem mínimo)', () => {
     const s = summarizeKittensHistory([match([ANA, BETO], ANA, [BETO], { Ana: 3 }), match([ANA, BETO], ANA, [BETO], { Ana: 1 })]);
-    expect(s).toEqual({ bestRate: [], mostWins: [{ name: 'Ana', color: ANA.color, count: 2, matches: 2, rate: 1 }], firstOut: [], nopeKings: [] });
+    expect(s).toEqual({ bestRate: [], mostWins: [{ name: 'Ana', color: ANA.color, count: 2, matches: 2, rate: 1 }], firstOut: [], nopeKings: [], targeted: [] });
   });
 
   it('maior % de vitórias (só com 10 partidas ou mais) e mais vitórias no geral', () => {
@@ -115,6 +121,20 @@ describe('estatísticas da galera do Tatubum', () => {
       { name: 'Beto', color: BETO.color, count: 9, matches: 3, rate: 3 },
       { name: 'Duda', color: DUDA.color, count: 10, matches: 4, rate: 2.5 },
       { name: 'Caio', color: CAIO.color, count: 6, matches: 3, rate: 2 },
+    ]);
+  });
+
+  it('alvo preferido: média por partida, contando só as partidas gravadas com a contagem de alvo', () => {
+    const ms = [
+      // Partidas antigas (sem a contagem): não entram na média de ninguém.
+      ...times(5, () => match([ANA, BETO, CAIO], ANA, [BETO, CAIO])),
+      ...times(3, () => match([ANA, BETO, CAIO], ANA, [BETO, CAIO], {}, ++seq, { Ana: 1, Beto: 4, Caio: 0 })),
+      // Duda: só 2 partidas com a contagem, fica de fora (mínimo de 3).
+      ...times(2, () => match([DUDA, ELI], DUDA, [ELI], {}, ++seq, { Duda: 9, Eli: 0 })),
+    ];
+    expect(summarizeKittensHistory(ms).targeted).toEqual([
+      { name: 'Beto', color: BETO.color, count: 12, matches: 3, rate: 4 },
+      { name: 'Ana', color: ANA.color, count: 3, matches: 3, rate: 1 },
     ]);
   });
 

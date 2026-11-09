@@ -72,30 +72,45 @@ describe('contadores do histórico: partida, saídas, Nem vem! e Desarmes', () =
     const start = table({ hands: { p0: ['ataque-0'], p1: ['nemvem-1', 'nemvem-2'], p2: [] }, draw: ['mico-9'] });
     const air = act(start, 'p0', { type: 'play', cards: ['ataque-0'] }, ctx);
     const noped = act(air, 'p1', { type: 'nope', at: 0 }, at(1000));
-    expect(noped.stats.p1).toEqual({ nopes: 1, defuses: 0 });
+    expect(noped.stats.p1).toMatchObject({ nopes: 1, defuses: 0 });
     // Atrasado (viu 0 Nem vem! na carta no ar): recusado, não conta.
     expect(refuse(noped, 'p1', { type: 'nope', at: 0 }, at(1500))).toBe('nope_late');
-    expect(act(noped, 'p1', { type: 'nope', at: 1 }, at(3000)).stats.p1).toEqual({ nopes: 2, defuses: 0 });
+    expect(act(noped, 'p1', { type: 'nope', at: 1 }, at(3000)).stats.p1).toMatchObject({ nopes: 2, defuses: 0 });
+  });
+
+  it('alvo de magia conta pra quem foi escolhido (mesmo com Nem vem! depois) e pra quem recebe de volta pelo Sapo', () => {
+    const start = { ...table({ hands: { p0: ['favor-0', 'favor-1'], p1: ['nemvem-1', 'sapo-0', 'sapo-1'], p2: [] }, draw: ['mico-9'] }), bichos: ['sapo'] as KittensState['bichos'] };
+    const air = act(start, 'p0', { type: 'play', cards: ['favor-0'], target: 'p1' }, ctx);
+    expect(air.stats.p1).toMatchObject({ targeted: 1 });
+    expect(air.stats.p0?.targeted ?? 0).toBe(0);
+    // Sapo: a magia volta pro p0, que passa a contar também.
+    const back = act(air, 'p1', { type: 'sapo', cards: ['sapo-0', 'sapo-1'] }, at(1000));
+    expect(back.stats.p0).toMatchObject({ targeted: 1 });
+    expect(back.stats.p1).toMatchObject({ targeted: 1 });
+    // Jogada sem alvo (Ataque) não conta pra ninguém.
+    const atk = table({ hands: { p0: ['ataque-0'], p1: [], p2: [] }, draw: ['mico-9'] });
+    const played = act(atk, 'p0', { type: 'play', cards: ['ataque-0'] }, ctx);
+    expect(Object.values(played.stats).every((x) => (x.targeted ?? 0) === 0)).toBe(true);
   });
 
   it('Desarme contra o Tatubum comprado conta, jogado à mão ou sozinho no fim do prazo', () => {
     const start = table({ hands: { p0: ['cafune-0'], p1: [], p2: [] }, draw: ['mico-9', 'tatubum-0'] });
     const drew = act(start, 'p0', { type: 'draw' }, ctx);
     expect(drew.stats.p0 ?? zero).toEqual(zero);
-    expect(act(drew, 'p0', { type: 'choose', card: 'cafune-0' }, at(1000)).stats.p0).toEqual({ nopes: 0, defuses: 1 });
+    expect(act(drew, 'p0', { type: 'choose', card: 'cafune-0' }, at(1000)).stats.p0).toMatchObject({ nopes: 0, defuses: 1 });
     const auto = settleKittens(deepFreeze(drew), at(KITTENS_CHOICE_MS));
     expect(auto.choice).toBeNull();
-    expect(auto.stats.p0).toEqual({ nopes: 0, defuses: 1 });
+    expect(auto.stats.p0).toMatchObject({ nopes: 0, defuses: 1 });
   });
 
   it('Desarme contra o Tatu Latidor conta, jogado à mão ou sozinho no fim do prazo', () => {
     const start = table({ hands: { p0: ['latido-0'], p1: ['latido-1', 'cafune-1'], p2: [] }, draw: ['mico-9', 'tatubum-0', 'tatubum-1'] });
     const barked = settleKittens(act(start, 'p0', { type: 'play', cards: ['latido-0'] }, ctx), at(5000));
     expect(barked.choice).toMatchObject({ kind: 'latido', who: 'p1' });
-    expect(act(barked, 'p1', { type: 'choose', card: 'cafune-1' }, at(6000)).stats.p1).toEqual({ nopes: 0, defuses: 1 });
+    expect(act(barked, 'p1', { type: 'choose', card: 'cafune-1' }, at(6000)).stats.p1).toMatchObject({ nopes: 0, defuses: 1 });
     const auto = settleKittens(deepFreeze(barked), at(5000 + KITTENS_CHOICE_MS));
     expect(auto.choice).toBeNull();
-    expect(auto.stats.p1).toEqual({ nopes: 0, defuses: 1 });
+    expect(auto.stats.p1).toMatchObject({ nopes: 0, defuses: 1 });
   });
 });
 
