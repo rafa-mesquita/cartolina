@@ -94,12 +94,12 @@ describe('par de Tucano: o efeito', () => {
     }
   });
 
-  it('alvo devendo 2 turnos (Ataque): a pulada gasta um deles e ele joga o outro', () => {
+  it('alvo devendo turnos de Ataque: a pulada leva a vez inteira, com os turnos do Ataque (pedido do Rafa, 2026-11-08)', () => {
     const s = resolved(mesa({ hands: { p0: ['tucano-0', 'tucano-1', 'ataque-0'], p1: [], p2: [], p3: [] } }), tucano('p2'));
     expect(s).toMatchObject({ current: 'p1', skips: { p2: 1 } });
-    // p1 ataca: p2 deve 2, a pulada gasta um.
+    // p1 ataca: p2 devia 2, mas a vez dele é pulada inteira e vai pro p3 com 1 turno.
     const attacked = resolved({ ...s, hands: { ...s.hands, p1: ['ataque-1'] } }, { type: 'play', cards: ['ataque-1'] }, 'p1');
-    expect(attacked).toMatchObject({ current: 'p2', owed: 1, skips: {} });
+    expect(attacked).toMatchObject({ current: 'p3', owed: 1, skips: {} });
     expect(skippedIn(attacked, s.seq)).toEqual(['p2']);
   });
 
@@ -118,11 +118,11 @@ describe('par de Tucano: o efeito', () => {
     expect(skippedIn(t, before)).toEqual(['p2']);
   });
 
-  it('duas puladas devendo 2 turnos: as duas se gastam e a vez segue', () => {
+  it('duas puladas devendo 2 turnos: só uma se gasta (leva a vez inteira) e a outra fica pra próxima', () => {
     const s = { ...mesa({ hands: { p0: ['ataque-0'], p1: [], p2: [], p3: [] } }), skips: { p1: 2 } };
     const attacked = resolved(s, { type: 'play', cards: ['ataque-0'] });
-    expect(attacked).toMatchObject({ current: 'p2', owed: 1, skips: {} });
-    expect(skippedIn(attacked, s.seq)).toEqual(['p1', 'p1']);
+    expect(attacked).toMatchObject({ current: 'p2', owed: 1, skips: { p1: 1 } });
+    expect(skippedIn(attacked, s.seq)).toEqual(['p1']);
   });
 
   it('puladas em cadeia: vários seguidos perdem a vez', () => {
