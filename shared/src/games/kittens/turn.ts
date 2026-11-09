@@ -28,8 +28,9 @@ export function nextAlive(state: KittensState, from: string): string | null {
  * cartas saírem do monte ou o monte mudar de ordem.
  *
  * Único lugar onde a vez muda de mão, então é aqui que o par de Tucano vale (pedido do Rafa, 2026-10-21): quem recebe a
- * vez com vez pulada (`skips`) perde 1 turno sem jogar nem comprar (diário: `skipped`). Devendo 2 (Ataque), a pulada gasta
- * um deles e ele continua na vez; devendo 1, a vez segue pro próximo, que também pode ter vez pulada (pulas em cadeia).
+ * vez com vez pulada (`skips`) perde a vez inteira sem jogar nem comprar (diário: `skipped`): mesmo devendo turnos de um
+ * Ataque, eles se perdem (pedido do Rafa, 2026-11-08; antes a pulada gastava só um). A vez segue pro próximo com 1 turno,
+ * e ele também pode ter vez pulada (pulas em cadeia).
  * Sempre acaba: cada volta gasta uma pulada. Se todos os outros tinham, as puladas se gastam na ordem e a vez volta.
  * Com 1 vivo (ou ninguém) não pula: a partida já acabou.
  */
@@ -40,7 +41,7 @@ export function passTo(state: KittensState, next: string | null, owed: number): 
     const left = s.skips[who]! - 1;
     const skips = Object.fromEntries(Object.entries(s.skips).filter(([p]) => p !== who));
     s = logged({ ...s, skips: left > 0 ? { ...skips, [who]: left } : skips }, { t: 'skipped', who });
-    s = s.owed > 1 ? { ...s, owed: s.owed - 1 } : { ...s, current: nextAlive(s, who), owed: 1 };
+    s = { ...s, current: nextAlive(s, who), owed: 1 };
   }
   return s;
 }

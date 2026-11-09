@@ -450,8 +450,6 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
       marked.set(who, k - 1);
     }
     if (new Set(skipped).size >= 2) seen.add('skipped:chain');
-    // A pulada gastou um dos turnos de Ataque e ele continua na vez.
-    if (s.current !== null && skipped.includes(s.current)) seen.add('skipped:owed');
     if (s.choice?.kind === 'favor' && c?.kind === 'favor' && s.choice.left < c.left) seen.add('favor:again');
     // Tatu Latidor (pedido do Rafa, 2026-10-21): quem se defende tem Latidor e Desarme; a fila passa de um pro outro; e
     // quando ela acaba (partida seguindo), nenhum vivo além de quem jogou tem Latidor.
@@ -579,8 +577,6 @@ describe('simulação aleatória do Tatubum', () => {
       'peixe:bottom',
       'onca:pega',
       'pombo',
-      // 'skipped:owed' (a pulada gasta um dos turnos de Ataque) só aparecia no 1x1, que não pula mais ninguém
-      // (2026-11-03); fica nos testes do Tucano (kittens-tucano.test.ts).
     ];
     const seen = new Set<string>();
     // Joga partidas (as mesmas sementes dos testes de cima, em ordem) até ver tudo, com um teto.
