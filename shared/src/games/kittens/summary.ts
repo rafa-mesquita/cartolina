@@ -27,6 +27,12 @@ export interface KittensStats {
   firstOut: KittensStatEntry[];
   /** Rei do Nem vem!: `count` = Nem vem! dados no total; ordem pela média por partida (`rate`). */
   nopeKings: KittensStatEntry[];
+  /**
+   * Alvo preferido (pedido do Rafa, 2026-11-09): `count` = vezes que foi alvo de magia; ordem pela média por partida
+   * (`rate`). `matches` conta só as partidas gravadas com essa estatística (desde 2026-11-09). Resposta de servidor
+   * antigo não tem.
+   */
+  targeted?: KittensStatEntry[];
 }
 
 interface Tally {
@@ -36,6 +42,9 @@ interface Tally {
   wins: number;
   first: number;
   nopes: number;
+  targeted: number;
+  /** Partidas gravadas com a contagem de alvo (as de antes de 2026-11-09 não têm). */
+  targetMatches: number;
 }
 
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'pt-BR');
@@ -49,11 +58,12 @@ function board(
   count: (t: Tally) => number,
   primary: 'rate' | 'count',
   min = KITTENS_STATS_MIN_MATCHES,
+  matches: (t: Tally) => number = (t) => t.matches,
 ): KittensStatEntry[] {
   const second = primary === 'rate' ? 'count' : 'rate';
   return tallies
-    .filter((t) => t.matches >= min && count(t) > 0)
-    .map((t) => ({ name: t.name, color: t.color, count: count(t), matches: t.matches, rate: count(t) / t.matches }))
+    .filter((t) => matches(t) >= min && count(t) > 0)
+    .map((t) => ({ name: t.name, color: t.color, count: count(t), matches: matches(t), rate: count(t) / matches(t) }))
     .sort((a, b) => b[primary] - a[primary] || b[second] - a[second] || byName(a, b))
     .slice(0, KITTENS_TOP_PEOPLE);
 }
@@ -66,7 +76,7 @@ export function summarizeKittensHistory(matches: readonly KittensMatchRecord[]):
   const ordered = [...matches].sort((a, b) => a.playedAt - b.playedAt);
   const tallies = new Map<string, Tally>();
   const tallyOf = (p: KittensPerson): Tally => {
-    const t = tallies.get(p.name) ?? { name: p.name, color: p.color, matches: 0, wins: 0, first: 0, nopes: 0 };
+    const t = tallies.get(p.name) ?? { name: p.name, color: p.color, matches: 0, wins: 0, first: 0, nopes: 0, targeted: 0, targetMatches: 0 };
     t.color = p.color;
     tallies.set(p.name, t);
     return t;
@@ -82,7 +92,14 @@ export function summarizeKittensHistory(matches: readonly KittensMatchRecord[]):
     tallyOf(m.winner).wins++;
     const first = m.exits[0];
     if (first) tallyOf(first.who).first++;
-    for (const x of m.perPlayer) tallyOf(x.who).nopes += x.nopes;
+    for (const x of m.perPlayer) {
+      const t = tallyOf(x.who);
+      t.nopes += x.nopes;
+      if (x.targeted !== undefined) {
+        t.targeted += x.targeted;
+        t.targetMatches++;
+      }
+    }
   }
   const all = [...tallies.values()];
   return {
@@ -90,5 +107,6 @@ export function summarizeKittensHistory(matches: readonly KittensMatchRecord[]):
     mostWins: board(all, (t) => t.wins, 'count', 1),
     firstOut: board(all, (t) => t.first, 'count'),
     nopeKings: board(all, (t) => t.nopes, 'rate'),
+    targeted: board(all, (t) => t.targeted, 'rate', KITTENS_STATS_MIN_MATCHES, (t) => t.targetMatches),
   };
 }

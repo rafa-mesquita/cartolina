@@ -124,6 +124,11 @@ function GaleraBoards({ stats }: { stats: KittensStats }) {
           rows={stats.nopeKings}
           detail={(e) => `${decimal.format(e.rate)} por partida · ${e.count} em ${plural(e.matches, 'partida', 'partidas')}`}
         />
+        <Board
+          title="alvo preferido"
+          rows={stats.targeted ?? []}
+          detail={(e) => `alvo de ${decimal.format(e.rate)} magias por partida · ${e.count} em ${plural(e.matches, 'partida', 'partidas')}`}
+        />
       </div>
     </section>
   );

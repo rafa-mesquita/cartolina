@@ -71,6 +71,7 @@ const STATS: KittensStats = {
   ],
   firstOut: [{ ...CAIO, count: 1, matches: 3, rate: 1 / 3 }],
   nopeKings: [{ ...BETO, count: 10, matches: 4, rate: 2.5 }],
+  targeted: [{ ...CAIO, count: 7, matches: 5, rate: 1.4 }],
 };
 
 function response(matches: KittensMatchRecord[], nextBefore: number | null = null, stats: KittensStats | null = NO_STATS): KittensHistoryResponse {
@@ -130,7 +131,7 @@ describe('aba histórico do Tatubum', () => {
     expect(second!.getAttribute('aria-label')).toBe(`${dateText(AT_OLD)} · Ana venceu · jogaram Ana e Beto · saíram Beto (explodiu)`);
   });
 
-  it('estatísticas da galera: quatro quadros com o top 3; quadro vazio pede mais partidas', async () => {
+  it('estatísticas da galera: cinco quadros com o top 3; quadro vazio pede mais partidas', async () => {
     vi.mocked(api.getHistory).mockResolvedValue(response([NEWER], null, { ...STATS, firstOut: [] }));
     render(<KittensHistory />);
     const galera = (await screen.findByRole('heading', { name: 'a galera' })).closest('section')!;
@@ -144,6 +145,15 @@ describe('aba histórico do Tatubum', () => {
     expect(within(wins).getByText('1 vitória em 10 partidas')).toBeTruthy();
     expect(within(board('quem explode primeiro')).getByText('joguem mais umas partidas')).toBeTruthy();
     expect(within(board('rei do Nem vem!')).getByText('2,5 por partida · 10 em 4 partidas')).toBeTruthy();
+    expect(within(board('alvo preferido')).getByText('alvo de 1,4 magias por partida · 7 em 5 partidas')).toBeTruthy();
+  });
+
+  it('servidor antigo (sem o quadro do alvo): o quadro aparece vazio', async () => {
+    const { targeted: _t, ...old } = STATS;
+    vi.mocked(api.getHistory).mockResolvedValue(response([NEWER], null, old));
+    render(<KittensHistory />);
+    const galera = (await screen.findByRole('heading', { name: 'a galera' })).closest('section')!;
+    expect(within(within(galera).getByRole('region', { name: 'alvo preferido' })).getByText('joguem mais umas partidas')).toBeTruthy();
   });
 
   it('maior % de vitórias vazio: diz que precisa de 10 partidas', async () => {

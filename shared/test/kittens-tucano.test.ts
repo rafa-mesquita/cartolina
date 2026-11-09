@@ -170,7 +170,7 @@ describe('par de Tucano: o efeito', () => {
     const air = act(s, 'p0', tucano('p2'), ctx);
     const noped = settleKittens(act(air, 'p1', { type: 'nope' }, at(1000)), at(6000));
     expect(noped).toMatchObject({ current: 'p0', owed: 1, skips: {} });
-    expect(noped.stats.p1).toEqual({ nopes: 1, defuses: 0 });
+    expect(noped.stats.p1).toMatchObject({ nopes: 1, defuses: 0 });
   });
 
   it('o alvo saiu antes de resolver: a jogada não vale', () => {

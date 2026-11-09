@@ -1,10 +1,10 @@
 import { kittensKindOf } from './cards';
 import { KITTENS_LOG_SIZE, type KittensEvent, type KittensExitHow, type KittensPlayerStats, type KittensState } from './types';
 
-/** Soma 1 no contador `key` de `p` (Nem vem! dados ou Desarmes usados), pro histórico. */
+/** Soma 1 no contador `key` de `p` (Nem vem! dados, Desarmes usados ou vezes que foi alvo), pro histórico. */
 export function counted(state: KittensState, p: string, key: keyof KittensPlayerStats): KittensState {
-  const mine = Object.hasOwn(state.stats, p) ? state.stats[p]! : { nopes: 0, defuses: 0 };
-  return { ...state, stats: { ...state.stats, [p]: { ...mine, [key]: mine[key] + 1 } } };
+  const mine = Object.hasOwn(state.stats, p) ? state.stats[p]! : { nopes: 0, defuses: 0, targeted: 0 };
+  return { ...state, stats: { ...state.stats, [p]: { ...mine, [key]: (mine[key] ?? 0) + 1 } } };
 }
 
 /** Acrescenta ao diário (só as últimas KITTENS_LOG_SIZE ficam). `seenBy`: quem vê a carta do evento (null = todos). */
