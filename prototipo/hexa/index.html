@@ -84,6 +84,13 @@ body.tema-c{
 }
 body.tema-c .btn{border-style:solid;border-color:#7a2520;outline:2px dashed rgba(255,248,234,.7);outline-offset:-6px}
 body.tema-c .jogadores .jog, body.tema-c .box, body.tema-c .carta{border-style:dashed}
+/* ---------- D: caatinga ao sol ---------- */
+body.tema-d{
+  --bg:#f3dcb4;--ink:#4a2e1f;--panel:#fff6e6;--card:#fff6e6;--card-dev:#f6e0bd;--accent:#b8321f;--accent-ink:#fff6e6;
+  --btn:#c8643b;--btn-ink:#fff6e6;--die:#fff6e6;--die-ink:#4a2e1f;
+  --ft:400 1em 'Bree Serif',serif;--fb:'Mulish',sans-serif;--bd:2px solid #5b3a29;--rad:10px;--rad-s:8px;--sh:0 3px 0 #5b3a29;
+  background-image:radial-gradient(ellipse at 50% -10%,rgba(255,214,120,.65),transparent 60%),linear-gradient(#f7e6c4,#ecc896);
+}
 </style>
 </head>
 <body class="tema-a">
@@ -116,6 +123,7 @@ body.tema-c .jogadores .jog, body.tema-c .box, body.tema-c .carta{border-style:d
   <button data-t="a">A · Sertãozim</button>
   <button data-t="b">B · Ilhota</button>
   <button data-t="c">C · Fuxico</button>
+  <button data-t="d">D · Mandacaru</button>
   <span class="sep"></span>
   <button id="sortear">🎲 sortear outro tabuleiro</button>
 </div>
@@ -127,7 +135,7 @@ let seed = Number(new URLSearchParams(location.search).get('s')) || 20261109;
 let tema = new URLSearchParams(location.search).get('t') || 'a';
 
 function resIcon(T, res) {
-  return res === 'pasto' ? T.icons.pasto : res === 'roca' ? T.icons.roca : res;
+  return T.icons[res] ?? (res === 'pasto' ? T.icons.pasto : res === 'roca' ? T.icons.roca : res);
 }
 
 function render() {

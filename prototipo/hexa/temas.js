@@ -42,6 +42,30 @@ function icon(kind, s) {
       return `<circle cx="50" cy="50" r="16" fill="${f2}" ${st}/><path d="M50 16 V26 M50 74 V84 M16 50 H26 M74 50 H84 M26 26 L33 33 M67 67 L74 74 M26 74 L33 67 M67 33 L74 26" fill="none" ${st}/>`;
     case 'causo':
       return `<rect x="22" y="14" width="56" height="72" rx="6" fill="${f2}" ${st}/><path d="M50 30 L56 44 L70 44 L59 53 L63 68 L50 59 L37 68 L41 53 L30 44 L44 44 Z" fill="${f}" ${st} stroke-width="${s.sw * 0.6}"/>`;
+    case 'catingueira':
+      // Árvore seca retorcida da caatinga, com folhinhas miúdas.
+      return `<path d="M50 90 Q45 72 52 60 Q58 48 47 38 M52 60 Q66 52 72 36 M47 38 Q38 30 27 32 M47 38 Q50 25 58 16 M72 36 Q79 30 86 32 M27 32 Q20 28 17 19 M58 16 Q63 12 66 6" fill="none" stroke="${s.ink}" stroke-width="${s.sw * 1.5}" stroke-linecap="round"/>
+        <g fill="${f}"><circle cx="17" cy="17" r="4"/><circle cx="66" cy="6" r="4"/><circle cx="87" cy="31" r="4"/><circle cx="27" cy="31" r="3.5"/><circle cx="72" cy="35" r="3.5"/><circle cx="58" cy="15" r="3.5"/></g>
+        <path d="M30 90 H70" fill="none" ${st}/>`;
+    case 'bode':
+      return `<path d="M26 48 L19 41" fill="none" ${st}/><ellipse cx="46" cy="55" rx="22" ry="13" fill="${f2}" ${st}/>
+        <path d="M34 66 V84 M42 67 V84 M54 67 V84 M61 65 V84" fill="none" ${st}/>
+        <path d="M64 50 Q66 38 76 36 Q86 38 86 46 Q84 54 76 56 Q68 56 64 50 Z" fill="${f2}" ${st}/>
+        <path d="M74 37 Q70 24 60 22 M80 37 Q80 26 72 20" fill="none" ${st}/><path d="M80 55 L79 66" fill="none" ${st}/>
+        <circle cx="79" cy="44" r="2.6" fill="${s.ink}"/>`;
+    case 'feijao':
+      return `<path d="M50 90 V40 M50 62 Q36 58 30 46 M50 54 Q64 50 70 38" fill="none" ${st}/>
+        <path d="M50 40 Q38 30 44 16 Q56 24 50 40 Z M30 46 Q16 42 16 28 Q30 30 30 46 Z M70 38 Q84 36 86 22 Q72 22 70 38 Z" fill="${f}" ${st}/>
+        <path d="M50 70 Q30 72 22 88 Q40 86 50 72 Z" fill="${f2}" ${st}/><path d="M50 66 Q70 66 80 82 Q62 82 50 68 Z" fill="${f2}" ${st}/>`;
+    case 'pote':
+      return `<path d="M36 22 H64 V30 Q82 42 80 62 Q76 86 50 88 Q24 86 20 62 Q18 42 36 30 Z" fill="${f2}" ${st}/>
+        <path d="M32 22 H68" fill="none" ${st}/><path d="M26 54 Q50 62 74 54" fill="none" ${st} stroke-width="${s.sw * 0.7}"/><path d="M28 64 Q50 72 72 64" fill="none" ${st} stroke-width="${s.sw * 0.7}"/>`;
+    case 'lajedo':
+      return `<path d="M8 84 Q10 58 34 56 Q46 40 64 48 Q88 50 92 84 Z" fill="${f}" ${st}/><path d="M40 56 Q48 46 58 50 M64 62 Q72 58 80 64 M22 70 Q28 66 34 70" fill="none" ${st} stroke-width="${s.sw * 0.7}"/>
+        <path d="M58 48 Q60 30 74 28 Q84 32 82 46" fill="${f2}" ${st}/>`;
+    case 'rachado':
+      return `<circle cx="74" cy="24" r="11" fill="${f2}" ${st}/>
+        <path d="M8 58 L28 52 L44 62 L62 52 L92 60 M28 52 L24 40 M44 62 L42 84 M62 52 L70 40 M62 52 L76 82 M44 62 L24 82" fill="none" ${st}/>`;
     default:
       return '';
   }
@@ -279,5 +303,91 @@ const C = {
   },
 };
 
-window.TEMAS = { a: A, b: B, c: C };
+// ============================================================
+// D) Mandacaru — caatinga ao sol, ilustração chapada; a borda é terra rachada com feiras
+// ============================================================
+const D = {
+  id: 'd',
+  nome: 'Mandacaru',
+  sub: 'faça a caatinga florir',
+  fonts: 'family=Bree+Serif&family=Mulish:wght@600;800',
+  colors: ['#b8321f', '#2f6fa8', '#7b4a9a', '#f4efe3'],
+  terrenos: { mata: 'caatinga', pasto: 'malhada', roca: 'roçado', barreiro: 'barreiro', serra: 'lajedo', deserto: 'rio seco' },
+  recursos: { madeira: 'madeira', barro: 'barro', pasto: 'couro', roca: 'feijão', pedra: 'pedra' },
+  icons: { mata: 'catingueira', madeira: 'catingueira', pasto: 'bode', roca: 'feijao', barreiro: 'pote', barro: 'pote', serra: 'lajedo', pedra: 'lajedo', deserto: 'rachado' },
+  pecas: { estrada: 'estrada', aldeia: 'casa', cidade: 'vila', carta: 'cordel' },
+  ladrao: 'Carcará',
+  defs: `
+    <filter id="d-som" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="0" flood-color="#5b3a29" flood-opacity=".9"/></filter>
+    <pattern id="d-grao" width="12" height="12" patternUnits="userSpaceOnUse"><circle cx="2" cy="3" r=".9" fill="#5b3a29" opacity=".18"/><circle cx="8" cy="9" r=".9" fill="#fff" opacity=".25"/><circle cx="9" cy="2" r=".7" fill="#5b3a29" opacity=".12"/></pattern>
+    <pattern id="d-racha" width="70" height="60" patternUnits="userSpaceOnUse"><rect width="70" height="60" fill="#d9a56c"/>
+      <path d="M0 18 L16 22 L24 10 L40 14 L52 4 M16 22 L20 38 L8 50 M20 38 L38 42 L50 30 L70 34 M38 42 L42 60 M50 30 L52 4 M52 30 L62 50 L70 52" fill="none" stroke="#a86d3c" stroke-width="2" stroke-linejoin="round"/></pattern>
+    <linearGradient id="d-sol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#5b3a29" stop-opacity=".12"/></linearGradient>`,
+  fill: { mata: '#8f9c6c', pasto: '#d4b878', roca: '#9db35a', barreiro: '#c8643b', serra: '#aaa49a', deserto: '#e8cd96' },
+  rim: { mata: '#67724a', pasto: '#a98c4f', roca: '#728a35', barreiro: '#963f22', serra: '#7c766c', deserto: '#bf9f62' },
+  iconStyle: { ink: '#4a2e1f', fill: '#5f7a3a', fill2: '#fbf1dc', light: '#fbf1dc', sw: 3.6 },
+  hex(h) {
+    const ic = this.icons[h.terrain] ?? h.terrain;
+    return `<g filter="url(#d-som)"><path d="${hexPath(h.pts, 0.97, h.x, h.y)}" fill="${this.rim[h.terrain]}" stroke="#5b3a29" stroke-width="2.5"/></g>
+      <path d="${hexPath(h.pts, 0.88, h.x, h.y - 2)}" fill="${this.fill[h.terrain]}"/>
+      <path d="${hexPath(h.pts, 0.88, h.x, h.y - 2)}" fill="url(#d-grao)"/>
+      <path d="${hexPath(h.pts, 0.88, h.x, h.y - 2)}" fill="url(#d-sol)"/>
+      <g transform="translate(${h.x - 25},${h.y - (h.number ? 54 : 30)}) scale(.5)">${icon(ic, this.iconStyle)}</g>`;
+  },
+  ocean(o) {
+    return `<path d="${hexPath(o.pts)}" fill="url(#d-racha)"/>`;
+  },
+  token(h) {
+    const red = h.number === 6 || h.number === 8;
+    const c = red ? '#b8321f' : '#4a2e1f';
+    const dots = Array.from({ length: pip(h.number) }, (_, i) => `<circle cx="${h.x + (i - (pip(h.number) - 1) / 2) * 5}" cy="${h.y + 25}" r="1.8" fill="${c}"/>`).join('');
+    return `<g filter="url(#d-som)"><circle cx="${h.x}" cy="${h.y + 10}" r="21" fill="#fbf1dc" stroke="#5b3a29" stroke-width="2.5"/></g>
+      <circle cx="${h.x}" cy="${h.y + 10}" r="17" fill="none" stroke="#c8643b" stroke-width="1.5"/>
+      <text x="${h.x}" y="${h.y + 17}" text-anchor="middle" font-family="Bree Serif" font-size="20" fill="${c}">${h.number}</text>${dots}`;
+  },
+  port(p, label) {
+    // Feira: barraca de toldo listrado na beira da estrada de terra.
+    const x = p.x;
+    const y = p.y;
+    const stripes = [0, 1, 2, 3, 4, 5].map((i) => `<path d="M${x - 24 + i * 8} ${y - 14} h8 l-2 9 h-8 Z" fill="${i % 2 ? '#fbf1dc' : '#b8321f'}" stroke="#5b3a29" stroke-width="1.2"/>`).join('');
+    return `<path d="M${p.a.x},${p.a.y} L${x},${y} L${p.b.x},${p.b.y}" fill="none" stroke="#7a4a2a" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 8"/>
+      <g filter="url(#d-som)"><rect x="${x - 23}" y="${y - 6}" width="44" height="22" rx="3" fill="#fbf1dc" stroke="#5b3a29" stroke-width="2"/></g>${stripes}
+      ${p.type === '3:1' ? `<text x="${x - 1}" y="${y + 11}" text-anchor="middle" font-family="Bree Serif" font-size="14" fill="#4a2e1f">3:1</text>`
+        : `<text x="${x - 9}" y="${y + 11}" text-anchor="middle" font-family="Bree Serif" font-size="12" fill="#4a2e1f">2:1</text><g transform="translate(${x + 2},${y - 5}) scale(.19)">${icon(label, this.iconStyle)}</g>`}`;
+  },
+  road(rd, c) {
+    return `<line x1="${rd.a.x}" y1="${rd.a.y}" x2="${rd.b.x}" y2="${rd.b.y}" stroke="#5b3a29" stroke-width="12" stroke-linecap="round"/><line x1="${rd.a.x}" y1="${rd.a.y}" x2="${rd.b.x}" y2="${rd.b.y}" stroke="${c}" stroke-width="7" stroke-linecap="round"/>`;
+  },
+  settle(x, y, c) {
+    // Casa de taipa: parede na cor do jogador, telhado de telha.
+    return `<g transform="translate(${x},${y})"><g filter="url(#d-som)"><path d="M-12 10 V-3 H12 V10 Z" fill="${c}" stroke="#5b3a29" stroke-width="2.2"/></g>
+      <path d="M-15 -2 L0 -14 L15 -2 Z" fill="#a4462a" stroke="#5b3a29" stroke-width="2.2" stroke-linejoin="round"/><rect x="-3" y="2" width="6" height="8" fill="#5b3a29"/></g>`;
+  },
+  city(x, y, c) {
+    // Vila: casario com a torre da igrejinha.
+    return `<g transform="translate(${x},${y})"><g filter="url(#d-som)"><path d="M-19 11 V-2 H0 V-16 H12 V11 Z" fill="${c}" stroke="#5b3a29" stroke-width="2.2"/></g>
+      <path d="M-22 -1 L-10 -11 L2 -1 Z" fill="#a4462a" stroke="#5b3a29" stroke-width="2.2" stroke-linejoin="round"/>
+      <path d="M-2 -15 L6 -25 L14 -15 Z" fill="#a4462a" stroke="#5b3a29" stroke-width="2.2" stroke-linejoin="round"/>
+      <path d="M6 -10 V-4 M3 -7 H9" stroke="#5b3a29" stroke-width="2"/><rect x="-13" y="3" width="6" height="8" fill="#5b3a29"/></g>`;
+  },
+  robber(x, y) {
+    // Carcará de pé: capuz preto, cara vermelha, peito claro listrado.
+    return `<g transform="translate(${x},${y - 2})">
+      <ellipse cx="0" cy="30" rx="16" ry="4" fill="#5b3a29" opacity=".3"/>
+      <path d="M-4 18 V29 M4 18 V29" stroke="#e8b23a" stroke-width="3" stroke-linecap="round"/>
+      <path d="M-8 18 L-13 34 L2 32 L1 18 Z" fill="#3e2a1d" stroke="#2a1c13" stroke-width="1.5"/>
+      <path d="M-11 34 L-11 30 M-6 33 L-6 29" stroke="#efe2c4" stroke-width="1.4"/>
+      <path d="M-14 4 Q-17 -14 -2 -17 Q13 -17 14 0 Q14 16 1 21 Q-11 18 -14 4 Z" fill="#5a3a26" stroke="#2a1c13" stroke-width="1.8"/>
+      <path d="M-1 -15 Q11 -13 11 -1 Q8 7 -1 6 Q-6 -4 -1 -15 Z" fill="#efe2c4"/>
+      <path d="M1 -8 H9 M0 -3 H9 M1 2 H8" stroke="#8a6a4a" stroke-width="1.3"/>
+      <path d="M-12 -2 Q-8 8 -2 16" fill="none" stroke="#2a1c13" stroke-width="1.5"/>
+      <circle cx="2" cy="-24" r="9.5" fill="#efe2c4" stroke="#2a1c13" stroke-width="1.8"/>
+      <path d="M-7.5 -26 Q1 -38 11.5 -26 Q2 -30 -7.5 -26 Z" fill="#1d1a17"/>
+      <path d="M4 -26 Q12 -27 12 -21 Q8 -18 4 -22 Z" fill="#e0582a"/>
+      <circle cx="6" cy="-24" r="1.6" fill="#1d1a17"/>
+      <path d="M11 -25 Q19 -23 15 -16 L12.5 -19 Z" fill="#cfc6b2" stroke="#2a1c13" stroke-width="1.2"/></g>`;
+  },
+};
+
+window.TEMAS = { a: A, b: B, c: C, d: D };
 window.HexaArt = { icon, svgIcon, diceFace };
