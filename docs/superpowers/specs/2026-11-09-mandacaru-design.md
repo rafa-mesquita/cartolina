@@ -125,8 +125,10 @@ banco.
 - Quem está na vez **fecha negócio** com um jogador: com quem aceitou a oferta
   dele (nos termos da oferta) ou aceitando a proposta de alguém (nos termos da
   proposta). Na hora de fechar, os dois precisam ter as cartas; se não têm, a
-  ação é recusada (`cannot_afford`). Depois de um negócio fechado, a oferta e
-  todas as propostas somem.
+  ação é recusada (`cannot_afford`). O fechar leva o `id` da oferta ou da
+  proposta que ele viu: se ela mudou (ou sumiu) entre o clique e a ação, é
+  recusado (`stale_offer`), nunca fecha nos termos novos. Depois de um negócio
+  fechado, a oferta e todas as propostas somem.
 - **Feira**: quem está na vez troca com o banco, **4:1** sempre; **3:1** se tem
   casa/vila numa feira comum; **2:1** do recurso da feira de 2:1 onde tem
   casa/vila. Pode pedir várias de uma vez (múltiplos da taxa). O banco precisa
@@ -255,10 +257,12 @@ cordéis por jogador), `bank`, `cordelDeck`, `turn`, `setupStep`, `rolled`,
 `move_carcara`, `steal`, `build_road`, `build_house`, `build_city`,
 `buy_cordel`, `play_vaqueiro`, `play_mutirao`, `play_chuva`,
 `play_atravessador`, `offer`, `cancel_offer`, `respond` (aceito/não),
-`propose` (contraproposta ou proposta), `close_deal`, `feira`, `end_turn`.
+`propose` (contraproposta ou proposta), `close_deal` (`with`, `source:
+'offer' | 'proposal'` e `id` obrigatório da oferta/proposta), `feira`,
+`end_turn`.
 
 **Erros** (códigos curtos como nos outros jogos): `not_host`, `bad_phase`,
-`not_player`, `not_your_turn`, `not_enough_players`, `room_full`, `bad_spot`,
+`not_player`, `not_your_turn`, `need_3_players`, `room_full`, `bad_spot`,
 `cannot_afford`, `no_pieces`, `bank_empty`, `deck_empty`, `cordel_used`,
 `cordel_fresh`, `no_cordel`, `bad_trade`, `stale_offer`, `bad_discard`,
 `bad_target`.

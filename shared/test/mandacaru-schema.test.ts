@@ -15,7 +15,7 @@ describe('Mandacaru: schema das ações', () => {
       { type: 'play_chuva', resources: ['wood', 'stone'] },
       { type: 'offer', give: R, want: { ...R, wood: 0, stone: 1 } },
       { type: 'respond', offerId: 3, accept: true },
-      { type: 'close_deal', with: 'x', source: 'proposal' },
+      { type: 'close_deal', with: 'x', source: 'proposal', id: 4 },
       { type: 'feira', give: 'wood', want: 'beans', count: 2 },
       { type: 'end_turn' },
     ]) {
@@ -31,6 +31,7 @@ describe('Mandacaru: schema das ações', () => {
       { type: 'play_atravessador', resource: 'ouro' },
       { type: 'discard', cards: { ...R, wood: 1.5 } },
       { type: 'feira', give: 'wood', want: 'beans', count: 0 },
+      { type: 'close_deal', with: 'x', source: 'offer' },
       { type: 'voar' },
     ]) {
       expect(mandacaruActionSchema.safeParse(a).success, JSON.stringify(a)).toBe(false);

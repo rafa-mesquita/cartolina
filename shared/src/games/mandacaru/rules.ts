@@ -206,7 +206,7 @@ export function applyMandacaruAction(
     case 'propose':
       return done(propose(state, playerId, action.give, action.want), ctx);
     case 'close_deal':
-      return done(closeDeal(state, playerId, action.with, action.source), ctx);
+      return done(closeDeal(state, playerId, action.with, action.source, action.id), ctx);
     case 'feira':
       return done(feira(state, playerId, action.give, action.want, action.count ?? 1), ctx);
     case 'end_turn': {

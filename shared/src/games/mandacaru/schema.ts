@@ -31,7 +31,7 @@ export const mandacaruActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cancel_offer') }),
   z.object({ type: z.literal('respond'), offerId: z.number().int().nonnegative(), accept: z.boolean() }),
   z.object({ type: z.literal('propose'), give: resources, want: resources }),
-  z.object({ type: z.literal('close_deal'), with: playerId, source: z.enum(['offer', 'proposal']) }),
+  z.object({ type: z.literal('close_deal'), with: playerId, source: z.enum(['offer', 'proposal']), id: z.number().int().nonnegative() }),
   z.object({ type: z.literal('feira'), give: resource, want: resource, count: z.number().int().min(1).max(MANDACARU_BANK_EACH).optional() }),
   z.object({ type: z.literal('end_turn') }),
 ]);

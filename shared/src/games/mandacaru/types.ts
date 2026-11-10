@@ -199,8 +199,11 @@ export type MandacaruAction =
   | { type: 'respond'; offerId: number; accept: boolean }
   /** Contraproposta ou proposta pra quem está na vez: `give` = o que você dá. */
   | { type: 'propose'; give: Resources; want: Resources }
-  /** Quem está na vez fecha: com quem aceitou a oferta (`source: 'offer'`) ou aceitando a proposta dele (`'proposal'`). */
-  | { type: 'close_deal'; with: string; source: 'offer' | 'proposal' }
+  /**
+   * Quem está na vez fecha: com quem aceitou a oferta (`source: 'offer'`) ou aceitando a proposta dele (`'proposal'`).
+   * `id` é o da oferta ou da proposta que ele viu; se mudou desde então, `stale_offer`.
+   */
+  | { type: 'close_deal'; with: string; source: 'offer' | 'proposal'; id: number }
   /** Troca com o banco: dá `give` na taxa da feira e recebe `count` (padrão 1) de `want`. */
   | { type: 'feira'; give: Resource; want: Resource; count?: number }
   | { type: 'end_turn' };

@@ -13,12 +13,32 @@ describe('Mandacaru: troca entre jogadores', () => {
     s = act(s, 'p1', { type: 'respond', offerId: id, accept: true }, ctx);
     s = act(s, 'p2', { type: 'respond', offerId: id, accept: false }, ctx);
     expect(s.offer).toMatchObject({ accepted: ['p1'], rejected: ['p2'] });
-    expect(tryAct(s, 'p0', { type: 'close_deal', with: 'p2', source: 'offer' }, ctx)).toEqual({ ok: false, error: 'bad_target' });
-    s = act(s, 'p0', { type: 'close_deal', with: 'p1', source: 'offer' }, ctx);
+    expect(tryAct(s, 'p0', { type: 'close_deal', with: 'p2', source: 'offer', id }, ctx)).toEqual({ ok: false, error: 'bad_target' });
+    s = act(s, 'p0', { type: 'close_deal', with: 'p1', source: 'offer', id }, ctx);
     expect(s.hands.p0!.res).toEqual(res({ brick: 1, stone: 1 }));
     expect(s.hands.p1!.res).toEqual(res({ wood: 2 }));
     expect(s.offer).toBeNull();
     expect(s.log.at(-1)).toEqual({ t: 'trade', a: 'p0', b: 'p1', aGives: res({ wood: 2 }), bGives: res({ stone: 1 }) });
+  });
+
+  it('fechar com oferta ou proposta que mudou depois do clique: stale_offer', () => {
+    let s = act(base(), 'p0', { type: 'offer', give: res({ wood: 1 }), want: res({ stone: 1 }) }, ctx);
+    const old = s.offer!.id;
+    s = act(s, 'p1', { type: 'respond', offerId: old, accept: true }, ctx);
+    s = act(s, 'p0', { type: 'offer', give: res({ wood: 2 }), want: res({ stone: 1 }) }, ctx);
+    s = act(s, 'p1', { type: 'respond', offerId: s.offer!.id, accept: true }, ctx);
+    expect(tryAct(s, 'p0', { type: 'close_deal', with: 'p1', source: 'offer', id: old }, ctx)).toEqual({ ok: false, error: 'stale_offer' });
+    expect(tryAct({ ...s, offer: null }, 'p0', { type: 'close_deal', with: 'p1', source: 'offer', id: old }, ctx)).toEqual({
+      ok: false,
+      error: 'stale_offer',
+    });
+
+    let t = act(base(), 'p2', { type: 'propose', give: res({ stone: 1 }), want: res({ wood: 1 }) }, ctx);
+    const first = t.proposals[0]!.id;
+    // p2 troca a proposta por uma pior pra quem está na vez entre o clique e a ação.
+    t = act(t, 'p2', { type: 'propose', give: res({ stone: 1 }), want: res({ wood: 2 }) }, ctx);
+    expect(tryAct(t, 'p0', { type: 'close_deal', with: 'p2', source: 'proposal', id: first }, ctx)).toEqual({ ok: false, error: 'stale_offer' });
+    expect(tryAct(t, 'p0', { type: 'close_deal', with: 'p1', source: 'proposal', id: first }, ctx)).toEqual({ ok: false, error: 'bad_target' });
   });
 
   it('termos inválidos, sem cartas, fora da vez', () => {
@@ -46,7 +66,7 @@ describe('Mandacaru: troca entre jogadores', () => {
     expect(s.proposals).toHaveLength(1);
     s = act(s, 'p2', { type: 'propose', give: res({ stone: 1 }), want: res({ brick: 1 }) }, ctx);
     expect(s.proposals).toHaveLength(1);
-    s = act(s, 'p0', { type: 'close_deal', with: 'p2', source: 'proposal' }, ctx);
+    s = act(s, 'p0', { type: 'close_deal', with: 'p2', source: 'proposal', id: s.proposals[0]!.id }, ctx);
     expect(s.hands.p0!.res).toEqual(res({ wood: 2, stone: 1 }));
     expect(s.hands.p2!.res).toEqual(res({ stone: 1, brick: 1 }));
     expect(s.proposals).toEqual([]);

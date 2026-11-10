@@ -76,19 +76,30 @@ function swap(state: MandacaruState, a: string, b: string, aGives: Resources, bG
   return grant(s, b, aGives);
 }
 
-/** Quem está na vez fecha com `other`: quem aceitou a oferta dele, ou aceitando a proposta de `other`. */
-export function closeDeal(state: MandacaruState, player: string, other: string, source: 'offer' | 'proposal'): MandacaruResult {
+/**
+ * Quem está na vez fecha com `other`: quem aceitou a oferta dele, ou aceitando a proposta de `other`.
+ * `id` é o da oferta/proposta que ele viu: se ela mudou (ou sumiu) desde o clique, `stale_offer`.
+ */
+export function closeDeal(
+  state: MandacaruState,
+  player: string,
+  other: string,
+  source: 'offer' | 'proposal',
+  id: number,
+): MandacaruResult {
   const e = tradeError(state, player, true);
   if (e) return fail(e);
   let aGives: Resources;
   let bGives: Resources;
   if (source === 'offer') {
-    if (state.offer === null || !state.offer.accepted.includes(other)) return fail('bad_target');
+    if (state.offer === null || state.offer.id !== id) return fail('stale_offer');
+    if (!state.offer.accepted.includes(other)) return fail('bad_target');
     aGives = state.offer.give;
     bGives = state.offer.want;
   } else {
     const proposal = state.proposals.find((x) => x.from === other);
     if (proposal === undefined) return fail('bad_target');
+    if (proposal.id !== id) return fail('stale_offer');
     aGives = proposal.want;
     bGives = proposal.give;
   }
