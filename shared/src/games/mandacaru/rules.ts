@@ -1,5 +1,6 @@
 import type { GameContext } from '../../game';
 import { shuffle } from '../../rng';
+import { settleMandacaru } from './auto';
 import { geometry } from './board';
 import { fail, ok, type MandacaruResult } from './build';
 import { discard, moveCarcara, playVaqueiro, startSeven, steal } from './carcara';
@@ -96,11 +97,8 @@ function startMatch(state: MandacaruState, ctx: GameContext): MandacaruResult {
   });
 }
 
-// A Task 8 troca por `settleMandacaru`.
-const settle = (state: MandacaruState, _ctx: GameContext): MandacaruState => state;
-
 /** Ação aceita: confere a vitória de quem está na vez e roda o automático. */
-const done = (res: MandacaruResult, ctx: GameContext): MandacaruResult => (res.ok ? ok(settle(checkWin(res.state), ctx)) : res);
+const done = (res: MandacaruResult, ctx: GameContext): MandacaruResult => (res.ok ? ok(settleMandacaru(checkWin(res.state), ctx)) : res);
 
 /** Por que `player` não pode agir agora como quem está na vez, numa das `phases` (ou null se pode). */
 function turnError(state: MandacaruState, player: string, phases: MandacaruPhase[]): string | null {
