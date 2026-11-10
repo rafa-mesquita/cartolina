@@ -4,9 +4,9 @@ import { geometry, pips } from './board';
 import { houseSpots, logged, roadSpots, type MandacaruResult } from './build';
 import { discard, moveCarcara, randomCards, startSeven, steal, victims } from './carcara';
 import { buildRoad, checkWin, passTurn, placeHouse, placeRoad, rollDice } from './turn';
-import type { MandacaruState } from './types';
+import { MANDACARU_DISCARD_MS, MANDACARU_TURN_MS, type MandacaruState } from './types';
 
-/** Teto de passos automáticos por chamada: todo mundo ausente ainda anda o jogo, mas sem laço infinito. */
+/** Teto de passos automáticos por chamada (a mesa vazia congela; isto é só uma rede contra laço infinito). */
 const AUTO_STEPS = 1000;
 
 const away = (ctx: GameContext, player: string): boolean => !ctx.active.includes(player);
@@ -48,13 +48,57 @@ function autoDiscard(state: MandacaruState, ctx: GameContext): MandacaruState {
 }
 
 /**
+ * Fase principal: quem está ausente (fora quem está na vez) conta como "não" na oferta aberta, se ainda não
+ * respondeu, e perde a proposta dele. Devolve o mesmo objeto se não há o que mudar.
+ */
+function tradeAway(state: MandacaruState, ctx: GameContext): MandacaruState {
+  const gone = state.players.filter((p) => p !== state.turn && away(ctx, p));
+  if (gone.length === 0) return state;
+  const offer = state.offer;
+  const silent = offer === null ? [] : gone.filter((p) => !offer.accepted.includes(p) && !offer.rejected.includes(p));
+  const proposals = state.proposals.filter((x) => !gone.includes(x.from));
+  if (silent.length === 0 && proposals.length === state.proposals.length) return state;
+  return {
+    ...state,
+    offer: offer === null || silent.length === 0 ? offer : { ...offer, rejected: [...offer.rejected, ...silent] },
+    proposals: proposals.length === state.proposals.length ? state.proposals : proposals,
+  };
+}
+
+/** Com o relógio parado (mesa vazia) e alguém de volta: prazos novos a partir de agora. */
+function resumeClock(state: MandacaruState, ctx: GameContext): MandacaruState {
+  if (state.turnEndsAt !== null) return state;
+  const discardEndsAt = state.phase === 'discard' && state.discardEndsAt === null ? ctx.now + MANDACARU_DISCARD_MS : state.discardEndsAt;
+  return { ...state, turnEndsAt: ctx.now + MANDACARU_TURN_MS, discardEndsAt };
+}
+
+/**
+ * Mesa vazia (nenhum jogador da partida ativo): nada anda. Se um prazo já venceu, o relógio para (prazos
+ * null), senão o alarme acordaria no passado sem parar; volta com `resumeClock` quando alguém chega.
+ */
+function frozen(state: MandacaruState, ctx: GameContext): MandacaruState {
+  const turnOver = late(state, ctx);
+  const discardOver = state.phase === 'discard' && state.discardEndsAt !== null && ctx.now >= state.discardEndsAt;
+  if (!turnOver && !discardOver) return state;
+  return { ...state, turnEndsAt: null, discardEndsAt: null };
+}
+
+/**
  * Um passo: fecha o prazo do descarte e joga por quem está ausente ou estourou os 5 min do turno.
  * Devolve o mesmo objeto se não há o que fazer.
  */
 function settleOnce(state: MandacaruState, ctx: GameContext): MandacaruState {
+  if (state.phase === 'lobby' || state.phase === 'over') return state;
+  if (!state.players.some((p) => !away(ctx, p))) return frozen(state, ctx);
+  const resumed = resumeClock(state, ctx);
+  if (resumed !== state) return resumed;
   if (state.phase === 'discard') return autoDiscard(state, ctx);
   const p = state.turn;
-  if (p === null || state.phase === 'lobby' || state.phase === 'over') return state;
+  if (p === null) return state;
+  if (state.phase === 'main') {
+    const traded = tradeAway(state, ctx);
+    if (traded !== state) return traded;
+  }
   const timeout = late(state, ctx);
   if (!timeout && !away(ctx, p)) return state;
   // O diário marca o estouro do prazo uma vez por vez: no passo que termina a vez.

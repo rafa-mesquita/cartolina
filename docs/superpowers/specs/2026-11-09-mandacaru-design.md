@@ -183,8 +183,13 @@ banco.
   descarta cartas sorteadas. O relógio do turno não para durante o descarte.
 - **Ausente** (mais de 30 s desconectado, fora de `ctx.active`), como no Cúpi:
   na vez dele faz o mesmo que o fim do prazo, mas na hora; no descarte, descarta
-  sorteado na hora; respostas pendentes dele contam como "não". Ele continua na
-  partida e as peças ficam.
+  sorteado na hora; na fase principal de outro, a resposta pendente dele à
+  oferta conta como "não" (entra em `rejected`) e a proposta dele some. Ele
+  continua na partida e as peças ficam.
+- **Mesa vazia** (nenhum jogador da partida ativo): nada anda, a mesa congela
+  até alguém voltar. Se um prazo vence nesse meio-tempo, o relógio para
+  (prazos `null`, sem alarme); quem voltar ganha prazos novos a partir dali
+  (5 min de turno e, no descarte, 60 s).
 - `onPresenceChange` aplica tudo isso e devolve **o mesmo objeto** quando nada
   muda; `nextDeadline` = o fim do descarte na fase `discard` (o turno pode já
   ter estourado ali, e o automático só olha o turno depois do descarte) e o fim
