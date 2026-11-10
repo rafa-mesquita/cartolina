@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../src/App';
 import { Home } from '../src/screens/Home';
@@ -20,7 +20,11 @@ describe('estante de jogos', () => {
     expect(screen.getByRole('link', { name: /Retratim/ }).getAttribute('href')).toBe('#/pictures');
     expect(screen.getByRole('link', { name: /Tatubum/ }).getAttribute('href')).toBe('#/kittens');
     expect(screen.getByRole('link', { name: /Cúpi/ }).getAttribute('href')).toBe('#/coup');
-    expect(screen.queryByText('em breve')).toBeNull(); // todos os jogos da estante já dão pra jogar
+    const mandacaru = screen.getByRole('link', { name: /Mandacaru/ });
+    expect(mandacaru.getAttribute('href')).toBe('#/mandacaru');
+    // só o Mandacaru (ainda sem mesa) tem o selo; os outros já dão pra jogar
+    expect(screen.getAllByText('em breve')).toHaveLength(1);
+    expect(within(mandacaru).getByText('em breve')).toBeTruthy();
     expect(screen.queryByText(/grupo/i)).toBeNull();
     expect(screen.queryByText(/Dixit/)).toBeNull();
   });

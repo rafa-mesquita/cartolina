@@ -32,6 +32,8 @@ const API: Record<GameKey, Api> = {
   coup: import.meta.env.DEV
     ? { subscribe: subscribeCoupBots, version: coupBotsVersion, count: coupBotsIn, add: addCoupBot, removeAll: removeAllCoupBots }
     : NO_BOTS,
+  // os bots do Mandacaru vêm com a mesa (M2)
+  mandacaru: NO_BOTS,
 };
 
 /** `max`: lotação da sala desse jogo (sala cheia, sem bot novo); sem ele, vem do registro (`GAMES[game].maxPlayers`). */
