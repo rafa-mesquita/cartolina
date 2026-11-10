@@ -98,24 +98,77 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
 #diario p{margin:0 0 5px}
 #diario p:first-of-type{font-weight:800}
 
+.trocas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ---------- janelas sobre a mesa (troca, feira, cordéis, descarte, oferta de bot) ---------- */
+.janela{position:absolute;left:50%;top:50px;transform:translateX(-50%);z-index:6;width:560px;padding:14px 18px 16px;border:var(--bd);border-radius:14px;background:var(--panel);box-shadow:0 5px 0 #5b3a29}
+.janela.meio{top:50%;transform:translate(-50%,-50%)}
+.janela.estreita{width:470px}
+.janela h3{margin:0 34px 2px 0;font:400 23px/1.1 var(--ft)}
+.janela h4{margin:10px 0 6px;font:400 16px/1 var(--ft)}
+.janela .sub{font-size:13.5px;line-height:1.35;opacity:.8;margin-bottom:8px}
+.janela .x{position:absolute;top:9px;right:10px;width:30px;height:30px;padding:0;border:var(--bd);border-radius:50%;background:#fff6e6;font:400 17px/1 var(--ft);box-shadow:0 2px 0 #5b3a29}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.col{border:1.5px dashed #c9a77a;border-radius:10px;padding:6px 10px 8px}
+.col h4{margin:2px 0 4px}
+.linha{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:14px}
+.linha .nm{flex:1}
+.linha .tem{font-size:11.5px;opacity:.6}
+.step{display:inline-flex;align-items:center;gap:4px}
+.step button{width:28px;height:28px;padding:0;border:var(--bd);border-radius:8px;background:#fff6e6;box-shadow:0 2px 0 #5b3a29;font:400 18px/1 var(--ft)}
+.step button:disabled{opacity:.32;cursor:default}
+.step b{min-width:22px;text-align:center;font:400 19px/1 var(--ft)}
+.rodape{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px}
+.rodape .resumo{flex:1;font-size:13.5px;line-height:1.35}
+.respostas{margin-top:12px;padding-top:10px;border-top:1.5px dashed #c9a77a;display:flex;flex-direction:column;gap:7px;font-size:14px}
+.respostas .tit{font:400 15px/1 var(--ft)}
+.resp{display:flex;align-items:center;gap:8px;min-height:32px}
+.resp .quem{min-width:52px;font:400 16px/1 var(--ft)}
+.resp .meio{flex:1}
+.st{font:800 12px/1 var(--fb);padding:5px 9px;border-radius:999px;background:#ead6b3;white-space:nowrap}
+.st.sim{background:#5f7a3a;color:#fff6e6}
+.st.nao{background:var(--accent);color:#fff6e6}
+.chips{display:inline-flex;align-items:center;gap:1px;vertical-align:middle;margin-right:6px}
+.chips i{font:400 15px/1 var(--ft);font-style:normal;margin-left:1px}
+.escolha{display:flex;gap:7px}
+.opc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px 6px;border:var(--bd);border-radius:10px;background:#fff6e6;box-shadow:0 2px 0 #5b3a29;font-size:13px}
+.opc.on{background:#f3c9a0;outline:3px solid var(--accent);outline-offset:-5px}
+.opc:disabled{opacity:.36;cursor:default}
+.opc small{font:800 11px/1 var(--fb);opacity:.7}
+.opc .taxa{font:400 15px/1 var(--ft);color:var(--accent);opacity:1}
+.qtdlinha{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px}
+.cartao .fita{position:absolute;top:-15px;left:18px;padding:5px 12px;border:var(--bd);border-radius:6px;background:var(--terra);color:#fff6e6;font:400 15px/1 var(--ft);box-shadow:0 2px 0 #5b3a29}
+.termos{display:flex;align-items:center;gap:14px;justify-content:center;margin:10px 0 6px}
+.termos > div{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:130px;padding:8px 10px;border:1.5px dashed #c9a77a;border-radius:10px}
+.termos small{font:800 11px/1 var(--fb);letter-spacing:.05em;text-transform:uppercase;opacity:.65}
+.termos .seta{font:400 26px/1 var(--ft);border:0;min-width:0;padding:0}
+.cartao .estado{text-align:center;font-size:14px;margin:6px 0 2px}
+.cartao .botoes{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.descarte .falta{font:400 17px/1 var(--ft)}
+.descarte .falta.ok{color:#5f7a3a}
+[data-descarte].pouco{color:var(--accent)}
+
 /* ---------- mão (embaixo) ---------- */
-#mao{grid-row:3;grid-column:2;display:flex;align-items:flex-end;justify-content:center;gap:18px;padding-bottom:4px}
+#mao{grid-row:3;grid-column:2;display:flex;align-items:flex-end;justify-content:center;gap:14px;padding-bottom:4px}
 .grupo{display:flex;align-items:flex-end}
-.grupo.res{gap:8px}
-.carta{position:relative;flex:none;width:82px;height:120px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);
+.grupo.res,.grupo.cords{gap:6px}
+.carta{position:relative;flex:none;width:76px;height:120px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform .15s}
 .carta:hover{transform:translateY(-8px)}
 .carta .nome{font:400 15px/1 var(--ft)}
 .carta .qtd{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff6e6;font:400 16px/1 var(--ft);border:var(--bd)}
 .carta.zero{opacity:.45}
 .carta.zero .qtd{background:#c9b291}
-.cordel{position:relative;flex:none;width:80px;height:124px;border:var(--bd);border-radius:6px;background:var(--paper);box-shadow:var(--sh);
+.cordel{position:relative;flex:none;width:72px;height:124px;border:var(--bd);border-radius:6px;background:var(--paper);box-shadow:var(--sh);
   display:flex;flex-direction:column;align-items:center;padding:5px 4px;gap:3px;transition:transform .15s}
-.cordel:hover{transform:translateY(-10px);z-index:2}
+.cordel:hover{transform:translateY(-6px);z-index:2}
 .cordel .cap{font:800 8.5px/1 var(--fb);letter-spacing:.18em;opacity:.7}
-.cordel .xilo{width:62px;height:58px;background:#2a1c13;border-radius:2px;display:grid;place-items:center}
+.cordel .xilo{width:58px;height:56px;background:#2a1c13;border-radius:2px;display:grid;place-items:center}
 .cordel .tit{font:400 12.5px/1.05 var(--ft);text-align:center;min-height:26px;display:grid;place-items:center}
-.cordel .novo{position:absolute;top:8px;right:-10px;transform:rotate(14deg);font:800 10px/1 var(--fb);padding:3px 6px;border-radius:4px;background:var(--accent);color:#fff6e6;border:1.5px solid #5b3a29;letter-spacing:.05em}
+.cordel .qtd{position:absolute;top:-10px;right:-9px;min-width:30px;height:28px;padding:0 5px;border-radius:999px;display:grid;place-items:center;background:var(--ink);color:#fff6e6;font:400 15px/1 var(--ft);border:var(--bd)}
+.cordel .novo{position:absolute;top:4px;left:-9px;transform:rotate(-12deg);font:800 10px/1 var(--fb);padding:3px 6px;border-radius:4px;background:var(--accent);color:#fff6e6;border:1.5px solid #5b3a29;letter-spacing:.05em;white-space:nowrap}
+.cordel .jogar{position:absolute;top:-36px;left:50%;transform:translateX(-50%);padding:5px 10px;font-size:14px;white-space:nowrap}
+.cordel.pode{outline:3px solid var(--accent);outline-offset:2px}
 .vazio{font-size:13px;opacity:.6;align-self:center}
 
 /* ---------- lobby, fim, aviso ---------- */
@@ -156,6 +209,8 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
     </svg>
     <div id="dica" hidden></div>
     <div id="soma"></div>
+    <div id="cartao"></div>
+    <div id="janela"></div>
   </main>
 
   <aside id="dir">
@@ -167,6 +222,10 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
         <button class="btn" id="bHouse" data-mode="house">casa</button>
         <button class="btn" id="bCity" data-mode="city">vila</button>
         <button class="btn" id="bCordel">cordel</button>
+      </div>
+      <div class="trocas">
+        <button class="btn sec" id="bTrade">⇄ trocar</button>
+        <button class="btn sec" id="bFeira">feira</button>
       </div>
       <button class="btn sec" id="bEnd">passar a vez</button>
     </div>
@@ -186,6 +245,11 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
         <button class="btn sec" data-bots="3">3 bots</button>
       </div>
       <div class="nomes" id="nomesLobby"></div>
+      <div>velocidade dos bots</div>
+      <div class="esc">
+        <button class="btn sec" data-speed="normal">normal</button>
+        <button class="btn sec" data-speed="rapido">rápido (pra testar)</button>
+      </div>
       <button class="btn grande" id="bStart">começar</button>
     </div>
   </div>
@@ -270,6 +334,11 @@ function tick() {
 setInterval(tick, 250);
 
 /* ---------- bots ---------- */
+/** Velocidade dos bots (escolhida no lobby): normal pra jogar, rápido pra testar uma partida inteira. */
+let speed = 'normal';
+const botDelay = () => (speed === 'rapido' ? between(150, 250) : between(700, 1100));
+/** Quanto o bot da vez espera antes de passar a vez enquanto você monta uma proposta pra ele. */
+const COMPOSE_WAIT_MS = 8000;
 /** Um plano por bot; qualquer mudança no estado recomeça o atraso (700–1100 ms a partir da situação nova). */
 const plans = new Map();
 const fails = new Map();
@@ -280,7 +349,7 @@ function scheduleBots() {
     const cur = plans.get(p);
     if (cur && cur.version === version) continue;
     if (cur) { clearTimeout(cur.timer); timers.delete(cur.timer); }
-    plans.set(p, { version, timer: later(between(700, 1100), () => { plans.delete(p); fire(p); }) });
+    plans.set(p, { version, timer: later(botDelay(), () => { plans.delete(p); fire(p); }) });
   }
 }
 function fire(p) {
@@ -288,6 +357,8 @@ function fire(p) {
   const v = view(p);
   const d = Bot.decide(v, p, Math.random);
   if (!d) return;
+  // Você está montando uma proposta pra este bot: ele segura o "passar a vez" um pouco.
+  if (d.type === 'end_turn' && ui.panel === 'trade' && ui.composeSince && v.turn === p && Date.now() - ui.composeSince < COMPOSE_WAIT_MS) return;
   if (send(p, d)) { fails.delete(p); return; }
   // Recusado: tenta de novo; se insistir no erro, passa a vez pra não travar a mesa.
   const n = (fails.get(p) || 0) + 1;
@@ -299,12 +370,12 @@ function fire(p) {
 function clearTimers() { for (const t of timers) clearTimeout(t); timers.clear(); plans.clear(); fails.clear(); }
 function newGame() {
   clearTimers();
-  mode = null; lastLayout = undefined; lastEntry = null;
+  mode = null; lastLayout = undefined; lastEntry = null; closePanel(); ui.hiddenOffer = null;
   state = Manda.initialMandacaruState();
   $('#lobby').hidden = true;
   send(ME, { type: 'start' });
 }
-function restart() { clearTimers(); mode = null; send(ME, { type: 'restart' }); }
+function restart() { clearTimers(); mode = null; closePanel(); send(ME, { type: 'restart' }); }
 function toLobby() { clearTimers(); state = null; version++; $('#fim').hidden = true; $('#relogio').hidden = true; $('#lobby').hidden = false; lobby(); }
 
 /* ---------- mudanças: diário novo, dados, render ---------- */
@@ -319,6 +390,12 @@ function changed() {
   lastEntry = log[log.length - 1] || null;
   for (const e of fresh) {
     if (e.t === 'roll') rollFx(e.dice);
+    if (e.t === 'trade' && (e.a === ME || e.b === ME)) {
+      // Sua troca saiu: fecha o painel (a proposta/oferta sumiu) e avisa.
+      if (ui.panel === 'trade') closePanel();
+      const other = e.a === ME ? e.b : e.a;
+      toast(`troca feita ${Txt.com(nameOf(other))}: você deu ${Txt.resList(e.a === ME ? e.aGives : e.bGives)}`);
+    }
     if (e.t === 'steal' && v.stolen && (e.player === ME || e.from === ME)) {
       const r = Txt.RES[v.stolen.resource];
       toast(e.player === ME ? `você roubou 1 ${r} ${Txt.de(nameOf(e.from))}` : `o Carcará ${Txt.de(nameOf(e.player))} levou 1 ${r} seu`);
@@ -500,7 +577,7 @@ function clocks() {
   const r = document.querySelector('[data-relo]');
   if (r) { const t = v.turnEndsAt === null ? Infinity : v.turnEndsAt - Date.now(); r.textContent = `⏱ ${clockText(v.turnEndsAt)}`; r.classList.toggle('pouco', t < 60_000); }
   const dl = document.querySelector('[data-descarte]');
-  if (dl && v.discardEndsAt) dl.textContent = mmss(v.discardEndsAt - Date.now());
+  if (dl && v.discardEndsAt) { const t = v.discardEndsAt - Date.now(); dl.textContent = mmss(t); dl.classList.toggle('pouco', t < 10_000); }
 }
 
 function promptFor(v) {
@@ -517,8 +594,7 @@ function promptFor(v) {
     case 'discard': {
       const pend = Object.entries(v.discards).filter(([p]) => p !== ME).map(([p, n]) => `${nameOf(p)} (${n})`);
       if (c.discard > 0) {
-        return { text: `<b>Saiu 7!</b> Você tem mais de 7 cartas: descarte <b>${c.discard}</b>. Sem escolher, o descarte é sorteado em <span data-descarte>${clockText(v.discardEndsAt)}</span>.
-          <div class="alvos"><button class="btn mini" data-act="discard">descartar as de que tenho mais</button></div>` };
+        return { text: `<b>Saiu 7!</b> Você tem mais de 7 cartas: escolha <b>${c.discard}</b> pra descartar na janela.` };
       }
       return { text: `Saiu 7: esperando o descarte${pend.length ? ' de ' + Txt.joinE(pend) : ''}…` };
     }
@@ -538,7 +614,10 @@ function promptFor(v) {
       if (mode === 'road') return { text: '<b>Estrada:</b> clique num lado que pulsa. (clique no botão de novo pra sair)', dica: 'clique num lado que pulsa' };
       if (mode === 'house') return { text: '<b>Casa:</b> clique num canto que pulsa.', dica: 'clique num canto que pulsa' };
       if (mode === 'city') return { text: '<b>Vila:</b> clique numa casa sua.', dica: 'clique numa casa sua' };
-      return { text: '<b>Sua vez.</b> Construa, compre cordel ou passe a vez.' };
+      const trade = v.offer || v.proposals.length;
+      const st = v.offer ? `Sua oferta está na mesa (${v.offer.accepted.length ? `aceitaram: ${Txt.joinE(v.offer.accepted.map(nameOf))}` : 'esperando respostas'}).` : '';
+      const pr = v.proposals.length ? ` ${v.proposals.length === 1 ? 'Chegou 1 proposta' : `Chegaram ${v.proposals.length} propostas`} pra você.` : '';
+      return { text: `<b>Sua vez.</b> Construa, troque, compre cordel ou passe a vez.${trade && ui.panel !== 'trade' ? `<div class="oferta">${st}${pr} <button class="btn mini" data-act="trade">ver a troca</button></div>` : ''}` };
     }
     default:
       return { text: '' };
@@ -557,6 +636,11 @@ function renderActions(v) {
   $('#bHouse').disabled = c.buildHouse.length === 0;
   $('#bCity').disabled = c.buildCity.length === 0;
   $('#bCordel').disabled = !c.buyCordel;
+  $('#bTrade').disabled = !(v.phase === 'main' && (c.offer || c.propose));
+  $('#bTrade').textContent = v.turn === ME || v.phase !== 'main' ? '⇄ trocar' : '⇄ propor';
+  $('#bTrade').classList.toggle('on', ui.panel === 'trade');
+  $('#bFeira').disabled = !(v.phase === 'main' && v.turn === ME);
+  $('#bFeira').classList.toggle('on', ui.panel === 'feira');
   $('#bEnd').disabled = !c.endTurn;
   for (const b of document.querySelectorAll('[data-mode]')) b.classList.toggle('on', b.dataset.mode === mode);
 }
@@ -566,18 +650,32 @@ $('#custos').innerHTML = `<h3>quanto custa</h3>` + ['road', 'house', 'city', 'co
 function renderHand(v) {
   if (!v.myRes) { $('#mao').innerHTML = ''; return; }
   const res = Txt.ORDER.map((r) => `<div class="carta ${v.myRes[r] ? '' : 'zero'}" title="${Txt.RES[r]}">${Art.resIcon(r, 50)}<span class="nome">${Txt.RES[r]}</span><span class="qtd">${v.myRes[r]}</span></div>`).join('');
+  // Cordéis agrupados por tipo, com contador ("Vaqueiro ×3"); "jogar" em cima dos que dá pra jogar agora.
   const cs = v.myCordeis;
-  // Leque: os cordéis se sobrepõem quando são muitos.
-  const avail = 300, w = 80;
-  const step = cs.length > 1 ? Math.min(w + 8, (avail - w) / (cs.length - 1)) : 0;
-  let pointIdx = 0;
-  const cords = cs.length ? cs.map((c, i) => {
-    const tit = c.kind === 'point' ? `Ponto · ${Txt.POINT_NAMES[pointIdx++ % 5]}` : Txt.CORDEL[c.kind];
-    return `<div class="cordel" style="${i ? `margin-left:${step - w}px` : ''}" title="${Txt.CORDEL[c.kind]}: ${Txt.CORDEL_DESC[c.kind]}">
-      <span class="cap">CORDEL</span><span class="xilo">${Art.svgIcon(Art.CORDEL_ICON[c.kind], Art.WOODCUT, 46)}</span><span class="tit">${tit}</span>${c.fresh ? '<span class="novo">novo</span>' : ''}</div>`;
+  const groups = ['vaqueiro', 'point', 'mutirao', 'chuva', 'atravessador']
+    .map((kind) => ({ kind, n: cs.filter((c) => c.kind === kind).length, fresh: cs.filter((c) => c.kind === kind && c.fresh).length }))
+    .filter((g) => g.n > 0);
+  const cords = groups.length ? groups.map((g) => {
+    const names = Txt.POINT_NAMES.slice(0, g.n);
+    const tit = g.kind === 'point' ? (g.n === 1 ? `Ponto · ${names[0]}` : 'Pontos') : Txt.CORDEL[g.kind];
+    const desc = g.kind === 'point' ? `${names.join(', ')}: ${Txt.CORDEL_DESC.point}` : `${Txt.CORDEL[g.kind]}: ${Txt.CORDEL_DESC[g.kind]}`;
+    const can = g.kind !== 'point' && v.can.play.includes(g.kind);
+    const novo = g.fresh ? `<span class="novo">${g.fresh === g.n ? 'novo' : `${g.fresh} novo${g.fresh > 1 ? 's' : ''}`}</span>` : '';
+    return `<div class="cordel ${can ? 'pode' : ''}" title="${desc}">
+      <span class="cap">CORDEL</span><span class="xilo">${Art.svgIcon(Art.CORDEL_ICON[g.kind], Art.WOODCUT, 44)}</span><span class="tit">${tit}</span>
+      ${g.n > 1 ? `<span class="qtd">×${g.n}</span>` : ''}${novo}${can ? `<button class="btn mini jogar" data-play="${g.kind}">jogar</button>` : ''}</div>`;
   }).join('') : '<span class="vazio">sem cordéis</span>';
-  $('#mao').innerHTML = `<div class="grupo res">${res}</div><div class="grupo">${cords}</div>`;
+  $('#mao').innerHTML = `<div class="grupo res">${res}</div><div class="grupo cords">${cords}</div>`;
 }
+$('#mao').addEventListener('click', (ev) => {
+  const t = ev.target.closest('[data-play]');
+  if (!t || !state) return;
+  const v = view();
+  const k = t.dataset.play;
+  if (k === 'vaqueiro') { closePanel(); send(ME, { type: 'play_vaqueiro' }); }
+  else if (k === 'mutirao') { closePanel(); send(ME, { type: 'play_mutirao' }); }
+  else { openPanel(k, v); render(view()); }
+});
 
 function renderLog(v) {
   const lines = v.log.slice(-8).reverse().map((e) => Txt.line(e, nameOf, v)).filter(Boolean);
@@ -596,6 +694,231 @@ function renderEnd(v) {
   $('#fimPlacar').innerHTML = rows;
 }
 
+/* ---------- janelas: troca, feira, Chuva, Atravessador, descarte, oferta de bot ---------- */
+const none = () => ({ wood: 0, brick: 0, leather: 0, beans: 0, stone: 0 });
+const total = (res) => Txt.ORDER.reduce((n, r) => n + res[r], 0);
+const covers = (have, cost) => Txt.ORDER.every((r) => have[r] >= cost[r]);
+/** "[ícone]2 [ícone]1" pra um punhado de recursos. */
+const chips = (res, size = 24) => {
+  const parts = Txt.ORDER.filter((r) => res[r] > 0).map((r) => `<span class="chips" title="${res[r]} ${Txt.RES[r]}">${Art.resIcon(r, size)}<i>${res[r]}</i></span>`);
+  return parts.length ? parts.join('') : '<span class="chips">nada</span>';
+};
+/** O que está aberto e o que já foi escolhido nos painéis. */
+const ui = {
+  panel: null, // 'trade' | 'feira' | 'chuva' | 'atravessador'
+  give: none(), want: none(),
+  feira: { give: null, want: null, count: 1 },
+  chuva: none(), atrav: null,
+  discard: none(), discardKey: null,
+  hiddenOffer: null, // oferta de bot que você fechou o cartão
+  composeSince: 0, // quando abriu a proposta na vez de um bot (o bot espera um pouco antes de passar a vez)
+};
+function openPanel(name, v) {
+  ui.panel = name;
+  if (name === 'feira') ui.feira = { give: null, want: null, count: 1 };
+  if (name === 'chuva') ui.chuva = none();
+  if (name === 'atravessador') ui.atrav = null;
+  if (name === 'trade') ui.composeSince = v.turn === ME ? 0 : Date.now();
+  mode = null;
+}
+function closePanel() { ui.panel = null; ui.composeSince = 0; }
+
+/** O painel aberto ainda faz sentido agora? */
+function panelOk(v) {
+  const c = v.can;
+  switch (ui.panel) {
+    case 'trade': return v.phase === 'main' && (v.turn === ME ? c.offer : c.propose);
+    case 'feira': return v.phase === 'main' && v.turn === ME;
+    case 'chuva': return c.play.includes('chuva');
+    case 'atravessador': return c.play.includes('atravessador');
+    default: return false;
+  }
+}
+
+function stepper(attr, n, minus, plus) {
+  return `<span class="step"><button data-${attr}="-1" ${minus ? '' : 'disabled'}>−</button><b>${n}</b><button data-${attr}="1" ${plus ? '' : 'disabled'}>+</button></span>`;
+}
+
+function tradeHtml(v) {
+  const have = v.myRes;
+  const mine = v.turn === ME;
+  for (const r of Txt.ORDER) ui.give[r] = Math.min(ui.give[r], have[r]);
+  const rows = (side) => Txt.ORDER.map((r) => {
+    const n = ui[side][r];
+    const other = side === 'give' ? ui.want[r] : ui.give[r];
+    const max = side === 'give' ? have[r] : 19;
+    return `<div class="linha">${Art.resIcon(r, 26)}<span class="nm">${Txt.RES[r]}${side === 'give' ? ` <span class="tem">tem ${have[r]}</span>` : ''}</span>
+      ${stepper(`tr="${side}:${r}" data-d`, n, n > 0, n < max && other === 0)}</div>`;
+  }).join('');
+  const valid = total(ui.give) > 0 && total(ui.want) > 0;
+  const head = mine
+    ? `<h3>troca com a mesa</h3><div class="sub">Monte o que você dá e o que quer. Os outros respondem; você fecha com quem aceitar.</div>`
+    : `<h3>proposta pra ${nameOf(v.turn)}</h3><div class="sub">É a vez ${Txt.de(nameOf(v.turn))}: ${nameOf(v.turn)} aceita ou não a sua proposta.</div>`;
+  const send = mine ? `<button class="btn" data-send="offer" ${valid ? '' : 'disabled'}>${v.offer ? 'trocar a oferta' : 'mandar pra mesa'}</button>`
+    : `<button class="btn" data-send="propose" ${valid ? '' : 'disabled'}>mandar proposta</button>`;
+  let resp = '';
+  if (mine && v.offer) {
+    const o = v.offer;
+    const canGive = covers(have, o.give);
+    const lines = v.players.filter((p) => p !== ME).map((p) => {
+      const st = o.accepted.includes(p) ? `<span class="st sim">✓ aceito</span><button class="btn mini" data-deal="${p}" ${canGive ? '' : 'disabled'}>fechar com ${nameOf(p)}</button>`
+        : o.rejected.includes(p) ? '<span class="st nao">✗ não</span>' : '<span class="st">pensando…</span>';
+      return `<div class="resp"><span class="quem">${nameOf(p)}</span><span class="meio"></span>${st}</div>`;
+    }).join('');
+    resp += `<div class="respostas"><div class="tit">na mesa: você dá ${chips(o.give, 20)} e quer ${chips(o.want, 20)}</div>${lines}
+      <div class="rodape" style="margin-top:2px"><button class="btn sec mini" data-send="cancel">retirar a oferta</button></div></div>`;
+  }
+  if (mine && v.proposals.length) {
+    resp += `<div class="respostas"><div class="tit">propostas pra você</div>` + v.proposals.map((p) => {
+      const ok = covers(have, p.want);
+      return `<div class="resp"><span class="quem">${nameOf(p.from)}</span><span class="meio">te dá ${chips(p.give, 20)} e quer ${chips(p.want, 20)}</span>
+        <button class="btn mini" data-prop="${p.from}:${p.id}" ${ok ? '' : 'disabled'} title="${ok ? '' : 'faltam cartas'}">aceitar</button></div>`;
+    }).join('') + '</div>';
+  }
+  if (!mine) {
+    const p = v.proposals.find((x) => x.from === ME);
+    if (p) {
+      const said = Bot.verdict(v.turn, p.id);
+      const st = said === false ? `<span class="st nao">✗ ${nameOf(v.turn)} não quis</span>` : `<span class="st">esperando ${nameOf(v.turn)}…</span>`;
+      resp = `<div class="respostas"><div class="resp"><span class="meio">sua proposta: você dá ${chips(p.give, 20)} e quer ${chips(p.want, 20)}</span>${st}</div></div>`;
+    }
+  }
+  return `<div class="janela"><button class="x" data-close="1" title="fechar">✕</button>${head}
+    <div class="cols"><div class="col"><h4>você dá</h4>${rows('give')}</div><div class="col"><h4>você quer</h4>${rows('want')}</div></div>
+    <div class="rodape"><span class="resumo">${valid ? `você dá ${Txt.resList(ui.give)} e quer ${Txt.resList(ui.want)}` : 'escolha pelo menos 1 carta de cada lado'}</span>${send}</div>${resp}</div>`;
+}
+
+function feiraHtml(v) {
+  const have = v.myRes;
+  const rates = v.can.feira;
+  const f = ui.feira;
+  if (f.give && have[f.give] < rates[f.give]) f.give = null;
+  if (f.want && (f.want === f.give || v.bank[f.want] === 0)) f.want = null;
+  const max = f.give && f.want ? Math.min(Math.floor(have[f.give] / rates[f.give]), v.bank[f.want]) : 1;
+  f.count = Math.max(1, Math.min(f.count, max));
+  const gives = Txt.ORDER.map((r) => `<button class="opc ${f.give === r ? 'on' : ''}" data-fg="${r}" ${have[r] >= rates[r] ? '' : 'disabled'}>
+    ${Art.resIcon(r, 34)}<span>${Txt.RES[r]}</span><small class="taxa">${rates[r]}:1</small><small>tem ${have[r]}</small></button>`).join('');
+  const wants = Txt.ORDER.map((r) => `<button class="opc ${f.want === r ? 'on' : ''}" data-fw="${r}" ${v.bank[r] > 0 && r !== f.give ? '' : 'disabled'}>
+    ${Art.resIcon(r, 34)}<span>${Txt.RES[r]}</span><small>banco ${v.bank[r]}</small></button>`).join('');
+  const ready = f.give && f.want;
+  return `<div class="janela"><button class="x" data-close="1" title="fechar">✕</button><h3>feira</h3>
+    <div class="sub">Troca com o banco: 4 por 1; 3 por 1 com casa ou vila numa feira comum; 2 por 1 na feira do recurso.</div>
+    <h4>você dá</h4><div class="escolha">${gives}</div>
+    <h4>você quer</h4><div class="escolha">${wants}</div>
+    <div class="qtdlinha">quantas? ${stepper('fc', f.count, ready && f.count > 1, ready && f.count < max)}</div>
+    <div class="rodape"><span class="resumo">${ready ? `você dá <b>${f.count * rates[f.give]} ${Txt.RES[f.give]}</b> e recebe <b>${f.count} ${Txt.RES[f.want]}</b>` : 'escolha o que dá e o que quer'}</span>
+      <button class="btn" data-send="feira" ${ready ? '' : 'disabled'}>trocar na feira</button></div></div>`;
+}
+
+function chuvaHtml(v) {
+  const n = total(ui.chuva);
+  const rows = Txt.ORDER.map((r) => `<div class="linha">${Art.resIcon(r, 26)}<span class="nm">${Txt.RES[r]} <span class="tem">banco ${v.bank[r]}</span></span>
+    ${stepper(`ch="${r}" data-d`, ui.chuva[r], ui.chuva[r] > 0, n < 2 && ui.chuva[r] < v.bank[r])}</div>`).join('');
+  return `<div class="janela estreita"><button class="x" data-close="1" title="fechar">✕</button><h3>Chuva no sertão</h3>
+    <div class="sub">Pegue 2 recursos quaisquer do banco (podem ser iguais).</div>${rows}
+    <div class="rodape"><span class="resumo">${n === 2 ? `você pega ${Txt.resList(ui.chuva)}` : `escolha mais ${2 - n}`}</span>
+      <button class="btn" data-send="chuva" ${n === 2 ? '' : 'disabled'}>jogar a Chuva</button></div></div>`;
+}
+
+function atravHtml() {
+  const opts = Txt.ORDER.map((r) => `<button class="opc ${ui.atrav === r ? 'on' : ''}" data-at="${r}">${Art.resIcon(r, 34)}<span>${Txt.RES[r]}</span></button>`).join('');
+  return `<div class="janela estreita"><button class="x" data-close="1" title="fechar">✕</button><h3>Atravessador</h3>
+    <div class="sub">Escolha um recurso: todo mundo te entrega o que tem dele.</div><div class="escolha">${opts}</div>
+    <div class="rodape"><span class="resumo">${ui.atrav ? `todo mundo te entrega ${Txt.RES_ART[ui.atrav]} ${Txt.RES[ui.atrav]} que tem` : 'escolha um recurso'}</span>
+      <button class="btn" data-send="atravessador" ${ui.atrav ? '' : 'disabled'}>jogar o Atravessador</button></div></div>`;
+}
+
+function discardHtml(v) {
+  const need = v.can.discard;
+  const have = v.myRes;
+  if (ui.discardKey !== v.discardEndsAt) { ui.discardKey = v.discardEndsAt; ui.discard = none(); }
+  const n = total(ui.discard);
+  const rows = Txt.ORDER.map((r) => `<div class="linha">${Art.resIcon(r, 26)}<span class="nm">${Txt.RES[r]} <span class="tem">tem ${have[r]}</span></span>
+    ${stepper(`dc="${r}" data-d`, ui.discard[r], ui.discard[r] > 0, n < need && ui.discard[r] < have[r])}</div>`).join('');
+  const left = need - n;
+  return `<div class="janela meio estreita descarte"><h3>Saiu 7! Descarte ${need} ${need === 1 ? 'carta' : 'cartas'}</h3>
+    <div class="sub">Você tem ${total(have)} cartas (mais de 7). Sem escolher, o descarte é sorteado em <b data-descarte>${clockText(v.discardEndsAt)}</b>.</div>${rows}
+    <div class="rodape"><span class="resumo falta ${left === 0 ? 'ok' : ''}">${left === 0 ? 'pronto!' : `faltam ${left}`}</span>
+      <button class="btn sec" data-send="suggest">sugerir</button><button class="btn" data-send="discard" ${left === 0 ? '' : 'disabled'}>descartar</button></div></div>`;
+}
+
+/** Cartão no alto quando um bot oferece troca na vez dele. */
+function offerCardHtml(v) {
+  const o = v.offer;
+  if (!o || v.turn === ME || v.phase !== 'main' || ui.panel === 'trade' || ui.hiddenOffer === o.id || !v.myRes) return '';
+  const who = nameOf(v.turn);
+  const can = covers(v.myRes, o.want);
+  const yes = o.accepted.includes(ME);
+  const no = o.rejected.includes(ME);
+  const others = v.players.filter((p) => p !== ME && p !== v.turn).map((p) => `${nameOf(p)} ${o.accepted.includes(p) ? '<span class="st sim">✓</span>' : o.rejected.includes(p) ? '<span class="st nao">✗</span>' : '<span class="st">…</span>'}`).join(' &nbsp; ');
+  const estado = yes ? `Você aceitou: esperando ${who} fechar…` : no ? 'Você disse não.' : can ? '' : `Você não tem ${Txt.resList(o.want)} pra dar.`;
+  return `<div class="janela cartao estreita"><span class="fita">oferta ${Txt.de(who)}</span><button class="x" data-hide="${o.id}" title="esconder">✕</button>
+    <div class="termos"><div><small>${who} te dá</small>${chips(o.give, 34)}</div><div class="seta">⇄</div><div><small>e quer</small>${chips(o.want, 34)}</div></div>
+    ${estado ? `<div class="estado">${estado}</div>` : ''}${others ? `<div class="estado" style="opacity:.8">${others}</div>` : ''}
+    <div class="botoes"><button class="btn" data-resp="1" ${can && !yes ? '' : 'disabled'}>aceito</button><button class="btn sec" data-resp="0" ${no ? 'disabled' : ''}>não</button>
+      <button class="btn sec" data-counter="1">contraproposta</button></div></div>`;
+}
+
+function renderJanela(v) {
+  if (ui.panel && !panelOk(v)) closePanel();
+  let html = '';
+  if (v.can.discard > 0 && v.myRes) html = discardHtml(v);
+  else if (ui.panel === 'trade') html = tradeHtml(v);
+  else if (ui.panel === 'feira') html = feiraHtml(v);
+  else if (ui.panel === 'chuva') html = chuvaHtml(v);
+  else if (ui.panel === 'atravessador') html = atravHtml(v);
+  $('#janela').innerHTML = html;
+  $('#cartao').innerHTML = html ? '' : offerCardHtml(v);
+}
+
+function onJanela(ev) {
+  const t = ev.target.closest('button');
+  if (!t || t.disabled || !state) return;
+  const v = view();
+  const d = t.dataset;
+  const delta = Number(d.d);
+  if (d.close) closePanel();
+  else if (d.tr) {
+    const [side, r] = d.tr.split(':');
+    ui[side][r] = Math.max(0, ui[side][r] + delta);
+  } else if (d.fg) ui.feira.give = d.fg;
+  else if (d.fw) ui.feira.want = d.fw;
+  else if (d.fc) ui.feira.count += Number(d.fc);
+  else if (d.ch) ui.chuva[d.ch] = Math.max(0, ui.chuva[d.ch] + delta);
+  else if (d.at) ui.atrav = d.at;
+  else if (d.dc) ui.discard[d.dc] = Math.max(0, ui.discard[d.dc] + delta);
+  else if (d.deal) send(ME, { type: 'close_deal', with: d.deal, source: 'offer', id: v.offer.id }) && closePanel();
+  else if (d.prop) {
+    const [from, id] = d.prop.split(':');
+    if (send(ME, { type: 'close_deal', with: from, source: 'proposal', id: Number(id) })) closePanel();
+  } else if (d.hide) ui.hiddenOffer = Number(d.hide);
+  else if (d.resp) send(ME, { type: 'respond', offerId: v.offer.id, accept: d.resp === '1' });
+  else if (d.counter) {
+    // Contraproposta: o painel já vem com a oferta invertida (você dá o que ele quer, quer o que ele dá).
+    ui.give = { ...v.offer.want };
+    ui.want = { ...v.offer.give };
+    openPanel('trade', v);
+  } else if (d.send) {
+    const s = d.send;
+    if (s === 'offer') send(ME, { type: 'offer', give: { ...ui.give }, want: { ...ui.want } });
+    else if (s === 'propose') send(ME, { type: 'propose', give: { ...ui.give }, want: { ...ui.want } });
+    else if (s === 'cancel') send(ME, { type: 'cancel_offer' });
+    else if (s === 'feira') {
+      const f = ui.feira;
+      if (send(ME, { type: 'feira', give: f.give, want: f.want, count: f.count })) ui.feira = { give: f.give, want: null, count: 1 };
+    } else if (s === 'chuva') {
+      const rs = Txt.ORDER.flatMap((r) => Array(ui.chuva[r]).fill(r));
+      if (send(ME, { type: 'play_chuva', resources: rs })) closePanel();
+    } else if (s === 'atravessador') {
+      if (send(ME, { type: 'play_atravessador', resource: ui.atrav })) closePanel();
+    } else if (s === 'suggest') ui.discard = Bot.chooseDiscard(v.myRes, v.can.discard);
+    else if (s === 'discard') send(ME, { type: 'discard', cards: { ...ui.discard } });
+  }
+  render(view());
+}
+$('#janela').addEventListener('click', onJanela);
+$('#cartao').addEventListener('click', onJanela);
+
 function render(v) {
   renderStatic(v);
   renderDyn(v);
@@ -604,6 +927,7 @@ function render(v) {
   renderActions(v);
   renderHand(v);
   renderLog(v);
+  renderJanela(v);
   renderEnd(v);
   clocks();
 }
@@ -611,17 +935,33 @@ function render(v) {
 /* ---------- botões ---------- */
 $('#bRoll').addEventListener('click', () => send(ME, { type: 'roll' }));
 $('#bCordel').addEventListener('click', () => send(ME, { type: 'buy_cordel' }));
-$('#bEnd').addEventListener('click', () => { mode = null; send(ME, { type: 'end_turn' }); });
+$('#bEnd').addEventListener('click', () => { mode = null; closePanel(); send(ME, { type: 'end_turn' }); });
+$('#bTrade').addEventListener('click', () => {
+  const v = view();
+  if (ui.panel === 'trade') closePanel();
+  else {
+    // O painel começa com a sua oferta aberta (na sua vez) ou a sua proposta (na vez de bot), se houver.
+    const p = v.turn !== ME ? v.proposals.find((x) => x.from === ME) : v.offer;
+    ui.give = p ? { ...p.give } : none();
+    ui.want = p ? { ...p.want } : none();
+    openPanel('trade', v);
+  }
+  render(view());
+});
+$('#bFeira').addEventListener('click', () => { if (ui.panel === 'feira') closePanel(); else openPanel('feira', view()); render(view()); });
 for (const b of document.querySelectorAll('[data-mode]')) {
-  b.addEventListener('click', () => { mode = mode === b.dataset.mode ? null : b.dataset.mode; render(view()); });
+  b.addEventListener('click', () => { const m = mode === b.dataset.mode ? null : b.dataset.mode; closePanel(); mode = m; render(view()); });
 }
 $('#prompt').addEventListener('click', (ev) => {
   const t = ev.target.closest('button');
   if (!t || !state) return;
   if (t.dataset.steal) send(ME, { type: 'steal', from: t.dataset.steal });
-  if (t.dataset.act === 'discard') { const v = view(); send(ME, { type: 'discard', cards: Bot.chooseDiscard(v.myRes, v.can.discard) }); }
+  if (t.dataset.act === 'trade') { const v = view(); ui.give = v.offer ? { ...v.offer.give } : none(); ui.want = v.offer ? { ...v.offer.want } : none(); openPanel('trade', v); render(view()); }
 });
-addEventListener('keydown', (e) => { if (e.key === 'Escape' && mode) { mode = null; render(view()); } });
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !state) return;
+  if (mode || ui.panel) { mode = null; closePanel(); render(view()); }
+});
 $('#bStart').addEventListener('click', newGame);
 $('#bRestart').addEventListener('click', restart);
 $('#bLobby').addEventListener('click', toLobby);
@@ -629,9 +969,11 @@ $('#bLobby').addEventListener('click', toLobby);
 /* ---------- lobby ---------- */
 function lobby() {
   for (const b of document.querySelectorAll('[data-bots]')) b.classList.toggle('on', Number(b.dataset.bots) === bots);
+  for (const b of document.querySelectorAll('[data-speed]')) b.classList.toggle('on', b.dataset.speed === speed);
   $('#nomesLobby').innerHTML = ids().map((id) => `<span><svg width="26" height="26" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[id])}</svg>${nameOf(id)}</span>`).join('');
 }
 for (const b of document.querySelectorAll('[data-bots]')) b.addEventListener('click', () => { bots = Number(b.dataset.bots); lobby(); });
+for (const b of document.querySelectorAll('[data-speed]')) b.addEventListener('click', () => { speed = b.dataset.speed; lobby(); });
 $('#logoIcon').innerHTML = `<svg width="46" height="46" viewBox="0 0 100 100"><path d="M44 86 V26 Q44 18 50 18 Q56 18 56 26 V86 Z M44 58 H34 Q28 58 28 52 V38 Q28 33 32 33 Q36 33 36 38 V50 H44 M56 50 H64 V34 Q64 29 68 29 Q72 29 72 34 V50 Q72 58 66 58 H56" fill="#5f7a3a" stroke="#4a2e1f" stroke-width="3.6" stroke-linejoin="round"/><circle cx="50" cy="16" r="4.5" fill="#e0582a" stroke="#4a2e1f" stroke-width="2"/><path d="M14 86 H86" stroke="#4a2e1f" stroke-width="3.6" stroke-linecap="round"/></svg>`;
 lobby();
 // Antes da partida: o tabuleiro vazio com a borda e os painéis zerados.

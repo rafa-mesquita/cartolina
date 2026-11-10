@@ -155,27 +155,63 @@
     return out;
   }
 
-  /** Memória curta por bot: oferta já tentada neste turno, trocas na feira, quanto esperou a oferta. */
+  /** Quanto tempo o bot espera respostas da oferta dele (o humano precisa de tempo pra ler e clicar). */
+  const OFFER_WAIT_MS = 8000;
+
+  /** Memória curta por bot: oferta já tentada neste turno, trocas na feira, quando ofereceu, propostas julgadas. */
   const memo = new Map();
   /** Uma chave que muda a cada turno: partida + quantas vezes já rolaram os dados. */
   const turnKey = (view, me) => `${me}:${view.match}:${view.diceCounts.reduce((a, b) => a + b, 0)}`;
   function turnMemo(view, me) {
     const k = turnKey(view, me);
     let m = memo.get(me);
-    if (!m || m.key !== k) { m = { key: k, offered: false, feiras: 0, offerWaits: 0 }; memo.set(me, m); }
+    if (!m || m.key !== k) { m = { key: k, offered: false, feiras: 0, offerAt: 0, judged: {}, countered: null }; memo.set(me, m); }
     return m;
+  }
+
+  /**
+   * Vale a pena receber `gets` e dar `gives`? Precisa ter o que dá, receber algo que falta pra meta,
+   * não dar algo que a meta usa e não sair perdendo em número de cartas.
+   */
+  function wantsTrade(view, me, gets, gives) {
+    const have = view.myRes;
+    if (!RES.every((r) => have[r] >= gives[r])) return false;
+    const goal = goalOf(view, me);
+    const need = missing(have, goal);
+    const cost = COSTS[goal || 'road'];
+    const helps = RES.some((r) => gets[r] > 0 && need[r] > 0);
+    const hurts = RES.some((r) => gives[r] > 0 && have[r] - gives[r] < cost[r]);
+    return helps && !hurts && total(gets) >= total(gives);
   }
 
   /** Fora da vez: responde a oferta aberta uma vez. */
   function respondTo(view, me) {
     const o = view.offer;
     if (!o || o.accepted.includes(me) || o.rejected.includes(me)) return null;
+    return { type: 'respond', offerId: o.id, accept: wantsTrade(view, me, o.give, o.want) };
+  }
+
+  /**
+   * Depois de recusar, às vezes manda contraproposta: pede 1 do que a oferta dava e que falta pra meta,
+   * e dá 1 do que sobra. Uma vez por oferta.
+   */
+  function counterTo(view, me, rnd) {
+    const o = view.offer;
+    const m = turnMemo(view, me);
+    if (!o || m.countered === o.id) return null;
+    m.countered = o.id;
+    if (view.proposals.some((p) => p.from === me) || rnd() > 0.45) return null;
     const have = view.myRes;
     const need = missing(have, goalOf(view, me));
-    const has = RES.every((r) => have[r] >= o.want[r]);
-    const helps = RES.some((r) => o.give[r] > 0 && need[r] > 0);
-    const hurts = RES.some((r) => o.want[r] > 0 && have[r] - o.want[r] < COSTS[goalOf(view, me) || 'road'][r]);
-    return { type: 'respond', offerId: o.id, accept: has && helps && !hurts };
+    const keep = keepFor(view, me);
+    const want = RES.filter((r) => o.give[r] > 0 && need[r] > 0)[0];
+    const give = RES.filter((r) => r !== want && have[r] - keep[r] > 0 && need[r] === 0).sort((a, b) => have[b] - have[a])[0];
+    if (!want || !give) return null;
+    const g = none();
+    const w = none();
+    g[give] = 1;
+    w[want] = 1;
+    return { type: 'propose', give: g, want: w };
   }
 
   /** Recursos pra Chuva: os 2 que mais faltam pra meta (que o banco tem). */
@@ -202,13 +238,20 @@
     const have = view.myRes;
     const m = turnMemo(view, me);
 
-    // Oferta minha aberta: fecha com quem aceitou; sem resposta boa, desiste depois de um tempo.
+    // Propostas pra mim (contrapropostas ou propostas soltas): julga cada uma uma vez; fecha a primeira boa.
+    for (const p of view.proposals) {
+      if (p.id in m.judged) continue;
+      const yes = wantsTrade(view, me, p.give, p.want);
+      m.judged[p.id] = yes;
+      if (yes) return { type: 'close_deal', with: p.from, source: 'proposal', id: p.id };
+    }
+
+    // Oferta minha aberta: fecha com quem aceitou; se todos recusaram ou passou o tempo, desiste.
     if (view.offer) {
       const o = view.offer;
       if (o.accepted.length) return { type: 'close_deal', with: o.accepted[0], source: 'offer', id: o.id };
-      m.offerWaits++;
       const others = view.players.length - 1;
-      if (o.rejected.length >= others || m.offerWaits > 3) return { type: 'cancel_offer' };
+      if (o.rejected.length >= others || Date.now() - m.offerAt > OFFER_WAIT_MS) return { type: 'cancel_offer' };
       return null;
     }
 
@@ -255,7 +298,7 @@
           const w = none();
           g[give] = 1;
           w[want] = 1;
-          m.offerWaits = 0;
+          m.offerAt = Date.now();
           return { type: 'offer', give: g, want: w };
         }
       }
@@ -268,7 +311,12 @@
     if (view.phase === 'lobby' || view.phase === 'over' || !view.myRes) return null;
     const can = view.can;
     if (can.discard > 0) return { type: 'discard', cards: chooseDiscard(view.myRes, can.discard) };
-    if (view.turn !== me) return can.respond ? respondTo(view, me) : null;
+    if (view.turn !== me) {
+      const r = can.respond ? respondTo(view, me) : null;
+      if (r) return r;
+      if (can.propose && view.offer && view.offer.rejected.includes(me)) return counterTo(view, me, rnd);
+      return null;
+    }
 
     if (can.placeHouse.length) return { type: 'place_house', vertex: best(can.placeHouse, (v) => cornerValue(view, v), rnd) };
     if (can.placeRoad.length) return { type: 'place_road', edge: pick(can.placeRoad, rnd) };
@@ -285,5 +333,11 @@
     return null;
   }
 
-  window.Bot = { decide, chooseDiscard, goalOf, missing };
+  /** O que o bot `me` achou da proposta `id` (true = fechou/vai fechar, false = não quis, undefined = ainda não viu). */
+  function verdict(me, id) {
+    const m = memo.get(me);
+    return m ? m.judged[id] : undefined;
+  }
+
+  window.Bot = { decide, chooseDiscard, goalOf, missing, verdict };
 })();

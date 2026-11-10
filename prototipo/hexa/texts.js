@@ -2,6 +2,8 @@
 /* Textos do protótipo do Mandacaru: nomes do tema e uma frase curta por linha do diário (MandacaruLogEntry). */
 (function () {
   const RES = { wood: 'madeira', brick: 'barro', leather: 'couro', beans: 'feijão', stone: 'pedra' };
+  /** Artigo de cada recurso ("a madeira", "o barro"). */
+  const RES_ART = { wood: 'a', brick: 'o', leather: 'o', beans: 'o', stone: 'a' };
   const TERRAIN = { forest: 'caatinga', hills: 'barreiro', pasture: 'malhada', fields: 'roçado', mountains: 'lajedo', desert: 'rio seco' };
   const CORDEL = { vaqueiro: 'Vaqueiro', point: 'Ponto', mutirao: 'Mutirão', chuva: 'Chuva no sertão', atravessador: 'Atravessador' };
   const CORDEL_DESC = {
@@ -108,5 +110,5 @@
     stale_offer: 'essa oferta já mudou.',
   };
 
-  window.Txt = { RES, TERRAIN, CORDEL, CORDEL_DESC, POINT_NAMES, PIECE, ORDER, ERR, line, resList, joinE, de, com, hexName };
+  window.Txt = { RES, RES_ART, TERRAIN, CORDEL, CORDEL_DESC, POINT_NAMES, PIECE, ORDER, ERR, line, resList, joinE, de, com, hexName };
 })();
