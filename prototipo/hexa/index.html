@@ -3,199 +3,640 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>cartolina~ · protótipo do jogo de hexágonos</title>
+<title>Mandacaru · protótipo da mesa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link id="fonts" rel="stylesheet" href="">
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Mulish:wght@600;800&display=swap" rel="stylesheet">
 <style>
+:root{
+  --ink:#4a2e1f; --line:#5b3a29; --panel:#fff6e6; --paper:#f6e0bd; --accent:#b8321f; --terra:#c8643b; --soft:#8a6a4a;
+  --bd:2px solid #5b3a29; --rad:10px; --sh:0 3px 0 #5b3a29; --ft:'Bree Serif',Georgia,serif; --fb:'Mulish',system-ui,sans-serif;
+}
 *{box-sizing:border-box}
+[hidden]{display:none !important}
 html,body{margin:0;height:100%;overflow:hidden}
-body{font-family:var(--fb);color:var(--ink);background:var(--bg);transition:background .3s}
+body{font-family:var(--fb);font-weight:600;color:var(--ink);-webkit-user-select:none;user-select:none;
+  background:radial-gradient(ellipse at 50% -10%,rgba(255,214,120,.65),transparent 60%),linear-gradient(#f7e6c4,#ecc896) fixed}
 button{font:inherit;color:inherit;cursor:pointer}
+b{font-weight:800}
 
-/* ---------- troca de estilo (só do protótipo) ---------- */
-.proto{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:20;display:flex;gap:6px;padding:6px;border-radius:999px;background:rgba(20,20,20,.82);font:600 13px/1 system-ui}
-.proto button{border:0;border-radius:999px;padding:8px 14px;background:transparent;color:#ddd}
-.proto button.on{background:#fff;color:#111}
-.proto .sep{width:1px;background:#555;margin:4px 2px}
+/* ---------- palco 1440×900 escalado ---------- */
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;
+  display:grid;grid-template-columns:268px 1fr 292px;grid-template-rows:78px 1fr 166px;column-gap:18px;padding:0 20px 12px}
 
-/* ---------- layout ---------- */
-.app{display:grid;grid-template-columns:250px 1fr 250px;grid-template-rows:72px 1fr 150px;height:100%;padding:0 18px 52px}
-header{grid-column:1/-1;display:flex;align-items:center;gap:16px}
-.logo{font:var(--ft);font-size:34px;line-height:1;letter-spacing:var(--ls,0)}
-.sub{font-size:15px;opacity:.75}
-.turno{margin-left:auto;display:flex;align-items:center;gap:14px}
-.relogio{font:var(--ft);font-size:22px;padding:6px 14px;border:var(--bd);border-radius:var(--rad);background:var(--panel)}
-.dados{display:flex;gap:8px}
-.dados svg{width:44px;height:44px;border:var(--bd);border-radius:var(--rad-s);background:var(--die);fill:var(--die-ink)}
+/* ---------- topo ---------- */
+header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
+.logo{display:flex;align-items:center;gap:10px;width:268px;flex:none}
+.logo h1{margin:0;font:400 34px/1 var(--ft)}
+.logo .sub{font-size:14px;opacity:.75;margin-top:2px}
+.turno{flex:1;display:flex;align-items:center;justify-content:center;gap:14px}
+#vez{font:400 22px/1 var(--ft)}
+.relogio{font:400 21px/1 var(--ft);padding:7px 14px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);min-width:84px;text-align:center}
+.relogio.pouco{color:var(--accent);border-color:var(--accent)}
+.dados{display:flex;gap:8px;width:292px;justify-content:flex-end}
+.dado{width:46px;height:46px;border:var(--bd);border-radius:8px;background:var(--panel);box-shadow:var(--sh);fill:var(--ink)}
+.dado.rolando{animation:chacoalha .3s linear}
+@keyframes chacoalha{0%{transform:rotate(0)}25%{transform:rotate(-14deg) translateY(-4px)}50%{transform:rotate(10deg)}75%{transform:rotate(-6deg) translateY(-2px)}100%{transform:rotate(0)}}
 
-.jogadores{grid-row:2/4;display:flex;flex-direction:column;gap:10px;padding-top:6px}
-.jog{display:flex;align-items:center;gap:10px;padding:10px 12px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh)}
-.jog.vez{outline:3px solid var(--accent);outline-offset:2px}
-.jog svg{flex:none}
-.jog .n{font:var(--ft);font-size:18px}
-.jog .m{font-size:13px;opacity:.8;display:flex;gap:10px;margin-top:3px}
-.jog .pts{margin-left:auto;font:var(--ft);font-size:26px}
+/* ---------- jogadores (esquerda) ---------- */
+#esq{grid-row:2/4;display:flex;flex-direction:column;gap:10px;padding-top:4px;min-height:0}
+.jog{position:relative;display:flex;align-items:center;gap:10px;padding:10px 12px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);transition:transform .2s}
+.jog.vez{outline:3px solid var(--accent);outline-offset:2px;transform:translateX(4px)}
+.jog .casa{flex:none}
+.jog .info{flex:1;min-width:0}
+.jog .n{font:400 19px/1.1 var(--ft);display:flex;align-items:center;gap:6px}
+.jog .n small{font:800 10px/1 var(--fb);letter-spacing:.06em;text-transform:uppercase;opacity:.55}
+.jog .m{font-size:13px;display:flex;gap:10px;margin-top:4px;align-items:center}
+.jog .m span{display:inline-flex;align-items:center;gap:3px}
+.jog .selos{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.selo{font:800 10.5px/1 var(--fb);padding:3px 6px;border-radius:999px;background:var(--terra);color:#fff6e6;letter-spacing:.02em}
+.selo.comitiva{background:#7a4a2a}
+.jog .pts{font:400 30px/1 var(--ft);text-align:right}
+.jog .pts small{display:block;font:800 10px/1 var(--fb);opacity:.6;letter-spacing:.05em}
+.jog .pts .esc{display:block;font:700 11px/1.2 var(--fb);opacity:.7}
+.jog .relo{position:absolute;left:60px;bottom:-11px;font:400 13px/1 var(--ft);padding:3px 8px;border:var(--bd);border-radius:999px;background:#fff6e6}
+.jog .relo.pouco{color:var(--accent);border-color:var(--accent)}
+.box{border:var(--bd);border-radius:var(--rad);background:var(--panel);padding:11px 13px;box-shadow:var(--sh)}
+.box h3{margin:0 0 7px;font:400 16px/1 var(--ft)}
+.banco{display:flex;gap:8px;flex-wrap:wrap;font-size:13px}
+.banco span{display:inline-flex;align-items:center;gap:2px}
+.monte{font-size:13px;margin-top:6px}
 
-.mesa{grid-row:2;grid-column:2;position:relative;min-height:0;display:grid;place-items:center}
-.mesa svg{width:100%;height:100%}
+/* ---------- mesa (centro) ---------- */
+#mesa{grid-row:2;grid-column:2;position:relative;min-height:0;display:grid;place-items:center}
+#board{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#board [data-v],#board [data-e],#board [data-h],#board [data-c]{cursor:pointer}
+.pulse{animation:pulse 1.1s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.pulse-o{animation:pulseo 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.6;transform:scale(.82)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes pulseo{0%,100%{opacity:.45}50%{opacity:1}}
+#soma{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) scale(.6);font:400 150px/1 var(--ft);color:#fff6e6;
+  -webkit-text-stroke:5px #5b3a29;paint-order:stroke fill;text-shadow:0 7px 0 #5b3a29;opacity:0;pointer-events:none;transition:opacity .2s,transform .25s;text-align:center}
+#soma.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#soma.sete{color:#f3c9a0}
+#soma small{display:block;font-size:34px;-webkit-text-stroke:2px #5b3a29;text-shadow:0 3px 0 #5b3a29;margin-top:4px}
+#dica{position:absolute;left:50%;top:6px;transform:translateX(-50%);padding:7px 16px;border:var(--bd);border-radius:999px;background:var(--panel);box-shadow:var(--sh);font:400 16px/1 var(--ft);white-space:nowrap;pointer-events:none}
 
-.lado{grid-row:2/4;grid-column:3;display:flex;flex-direction:column;gap:12px;padding-top:6px}
-.box{border:var(--bd);border-radius:var(--rad);background:var(--panel);padding:12px 14px;box-shadow:var(--sh)}
-.box h3{margin:0 0 8px;font:var(--ft);font-size:17px}
-.custo{display:flex;align-items:center;gap:6px;margin:6px 0;font-size:14px}
-.custo b{min-width:62px;font-weight:700}
-.custo svg{width:22px;height:22px}
-.acoes{display:flex;flex-direction:column;gap:8px}
-.btn{border:var(--bd);border-radius:var(--rad);background:var(--btn);color:var(--btn-ink);padding:11px 14px;font:var(--ft);font-size:17px;box-shadow:var(--sh)}
+/* ---------- ações e diário (direita) ---------- */
+#dir{grid-row:2/4;grid-column:3;display:flex;flex-direction:column;gap:11px;padding-top:4px;min-height:0}
+#prompt{font-size:14.5px;line-height:1.4}
+#prompt .alvos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#prompt .oferta{margin-top:6px;padding:6px 8px;border-radius:8px;background:#f6e0bd;font-size:13.5px}
+.btn{border:var(--bd);border-radius:var(--rad);background:var(--terra);color:#fff6e6;padding:10px 12px;font:400 17px/1.1 var(--ft);box-shadow:var(--sh);transition:transform .08s}
+.btn:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 #5b3a29}
 .btn.sec{background:var(--panel);color:var(--ink)}
-.diario{font-size:14px;line-height:1.45}
-.diario p{margin:0 0 4px}
+.btn.on{background:var(--accent);outline:3px solid #fff6e6;outline-offset:-6px}
+.btn:disabled{opacity:.42;cursor:default}
+.btn.mini{padding:6px 10px;font-size:15px}
+.btn.grande{font-size:21px;padding:13px}
+.acoes{display:flex;flex-direction:column;gap:8px}
+.construir{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.construir .btn{display:flex;align-items:center;justify-content:center;gap:6px}
+.custo{display:flex;align-items:center;gap:4px;margin:4px 0;font-size:13.5px}
+.custo b{min-width:56px;font:400 15px/1 var(--ft)}
+#diario{flex:1;min-height:0;overflow:hidden;font-size:13.5px;line-height:1.4}
+#diario p{margin:0 0 5px}
+#diario p:first-of-type{font-weight:800}
 
-.mao{grid-row:3;grid-column:2;display:flex;align-items:flex-end;justify-content:center;gap:12px;padding-bottom:6px}
-.carta{position:relative;width:92px;height:128px;border:var(--bd);border-radius:var(--rad);background:var(--card);box-shadow:var(--sh);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform .15s}
+/* ---------- mão (embaixo) ---------- */
+#mao{grid-row:3;grid-column:2;display:flex;align-items:flex-end;justify-content:center;gap:18px;padding-bottom:4px}
+.grupo{display:flex;align-items:flex-end}
+.grupo.res{gap:8px}
+.carta{position:relative;flex:none;width:82px;height:120px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform .15s}
 .carta:hover{transform:translateY(-8px)}
-.carta .nome{font:var(--ft);font-size:15px}
-.carta .qtd{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font:var(--ft);font-size:16px;border:var(--bd)}
-.carta.dev{background:var(--card-dev)}
+.carta .nome{font:400 15px/1 var(--ft)}
+.carta .qtd{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff6e6;font:400 16px/1 var(--ft);border:var(--bd)}
+.carta.zero{opacity:.45}
+.carta.zero .qtd{background:#c9b291}
+.cordel{position:relative;flex:none;width:80px;height:124px;border:var(--bd);border-radius:6px;background:var(--paper);box-shadow:var(--sh);
+  display:flex;flex-direction:column;align-items:center;padding:5px 4px;gap:3px;transition:transform .15s}
+.cordel:hover{transform:translateY(-10px);z-index:2}
+.cordel .cap{font:800 8.5px/1 var(--fb);letter-spacing:.18em;opacity:.7}
+.cordel .xilo{width:62px;height:58px;background:#2a1c13;border-radius:2px;display:grid;place-items:center}
+.cordel .tit{font:400 12.5px/1.05 var(--ft);text-align:center;min-height:26px;display:grid;place-items:center}
+.cordel .novo{position:absolute;top:8px;right:-10px;transform:rotate(14deg);font:800 10px/1 var(--fb);padding:3px 6px;border-radius:4px;background:var(--accent);color:#fff6e6;border:1.5px solid #5b3a29;letter-spacing:.05em}
+.vazio{font-size:13px;opacity:.6;align-self:center}
 
-/* ---------- A: xilogravura ---------- */
-body.tema-a{
-  --bg:#efe3c4;--ink:#1b1712;--panel:#f6ecd2;--card:#f6ecd2;--card-dev:#e8d3a3;--accent:#b3261e;--accent-ink:#f6ecd2;
-  --btn:#1b1712;--btn-ink:#f6ecd2;--die:#f6ecd2;--die-ink:#1b1712;
-  --ft:400 1em 'Alfa Slab One',serif;--fb:'Bitter',serif;--bd:3px solid #1b1712;--rad:2px;--rad-s:4px;--sh:4px 4px 0 #1b1712;
-  background-image:radial-gradient(rgba(27,23,18,.07) 1px,transparent 1.4px),radial-gradient(rgba(120,80,30,.08) 1px,transparent 1.6px);
-  background-size:6px 6px,13px 13px;background-position:0 0,4px 7px;
-}
-body.tema-a .logo{text-transform:uppercase;--ls:1px}
-/* ---------- B: azulejo / aquarela ---------- */
-body.tema-b{
-  --bg:#fbf7ee;--ink:#1d2f55;--panel:#ffffff;--card:#ffffff;--card-dev:#e9f0fb;--accent:#1f4e9c;--accent-ink:#fff;
-  --btn:#1f4e9c;--btn-ink:#fff;--die:#fff;--die-ink:#1f4e9c;
-  --ft:800 1em 'Fraunces',serif;--fb:'Nunito',sans-serif;--bd:2px solid #1f4e9c;--rad:14px;--rad-s:10px;--sh:0 3px 10px rgba(31,78,156,.18);
-}
-body.tema-b .logo{font-style:italic}
-/* ---------- C: retalhos ---------- */
-body.tema-c{
-  --bg:#e6d9c2;--ink:#4a3424;--panel:#f6efe0;--card:#f6efe0;--card-dev:#f3dfc6;--accent:#c8362f;--accent-ink:#fff8ea;
-  --btn:#c8362f;--btn-ink:#fff8ea;--die:#f6efe0;--die-ink:#4a3424;
-  --ft:700 1em 'Fredoka',sans-serif;--fb:'Patrick Hand',cursive;--bd:2px dashed #8a6a4a;--rad:16px 12px 15px 11px;--rad-s:10px;--sh:2px 4px 6px rgba(58,42,26,.25);
-  background-image:repeating-linear-gradient(0deg,rgba(90,61,43,.07) 0 1px,transparent 1px 4px),repeating-linear-gradient(90deg,rgba(90,61,43,.07) 0 1px,transparent 1px 4px);
-}
-body.tema-c .btn{border-style:solid;border-color:#7a2520;outline:2px dashed rgba(255,248,234,.7);outline-offset:-6px}
-body.tema-c .jogadores .jog, body.tema-c .box, body.tema-c .carta{border-style:dashed}
-/* ---------- D: caatinga ao sol ---------- */
-body.tema-d{
-  --bg:#f3dcb4;--ink:#4a2e1f;--panel:#fff6e6;--card:#fff6e6;--card-dev:#f6e0bd;--accent:#b8321f;--accent-ink:#fff6e6;
-  --btn:#c8643b;--btn-ink:#fff6e6;--die:#fff6e6;--die-ink:#4a2e1f;
-  --ft:400 1em 'Bree Serif',serif;--fb:'Mulish',sans-serif;--bd:2px solid #5b3a29;--rad:10px;--rad-s:8px;--sh:0 3px 0 #5b3a29;
-  background-image:radial-gradient(ellipse at 50% -10%,rgba(255,214,120,.65),transparent 60%),linear-gradient(#f7e6c4,#ecc896);
-}
+/* ---------- lobby, fim, aviso ---------- */
+.veu{position:absolute;inset:0;z-index:10;display:grid;place-items:center;background:rgba(74,46,31,.28)}
+.painel{width:520px;padding:28px 32px;border:var(--bd);border-radius:14px;background:var(--panel);box-shadow:0 6px 0 #5b3a29;text-align:center}
+.painel h2{margin:0;font:400 46px/1 var(--ft)}
+.painel .sub{margin:6px 0 20px;opacity:.75}
+.painel .esc{display:flex;gap:10px;justify-content:center;margin:12px 0 18px}
+.painel .nomes{display:flex;gap:14px;justify-content:center;margin-bottom:22px;font:400 17px/1 var(--ft)}
+.painel .nomes span{display:inline-flex;align-items:center;gap:5px}
+.placar{text-align:left;margin:16px 0 20px}
+.placar div{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1.5px dashed #c9a77a;font-size:15px}
+.placar div b{margin-left:auto;font:400 22px/1 var(--ft)}
+#toast{position:absolute;left:50%;bottom:184px;transform:translate(-50%,10px);z-index:20;padding:10px 18px;border:var(--bd);border-radius:999px;background:#4a2e1f;color:#fff6e6;
+  font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
-<body class="tema-a">
-<div class="app">
+<body>
+<div id="app">
   <header>
-    <div>
-      <div class="logo" id="logo"></div>
-      <div class="sub" id="sub"></div>
+    <div class="logo">
+      <span id="logoIcon"></span>
+      <div><h1>Mandacaru</h1><div class="sub">faça a caatinga florir</div></div>
     </div>
-    <div class="turno">
-      <span id="vez"></span>
-      <span class="relogio">4:12</span>
-      <div class="dados" id="dados"></div>
-    </div>
+    <div class="turno"><span id="vez"></span><span class="relogio" id="relogio" hidden>5:00</span></div>
+    <div class="dados" id="dados"></div>
   </header>
-  <aside class="jogadores" id="jogadores"></aside>
-  <main class="mesa"><svg id="mesa" viewBox="-356 -324 712 648" preserveAspectRatio="xMidYMid meet"></svg></main>
-  <aside class="lado">
+
+  <aside id="esq">
+    <div id="jogadores" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div class="box" id="bancoBox"></div>
+  </aside>
+
+  <main id="mesa">
+    <svg id="board" viewBox="-356 -324 712 648" preserveAspectRatio="xMidYMid meet">
+      <defs id="defs"></defs><g id="static"></g><g id="dyn"></g>
+    </svg>
+    <div id="dica" hidden></div>
+    <div id="soma"></div>
+  </main>
+
+  <aside id="dir">
+    <div class="box" id="prompt"></div>
     <div class="acoes">
-      <button class="btn">trocar</button>
-      <button class="btn">construir</button>
-      <button class="btn sec">passar a vez</button>
+      <button class="btn grande" id="bRoll">🎲 rolar os dados</button>
+      <div class="construir">
+        <button class="btn" id="bRoad" data-mode="road">estrada</button>
+        <button class="btn" id="bHouse" data-mode="house">casa</button>
+        <button class="btn" id="bCity" data-mode="city">vila</button>
+        <button class="btn" id="bCordel">cordel</button>
+      </div>
+      <button class="btn sec" id="bEnd">passar a vez</button>
     </div>
     <div class="box" id="custos"></div>
-    <div class="box diario" id="diario"></div>
+    <div class="box" id="diario"></div>
   </aside>
-  <section class="mao" id="mao"></section>
+
+  <section id="mao"></section>
+
+  <div class="veu" id="lobby">
+    <div class="painel">
+      <h2>Mandacaru</h2>
+      <div class="sub">protótipo: você contra os bots, com as regras de verdade</div>
+      <div>com quantos bots?</div>
+      <div class="esc">
+        <button class="btn sec" data-bots="2">2 bots</button>
+        <button class="btn sec" data-bots="3">3 bots</button>
+      </div>
+      <div class="nomes" id="nomesLobby"></div>
+      <button class="btn grande" id="bStart">começar</button>
+    </div>
+  </div>
+
+  <div class="veu" id="fim" hidden>
+    <div class="painel">
+      <h2 id="fimTit"></h2>
+      <div class="placar" id="fimPlacar"></div>
+      <div class="esc">
+        <button class="btn grande" id="bRestart">jogar de novo</button>
+        <button class="btn sec" id="bLobby">mudar os bots</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
 </div>
-<div class="proto" id="proto">
-  <button data-t="a">A · Sertãozim</button>
-  <button data-t="b">B · Ilhota</button>
-  <button data-t="c">C · Fuxico</button>
-  <button data-t="d">D · Mandacaru</button>
-  <span class="sep"></span>
-  <button id="sortear">🎲 sortear outro tabuleiro</button>
-</div>
-<script src="board.js"></script>
-<script src="temas.js"></script>
+
+<script src="rules.js"></script>
+<script src="art.js"></script>
+<script src="texts.js"></script>
+<script src="bots.js"></script>
 <script>
-const R = 58;
-let seed = Number(new URLSearchParams(location.search).get('s')) || 20261109;
-let tema = new URLSearchParams(location.search).get('t') || 'a';
+'use strict';
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+const G = Manda.geometry();
+const R = Art.R;
 
-function resIcon(T, res) {
-  return T.icons[res] ?? (res === 'pasto' ? T.icons.pasto : res === 'roca' ? T.icons.roca : res);
+/* ---------- estado e laço ---------- */
+const ME = 'p0';
+const NAMES = { p0: 'você', p1: 'Bia', p2: 'Duda', p3: 'Léo' };
+const nameOf = (id) => NAMES[id] || id;
+let bots = 3;
+let state = null;
+let version = 0;
+let mode = null; // 'road' | 'house' | 'city' na fase principal
+const ids = () => Array.from({ length: bots + 1 }, (_, i) => `p${i}`);
+const ctx = () => ({ hostId: ME, active: ids(), rng: Math.random, now: Date.now() });
+const view = (p = ME) => Manda.mandacaruViewFor(state, p);
+
+/* ---------- utilidades ---------- */
+const timers = new Set();
+const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+const between = (a, b) => a + Math.random() * (b - a);
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600); }
+const clockText = (endsAt) => (endsAt === null || endsAt === undefined ? "parado" : mmss(endsAt - Date.now()));
+const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const vezDe = (id) => (id === ME ? 'sua vez' : `vez ${Txt.de(nameOf(id))}`);
+
+/* ---------- escala do palco ---------- */
+function fit() {
+  const sc = Math.min(innerWidth / 1440, innerHeight / 900);
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+}
+addEventListener('resize', fit);
+fit();
+
+/** Igual ao servidor: o schema valida antes das regras. */
+function send(pid, action) {
+  const parsed = Manda.mandacaruActionSchema.safeParse(action);
+  if (!parsed.success) { console.error('ação inválida (bug do protótipo)', pid, action, parsed.error); if (pid === ME) toast('ação inválida (bug do protótipo — veja o console)'); return false; }
+  const res = Manda.applyMandacaruAction(state, pid, parsed.data, ctx());
+  if (!res.ok) {
+    if (pid === ME) toast(Txt.ERR[res.error] || res.error);
+    else console.warn('bot recusado', nameOf(pid), action, res.error);
+    return false;
+  }
+  state = res.state;
+  changed();
+  return true;
 }
 
-function render() {
-  const T = TEMAS[tema];
-  document.body.className = 'tema-' + tema;
-  document.getElementById('fonts').href = `https://fonts.googleapis.com/css2?${T.fonts}&display=swap`;
-  document.getElementById('logo').textContent = T.nome;
-  document.getElementById('sub').textContent = T.sub;
-  document.querySelectorAll('#proto [data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === tema));
+/** O "alarme" do servidor: prazos (turno de 5 min, descarte de 60 s). */
+function tick() {
+  if (!state) return;
+  const next = Manda.settleMandacaru(state, ctx());
+  if (next !== state) { state = next; changed(); }
+  scheduleBots();
+  clocks();
+}
+setInterval(tick, 250);
 
-  const b = Hexa.makeBoard(seed, R);
-  let s = `<defs>${T.defs}</defs>`;
-  for (const o of b.ocean) s += T.ocean(o);
-  for (const h of b.hexes) s += T.hex(h);
-  for (const o of b.ocean) if (o.port) s += T.port(o.port, o.port.type === '3:1' ? null : resIcon(T, o.port.type));
-  for (const h of b.hexes) if (h.number) s += T.token(h);
-  for (const rd of b.roads) s += T.road(rd, T.colors[rd.player]);
-  for (const p of b.pieces) s += p.city ? T.city(p.x, p.y, T.colors[p.player]) : T.settle(p.x, p.y, T.colors[p.player]);
-  s += T.robber(b.robber.x, b.robber.y);
-  document.getElementById('mesa').innerHTML = s;
-
-  // Dados
-  document.getElementById('dados').innerHTML = [3, 5].map((n) => `<svg viewBox="0 0 100 100">${HexaArt.diceFace(n)}</svg>`).join('');
-  document.getElementById('vez').textContent = 'vez da Bia';
-
-  // Jogadores
-  const pts = [4, 3, 3, 2];
-  const cartas = [6, 4, 7, 2];
-  const cav = [0, 1, 2, 0];
-  document.getElementById('jogadores').innerHTML = b.players.map((n, i) => `
-    <div class="jog ${i === 1 ? 'vez' : ''}">
-      <svg width="34" height="34" viewBox="-20 -24 40 40">${T.settle(0, 0, T.colors[i])}</svg>
-      <div><div class="n">${n}</div><div class="m"><span>🂠 ${cartas[i]}</span><span>⚔ ${cav[i]}</span></div></div>
-      <div class="pts">${pts[i]}</div>
-    </div>`).join('');
-
-  // Mão
-  const mine = [['madeira', 2], ['barro', 1], ['pasto', 1], ['roca', 3], ['pedra', 0]];
-  const st = T.iconStyle;
-  document.getElementById('mao').innerHTML = mine.map(([res, q]) => `
-    <div class="carta">${HexaArt.svgIcon(resIcon(T, res), st, 52)}<span class="nome">${T.recursos[res]}</span>${q ? `<span class="qtd">${q}</span>` : ''}</div>`).join('')
-    + `<div class="carta dev">${HexaArt.svgIcon('causo', st, 52)}<span class="nome">${T.pecas.carta}</span><span class="qtd">1</span></div>`;
-
-  // Custos
-  const ic = (r) => HexaArt.svgIcon(resIcon(T, r), st, 22);
-  document.getElementById('custos').innerHTML = `<h3>quanto custa</h3>
-    <div class="custo"><b>${T.pecas.estrada}</b>${ic('madeira')}${ic('barro')}</div>
-    <div class="custo"><b>${T.pecas.aldeia}</b>${ic('madeira')}${ic('barro')}${ic('pasto')}${ic('roca')}</div>
-    <div class="custo"><b>${T.pecas.cidade}</b>${ic('roca')}${ic('roca')}${ic('pedra')}${ic('pedra')}${ic('pedra')}</div>
-    <div class="custo"><b>${T.pecas.carta}</b>${ic('pedra')}${ic('pasto')}${ic('roca')}</div>`;
-
-  document.getElementById('diario').innerHTML = `<h3>diário</h3>
-    <p>Bia tirou <b>8</b>: Rafa ganhou 2 ${T.recursos.roca}, Duda 1 ${T.recursos.pedra}.</p>
-    <p>Léo trocou 4 ${T.recursos.madeira} por 1 ${T.recursos.pasto} no porto.</p>
-    <p>O ${T.ladrao} foi pro ${T.terrenos.deserto} e passou a mão numa carta do Rafa.</p>`;
+/* ---------- bots ---------- */
+/** Um plano por bot; qualquer mudança no estado recomeça o atraso (700–1100 ms a partir da situação nova). */
+const plans = new Map();
+const fails = new Map();
+function scheduleBots() {
+  if (!state || state.phase === 'lobby' || state.phase === 'over') return;
+  for (const p of state.players) {
+    if (p === ME) continue;
+    const cur = plans.get(p);
+    if (cur && cur.version === version) continue;
+    if (cur) { clearTimeout(cur.timer); timers.delete(cur.timer); }
+    plans.set(p, { version, timer: later(between(700, 1100), () => { plans.delete(p); fire(p); }) });
+  }
+}
+function fire(p) {
+  if (!state || !state.players.includes(p)) return;
+  const v = view(p);
+  const d = Bot.decide(v, p, Math.random);
+  if (!d) return;
+  if (send(p, d)) { fails.delete(p); return; }
+  // Recusado: tenta de novo; se insistir no erro, passa a vez pra não travar a mesa.
+  const n = (fails.get(p) || 0) + 1;
+  fails.set(p, n);
+  if (n >= 3 && v.can.endTurn) { fails.delete(p); send(p, { type: 'end_turn' }); }
 }
 
-document.querySelectorAll('#proto [data-t]').forEach((btn) => btn.addEventListener('click', () => { tema = btn.dataset.t; render(); }));
-document.getElementById('sortear').addEventListener('click', () => { seed = Math.floor(Math.random() * 1e9); render(); });
-render();
+/* ---------- partida ---------- */
+function clearTimers() { for (const t of timers) clearTimeout(t); timers.clear(); plans.clear(); fails.clear(); }
+function newGame() {
+  clearTimers();
+  mode = null; lastLayout = undefined; lastEntry = null;
+  state = Manda.initialMandacaruState();
+  $('#lobby').hidden = true;
+  send(ME, { type: 'start' });
+}
+function restart() { clearTimers(); mode = null; send(ME, { type: 'restart' }); }
+function toLobby() { clearTimers(); state = null; version++; $('#fim').hidden = true; $('#relogio').hidden = true; $('#lobby').hidden = false; lobby(); }
+
+/* ---------- mudanças: diário novo, dados, render ---------- */
+let lastEntry = null;
+function changed() {
+  version++;
+  const v = view();
+  // Linhas novas do diário (as entradas são as mesmas referências de um estado pro outro).
+  const log = v.log;
+  const i = lastEntry ? log.lastIndexOf(lastEntry) : -1;
+  const fresh = lastEntry && i < 0 ? log.slice(-1) : log.slice(i + 1);
+  lastEntry = log[log.length - 1] || null;
+  for (const e of fresh) {
+    if (e.t === 'roll') rollFx(e.dice);
+    if (e.t === 'steal' && v.stolen && (e.player === ME || e.from === ME)) {
+      const r = Txt.RES[v.stolen.resource];
+      toast(e.player === ME ? `você roubou 1 ${r} ${Txt.de(nameOf(e.from))}` : `o Carcará ${Txt.de(nameOf(e.player))} levou 1 ${r} seu`);
+    }
+  }
+  if (mode && (v.phase !== 'main' || v.turn !== ME || modeSpots(v).length === 0)) mode = null;
+  render(v);
+}
+
+/* ---------- dados ---------- */
+let rolling = false;
+function diceSvg(n) { return `<svg class="dado" viewBox="0 0 100 100">${Art.diceFace(n)}</svg>`; }
+function rollFx(dice) {
+  rolling = true;
+  const box = $('#dados');
+  let k = 0;
+  const spin = setInterval(() => {
+    box.innerHTML = diceSvg(1 + Math.floor(Math.random() * 6)) + diceSvg(1 + Math.floor(Math.random() * 6));
+    box.querySelectorAll('.dado').forEach((d) => d.classList.add('rolando'));
+    if (++k >= 5) {
+      clearInterval(spin);
+      rolling = false;
+      box.innerHTML = diceSvg(dice[0]) + diceSvg(dice[1]);
+      const sum = dice[0] + dice[1];
+      const soma = $('#soma');
+      soma.innerHTML = sum === 7 ? `7<small>lá vem o Carcará!</small>` : String(sum);
+      soma.classList.toggle('sete', sum === 7);
+      soma.classList.add('on');
+      clearTimeout(rollFx.t);
+      rollFx.t = setTimeout(() => soma.classList.remove('on'), 1000);
+    }
+  }, 60);
+}
+
+/* ---------- tabuleiro ---------- */
+$('#defs').innerHTML = Art.defs;
+let lastLayout; // undefined = nada desenhado ainda
+function renderStatic(v) {
+  if (v.layout === lastLayout) return;
+  lastLayout = v.layout;
+  if (!v.layout) { $('#static').innerHTML = Art.border(); return; }
+  let s = Art.border();
+  G.hexes.forEach((h, i) => { s += Art.hex(h, v.layout.hexes[i]); });
+  G.ports.forEach((p, i) => { s += Art.port(p, v.layout.ports[i]); });
+  G.hexes.forEach((h, i) => { const n = v.layout.hexes[i].number; if (n !== null) s += Art.token(h, n); });
+  $('#static').innerHTML = s;
+}
+
+/** Os lugares da fase principal pro modo de construir ligado. */
+function modeSpots(v) {
+  if (mode === 'road') return v.can.buildRoad;
+  if (mode === 'house') return v.can.buildHouse;
+  if (mode === 'city') return v.can.buildCity;
+  return [];
+}
+/** O que pulsa agora: cantos (casa), lados (estrada), casas (vila), terrenos (Carcará). */
+function spotsOf(v) {
+  const c = v.can;
+  const out = { v: [], e: [], c: [], h: [] };
+  if (c.placeHouse.length) out.v = c.placeHouse;
+  else if (c.placeRoad.length) out.e = c.placeRoad;
+  else if (c.carcara.length) out.h = c.carcara;
+  else if (v.phase === 'mutirao' && v.turn === ME) out.e = c.buildRoad;
+  else if (mode === 'road') out.e = c.buildRoad;
+  else if (mode === 'house') out.v = c.buildHouse;
+  else if (mode === 'city') out.c = c.buildCity;
+  return out;
+}
+
+function renderDyn(v) {
+  if (!v.layout) { $('#dyn').innerHTML = ''; return; }
+  let s = '';
+  // Terreno do Carcará escurecido (não produz).
+  const ch = G.hexes[v.carcara];
+  const cc = Art.at(ch);
+  s += `<path d="${Art.hexPath(Art.corners(cc.x, cc.y), 0.88, cc.x, cc.y - 2)}" fill="#2a1c13" opacity=".22" pointer-events="none"/>`;
+  v.roads.forEach((o, e) => { if (o) s += Art.road(Art.at(G.vertices[G.edges[e].a]), Art.at(G.vertices[G.edges[e].b]), Art.COLORS[o]); });
+  v.buildings.forEach((b, i) => {
+    if (!b) return;
+    const p = Art.at(G.vertices[i]);
+    s += b.kind === 'city' ? Art.city(p.x, p.y, Art.COLORS[b.owner]) : Art.house(p.x, p.y, Art.COLORS[b.owner]);
+  });
+  const desert = v.layout.hexes[v.carcara].number === null;
+  s += desert ? Art.carcara(cc.x, cc.y - 4, 0.95) : Art.carcara(cc.x + 2, cc.y - 31, 0.78);
+
+  const sp = spotsOf(v);
+  for (const h of sp.h) {
+    const c = Art.at(G.hexes[h]);
+    const d = Art.hexPath(Art.corners(c.x, c.y), 0.86, c.x, c.y - 2);
+    s += `<g data-h="${h}"><path d="${d}" fill="#fff6e6" fill-opacity=".22" stroke="#fff6e6" stroke-width="4" class="pulse-o"/><path d="${d}" fill="transparent"/></g>`;
+  }
+  for (const e of sp.e) {
+    const a = Art.at(G.vertices[G.edges[e].a]);
+    const b = Art.at(G.vertices[G.edges[e].b]);
+    const ax = a.x + (b.x - a.x) * 0.18, ay = a.y + (b.y - a.y) * 0.18, bx = b.x + (a.x - b.x) * 0.18, by = b.y + (a.y - b.y) * 0.18;
+    s += `<g data-e="${e}"><line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#5b3a29" stroke-width="11" stroke-linecap="round" opacity=".5" class="pulse-o"/>
+      <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#fff6e6" stroke-width="6" stroke-linecap="round" stroke-dasharray="3 7" class="pulse-o"/>
+      <line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="transparent" stroke-width="22"/></g>`;
+  }
+  for (const i of sp.v) {
+    const p = Art.at(G.vertices[i]);
+    s += `<g data-v="${i}"><circle cx="${p.x}" cy="${p.y}" r="10" fill="#fff6e6" stroke="#b8321f" stroke-width="3" class="pulse"/><circle cx="${p.x}" cy="${p.y}" r="18" fill="transparent"/></g>`;
+  }
+  for (const i of sp.c) {
+    const p = Art.at(G.vertices[i]);
+    s += `<g data-c="${i}"><circle cx="${p.x}" cy="${p.y - 2}" r="22" fill="#fff6e6" fill-opacity=".25" stroke="#fff6e6" stroke-width="3.5" stroke-dasharray="5 4" class="pulse"/><circle cx="${p.x}" cy="${p.y}" r="22" fill="transparent"/></g>`;
+  }
+  $('#dyn').innerHTML = s;
+}
+
+$('#board').addEventListener('click', (ev) => {
+  if (!state) return;
+  const v = view();
+  const t = ev.target.closest('[data-v],[data-e],[data-c],[data-h]');
+  if (!t) return;
+  if (t.dataset.v !== undefined) {
+    const vertex = Number(t.dataset.v);
+    send(ME, v.can.placeHouse.length ? { type: 'place_house', vertex } : { type: 'build_house', vertex });
+    mode = null;
+  } else if (t.dataset.e !== undefined) {
+    const edge = Number(t.dataset.e);
+    send(ME, v.can.placeRoad.length ? { type: 'place_road', edge } : { type: 'build_road', edge });
+  } else if (t.dataset.c !== undefined) {
+    send(ME, { type: 'build_city', vertex: Number(t.dataset.c) });
+    mode = null;
+  } else if (t.dataset.h !== undefined) {
+    send(ME, { type: 'move_carcara', hex: Number(t.dataset.h) });
+  }
+  render(view());
+});
+
+/* ---------- painéis ---------- */
+const resMini = (r, n = 20) => Art.resIcon(r, n);
+const costIcons = (piece) => Txt.ORDER.flatMap((r) => Array(Manda.COSTS[piece][r]).fill(resMini(r))).join('');
+
+function renderPlayers(v) {
+  const seats = v.seats.length ? v.seats : ids().map((id) => ({ id, points: 0, resCount: 0, cordelCount: 0, knights: 0 }));
+  $('#jogadores').innerHTML = seats.map((s) => {
+    const mine = s.id === ME;
+    const hidden = mine && v.myPoints !== null ? v.myPoints - s.points : 0;
+    const vez = v.turn === s.id && v.phase !== 'over';
+    const selos = (v.longestRoad === s.id ? '<span class="selo">maior estrada +2</span>' : '') + (v.largestArmy === s.id ? '<span class="selo comitiva">maior comitiva +2</span>' : '');
+    const wins = v.wins[s.id] ? `<span title="vitórias da noite">🏆 ${v.wins[s.id]}</span>` : '';
+    return `<div class="jog ${vez ? 'vez' : ''}">
+      <svg class="casa" width="38" height="38" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[s.id])}</svg>
+      <div class="info">
+        <div class="n">${nameOf(s.id)}${mine ? '' : '<small>bot</small>'}</div>
+        <div class="m"><span title="cartas de recurso">🂠 ${s.resCount}</span><span title="cordéis na mão">📜 ${s.cordelCount}</span>
+          <span title="Vaqueiros jogados">${Art.svgIcon('chapeu', Art.STYLE, 17)} ${s.knights}</span>${wins}</div>
+        ${selos ? `<div class="selos">${selos}</div>` : ''}
+      </div>
+      <div class="pts">${s.points}<small>PONTOS</small>${hidden > 0 ? `<span class="esc">+${hidden} escondido</span>` : ''}</div>
+      ${vez ? `<span class="relo" data-relo>⏱ ${clockText(v.turnEndsAt)}</span>` : ''}
+    </div>`;
+  }).join('');
+  $('#bancoBox').innerHTML = `<h3>banco</h3><div class="banco">${Txt.ORDER.map((r) => `<span title="${Txt.RES[r]}">${resMini(r, 22)}${v.bank[r]}</span>`).join('')}</div>
+    <div class="monte">📜 monte de cordel: <b>${v.deckSize}</b></div>`;
+}
+
+function renderHeader(v) {
+  const vez = $('#vez');
+  if (!state || v.phase === 'lobby') vez.textContent = '';
+  else if (v.phase === 'over') vez.textContent = `${nameOf(v.winner)} venceu!`;
+  else vez.textContent = vezDe(v.turn) + (v.phase === 'setup' ? ' · preparação' : '');
+  if (!rolling) $('#dados').innerHTML = v.dice ? diceSvg(v.dice[0]) + diceSvg(v.dice[1]) : diceSvg(5) + diceSvg(2);
+}
+
+/** Atualiza só os relógios (a cada 250 ms). */
+function clocks() {
+  if (!state) return;
+  const v = view();
+  // Prazo null no meio da partida = relógio parado (mesa vazia).
+  const ends = v.phase === 'discard' ? v.discardEndsAt : v.turnEndsAt;
+  const left = ends === null ? Infinity : ends - Date.now();
+  const rel = $('#relogio');
+  rel.hidden = v.phase === 'lobby' || v.phase === 'over';
+  rel.textContent = (v.phase === 'discard' ? 'descarte ' : '') + clockText(ends);
+  rel.classList.toggle('pouco', left < 60_000 && v.phase !== 'discard');
+  const r = document.querySelector('[data-relo]');
+  if (r) { const t = v.turnEndsAt === null ? Infinity : v.turnEndsAt - Date.now(); r.textContent = `⏱ ${clockText(v.turnEndsAt)}`; r.classList.toggle('pouco', t < 60_000); }
+  const dl = document.querySelector('[data-descarte]');
+  if (dl && v.discardEndsAt) dl.textContent = mmss(v.discardEndsAt - Date.now());
+}
+
+function promptFor(v) {
+  const c = v.can;
+  const mine = v.turn === ME;
+  const who = nameOf(v.turn);
+  switch (v.phase) {
+    case 'setup':
+      if (c.placeHouse.length) return { text: `<b>Sua vez na preparação.</b> Escolha onde pôr a casa: os cantos que pulsam.`, dica: 'clique num canto que pulsa' };
+      if (c.placeRoad.length) return { text: `<b>Agora a estrada</b>, encostada na casa que você pôs.`, dica: 'clique num lado que pulsa' };
+      return { text: `${who} está escolhendo ${v.setup && v.setup.house !== null ? 'a estrada' : 'onde pôr a casa'}…` };
+    case 'roll':
+      return mine ? { text: '<b>Sua vez!</b> Role os dados.' } : { text: `${who} vai rolar os dados…` };
+    case 'discard': {
+      const pend = Object.entries(v.discards).filter(([p]) => p !== ME).map(([p, n]) => `${nameOf(p)} (${n})`);
+      if (c.discard > 0) {
+        return { text: `<b>Saiu 7!</b> Você tem mais de 7 cartas: descarte <b>${c.discard}</b>. Sem escolher, o descarte é sorteado em <span data-descarte>${clockText(v.discardEndsAt)}</span>.
+          <div class="alvos"><button class="btn mini" data-act="discard">descartar as de que tenho mais</button></div>` };
+      }
+      return { text: `Saiu 7: esperando o descarte${pend.length ? ' de ' + Txt.joinE(pend) : ''}…` };
+    }
+    case 'carcara':
+      return mine ? { text: '<b>Leve o Carcará</b> pra outro terreno: clique num terreno aceso.', dica: 'clique num terreno pro Carcará' } : { text: `${who} está levando o Carcará…` };
+    case 'steal':
+      if (c.steal.length) return { text: `<b>De quem o Carcará rouba?</b><div class="alvos">${c.steal.map((p) => `<button class="btn mini" data-steal="${p}">${nameOf(p)} · 🂠 ${v.seats.find((s) => s.id === p).resCount}</button>`).join('')}</div>` };
+      return { text: `${who} está escolhendo de quem roubar…` };
+    case 'mutirao':
+      return mine ? { text: `<b>Mutirão!</b> Ponha ${v.mutiraoLeft} estrada${v.mutiraoLeft > 1 ? 's' : ''} de graça.`, dica: 'clique num lado que pulsa' } : { text: `${who} está fazendo um mutirão…` };
+    case 'main': {
+      if (!mine) {
+        const o = v.offer;
+        const of = o ? `<div class="oferta">${who} oferece ${Txt.resList(o.give)} por ${Txt.resList(o.want)}${o.accepted.length ? ` · aceitaram: ${Txt.joinE(o.accepted.map(nameOf))}` : ''}</div>` : '';
+        return { text: `${vezDe(v.turn)[0].toUpperCase() + vezDe(v.turn).slice(1)}.${of}` };
+      }
+      if (mode === 'road') return { text: '<b>Estrada:</b> clique num lado que pulsa. (clique no botão de novo pra sair)', dica: 'clique num lado que pulsa' };
+      if (mode === 'house') return { text: '<b>Casa:</b> clique num canto que pulsa.', dica: 'clique num canto que pulsa' };
+      if (mode === 'city') return { text: '<b>Vila:</b> clique numa casa sua.', dica: 'clique numa casa sua' };
+      return { text: '<b>Sua vez.</b> Construa, compre cordel ou passe a vez.' };
+    }
+    default:
+      return { text: '' };
+  }
+}
+
+function renderActions(v) {
+  const c = v.can;
+  const p = promptFor(v);
+  $('#prompt').innerHTML = p.text || '&nbsp;';
+  const dica = $('#dica');
+  dica.hidden = !p.dica;
+  if (p.dica) dica.textContent = p.dica;
+  $('#bRoll').disabled = !c.roll;
+  $('#bRoad').disabled = c.buildRoad.length === 0 || v.phase !== 'main';
+  $('#bHouse').disabled = c.buildHouse.length === 0;
+  $('#bCity').disabled = c.buildCity.length === 0;
+  $('#bCordel').disabled = !c.buyCordel;
+  $('#bEnd').disabled = !c.endTurn;
+  for (const b of document.querySelectorAll('[data-mode]')) b.classList.toggle('on', b.dataset.mode === mode);
+}
+
+$('#custos').innerHTML = `<h3>quanto custa</h3>` + ['road', 'house', 'city', 'cordel'].map((k) => `<div class="custo"><b>${Txt.PIECE[k]}</b>${costIcons(k)}</div>`).join('');
+
+function renderHand(v) {
+  if (!v.myRes) { $('#mao').innerHTML = ''; return; }
+  const res = Txt.ORDER.map((r) => `<div class="carta ${v.myRes[r] ? '' : 'zero'}" title="${Txt.RES[r]}">${Art.resIcon(r, 50)}<span class="nome">${Txt.RES[r]}</span><span class="qtd">${v.myRes[r]}</span></div>`).join('');
+  const cs = v.myCordeis;
+  // Leque: os cordéis se sobrepõem quando são muitos.
+  const avail = 300, w = 80;
+  const step = cs.length > 1 ? Math.min(w + 8, (avail - w) / (cs.length - 1)) : 0;
+  let pointIdx = 0;
+  const cords = cs.length ? cs.map((c, i) => {
+    const tit = c.kind === 'point' ? `Ponto · ${Txt.POINT_NAMES[pointIdx++ % 5]}` : Txt.CORDEL[c.kind];
+    return `<div class="cordel" style="${i ? `margin-left:${step - w}px` : ''}" title="${Txt.CORDEL[c.kind]}: ${Txt.CORDEL_DESC[c.kind]}">
+      <span class="cap">CORDEL</span><span class="xilo">${Art.svgIcon(Art.CORDEL_ICON[c.kind], Art.WOODCUT, 46)}</span><span class="tit">${tit}</span>${c.fresh ? '<span class="novo">novo</span>' : ''}</div>`;
+  }).join('') : '<span class="vazio">sem cordéis</span>';
+  $('#mao').innerHTML = `<div class="grupo res">${res}</div><div class="grupo">${cords}</div>`;
+}
+
+function renderLog(v) {
+  const lines = v.log.slice(-8).reverse().map((e) => Txt.line(e, nameOf, v)).filter(Boolean);
+  $('#diario').innerHTML = `<h3>diário</h3>` + lines.map((l) => `<p>${l[0].toUpperCase() + l.slice(1)}</p>`).join('');
+}
+
+function renderEnd(v) {
+  const over = v.phase === 'over';
+  $('#fim').hidden = !over;
+  if (!over) return;
+  $('#fimTit').textContent = v.winner === ME ? 'Você venceu!' : `${nameOf(v.winner)} venceu!`;
+  const rows = [...v.seats].sort((a, b) => b.points - a.points).map((s) => {
+    const pc = v.pointCards ? v.pointCards[s.id] : 0;
+    return `<div><svg width="30" height="30" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[s.id])}</svg>${nameOf(s.id)}${pc ? ` <small>(${pc} ${pc > 1 ? 'cordéis' : 'cordel'} de Ponto)</small>` : ''}<b>${s.points}</b></div>`;
+  }).join('');
+  $('#fimPlacar').innerHTML = rows;
+}
+
+function render(v) {
+  renderStatic(v);
+  renderDyn(v);
+  renderPlayers(v);
+  renderHeader(v);
+  renderActions(v);
+  renderHand(v);
+  renderLog(v);
+  renderEnd(v);
+  clocks();
+}
+
+/* ---------- botões ---------- */
+$('#bRoll').addEventListener('click', () => send(ME, { type: 'roll' }));
+$('#bCordel').addEventListener('click', () => send(ME, { type: 'buy_cordel' }));
+$('#bEnd').addEventListener('click', () => { mode = null; send(ME, { type: 'end_turn' }); });
+for (const b of document.querySelectorAll('[data-mode]')) {
+  b.addEventListener('click', () => { mode = mode === b.dataset.mode ? null : b.dataset.mode; render(view()); });
+}
+$('#prompt').addEventListener('click', (ev) => {
+  const t = ev.target.closest('button');
+  if (!t || !state) return;
+  if (t.dataset.steal) send(ME, { type: 'steal', from: t.dataset.steal });
+  if (t.dataset.act === 'discard') { const v = view(); send(ME, { type: 'discard', cards: Bot.chooseDiscard(v.myRes, v.can.discard) }); }
+});
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && mode) { mode = null; render(view()); } });
+$('#bStart').addEventListener('click', newGame);
+$('#bRestart').addEventListener('click', restart);
+$('#bLobby').addEventListener('click', toLobby);
+
+/* ---------- lobby ---------- */
+function lobby() {
+  for (const b of document.querySelectorAll('[data-bots]')) b.classList.toggle('on', Number(b.dataset.bots) === bots);
+  $('#nomesLobby').innerHTML = ids().map((id) => `<span><svg width="26" height="26" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[id])}</svg>${nameOf(id)}</span>`).join('');
+}
+for (const b of document.querySelectorAll('[data-bots]')) b.addEventListener('click', () => { bots = Number(b.dataset.bots); lobby(); });
+$('#logoIcon').innerHTML = `<svg width="46" height="46" viewBox="0 0 100 100"><path d="M44 86 V26 Q44 18 50 18 Q56 18 56 26 V86 Z M44 58 H34 Q28 58 28 52 V38 Q28 33 32 33 Q36 33 36 38 V50 H44 M56 50 H64 V34 Q64 29 68 29 Q72 29 72 34 V50 Q72 58 66 58 H56" fill="#5f7a3a" stroke="#4a2e1f" stroke-width="3.6" stroke-linejoin="round"/><circle cx="50" cy="16" r="4.5" fill="#e0582a" stroke="#4a2e1f" stroke-width="2"/><path d="M14 86 H86" stroke="#4a2e1f" stroke-width="3.6" stroke-linecap="round"/></svg>`;
+lobby();
+// Antes da partida: o tabuleiro vazio com a borda e os painéis zerados.
+renderStatic({ layout: null });
+renderHeader({ phase: 'lobby', dice: null });
 </script>
 </body>
 </html>
