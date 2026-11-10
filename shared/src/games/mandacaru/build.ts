@@ -1,3 +1,4 @@
+import type { ActionResult } from '../../game';
 import { geometry } from './board';
 import {
   MANDACARU_LOG_MAX,
@@ -8,6 +9,10 @@ import {
   type Resource,
   type Resources,
 } from './types';
+
+export type MandacaruResult = ActionResult<MandacaruState>;
+export const fail = (error: string): MandacaruResult => ({ ok: false, error });
+export const ok = (state: MandacaruState): MandacaruResult => ({ ok: true, state });
 
 /** Acrescenta uma linha ao diário, guardando só as últimas `MANDACARU_LOG_MAX`. */
 export function logged(state: MandacaruState, entry: MandacaruLogEntry): MandacaruState {
