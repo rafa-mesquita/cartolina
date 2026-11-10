@@ -1,6 +1,8 @@
 import { shuffle, type Rng } from '../../rng';
-import { fail, logged, ok, type MandacaruResult } from './build';
-import { CORDEIS, CORDEL_COUNTS, type CordelKind, type MandacaruState, type Resource } from './types';
+import { fail, grant, logged, ok, piecesLeft, roadSpots, type MandacaruResult } from './build';
+import { CORDEIS, CORDEL_COUNTS, RESOURCES, noResources, type CordelKind, type MandacaruState, type Resource } from './types';
+
+const isResource = (r: unknown): r is Resource => (RESOURCES as readonly unknown[]).includes(r);
 
 /** Os 25 cordéis embaralhados. */
 export function shuffledCordelDeck(rng: Rng): CordelKind[] {
@@ -27,4 +29,43 @@ export function takeCordel(
   const cordeis = hand.cordeis.filter((_, j) => j !== i);
   const s: MandacaruState = { ...state, cordelPlayed: true, hands: { ...state.hands, [player]: { ...hand, cordeis } } };
   return ok(logged(s, { t: 'play', player, kind, ...extra }));
+}
+
+/** Mutirão: até 2 estradas de graça (fase `mutirao`). Sem peça ou sem lugar, o cordel é gasto sem efeito. */
+export function playMutirao(state: MandacaruState, player: string): MandacaruResult {
+  const played = takeCordel(state, player, 'mutirao');
+  if (!played.ok) return played;
+  const s = played.state;
+  const left = Math.min(2, piecesLeft(s, player).road);
+  if (left === 0 || roadSpots(s, player).length === 0) return ok({ ...s, mutiraoLeft: 0 });
+  return ok({ ...s, phase: 'mutirao', mutiraoLeft: left });
+}
+
+/** Chuva no sertão: 2 recursos quaisquer do banco (podem ser iguais; o banco precisa ter). */
+export function playChuva(state: MandacaruState, player: string, resources: [Resource, Resource]): MandacaruResult {
+  if (resources.length !== 2 || !resources.every(isResource)) return fail('bad_trade');
+  const gain = noResources();
+  for (const r of resources) gain[r]++;
+  const played = takeCordel(state, player, 'chuva', { resources: [...resources] });
+  if (!played.ok) return played;
+  if (RESOURCES.some((r) => state.bank[r] < gain[r])) return fail('bank_empty');
+  return ok(grant(played.state, player, gain));
+}
+
+/** Atravessador: todos os outros entregam tudo que têm de `resource`. */
+export function playAtravessador(state: MandacaruState, player: string, resource: Resource): MandacaruResult {
+  if (!isResource(resource)) return fail('bad_trade');
+  let total = 0;
+  const hands = { ...state.hands };
+  for (const p of state.players) {
+    if (p === player) continue;
+    const hand = hands[p]!;
+    const n = hand.res[resource];
+    if (n === 0) continue;
+    total += n;
+    hands[p] = { ...hand, res: { ...hand.res, [resource]: 0 } };
+  }
+  const mine = hands[player]!;
+  hands[player] = { ...mine, res: { ...mine.res, [resource]: mine.res[resource] + total } };
+  return takeCordel({ ...state, hands }, player, 'atravessador', { resources: [resource], total });
 }

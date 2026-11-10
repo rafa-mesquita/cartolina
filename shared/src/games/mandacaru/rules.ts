@@ -3,7 +3,7 @@ import { shuffle } from '../../rng';
 import { geometry } from './board';
 import { fail, ok, type MandacaruResult } from './build';
 import { discard, moveCarcara, playVaqueiro, startSeven, steal } from './carcara';
-import { shuffledCordelDeck } from './cordel';
+import { playAtravessador, playChuva, playMutirao, shuffledCordelDeck } from './cordel';
 import { desertOf, randomLayout } from './setup';
 import { cancelOffer, closeDeal, feira, makeOffer, propose, respond } from './trade';
 import { buildCity, buildHouse, buildRoad, buyCordel, checkWin, passTurn, placeHouse, placeRoad, rollDice } from './turn';
@@ -163,7 +163,8 @@ export function applyMandacaruAction(
       return done(playVaqueiro(state, playerId), ctx);
     }
     case 'build_road': {
-      const e = mine('main');
+      // No Mutirão a estrada sai de graça.
+      const e = mine('main', 'mutirao');
       if (e) return fail(e);
       return done(buildRoad(state, playerId, action.edge), ctx);
     }
@@ -181,6 +182,21 @@ export function applyMandacaruAction(
       const e = mine('main');
       if (e) return fail(e);
       return done(buyCordel(state, playerId), ctx);
+    }
+    case 'play_mutirao': {
+      const e = mine('main');
+      if (e) return fail(e);
+      return done(playMutirao(state, playerId), ctx);
+    }
+    case 'play_chuva': {
+      const e = mine('main');
+      if (e) return fail(e);
+      return done(playChuva(state, playerId, action.resources), ctx);
+    }
+    case 'play_atravessador': {
+      const e = mine('main');
+      if (e) return fail(e);
+      return done(playAtravessador(state, playerId, action.resource), ctx);
     }
     // Troca: as funções de trade.ts conferem fase e vez.
     case 'offer':
