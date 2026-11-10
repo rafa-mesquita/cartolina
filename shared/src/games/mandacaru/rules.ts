@@ -2,6 +2,7 @@ import type { GameContext } from '../../game';
 import { shuffle } from '../../rng';
 import { geometry } from './board';
 import { fail, ok, type MandacaruResult } from './build';
+import { discard, moveCarcara, playVaqueiro, startSeven, steal } from './carcara';
 import { shuffledCordelDeck } from './cordel';
 import { desertOf, randomLayout } from './setup';
 import { buildCity, buildHouse, buildRoad, buyCordel, checkWin, passTurn, placeHouse, placeRoad, rollDice } from './turn';
@@ -138,8 +139,27 @@ export function applyMandacaruAction(
     case 'roll': {
       const e = mine('roll');
       if (e) return fail(e);
-      // Task 5: o 7 abre o descarte e o Carcará.
-      return done(ok(rollDice(state, playerId, ctx, (s) => ({ ...s, phase: 'main' }))), ctx);
+      return done(ok(rollDice(state, playerId, ctx, startSeven)), ctx);
+    }
+    case 'discard': {
+      if (state.phase !== 'discard') return fail('bad_phase');
+      if (!state.players.includes(playerId)) return fail('not_player');
+      return done(discard(state, playerId, action.cards), ctx);
+    }
+    case 'move_carcara': {
+      const e = mine('carcara');
+      if (e) return fail(e);
+      return done(moveCarcara(state, playerId, action.hex, ctx), ctx);
+    }
+    case 'steal': {
+      const e = mine('steal');
+      if (e) return fail(e);
+      return done(steal(state, playerId, action.from, ctx), ctx);
+    }
+    case 'play_vaqueiro': {
+      const e = mine('roll', 'main');
+      if (e) return fail(e);
+      return done(playVaqueiro(state, playerId), ctx);
     }
     case 'build_road': {
       const e = mine('main');
