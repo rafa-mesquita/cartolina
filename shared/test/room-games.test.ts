@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DixitState } from '../src/games/dixit/types';
 import { COUP_WINDOW_MS, type CoupState } from '../src/games/coup/types';
 import { KITTENS_NOPE_MS, type KittensState } from '../src/games/kittens/types';
+import { MANDACARU_TURN_MS } from '../src/games/mandacaru/types';
 import { GAMES, isGameId } from '../src/games/registry';
 import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
 import { PLAYER_COLORS } from '../src/players';
@@ -13,6 +14,7 @@ import {
   isItoRoomView,
   isCoupRoomView,
   isKittensRoomView,
+  isMandacaruRoomView,
   isPicturesRoomView,
   itoStateOf,
   joinRoom,
@@ -39,8 +41,8 @@ function dixitRoom(n: number): Room {
 }
 
 describe('registro de jogos', () => {
-  it('conhece ITO, Dixit, Retratim, Tatubum e Cúpi', () => {
-    expect(Object.keys(GAMES)).toEqual(['ito', 'dixit', 'pictures', 'kittens', 'coup']);
+  it('conhece ITO, Dixit, Retratim, Tatubum, Cúpi e Mandacaru', () => {
+    expect(Object.keys(GAMES)).toEqual(['ito', 'dixit', 'pictures', 'kittens', 'coup', 'mandacaru']);
     expect(GAMES.dixit.minPlayers).toBe(3);
     expect(GAMES.ito.liveCursors).toBe(true);
     expect(GAMES.dixit.liveCursors).toBe(false);
@@ -53,6 +55,25 @@ describe('registro de jogos', () => {
     expect(isGameId('pictures')).toBe(true);
     expect(isGameId('xadrez')).toBe(false);
     expect(isGameId(undefined)).toBe(false);
+  });
+
+  it('Mandacaru registrado: 3 a 4, sem cursor, sem histórico ainda', () => {
+    expect(GAMES.mandacaru).toMatchObject({ minPlayers: 3, maxPlayers: 4, liveCursors: false, recordsHistory: false });
+    expect(isGameId('mandacaru')).toBe(true);
+  });
+
+  it('sala de Mandacaru: visão própria e alarme no fim do turno', () => {
+    let room = createRoom('ABCD', 0, 'mandacaru');
+    for (let i = 0; i < 3; i++) {
+      const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+      if (!res.ok) throw new Error(res.error);
+      room = res.room;
+    }
+    const started = roomAction(room, 'p0', { type: 'start' }, rng, 10);
+    if (!started.ok) throw new Error(started.error);
+    room = started.room;
+    expect(isMandacaruRoomView(roomView(room, null))).toBe(true);
+    expect(nextAlarmAt(room, 10)).toBe(10 + MANDACARU_TURN_MS);
   });
 });
 

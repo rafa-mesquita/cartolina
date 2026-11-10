@@ -106,6 +106,8 @@ export interface HistoryResponses {
   pictures: never;
   kittens: KittensHistoryResponse;
   coup: CoupHistoryResponse;
+  /** O Mandacaru ainda não grava histórico (vem no M3): a rota responde 404 antes de chegar aqui. */
+  mandacaru: never;
 }
 export type HistoryResponseOf<G extends GameId> = HistoryResponses[G];
 
@@ -226,6 +228,8 @@ export function pendingHistoryRecord(room: Room, now: number, id: string): Pendi
       const pending = pendingCoupRecord(room, now, id);
       return pending ? { game: 'coup', ...pending } : null;
     }
+    case 'mandacaru':
+      return null; // histórico do Mandacaru vem no M3
     default: {
       const _never: never = room.gameId;
       return _never;

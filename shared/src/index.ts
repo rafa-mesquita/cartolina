@@ -48,6 +48,21 @@ export { fullDeck as coupFullDeck } from './games/coup/deck';
 export { applyCoupAction, initialCoupState, settleCoup } from './games/coup/rules';
 export { coup, coupNextDeadline, coupViewFor } from './games/coup/view';
 export { coupActionSchema } from './games/coup/schema';
+export * from './games/mandacaru/types';
+export { geometry as mandacaruGeometry, pips as mandacaruPips } from './games/mandacaru/board';
+export type { Geometry as MandacaruGeometry, GeoEdge, GeoHex, GeoPort, GeoVertex } from './games/mandacaru/board';
+export { randomLayout as mandacaruRandomLayout } from './games/mandacaru/setup';
+export {
+  citySpots as mandacaruCitySpots,
+  houseSpots as mandacaruHouseSpots,
+  points as mandacaruPoints,
+  portRates as mandacaruPortRates,
+  roadSpots as mandacaruRoadSpots,
+} from './games/mandacaru/build';
+export { applyMandacaruAction, initialMandacaruState } from './games/mandacaru/rules';
+export { settleMandacaru } from './games/mandacaru/auto';
+export { mandacaru, mandacaruNextDeadline, mandacaruViewFor } from './games/mandacaru/view';
+export { mandacaruActionSchema } from './games/mandacaru/schema';
 export * from './games/kittens/types';
 export * from './games/kittens/cards';
 export * from './games/kittens/record';
