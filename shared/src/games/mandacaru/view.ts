@@ -156,11 +156,14 @@ export function mandacaruViewFor(state: MandacaruState, viewerId: string | null)
   };
 }
 
-/** O menor entre o fim do turno e o fim do descarte (null fora de partida). */
+/**
+ * O prazo que o automático resolve na fase atual: no descarte, só o fim do descarte (o turno pode já ter
+ * estourado, e o `settle` só olha o turno depois do descarte: um prazo no passado deixaria o alarme em laço);
+ * nas outras fases da partida, o fim do turno; null fora de partida.
+ */
 export function mandacaruNextDeadline(state: MandacaruState): number | null {
   if (state.phase === 'lobby' || state.phase === 'over') return null;
-  const times = [state.turnEndsAt, state.discardEndsAt].filter((t): t is number => t !== null);
-  return times.length > 0 ? Math.min(...times) : null;
+  return state.phase === 'discard' ? state.discardEndsAt : state.turnEndsAt;
 }
 
 export const mandacaru: GameModule<MandacaruState, MandacaruAction, MandacaruView> = {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DixitState } from '../src/games/dixit/types';
 import { COUP_WINDOW_MS, type CoupState } from '../src/games/coup/types';
 import { KITTENS_NOPE_MS, type KittensState } from '../src/games/kittens/types';
-import { MANDACARU_TURN_MS } from '../src/games/mandacaru/types';
+import { MANDACARU_DISCARD_MS, MANDACARU_TURN_MS, type MandacaruState } from '../src/games/mandacaru/types';
 import { GAMES, isGameId } from '../src/games/registry';
 import { PICTURES_COUNTDOWN_MS, type PicturesState } from '../src/games/pictures/types';
 import { PLAYER_COLORS } from '../src/players';
@@ -74,6 +74,25 @@ describe('registro de jogos', () => {
     room = started.room;
     expect(isMandacaruRoomView(roomView(room, null))).toBe(true);
     expect(nextAlarmAt(room, 10)).toBe(10 + MANDACARU_TURN_MS);
+  });
+
+  it('sala de Mandacaru: descarte com o turno estourado acorda no fim do descarte, não em laço', () => {
+    let room = createRoom('ABCD', 0, 'mandacaru');
+    for (let i = 0; i < 3; i++) {
+      const res = joinRoom(room, { token: `t${i}`, name: `P${i}`, color: PLAYER_COLORS[i]! }, `p${i}`, 0);
+      if (!res.ok) throw new Error(res.error);
+      room = res.room;
+    }
+    const started = roomAction(room, 'p0', { type: 'start' }, rng, 10);
+    if (!started.ok) throw new Error(started.error);
+    const game = started.room.game as MandacaruState;
+    const now = 10 + MANDACARU_TURN_MS + 5;
+    // O automático rolou 7 depois do prazo: o turno já estourou e o descarte ainda corre.
+    const discardEndsAt = now + MANDACARU_DISCARD_MS;
+    const hands = { ...game.hands, [game.turn!]: { res: { wood: 8, brick: 0, leather: 0, beans: 0, stone: 0 }, cordeis: [] } };
+    room = { ...started.room, game: { ...game, phase: 'discard', hands, discards: { [game.turn!]: 4 }, discardEndsAt } };
+    expect(nextAlarmAt(room, now)).toBe(discardEndsAt);
+    expect(tick(room, now, rng).game).toBe(room.game);
   });
 });
 

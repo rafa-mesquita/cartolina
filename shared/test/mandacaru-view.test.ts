@@ -54,4 +54,11 @@ describe('Mandacaru: visão', () => {
     expect(mandacaruNextDeadline({ ...s, phase: 'over', turnEndsAt: null })).toBeNull();
     expect(mandacaru.id).toBe('mandacaru');
   });
+
+  it('prazo: no descarte com o turno já estourado, vale só o do descarte (senão o alarme fica no passado)', () => {
+    const d = { ...s, phase: 'discard' as const, discards: { p1: 4 }, turnEndsAt: T0 - 1, discardEndsAt: T0 + MANDACARU_DISCARD_MS };
+    expect(mandacaruNextDeadline(d)).toBe(T0 + MANDACARU_DISCARD_MS);
+    // Fora do descarte, um `discardEndsAt` que sobrou não conta.
+    expect(mandacaruNextDeadline({ ...s, discardEndsAt: T0 - 1 })).toBe(T0 + MANDACARU_TURN_MS);
+  });
 });

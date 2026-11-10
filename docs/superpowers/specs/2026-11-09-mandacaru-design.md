@@ -184,7 +184,9 @@ banco.
   sorteado na hora; respostas pendentes dele contam como "não". Ele continua na
   partida e as peças ficam.
 - `onPresenceChange` aplica tudo isso e devolve **o mesmo objeto** quando nada
-  muda; `nextDeadline` = o menor entre o fim do turno e o fim do descarte.
+  muda; `nextDeadline` = o fim do descarte na fase `discard` (o turno pode já
+  ter estourado ali, e o automático só olha o turno depois do descarte) e o fim
+  do turno nas outras fases.
 
 ### 2.9 O que cada um vê
 
