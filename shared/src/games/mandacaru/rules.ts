@@ -5,6 +5,7 @@ import { fail, ok, type MandacaruResult } from './build';
 import { discard, moveCarcara, playVaqueiro, startSeven, steal } from './carcara';
 import { shuffledCordelDeck } from './cordel';
 import { desertOf, randomLayout } from './setup';
+import { cancelOffer, closeDeal, feira, makeOffer, propose, respond } from './trade';
 import { buildCity, buildHouse, buildRoad, buyCordel, checkWin, passTurn, placeHouse, placeRoad, rollDice } from './turn';
 import {
   MANDACARU_BANK_EACH,
@@ -181,6 +182,19 @@ export function applyMandacaruAction(
       if (e) return fail(e);
       return done(buyCordel(state, playerId), ctx);
     }
+    // Troca: as funções de trade.ts conferem fase e vez.
+    case 'offer':
+      return done(makeOffer(state, playerId, action.give, action.want), ctx);
+    case 'cancel_offer':
+      return done(cancelOffer(state, playerId), ctx);
+    case 'respond':
+      return done(respond(state, playerId, action.offerId, action.accept), ctx);
+    case 'propose':
+      return done(propose(state, playerId, action.give, action.want), ctx);
+    case 'close_deal':
+      return done(closeDeal(state, playerId, action.with, action.source), ctx);
+    case 'feira':
+      return done(feira(state, playerId, action.give, action.want, action.count ?? 1), ctx);
     case 'end_turn': {
       const e = mine('main');
       if (e) return fail(e);
