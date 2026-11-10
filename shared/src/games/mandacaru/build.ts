@@ -1,5 +1,18 @@
 import { geometry } from './board';
-import { MANDACARU_PIECES, RESOURCES, type MandacaruState, type Resource, type Resources } from './types';
+import {
+  MANDACARU_LOG_MAX,
+  MANDACARU_PIECES,
+  RESOURCES,
+  type MandacaruLogEntry,
+  type MandacaruState,
+  type Resource,
+  type Resources,
+} from './types';
+
+/** Acrescenta uma linha ao diário, guardando só as últimas `MANDACARU_LOG_MAX`. */
+export function logged(state: MandacaruState, entry: MandacaruLogEntry): MandacaruState {
+  return { ...state, log: [...state.log, entry].slice(-MANDACARU_LOG_MAX) };
+}
 
 export function canAfford(have: Resources, cost: Resources): boolean {
   return RESOURCES.every((r) => have[r] >= cost[r]);
