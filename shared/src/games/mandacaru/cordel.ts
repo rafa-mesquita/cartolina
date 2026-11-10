@@ -31,14 +31,13 @@ export function takeCordel(
   return ok(logged(s, { t: 'play', player, kind, ...extra }));
 }
 
-/** Mutirão: até 2 estradas de graça (fase `mutirao`). Sem peça ou sem lugar, o cordel é gasto sem efeito. */
+/** Mutirão: até 2 estradas de graça (fase `mutirao`). Sem peça ou sem lugar de estrada, é recusado (`bad_spot`) e a carta fica. */
 export function playMutirao(state: MandacaruState, player: string): MandacaruResult {
   const played = takeCordel(state, player, 'mutirao');
   if (!played.ok) return played;
-  const s = played.state;
-  const left = Math.min(2, piecesLeft(s, player).road);
-  if (left === 0 || roadSpots(s, player).length === 0) return ok({ ...s, mutiraoLeft: 0 });
-  return ok({ ...s, phase: 'mutirao', mutiraoLeft: left });
+  const left = Math.min(2, piecesLeft(state, player).road);
+  if (left === 0 || roadSpots(state, player).length === 0) return fail('bad_spot');
+  return ok({ ...played.state, phase: 'mutirao', mutiraoLeft: left });
 }
 
 /** Chuva no sertão: 2 recursos quaisquer do banco (podem ser iguais; o banco precisa ter). */

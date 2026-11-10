@@ -33,13 +33,19 @@ const nothing = (): MandacaruCan => ({
   endTurn: false,
 });
 
-/** Cordéis que `me` pode jogar agora: os velhos (sem o Ponto), um por turno; na fase `roll`, só o Vaqueiro. */
+/**
+ * Cordéis que `me` pode jogar agora: os velhos (sem o Ponto), um por turno; na fase `roll`, só o Vaqueiro.
+ * Chuva no sertão só se o banco cobre algum par de recursos (2+ cartas no total); Mutirão só com peça e lugar
+ * de estrada (as regras recusam os dois sem isso).
+ */
 function playable(state: MandacaruState, me: string): Exclude<CordelKind, 'point'>[] {
   if (state.cordelPlayed || (state.phase !== 'main' && state.phase !== 'roll')) return [];
   const out: Exclude<CordelKind, 'point'>[] = [];
   for (const c of state.hands[me]!.cordeis) {
     if (c.fresh || c.kind === 'point' || out.includes(c.kind)) continue;
     if (state.phase === 'roll' && c.kind !== 'vaqueiro') continue;
+    if (c.kind === 'chuva' && handSize(state.bank) < 2) continue;
+    if (c.kind === 'mutirao' && (piecesLeft(state, me).road === 0 || roadSpots(state, me).length === 0)) continue;
     out.push(c.kind);
   }
   return out;

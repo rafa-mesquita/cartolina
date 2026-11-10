@@ -48,6 +48,21 @@ describe('Mandacaru: visão', () => {
     expect(other.play).toEqual([]);
   });
 
+  it('can.play: Chuva só se o banco cobre 2 recursos; Mutirão só com peça e lugar de estrada', () => {
+    const a = corner(9, 0);
+    const c = table({ houses: { [a]: 'p0' }, cordeis: { p0: ['chuva', 'mutirao'] } });
+    expect(mandacaruViewFor(c, 'p0').can.play).toEqual(['chuva', 'mutirao']);
+    expect(mandacaruViewFor({ ...c, bank: res({ wood: 1 }) }, 'p0').can.play).toEqual(['mutirao']);
+    expect(mandacaruViewFor({ ...c, bank: res() }, 'p0').can.play).toEqual(['mutirao']);
+    expect(mandacaruViewFor({ ...c, bank: res({ wood: 1, stone: 1 }) }, 'p0').can.play).toEqual(['chuva', 'mutirao']);
+    expect(mandacaruViewFor({ ...c, bank: res({ stone: 2 }) }, 'p0').can.play).toEqual(['chuva', 'mutirao']);
+    // Sem casa/estrada: nenhum lugar de estrada.
+    expect(mandacaruViewFor(table({ cordeis: { p0: ['mutirao'] } }), 'p0').can.play).toEqual([]);
+    // As 15 estradas já no tabuleiro: sem peça.
+    const roads = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [40 + i, 'p0']));
+    expect(mandacaruViewFor(table({ houses: { [a]: 'p0' }, roads, cordeis: { p0: ['mutirao'] } }), 'p0').can.play).toEqual([]);
+  });
+
   it('prazo: o menor entre turno e descarte', () => {
     expect(mandacaruNextDeadline(s)).toBe(T0 + MANDACARU_TURN_MS);
     expect(mandacaruNextDeadline({ ...s, phase: 'discard', discardEndsAt: T0 + MANDACARU_DISCARD_MS })).toBe(T0 + MANDACARU_DISCARD_MS);

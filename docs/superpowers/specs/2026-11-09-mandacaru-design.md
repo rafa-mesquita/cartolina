@@ -144,7 +144,10 @@ banco.
 - **Ponto** (Igrejinha, Açude, Cisterna, Escola, Casa de Farinha): +1 ponto,
   escondido dos outros até o fim.
 - **Mutirão**: põe 2 estradas de graça (fase `mutirao`), seguindo as regras de
-  lugar. Se faltar peça ou lugar, põe as que der.
+  lugar. Se a peça ou o lugar acabar depois da primeira, para nela; sem peça
+  ou sem lugar nenhum pra primeira, é recusado (`bad_spot`) e a carta fica na
+  mão. A mesa só oferece o Mutirão com peça e lugar, e a Chuva só com 2+
+  cartas no banco.
 - **Chuva no sertão**: pega 2 recursos quaisquer do banco (podem ser iguais;
   precisa ter no banco).
 - **Atravessador**: escolhe um recurso; todos os outros entregam tudo que têm

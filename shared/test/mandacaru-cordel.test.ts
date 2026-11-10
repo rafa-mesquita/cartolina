@@ -19,6 +19,21 @@ describe('Mandacaru: cordéis', () => {
     expect(s.hands.p0!.cordeis).toEqual([]);
   });
 
+  it('Mutirão sem lugar ou sem peça de estrada: recusado (bad_spot) e a carta fica', () => {
+    // Sem casa nem estrada, não tem onde pôr estrada.
+    const nowhere = table({ cordeis: { p0: ['mutirao'] } });
+    expect(tryAct(nowhere, 'p0', { type: 'play_mutirao' }, ctx)).toEqual({ ok: false, error: 'bad_spot' });
+    const a = corner(9, 0);
+    // As 15 estradas já no tabuleiro: sem peça.
+    const roads = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [40 + i, 'p0']));
+    const noPieces = table({ houses: { [a]: 'p0' }, roads, cordeis: { p0: ['mutirao'] } });
+    expect(tryAct(noPieces, 'p0', { type: 'play_mutirao' }, ctx)).toEqual({ ok: false, error: 'bad_spot' });
+    // Recusado não gasta o cordel do turno: ainda dá pra jogar outro.
+    const other = table({ cordeis: { p0: ['mutirao', 'chuva'] } });
+    expect(tryAct(other, 'p0', { type: 'play_mutirao' }, ctx).ok).toBe(false);
+    expect(tryAct(other, 'p0', { type: 'play_chuva', resources: ['wood', 'wood'] }, ctx).ok).toBe(true);
+  });
+
   it('Chuva no sertão: 2 recursos do banco', () => {
     const s = act(table({ cordeis: { p0: ['chuva'] } }), 'p0', { type: 'play_chuva', resources: ['stone', 'stone'] }, ctx);
     expect(s.hands.p0!.res).toEqual(res({ stone: 2 }));
