@@ -32,8 +32,11 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
 .turno{flex:1;display:flex;align-items:center;justify-content:center;gap:14px}
 #vez{font:400 22px/1 var(--ft)}
 .relogio{font:400 21px/1 var(--ft);padding:7px 14px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);min-width:84px;text-align:center}
-.relogio.pouco{color:var(--accent);border-color:var(--accent)}
-.dados{display:flex;gap:8px;width:292px;justify-content:flex-end}
+.relogio.pouco{background:var(--accent);color:#fff6e6;animation:pisca 1s ease-in-out infinite}
+@keyframes pisca{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.topo-dir{display:flex;align-items:center;gap:8px;width:292px;justify-content:flex-end;flex:none}
+.topo-dir .btn{padding:8px 11px;font-size:16px}
+.dados{display:flex;gap:8px;margin-left:6px}
 .dado{width:46px;height:46px;border:var(--bd);border-radius:8px;background:var(--panel);box-shadow:var(--sh);fill:var(--ink)}
 .dado.rolando{animation:chacoalha .3s linear}
 @keyframes chacoalha{0%{transform:rotate(0)}25%{transform:rotate(-14deg) translateY(-4px)}50%{transform:rotate(10deg)}75%{transform:rotate(-6deg) translateY(-2px)}100%{transform:rotate(0)}}
@@ -55,7 +58,7 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
 .jog .pts small{display:block;font:800 10px/1 var(--fb);opacity:.6;letter-spacing:.05em}
 .jog .pts .esc{display:block;font:700 11px/1.2 var(--fb);opacity:.7}
 .jog .relo{position:absolute;left:60px;bottom:-11px;font:400 13px/1 var(--ft);padding:3px 8px;border:var(--bd);border-radius:999px;background:#fff6e6}
-.jog .relo.pouco{color:var(--accent);border-color:var(--accent)}
+.jog .relo.pouco{background:var(--accent);color:#fff6e6}
 .box{border:var(--bd);border-radius:var(--rad);background:var(--panel);padding:11px 13px;box-shadow:var(--sh)}
 .box h3{margin:0 0 7px;font:400 16px/1 var(--ft)}
 .banco{display:flex;gap:8px;flex-wrap:wrap;font-size:13px}
@@ -180,8 +183,32 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
 .painel .nomes{display:flex;gap:14px;justify-content:center;margin-bottom:22px;font:400 17px/1 var(--ft)}
 .painel .nomes span{display:inline-flex;align-items:center;gap:5px}
 .placar{text-align:left;margin:16px 0 20px}
-.placar div{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1.5px dashed #c9a77a;font-size:15px}
-.placar div b{margin-left:auto;font:400 22px/1 var(--ft)}
+.painel.largo{width:680px}
+.lfim{display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1.5px dashed #c9a77a}
+.lfim.venc{background:#f6e0bd;border-radius:10px;border-bottom-color:transparent}
+.lfim .quem{flex:1;min-width:0}
+.lfim .nm{font:400 20px/1.1 var(--ft);display:flex;align-items:center;gap:8px}
+.lfim .noite{margin-left:auto;font:700 13px/1 var(--fb);opacity:.75}
+.lfim .de{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;font-size:13px}
+.lfim .de span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:#fff;border:1.5px solid #c9a77a}
+.lfim .de span.pontos{background:#2a1c13;color:#fbf1dc;border-color:#2a1c13}
+.lfim .de b{font:400 14px/1 var(--ft);color:var(--accent)}
+.lfim .de span.pontos b{color:#f3c9a0}
+.lfim .tot{font:400 36px/1 var(--ft);text-align:center;min-width:64px}
+.lfim .tot small{display:block;font:800 10px/1 var(--fb);opacity:.6;letter-spacing:.05em}
+/* ---------- folha de regras ---------- */
+#regras{position:absolute;top:0;right:0;bottom:0;z-index:30;width:470px;padding:22px 26px 28px;overflow-y:auto;background:var(--panel);border-left:var(--bd);
+  box-shadow:-4px 0 0 #5b3a29;transform:translateX(105%);transition:transform .25s ease;font-size:14.5px;line-height:1.45}
+#regras.on{transform:none}
+#regras h2{margin:0 0 4px;font:400 32px/1 var(--ft)}
+#regras h3{margin:18px 0 6px;font:400 19px/1.1 var(--ft);color:var(--terra)}
+#regras p{margin:0 0 6px}
+#regras ul{margin:0;padding-left:18px}
+#regras li{margin:0 0 4px}
+#regras .x{position:absolute;top:14px;right:16px;width:34px;height:34px;padding:0;border:var(--bd);border-radius:50%;background:#fff6e6;font:400 18px/1 var(--ft);box-shadow:0 2px 0 #5b3a29}
+#regras .custo b{min-width:64px}
+#regras .cord{display:flex;gap:10px;align-items:flex-start;margin:6px 0}
+#regras .cord .xilo{flex:none;width:38px;height:38px;background:#2a1c13;border-radius:3px;display:grid;place-items:center}
 #toast{position:absolute;left:50%;bottom:184px;transform:translate(-50%,10px);z-index:20;padding:10px 18px;border:var(--bd);border-radius:999px;background:#4a2e1f;color:#fff6e6;
   font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap}
 #toast.on{opacity:1;transform:translate(-50%,0)}
@@ -195,7 +222,11 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
       <div><h1>Mandacaru</h1><div class="sub">faça a caatinga florir</div></div>
     </div>
     <div class="turno"><span id="vez"></span><span class="relogio" id="relogio" hidden>5:00</span></div>
-    <div class="dados" id="dados"></div>
+    <div class="topo-dir">
+      <button class="btn sec" id="bRegras">regras</button>
+      <button class="btn sec" id="bSom" title="liga/desliga o som">🔊</button>
+      <div class="dados" id="dados"></div>
+    </div>
   </header>
 
   <aside id="esq">
@@ -255,8 +286,9 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
   </div>
 
   <div class="veu" id="fim" hidden>
-    <div class="painel">
+    <div class="painel largo">
       <h2 id="fimTit"></h2>
+      <div class="sub" id="fimSub"></div>
       <div class="placar" id="fimPlacar"></div>
       <div class="esc">
         <button class="btn grande" id="bRestart">jogar de novo</button>
@@ -265,6 +297,47 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
     </div>
   </div>
 
+  <aside id="regras" aria-label="regras">
+    <button class="x" id="bRegrasX" title="fechar">✕</button>
+    <h2>regras</h2>
+    <p>Quem chega a <b>10 pontos na própria vez</b> vence na hora (contando os Pontos escondidos).</p>
+    <h3>o turno</h3>
+    <ul>
+      <li>Antes dos dados dá pra jogar <b>1 Vaqueiro</b>.</li>
+      <li><b>Dados:</b> cada terreno com o número (sem o Carcará em cima) rende 1 carta por casa e 2 por vila nos cantos dele.</li>
+      <li>Se o banco não tem um recurso pra todos que iam receber, ninguém recebe dele (se só um ia receber, leva o que tiver).</li>
+      <li>Depois, em qualquer ordem: trocar, ir à feira, construir, comprar cordel e jogar <b>1 cordel</b>. Termina com “passar a vez”.</li>
+      <li>Cada turno tem <b>5 minutos</b>; o relógio fica vermelho no último minuto. Acabou o tempo, a mesa termina a vez sozinha.</li>
+    </ul>
+    <h3>quanto custa</h3>
+    <div id="regrasCustos"></div>
+    <p style="margin-top:6px">Casa: canto livre com os 3 cantos vizinhos vazios, encostado numa estrada sua. Vila: no lugar de uma casa sua. Estrada: encostada numa estrada, casa ou vila sua. Peças: 15 estradas, 5 casas, 4 vilas.</p>
+    <h3>saiu 7: lá vem o Carcará</h3>
+    <ul>
+      <li>Quem tem <b>mais de 7 cartas</b> descarta a metade (pra baixo), em até <b>60 s</b>; sem escolher, é sorteado.</li>
+      <li>Quem rolou leva o Carcará pra outro terreno: ele não produz enquanto o Carcará estiver lá.</li>
+      <li>E rouba 1 carta sorteada de alguém com casa ou vila naquele terreno.</li>
+    </ul>
+    <h3>troca</h3>
+    <ul>
+      <li>Só na sua vez, depois dos dados: monte “dou X, quero Y” e mande pra mesa.</li>
+      <li>Os outros respondem <b>aceito</b>, <b>não</b> ou mandam <b>contraproposta</b>. Você fecha com quem quiser.</li>
+      <li>Na vez dos outros, você pode mandar uma proposta pra quem está jogando.</li>
+    </ul>
+    <h3>feira</h3>
+    <p>Troca com o banco: <b>4 por 1</b> sempre; <b>3 por 1</b> com casa ou vila numa feira comum; <b>2 por 1</b> do recurso da feira de 2:1 onde você está.</p>
+    <h3>cordéis</h3>
+    <p>Comprado agora só pode ser jogado no próximo turno. Um por turno.</p>
+    <div id="regrasCordeis"></div>
+    <h3>pontos</h3>
+    <ul>
+      <li>Casa <b>1</b>, vila <b>2</b>, cordel de Ponto <b>1</b> (escondido até o fim).</li>
+      <li><b>Maior estrada</b> (5 ou mais seguidas, maior que todas): <b>+2</b>. Casa de outro no meio corta a estrada.</li>
+      <li><b>Maior comitiva</b> (3 ou mais Vaqueiros jogados, mais que todos): <b>+2</b>.</li>
+      <li>Empate: quem já tinha o selo continua com ele.</li>
+    </ul>
+  </aside>
+
   <div id="toast"></div>
 </div>
 
@@ -272,6 +345,7 @@ header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
 <script src="art.js"></script>
 <script src="texts.js"></script>
 <script src="bots.js"></script>
+<script src="sounds.js"></script>
 <script>
 'use strict';
 const $ = (s) => document.querySelector(s);
@@ -370,7 +444,8 @@ function fire(p) {
 function clearTimers() { for (const t of timers) clearTimeout(t); timers.clear(); plans.clear(); fails.clear(); }
 function newGame() {
   clearTimers();
-  mode = null; lastLayout = undefined; lastEntry = null; closePanel(); ui.hiddenOffer = null;
+  mode = null; lastLayout = undefined; lastEntry = null; lastTurn = null; closePanel(); ui.hiddenOffer = null;
+  Som.unlock();
   state = Manda.initialMandacaruState();
   $('#lobby').hidden = true;
   send(ME, { type: 'start' });
@@ -380,6 +455,9 @@ function toLobby() { clearTimers(); state = null; version++; $('#fim').hidden = 
 
 /* ---------- mudanças: diário novo, dados, render ---------- */
 let lastEntry = null;
+let lastTurn = null;
+/** Som de cada linha do diário (no máximo um de cada tipo por mudança). */
+const SOUND_OF = { roll: 'dados', place: 'construir', build: 'construir', buy_cordel: 'carta', play: 'carta', trade: 'carta', feira: 'carta', carcara: 'carcara', steal: 'carta', win: 'vitoria' };
 function changed() {
   version++;
   const v = view();
@@ -388,6 +466,11 @@ function changed() {
   const i = lastEntry ? log.lastIndexOf(lastEntry) : -1;
   const fresh = lastEntry && i < 0 ? log.slice(-1) : log.slice(i + 1);
   lastEntry = log[log.length - 1] || null;
+  const sounds = new Set(fresh.map((e) => SOUND_OF[e.t]).filter(Boolean));
+  if (v.turn === ME && lastTurn !== ME && v.phase !== 'over' && v.phase !== 'lobby') sounds.add('vez');
+  lastTurn = v.turn;
+  let delay = 0;
+  for (const name of sounds) { const n = name; setTimeout(() => Som.play(n), delay); delay += 160; }
   for (const e of fresh) {
     if (e.t === 'roll') rollFx(e.dice);
     if (e.t === 'trade' && (e.a === ME || e.b === ME)) {
@@ -645,6 +728,11 @@ function renderActions(v) {
   for (const b of document.querySelectorAll('[data-mode]')) b.classList.toggle('on', b.dataset.mode === mode);
 }
 
+$('#regrasCustos').innerHTML = ['road', 'house', 'city', 'cordel'].map((k) => `<div class="custo"><b>${Txt.PIECE[k]}</b>${costIcons(k)}</div>`).join('');
+$('#regrasCordeis').innerHTML = ['vaqueiro', 'point', 'mutirao', 'chuva', 'atravessador'].map((k) => `<div class="cord"><span class="xilo">${Art.svgIcon(Art.CORDEL_ICON[k], Art.WOODCUT, 30)}</span>
+  <span><b>${Txt.CORDEL[k]}${k === 'point' ? ` (${Txt.joinE(Txt.POINT_NAMES)})` : ''}:</b> ${Txt.CORDEL_DESC[k]}.</span></div>`).join('');
+$('#bRegras').addEventListener('click', () => $('#regras').classList.toggle('on'));
+$('#bRegrasX').addEventListener('click', () => $('#regras').classList.remove('on'));
 $('#custos').innerHTML = `<h3>quanto custa</h3>` + ['road', 'house', 'city', 'cordel'].map((k) => `<div class="custo"><b>${Txt.PIECE[k]}</b>${costIcons(k)}</div>`).join('');
 
 function renderHand(v) {
@@ -687,9 +775,28 @@ function renderEnd(v) {
   $('#fim').hidden = !over;
   if (!over) return;
   $('#fimTit').textContent = v.winner === ME ? 'Você venceu!' : `${nameOf(v.winner)} venceu!`;
-  const rows = [...v.seats].sort((a, b) => b.points - a.points).map((s) => {
-    const pc = v.pointCards ? v.pointCards[s.id] : 0;
-    return `<div><svg width="30" height="30" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[s.id])}</svg>${nameOf(s.id)}${pc ? ` <small>(${pc} ${pc > 1 ? 'cordéis' : 'cordel'} de Ponto)</small>` : ''}<b>${s.points}</b></div>`;
+  $('#fimSub').textContent = `partida ${v.match} · de onde veio cada ponto`;
+  // Nomes dos Pontos: os seus primeiro (os mesmos da sua mão), depois os dos outros na ordem da mesa.
+  const order = [ME, ...v.players.filter((p) => p !== ME)];
+  const pointNames = {};
+  let k = 0;
+  for (const p of order) { const n = v.pointCards ? v.pointCards[p] || 0 : 0; pointNames[p] = Txt.POINT_NAMES.slice(k, k + n); k += n; }
+  const rows = [...v.seats].sort((a, b) => (b.id === v.winner) - (a.id === v.winner) || b.points - a.points).map((s) => {
+    let casas = 0, vilas = 0;
+    v.buildings.forEach((b) => { if (b && b.owner === s.id) { if (b.kind === 'house') casas++; else vilas++; } });
+    const parts = [];
+    if (casas) parts.push(`<span>${casas} casa${casas > 1 ? 's' : ''} <b>+${casas}</b></span>`);
+    if (vilas) parts.push(`<span>${vilas} vila${vilas > 1 ? 's' : ''} <b>+${2 * vilas}</b></span>`);
+    if (v.longestRoad === s.id) parts.push(`<span>maior estrada (${s.roadLength}) <b>+2</b></span>`);
+    if (v.largestArmy === s.id) parts.push(`<span>maior comitiva (${s.knights} Vaqueiros) <b>+2</b></span>`);
+    const pn = pointNames[s.id] || [];
+    if (pn.length) parts.push(`<span class="pontos">${Art.svgIcon('igreja', Art.STYLE, 16)} ${Txt.joinE(pn)} <b>+${pn.length}</b></span>`);
+    const wins = v.wins[s.id] || 0;
+    return `<div class="lfim ${s.id === v.winner ? 'venc' : ''}">
+      <svg width="34" height="34" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[s.id])}</svg>
+      <div class="quem"><div class="nm">${nameOf(s.id)}${s.id === v.winner ? ' <span class="selo">venceu!</span>' : ''}<span class="noite" title="vitórias da noite">🏆 ${wins}</span></div>
+        <div class="de">${parts.join('') || '<span>nenhum ponto</span>'}</div></div>
+      <div class="tot">${s.points}<small>PONTOS</small></div></div>`;
   }).join('');
   $('#fimPlacar').innerHTML = rows;
 }
@@ -959,10 +1066,15 @@ $('#prompt').addEventListener('click', (ev) => {
   if (t.dataset.act === 'trade') { const v = view(); ui.give = v.offer ? { ...v.offer.give } : none(); ui.want = v.offer ? { ...v.offer.want } : none(); openPanel('trade', v); render(view()); }
 });
 addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || !state) return;
+  if (e.key !== 'Escape') return;
+  if ($('#regras').classList.contains('on')) { $('#regras').classList.remove('on'); return; }
+  if (!state) return;
   if (mode || ui.panel) { mode = null; closePanel(); render(view()); }
 });
 $('#bStart').addEventListener('click', newGame);
+const somIcon = () => { $('#bSom').textContent = Som.on ? '🔊' : '🔇'; };
+$('#bSom').addEventListener('click', () => { Som.toggle(); somIcon(); });
+somIcon();
 $('#bRestart').addEventListener('click', restart);
 $('#bLobby').addEventListener('click', toLobby);
 
