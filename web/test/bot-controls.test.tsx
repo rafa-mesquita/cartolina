@@ -1,4 +1,4 @@
-import { COUP_MAX_PLAYERS, MAX_PLAYERS } from '@cartolina/shared';
+import { COUP_MAX_PLAYERS, MANDACARU_MAX_PLAYERS, MAX_PLAYERS } from '@cartolina/shared';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -80,10 +80,28 @@ vi.mock('../src/dev/coupBots', () => ({
   }),
 }));
 
+vi.mock('../src/dev/mandacaruBots', () => ({
+  subscribeMandacaruBots: (fn: () => void) => {
+    fake.listeners.add(fn);
+    return () => fake.listeners.delete(fn);
+  },
+  mandacaruBotsVersion: () => fake.state.version,
+  mandacaruBotsIn: (code: string) => fake.state.bots.filter((b) => b.code === code).length,
+  addMandacaruBot: vi.fn((code: string) => {
+    fake.state.bots.push({ code });
+    fake.emit();
+  }),
+  removeAllMandacaruBots: vi.fn(() => {
+    fake.state.bots = [];
+    fake.emit();
+  }),
+}));
+
 import BotControls from '../src/dev/BotControls';
 import { addCoupBot, removeAllCoupBots } from '../src/dev/coupBots';
 import { addBot, removeAllBots } from '../src/dev/bots';
 import { addDixitBot, removeAllDixitBots } from '../src/dev/dixitBots';
+import { addMandacaruBot, removeAllMandacaruBots } from '../src/dev/mandacaruBots';
 import { addPicturesBot, removeAllPicturesBots } from '../src/dev/picturesBots';
 import { Lobby } from '../src/screens/Lobby';
 import { makeRoom, viewOf } from './fixtures';
@@ -155,6 +173,24 @@ describe('BotControls (dev)', () => {
     unmount();
     // com 6 pessoas o Cúpi está cheio, embora o teto geral seja maior
     render(<BotControls code="ABCD" seats={COUP_MAX_PLAYERS} game="coup" />);
+    expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('no Mandacaru usa os bots do Mandacaru, e o teto é o de 4 pessoas do jogo', () => {
+    const { unmount } = render(<BotControls code="ABCD" seats={3} game="mandacaru" />);
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /adicionar bot/ }));
+    });
+    expect(addMandacaruBot).toHaveBeenCalledWith('ABCD');
+    expect(addCoupBot).not.toHaveBeenCalled();
+    expect(addBot).not.toHaveBeenCalled();
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /tirar bots \(1\)/ }));
+    });
+    expect(removeAllMandacaruBots).toHaveBeenCalled();
+    expect(removeAllCoupBots).not.toHaveBeenCalled();
+    unmount();
+    render(<BotControls code="ABCD" seats={MANDACARU_MAX_PLAYERS} game="mandacaru" />);
     expect((screen.getByRole('button', { name: /adicionar bot/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
