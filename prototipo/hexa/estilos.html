@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cartolina~ · protótipo do jogo de hexágonos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="fonts" rel="stylesheet" href="">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font-family:var(--fb);color:var(--ink);background:var(--bg);transition:background .3s}
+button{font:inherit;color:inherit;cursor:pointer}
+
+/* ---------- troca de estilo (só do protótipo) ---------- */
+.proto{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);z-index:20;display:flex;gap:6px;padding:6px;border-radius:999px;background:rgba(20,20,20,.82);font:600 13px/1 system-ui}
+.proto button{border:0;border-radius:999px;padding:8px 14px;background:transparent;color:#ddd}
+.proto button.on{background:#fff;color:#111}
+.proto .sep{width:1px;background:#555;margin:4px 2px}
+
+/* ---------- layout ---------- */
+.app{display:grid;grid-template-columns:250px 1fr 250px;grid-template-rows:72px 1fr 150px;height:100%;padding:0 18px 52px}
+header{grid-column:1/-1;display:flex;align-items:center;gap:16px}
+.logo{font:var(--ft);font-size:34px;line-height:1;letter-spacing:var(--ls,0)}
+.sub{font-size:15px;opacity:.75}
+.turno{margin-left:auto;display:flex;align-items:center;gap:14px}
+.relogio{font:var(--ft);font-size:22px;padding:6px 14px;border:var(--bd);border-radius:var(--rad);background:var(--panel)}
+.dados{display:flex;gap:8px}
+.dados svg{width:44px;height:44px;border:var(--bd);border-radius:var(--rad-s);background:var(--die);fill:var(--die-ink)}
+
+.jogadores{grid-row:2/4;display:flex;flex-direction:column;gap:10px;padding-top:6px}
+.jog{display:flex;align-items:center;gap:10px;padding:10px 12px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh)}
+.jog.vez{outline:3px solid var(--accent);outline-offset:2px}
+.jog svg{flex:none}
+.jog .n{font:var(--ft);font-size:18px}
+.jog .m{font-size:13px;opacity:.8;display:flex;gap:10px;margin-top:3px}
+.jog .pts{margin-left:auto;font:var(--ft);font-size:26px}
+
+.mesa{grid-row:2;grid-column:2;position:relative;min-height:0;display:grid;place-items:center}
+.mesa svg{width:100%;height:100%}
+
+.lado{grid-row:2/4;grid-column:3;display:flex;flex-direction:column;gap:12px;padding-top:6px}
+.box{border:var(--bd);border-radius:var(--rad);background:var(--panel);padding:12px 14px;box-shadow:var(--sh)}
+.box h3{margin:0 0 8px;font:var(--ft);font-size:17px}
+.custo{display:flex;align-items:center;gap:6px;margin:6px 0;font-size:14px}
+.custo b{min-width:62px;font-weight:700}
+.custo svg{width:22px;height:22px}
+.acoes{display:flex;flex-direction:column;gap:8px}
+.btn{border:var(--bd);border-radius:var(--rad);background:var(--btn);color:var(--btn-ink);padding:11px 14px;font:var(--ft);font-size:17px;box-shadow:var(--sh)}
+.btn.sec{background:var(--panel);color:var(--ink)}
+.diario{font-size:14px;line-height:1.45}
+.diario p{margin:0 0 4px}
+
+.mao{grid-row:3;grid-column:2;display:flex;align-items:flex-end;justify-content:center;gap:12px;padding-bottom:6px}
+.carta{position:relative;width:92px;height:128px;border:var(--bd);border-radius:var(--rad);background:var(--card);box-shadow:var(--sh);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:transform .15s}
+.carta:hover{transform:translateY(-8px)}
+.carta .nome{font:var(--ft);font-size:15px}
+.carta .qtd{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font:var(--ft);font-size:16px;border:var(--bd)}
+.carta.dev{background:var(--card-dev)}
+
+/* ---------- A: xilogravura ---------- */
+body.tema-a{
+  --bg:#efe3c4;--ink:#1b1712;--panel:#f6ecd2;--card:#f6ecd2;--card-dev:#e8d3a3;--accent:#b3261e;--accent-ink:#f6ecd2;
+  --btn:#1b1712;--btn-ink:#f6ecd2;--die:#f6ecd2;--die-ink:#1b1712;
+  --ft:400 1em 'Alfa Slab One',serif;--fb:'Bitter',serif;--bd:3px solid #1b1712;--rad:2px;--rad-s:4px;--sh:4px 4px 0 #1b1712;
+  background-image:radial-gradient(rgba(27,23,18,.07) 1px,transparent 1.4px),radial-gradient(rgba(120,80,30,.08) 1px,transparent 1.6px);
+  background-size:6px 6px,13px 13px;background-position:0 0,4px 7px;
+}
+body.tema-a .logo{text-transform:uppercase;--ls:1px}
+/* ---------- B: azulejo / aquarela ---------- */
+body.tema-b{
+  --bg:#fbf7ee;--ink:#1d2f55;--panel:#ffffff;--card:#ffffff;--card-dev:#e9f0fb;--accent:#1f4e9c;--accent-ink:#fff;
+  --btn:#1f4e9c;--btn-ink:#fff;--die:#fff;--die-ink:#1f4e9c;
+  --ft:800 1em 'Fraunces',serif;--fb:'Nunito',sans-serif;--bd:2px solid #1f4e9c;--rad:14px;--rad-s:10px;--sh:0 3px 10px rgba(31,78,156,.18);
+}
+body.tema-b .logo{font-style:italic}
+/* ---------- C: retalhos ---------- */
+body.tema-c{
+  --bg:#e6d9c2;--ink:#4a3424;--panel:#f6efe0;--card:#f6efe0;--card-dev:#f3dfc6;--accent:#c8362f;--accent-ink:#fff8ea;
+  --btn:#c8362f;--btn-ink:#fff8ea;--die:#f6efe0;--die-ink:#4a3424;
+  --ft:700 1em 'Fredoka',sans-serif;--fb:'Patrick Hand',cursive;--bd:2px dashed #8a6a4a;--rad:16px 12px 15px 11px;--rad-s:10px;--sh:2px 4px 6px rgba(58,42,26,.25);
+  background-image:repeating-linear-gradient(0deg,rgba(90,61,43,.07) 0 1px,transparent 1px 4px),repeating-linear-gradient(90deg,rgba(90,61,43,.07) 0 1px,transparent 1px 4px);
+}
+body.tema-c .btn{border-style:solid;border-color:#7a2520;outline:2px dashed rgba(255,248,234,.7);outline-offset:-6px}
+body.tema-c .jogadores .jog, body.tema-c .box, body.tema-c .carta{border-style:dashed}
+/* ---------- D: caatinga ao sol ---------- */
+body.tema-d{
+  --bg:#f3dcb4;--ink:#4a2e1f;--panel:#fff6e6;--card:#fff6e6;--card-dev:#f6e0bd;--accent:#b8321f;--accent-ink:#fff6e6;
+  --btn:#c8643b;--btn-ink:#fff6e6;--die:#fff6e6;--die-ink:#4a2e1f;
+  --ft:400 1em 'Bree Serif',serif;--fb:'Mulish',sans-serif;--bd:2px solid #5b3a29;--rad:10px;--rad-s:8px;--sh:0 3px 0 #5b3a29;
+  background-image:radial-gradient(ellipse at 50% -10%,rgba(255,214,120,.65),transparent 60%),linear-gradient(#f7e6c4,#ecc896);
+}
+</style>
+</head>
+<body class="tema-a">
+<div class="app">
+  <header>
+    <div>
+      <div class="logo" id="logo"></div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="turno">
+      <span id="vez"></span>
+      <span class="relogio">4:12</span>
+      <div class="dados" id="dados"></div>
+    </div>
+  </header>
+  <aside class="jogadores" id="jogadores"></aside>
+  <main class="mesa"><svg id="mesa" viewBox="-356 -324 712 648" preserveAspectRatio="xMidYMid meet"></svg></main>
+  <aside class="lado">
+    <div class="acoes">
+      <button class="btn">trocar</button>
+      <button class="btn">construir</button>
+      <button class="btn sec">passar a vez</button>
+    </div>
+    <div class="box" id="custos"></div>
+    <div class="box diario" id="diario"></div>
+  </aside>
+  <section class="mao" id="mao"></section>
+</div>
+<div class="proto" id="proto">
+  <button data-t="a">A · Sertãozim</button>
+  <button data-t="b">B · Ilhota</button>
+  <button data-t="c">C · Fuxico</button>
+  <button data-t="d">D · Mandacaru</button>
+  <span class="sep"></span>
+  <button id="sortear">🎲 sortear outro tabuleiro</button>
+</div>
+<script src="board.js"></script>
+<script src="temas.js"></script>
+<script>
+const R = 58;
+let seed = Number(new URLSearchParams(location.search).get('s')) || 20261109;
+let tema = new URLSearchParams(location.search).get('t') || 'a';
+
+function resIcon(T, res) {
+  return T.icons[res] ?? (res === 'pasto' ? T.icons.pasto : res === 'roca' ? T.icons.roca : res);
+}
+
+function render() {
+  const T = TEMAS[tema];
+  document.body.className = 'tema-' + tema;
+  document.getElementById('fonts').href = `https://fonts.googleapis.com/css2?${T.fonts}&display=swap`;
+  document.getElementById('logo').textContent = T.nome;
+  document.getElementById('sub').textContent = T.sub;
+  document.querySelectorAll('#proto [data-t]').forEach((b) => b.classList.toggle('on', b.dataset.t === tema));
+
+  const b = Hexa.makeBoard(seed, R);
+  let s = `<defs>${T.defs}</defs>`;
+  for (const o of b.ocean) s += T.ocean(o);
+  for (const h of b.hexes) s += T.hex(h);
+  for (const o of b.ocean) if (o.port) s += T.port(o.port, o.port.type === '3:1' ? null : resIcon(T, o.port.type));
+  for (const h of b.hexes) if (h.number) s += T.token(h);
+  for (const rd of b.roads) s += T.road(rd, T.colors[rd.player]);
+  for (const p of b.pieces) s += p.city ? T.city(p.x, p.y, T.colors[p.player]) : T.settle(p.x, p.y, T.colors[p.player]);
+  s += T.robber(b.robber.x, b.robber.y);
+  document.getElementById('mesa').innerHTML = s;
+
+  // Dados
+  document.getElementById('dados').innerHTML = [3, 5].map((n) => `<svg viewBox="0 0 100 100">${HexaArt.diceFace(n)}</svg>`).join('');
+  document.getElementById('vez').textContent = 'vez da Bia';
+
+  // Jogadores
+  const pts = [4, 3, 3, 2];
+  const cartas = [6, 4, 7, 2];
+  const cav = [0, 1, 2, 0];
+  document.getElementById('jogadores').innerHTML = b.players.map((n, i) => `
+    <div class="jog ${i === 1 ? 'vez' : ''}">
+      <svg width="34" height="34" viewBox="-20 -24 40 40">${T.settle(0, 0, T.colors[i])}</svg>
+      <div><div class="n">${n}</div><div class="m"><span>🂠 ${cartas[i]}</span><span>⚔ ${cav[i]}</span></div></div>
+      <div class="pts">${pts[i]}</div>
+    </div>`).join('');
+
+  // Mão
+  const mine = [['madeira', 2], ['barro', 1], ['pasto', 1], ['roca', 3], ['pedra', 0]];
+  const st = T.iconStyle;
+  document.getElementById('mao').innerHTML = mine.map(([res, q]) => `
+    <div class="carta">${HexaArt.svgIcon(resIcon(T, res), st, 52)}<span class="nome">${T.recursos[res]}</span>${q ? `<span class="qtd">${q}</span>` : ''}</div>`).join('')
+    + `<div class="carta dev">${HexaArt.svgIcon('causo', st, 52)}<span class="nome">${T.pecas.carta}</span><span class="qtd">1</span></div>`;
+
+  // Custos
+  const ic = (r) => HexaArt.svgIcon(resIcon(T, r), st, 22);
+  document.getElementById('custos').innerHTML = `<h3>quanto custa</h3>
+    <div class="custo"><b>${T.pecas.estrada}</b>${ic('madeira')}${ic('barro')}</div>
+    <div class="custo"><b>${T.pecas.aldeia}</b>${ic('madeira')}${ic('barro')}${ic('pasto')}${ic('roca')}</div>
+    <div class="custo"><b>${T.pecas.cidade}</b>${ic('roca')}${ic('roca')}${ic('pedra')}${ic('pedra')}${ic('pedra')}</div>
+    <div class="custo"><b>${T.pecas.carta}</b>${ic('pedra')}${ic('pasto')}${ic('roca')}</div>`;
+
+  document.getElementById('diario').innerHTML = `<h3>diário</h3>
+    <p>Bia tirou <b>8</b>: Rafa ganhou 2 ${T.recursos.roca}, Duda 1 ${T.recursos.pedra}.</p>
+    <p>Léo trocou 4 ${T.recursos.madeira} por 1 ${T.recursos.pasto} no porto.</p>
+    <p>O ${T.ladrao} foi pro ${T.terrenos.deserto} e passou a mão numa carta do Rafa.</p>`;
+}
+
+document.querySelectorAll('#proto [data-t]').forEach((btn) => btn.addEventListener('click', () => { tema = btn.dataset.t; render(); }));
+document.getElementById('sortear').addEventListener('click', () => { seed = Math.floor(Math.random() * 1e9); render(); });
+render();
+</script>
+</body>
+</html>

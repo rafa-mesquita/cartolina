@@ -1,0 +1,339 @@
+/* Mandacaru: caatinga ao sol (estilo D do protótipo `prototipo/hexa/`). Tudo escopado em `.mandacaru`, classes com prefixo `mc-`. */
+.mandacaru {
+  --ink: #4a2e1f; --line: #5b3a29; --panel: #fff6e6; --paper: #f6e0bd; --accent: #b8321f; --terra: #c8643b; --soft: #8a6a4a;
+  --green: #5f7a3a; --dash: #c9a77a;
+  --bd: 2px solid #5b3a29; --rad: 10px; --sh: 0 3px 0 #5b3a29;
+  --ft: 'Bree Serif', Georgia, serif; --fb: 'Mulish', system-ui, sans-serif;
+  position: fixed; inset: 0; overflow: hidden; color: var(--ink);
+  font-family: var(--fb); font-weight: 600; -webkit-user-select: none; user-select: none;
+  /* fundo: pintura armorial da caatinga (arte do Flow, `--mc-fundo` vem do `FUNDO_STYLE`) com um véu creme leve por cima */
+  background: linear-gradient(rgba(247, 230, 196, .22), rgba(247, 230, 196, .22)), var(--mc-fundo, none) center / cover no-repeat, linear-gradient(#f7e6c4, #ecc896);
+}
+.mandacaru *, .mandacaru *::before, .mandacaru *::after { box-sizing: border-box; }
+.mandacaru [hidden] { display: none !important; }
+.mandacaru button { font: inherit; color: inherit; cursor: pointer; }
+.mandacaru b { font-weight: 800; }
+
+/* ---------- botões, caixas e pílulas (borda 2px e sombra chapada) ---------- */
+.mandacaru .mc-btn {
+  border: var(--bd); border-radius: var(--rad); background: var(--terra); color: #fff6e6; padding: 10px 12px;
+  font: 400 17px/1.1 var(--ft); box-shadow: var(--sh); transition: transform .08s;
+}
+.mandacaru .mc-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #5b3a29; }
+.mandacaru .mc-btn.sec { background: var(--panel); color: var(--ink); }
+.mandacaru .mc-btn.on { background: var(--accent); outline: 3px solid #fff6e6; outline-offset: -6px; }
+/* apagado sem transparência: a pintura do fundo não vaza pelo botão */
+.mandacaru .mc-btn:disabled {
+  cursor: default; background: color-mix(in srgb, var(--terra) 42%, #f7e6c4); color: rgba(255, 246, 230, .85);
+  border-color: rgba(91, 58, 41, .45); box-shadow: 0 3px 0 rgba(91, 58, 41, .4);
+}
+.mandacaru .mc-btn.sec:disabled { background: #f4e7cf; color: rgba(74, 46, 31, .45); }
+.mandacaru .mc-btn.mini { padding: 6px 10px; font-size: 15px; }
+.mandacaru .mc-btn.grande { font-size: 21px; padding: 13px; }
+.mandacaru .mc-box { border: var(--bd); border-radius: var(--rad); background: var(--panel); padding: 11px 13px; box-shadow: var(--sh); }
+.mandacaru .mc-box h3 { margin: 0 0 7px; font: 400 16px/1 var(--ft); }
+/* o botão de som do site (SoundPill) na cara do Mandacaru */
+.mandacaru .dx-pill {
+  align-self: flex-start; padding: 8px 12px; border: var(--bd); border-radius: 999px; background: var(--panel); color: var(--ink);
+  box-shadow: 0 2px 0 #5b3a29; font: 400 15px/1 var(--ft); white-space: nowrap;
+}
+@media (hover: hover) {
+  .mandacaru .mc-btn:hover:not(:disabled) { filter: brightness(1.06); }
+}
+
+/* ---------- lobby ---------- */
+.mandacaru .mc-lobby {
+  position: relative; height: 100%; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 32px 16px 40px;
+}
+.mandacaru .mc-head { width: min(560px, 100%); display: flex; align-items: center; gap: 14px; flex: none; }
+.mandacaru .mc-head h1 { margin: 0; font: 400 52px/1 var(--ft); }
+.mandacaru .mc-head .mc-sub { margin-top: 4px; font-size: 16px; opacity: .75; }
+.mandacaru .mc-head .mc-room { margin-left: auto; text-align: right; font-size: 13px; opacity: .8; }
+.mandacaru .mc-head .mc-code {
+  display: inline-block; margin-top: 4px; padding: 6px 12px; border: var(--bd); border-radius: var(--rad); background: var(--panel);
+  box-shadow: var(--sh); font: 400 24px/1 var(--ft); letter-spacing: 3px; color: var(--accent); opacity: 1;
+}
+.mandacaru .mc-sheet {
+  width: min(560px, 100%); padding: 18px 22px; border: var(--bd); border-radius: 14px; background: var(--panel); box-shadow: 0 5px 0 #5b3a29;
+  display: flex; flex-direction: column; gap: 12px; flex: none;
+}
+.mandacaru .mc-sheet h2 { margin: 0; font: 400 24px/1.1 var(--ft); }
+.mandacaru .mc-sheet p { margin: 0; font-size: 15px; line-height: 1.4; }
+.mandacaru .mc-people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.mandacaru .mc-people li { display: flex; align-items: center; gap: 8px; font: 400 17px/1.1 var(--ft); }
+.mandacaru .mc-people li.off { opacity: .45; }
+.mandacaru .mc-people .critter { width: 34px; height: 34px; }
+.mandacaru .mc-rules { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.4; }
+.mandacaru .mc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mandacaru .mc-link { width: 100%; padding: 8px 10px; border: var(--bd); border-radius: var(--rad); background: #fff; color: var(--ink); font: inherit; }
+.mandacaru .mc-sheet p.mc-note { font-weight: 800; }
+.mandacaru .mc-sheet p.mc-warn { color: var(--accent); font-weight: 800; }
+.mandacaru .mc-home { width: min(560px, 100%); flex: none; }
+
+/* ---------- aviso curto (toast) ---------- */
+.mandacaru .mc-toast {
+  position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 40; max-width: calc(100% - 32px); padding: 10px 18px;
+  border: var(--bd); border-radius: 999px; background: var(--ink); color: #fff6e6; font-size: 15px; pointer-events: none;
+}
+
+/* ---------- mesa: palco 1440×900 escalado (useStageFit; a largura cresce com a janela) ---------- */
+.mandacaru .mc-app {
+  position: absolute; left: 50%; top: 50%; height: 900px; transform-origin: 50% 50%; overflow: hidden;
+  display: grid; grid-template-columns: 268px 1fr 292px; grid-template-rows: 78px 1fr 166px; column-gap: 18px; padding: 0 20px 12px;
+}
+/* o aviso fica fora da grade, por cima de tudo */
+.mandacaru .mc-app > [role='status'] { position: absolute; inset: 0; pointer-events: none; z-index: 40; }
+.mandacaru .mc-app .mc-toast { bottom: 184px; white-space: nowrap; }
+
+/* topo */
+.mandacaru .mc-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; min-width: 0; }
+.mandacaru .mc-logo { display: flex; align-items: center; gap: 10px; width: 268px; flex: none; }
+/* texto solto sobre a pintura do fundo: um halo creme pra ler */
+.mandacaru .mc-logo, .mandacaru .mc-vezbox, .mandacaru .mc-head { text-shadow: 0 0 4px #fbf1dc, 0 0 8px #fbf1dc, 0 0 12px #fbf1dc; }
+.mandacaru .mc-logo h1 { margin: 0; font: 400 34px/1 var(--ft); }
+.mandacaru .mc-logo .mc-sub { font-size: 14px; opacity: .75; margin-top: 2px; }
+.mandacaru .mc-turno { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.mandacaru .mc-vezbox { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.mandacaru .mc-vez { font: 400 22px/1 var(--ft); white-space: nowrap; }
+.mandacaru .mc-score { font-size: 12.5px; opacity: .75; white-space: nowrap; }
+.mandacaru .mc-relogio {
+  font: 400 21px/1 var(--ft); padding: 7px 14px; border: var(--bd); border-radius: var(--rad); background: var(--panel); box-shadow: var(--sh);
+  min-width: 84px; text-align: center; white-space: nowrap;
+}
+.mandacaru .mc-relogio.pouco { background: var(--accent); color: #fff6e6; animation: mc-pisca 1s ease-in-out infinite; }
+@keyframes mc-pisca { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.mandacaru .mc-topo-dir { display: flex; align-items: center; gap: 8px; flex: none; justify-content: flex-end; }
+.mandacaru .mc-topo-dir .dx-pill { align-self: center; }
+.mandacaru .mc-dados { display: flex; gap: 8px; margin-left: 6px; }
+.mandacaru .mc-dado { width: 46px; height: 46px; border: var(--bd); border-radius: 8px; background: var(--panel); box-shadow: var(--sh); fill: var(--ink); }
+.mandacaru .mc-dado.apagado { background: #f4e7cf; fill: rgba(74, 46, 31, .4); border-color: rgba(91, 58, 41, .5); }
+.mandacaru .mc-dado.rolando { animation: mc-chacoalha .35s linear; }
+@keyframes mc-chacoalha {
+  0% { transform: rotate(0); } 25% { transform: rotate(-14deg) translateY(-4px); } 50% { transform: rotate(10deg); }
+  75% { transform: rotate(-6deg) translateY(-2px); } 100% { transform: rotate(0); }
+}
+
+/* jogadores (esquerda) */
+.mandacaru .mc-left { grid-row: 2 / 4; grid-column: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 4px; min-height: 0; }
+.mandacaru .mc-players { display: flex; flex-direction: column; gap: 14px; }
+.mandacaru .mc-seat {
+  position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: var(--bd); border-radius: var(--rad);
+  background: var(--panel); box-shadow: var(--sh); transition: transform .2s;
+}
+.mandacaru .mc-seat.vez { outline: 3px solid var(--accent); outline-offset: 2px; transform: translateX(4px); }
+.mandacaru .mc-seat-house { flex: none; }
+.mandacaru .mc-seat-info { flex: 1; min-width: 0; }
+.mandacaru .mc-seat-name { font: 400 19px/1.1 var(--ft); display: flex; align-items: center; gap: 6px; }
+.mandacaru .mc-gone { font: 800 10px/1 var(--fb); letter-spacing: .06em; text-transform: uppercase; padding: 3px 6px; border-radius: 999px; background: #ead6b3; }
+.mandacaru .mc-seat-meta { font-size: 13px; display: flex; gap: 10px; margin-top: 4px; align-items: center; }
+.mandacaru .mc-seat-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.mandacaru .mc-selos { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.mandacaru .mc-selo { font: 800 10.5px/1 var(--fb); padding: 3px 6px; border-radius: 999px; background: var(--terra); color: #fff6e6; letter-spacing: .02em; }
+.mandacaru .mc-selo.comitiva { background: #7a4a2a; }
+.mandacaru .mc-seat-pts { font: 400 30px/1 var(--ft); text-align: right; }
+.mandacaru .mc-seat-pts small { display: block; font: 800 10px/1 var(--fb); opacity: .6; letter-spacing: .05em; }
+.mandacaru .mc-seat-pts .mc-esc { display: block; font: 700 11px/1.2 var(--fb); opacity: .7; }
+.mandacaru .mc-relo { position: absolute; left: 60px; bottom: -11px; font: 400 13px/1 var(--ft); padding: 3px 8px; border: var(--bd); border-radius: 999px; background: #fff6e6; }
+.mandacaru .mc-relo.pouco { background: var(--accent); color: #fff6e6; }
+.mandacaru .mc-bank-res { display: flex; gap: 3px; flex-wrap: wrap; font-size: 13px; }
+.mandacaru .mc-bank-res span { display: inline-flex; align-items: center; gap: 2px; }
+.mandacaru .mc-deck { font-size: 13px; margin-top: 6px; }
+
+/* tabuleiro (centro) */
+.mandacaru .mc-mesa { grid-row: 2; grid-column: 2; position: relative; min-height: 0; min-width: 0; }
+.mandacaru .mc-board { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mandacaru .mc-spot { cursor: pointer; outline: none; }
+.mandacaru .mc-spot:focus-visible > :first-child { stroke: var(--accent); stroke-width: 5; }
+.mandacaru .mc-pulse { animation: mc-pulse 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.mandacaru .mc-pulse-o { animation: mc-pulse-o 1.1s ease-in-out infinite; }
+@keyframes mc-pulse { 0%, 100% { opacity: .6; transform: scale(.82); } 50% { opacity: 1; transform: scale(1.12); } }
+@keyframes mc-pulse-o { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+.mandacaru .mc-soma {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(.6); font: 400 150px/1 var(--ft); color: #fff6e6;
+  -webkit-text-stroke: 5px #5b3a29; paint-order: stroke fill; text-shadow: 0 7px 0 #5b3a29; opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .25s; text-align: center;
+}
+.mandacaru .mc-soma.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.mandacaru .mc-soma.sete { color: #f3c9a0; }
+.mandacaru .mc-soma small { display: block; font-size: 34px; -webkit-text-stroke: 2px #5b3a29; text-shadow: 0 3px 0 #5b3a29; margin-top: 4px; }
+.mandacaru .mc-dica {
+  position: absolute; left: 50%; top: 6px; transform: translateX(-50%); padding: 7px 16px; border: var(--bd); border-radius: 999px;
+  background: var(--panel); box-shadow: var(--sh); font: 400 16px/1 var(--ft); white-space: nowrap; pointer-events: none;
+}
+
+/* ações e diário (direita) */
+.mandacaru .mc-right { grid-row: 2 / 4; grid-column: 3; display: flex; flex-direction: column; gap: 11px; padding-top: 4px; min-height: 0; }
+.mandacaru .mc-prompt { font-size: 14.5px; line-height: 1.4; }
+.mandacaru .mc-alvos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mandacaru .mc-oferta { margin-top: 6px; padding: 6px 8px; border-radius: 8px; background: var(--paper); font-size: 13.5px; }
+.mandacaru .mc-acoes { display: flex; flex-direction: column; gap: 8px; }
+.mandacaru .mc-construir, .mandacaru .mc-trocas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mandacaru .mc-custo { display: flex; align-items: center; gap: 4px; margin: 4px 0; font-size: 13.5px; }
+.mandacaru .mc-custo b { min-width: 56px; font: 400 15px/1 var(--ft); }
+.mandacaru .mc-diario { flex: 1; min-height: 0; overflow: hidden; font-size: 13.5px; line-height: 1.4; }
+.mandacaru .mc-log { list-style: none; margin: 0; padding: 0; }
+.mandacaru .mc-log li { margin: 0 0 5px; }
+.mandacaru .mc-log li:first-child { font-weight: 800; }
+
+/* mão (embaixo) */
+.mandacaru .mc-hand { grid-row: 3; grid-column: 2; display: flex; align-items: flex-end; justify-content: center; gap: 14px; padding-bottom: 4px; min-width: 0; }
+.mandacaru .mc-grupo { display: flex; align-items: flex-end; gap: 6px; }
+.mandacaru .mc-watch { align-self: center; margin: 0; padding: 10px 18px; border: var(--bd); border-radius: 999px; background: var(--panel); box-shadow: var(--sh); font: 400 18px/1 var(--ft); }
+.mandacaru .mc-carta {
+  position: relative; flex: none; width: 76px; height: 120px; border: var(--bd); border-radius: var(--rad); background: var(--panel); box-shadow: var(--sh);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: transform .15s;
+}
+.mandacaru .mc-carta:hover { transform: translateY(-8px); }
+.mandacaru .mc-carta-nome { font: 400 15px/1 var(--ft); }
+.mandacaru .mc-qtd {
+  position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: #fff6e6; font: 400 16px/1 var(--ft); border: var(--bd);
+}
+.mandacaru .mc-carta.zero { background: #f4e7cf; border-color: rgba(91, 58, 41, .5); }
+.mandacaru .mc-carta.zero > :not(.mc-qtd) { opacity: .42; }
+.mandacaru .mc-carta.zero .mc-qtd { background: #c9b291; }
+.mandacaru .mc-cordel {
+  position: relative; flex: none; width: 72px; height: 124px; border: var(--bd); border-radius: 6px; background: var(--paper); box-shadow: var(--sh);
+  display: flex; flex-direction: column; align-items: center; padding: 5px 4px; gap: 3px; transition: transform .15s;
+}
+.mandacaru .mc-cordel:hover { transform: translateY(-6px); z-index: 2; }
+.mandacaru .mc-xilo { width: 58px; height: 56px; background: #2a1c13; border-radius: 2px; display: grid; place-items: center; overflow: hidden; }
+/* arte do Flow do cordel (quando houver): a cena enche o bloco */
+.mandacaru .mc-xilo > .mc-art-cordel { width: 100%; height: 100%; object-fit: cover; }
+/* cordel na mão: cartinha com a capa (arte) em cima e o nome embaixo */
+.mandacaru .mc-cordel > .mc-xilo { width: 64px; height: 74px; border: 1.5px solid #5b3a29; border-radius: 4px; }
+.mandacaru .mc-art-cordel { border-radius: 2px; }
+/* Pontos revelados no fim: a capa de cada um, miudinha */
+.mandacaru .mc-lfim .mc-de .mc-art-cordel { border: 1px solid #fbf1dc; }
+.mandacaru .mc-art-res { object-fit: contain; flex: none; }
+.mandacaru .mc-tit { font: 400 12.5px/1.05 var(--ft); text-align: center; min-height: 26px; display: grid; place-items: center; }
+.mandacaru .mc-cqtd {
+  position: absolute; top: -10px; right: -9px; min-width: 30px; height: 28px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--ink); color: #fff6e6; font: 400 15px/1 var(--ft); border: var(--bd);
+}
+.mandacaru .mc-novo {
+  position: absolute; top: 4px; left: -9px; transform: rotate(-12deg); font: 800 10px/1 var(--fb); padding: 3px 6px; border-radius: 4px;
+  background: var(--accent); color: #fff6e6; border: 1.5px solid #5b3a29; letter-spacing: .05em; white-space: nowrap;
+}
+.mandacaru .mc-jogar { position: absolute; top: -36px; left: 50%; transform: translateX(-50%); padding: 5px 10px; font-size: 14px; white-space: nowrap; }
+.mandacaru .mc-jogar:active:not(:disabled) { transform: translateX(-50%) translateY(2px); }
+.mandacaru .mc-cordel.pode { outline: 3px solid var(--accent); outline-offset: 2px; }
+.mandacaru .mc-vazio { font-size: 13px; opacity: .6; align-self: center; }
+
+/* ---------- janelas sobre a mesa (troca, feira, cordéis, descarte, cartão de oferta) ---------- */
+.mandacaru .mc-janela {
+  position: absolute; left: 50%; top: 50px; transform: translateX(-50%); z-index: 6; width: 560px; padding: 14px 18px 16px;
+  border: var(--bd); border-radius: 14px; background: var(--panel); box-shadow: 0 5px 0 #5b3a29; font-size: 14px;
+}
+.mandacaru .mc-janela.meio { top: 50%; transform: translate(-50%, -50%); }
+.mandacaru .mc-janela.estreita { width: 470px; }
+.mandacaru .mc-janela h3 { margin: 0 34px 2px 0; font: 400 23px/1.1 var(--ft); outline: none; }
+.mandacaru .mc-janela h4 { margin: 10px 0 6px; font: 400 16px/1 var(--ft); }
+.mandacaru .mc-janela .mc-sub { font-size: 13.5px; line-height: 1.35; opacity: .8; margin-bottom: 8px; }
+.mandacaru .mc-x {
+  position: absolute; top: 9px; right: 10px; width: 30px; height: 30px; padding: 0; border: var(--bd); border-radius: 50%;
+  background: #fff6e6; font: 400 17px/1 var(--ft); box-shadow: 0 2px 0 #5b3a29;
+}
+.mandacaru .mc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mandacaru .mc-col { border: 1.5px dashed var(--dash); border-radius: 10px; padding: 6px 10px 8px; }
+.mandacaru .mc-col h4 { margin: 2px 0 4px; }
+.mandacaru .mc-linha { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 14px; }
+.mandacaru .mc-linha .mc-nm { flex: 1; }
+.mandacaru .mc-tem { font-size: 11.5px; opacity: .6; }
+.mandacaru .mc-step { display: inline-flex; align-items: center; gap: 4px; }
+.mandacaru .mc-step button {
+  width: 28px; height: 28px; padding: 0; border: var(--bd); border-radius: 8px; background: #fff6e6; box-shadow: 0 2px 0 #5b3a29;
+  font: 400 18px/1 var(--ft);
+}
+.mandacaru .mc-step button:disabled { opacity: .32; cursor: default; }
+.mandacaru .mc-step b { min-width: 22px; text-align: center; font: 400 19px/1 var(--ft); }
+.mandacaru .mc-rodape { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+.mandacaru .mc-rodape.mc-rodape-mini { margin-top: 2px; }
+.mandacaru .mc-resumo { flex: 1; font-size: 13.5px; line-height: 1.35; }
+.mandacaru .mc-respostas {
+  margin-top: 12px; padding-top: 10px; border-top: 1.5px dashed var(--dash); display: flex; flex-direction: column; gap: 7px; font-size: 14px;
+}
+.mandacaru .mc-respostas .mc-rtit { font: 400 15px/1.6 var(--ft); }
+.mandacaru .mc-resp { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.mandacaru .mc-resp .mc-quem { min-width: 52px; font: 400 16px/1 var(--ft); }
+.mandacaru .mc-resp .mc-meio { flex: 1; }
+.mandacaru .mc-st { font: 800 12px/1 var(--fb); padding: 5px 9px; border-radius: 999px; background: #ead6b3; white-space: nowrap; }
+.mandacaru .mc-st.sim { background: var(--green); color: #fff6e6; }
+.mandacaru .mc-st.nao { background: var(--accent); color: #fff6e6; }
+.mandacaru .mc-chips { display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; margin-right: 6px; }
+.mandacaru .mc-chips i { font: 400 15px/1 var(--ft); font-style: normal; margin-left: 1px; }
+.mandacaru .mc-escolha { display: flex; gap: 7px; }
+.mandacaru .mc-opc {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 2px 6px; border: var(--bd); border-radius: 10px;
+  background: #fff6e6; box-shadow: 0 2px 0 #5b3a29; font-size: 13px;
+}
+.mandacaru .mc-opc.on { background: #f3c9a0; outline: 3px solid var(--accent); outline-offset: -5px; }
+.mandacaru .mc-opc:disabled { opacity: .36; cursor: default; }
+.mandacaru .mc-opc small { font: 800 11px/1 var(--fb); opacity: .7; }
+.mandacaru .mc-opc .mc-taxa { font: 400 15px/1 var(--ft); color: var(--accent); opacity: 1; }
+.mandacaru .mc-qtdlinha { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 14px; }
+/* cartão da oferta (quem está na vez mandou pra mesa) */
+.mandacaru .mc-cartao { padding-top: 18px; }
+.mandacaru .mc-fita {
+  position: absolute; top: -15px; left: 18px; padding: 5px 12px; border: var(--bd); border-radius: 6px; background: var(--terra); color: #fff6e6;
+  font: 400 15px/1 var(--ft); box-shadow: 0 2px 0 #5b3a29;
+}
+.mandacaru .mc-termos { display: flex; align-items: center; gap: 14px; justify-content: center; margin: 10px 0 6px; }
+.mandacaru .mc-termos > div {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 130px; padding: 8px 10px; border: 1.5px dashed var(--dash); border-radius: 10px;
+}
+.mandacaru .mc-termos small { font: 800 11px/1 var(--fb); letter-spacing: .05em; text-transform: uppercase; opacity: .65; }
+.mandacaru .mc-termos > .mc-seta { font: 400 26px/1 var(--ft); border: 0; min-width: 0; padding: 0; }
+.mandacaru .mc-estado { text-align: center; font-size: 14px; margin: 6px 0 2px; }
+.mandacaru .mc-estado.mc-outros { opacity: .8; display: flex; gap: 14px; justify-content: center; }
+.mandacaru .mc-botoes { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+/* descarte */
+.mandacaru .mc-descarte .mc-falta { font: 400 17px/1 var(--ft); }
+.mandacaru .mc-descarte .mc-falta.ok { color: var(--green); }
+.mandacaru .mc-prazo.pouco { color: var(--accent); }
+
+/* ---------- fim da partida ---------- */
+.mandacaru .mc-veu { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(74, 46, 31, .28); }
+.mandacaru .mc-painel {
+  width: 520px; padding: 28px 32px; border: var(--bd); border-radius: 14px; background: var(--panel); box-shadow: 0 6px 0 #5b3a29; text-align: center;
+}
+.mandacaru .mc-painel.largo { width: 680px; }
+.mandacaru .mc-painel h2 { margin: 0; font: 400 46px/1 var(--ft); outline: none; }
+.mandacaru .mc-painel .mc-sub { margin: 6px 0 0; opacity: .75; }
+.mandacaru .mc-placar { text-align: left; margin: 16px 0 20px; }
+.mandacaru .mc-lfim { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-bottom: 1.5px dashed var(--dash); }
+.mandacaru .mc-lfim.venc { background: var(--paper); border-radius: 10px; border-bottom-color: transparent; }
+.mandacaru .mc-lfim .mc-quem { flex: 1; min-width: 0; }
+.mandacaru .mc-lfim .mc-nm { font: 400 20px/1.1 var(--ft); display: flex; align-items: center; gap: 8px; }
+.mandacaru .mc-lfim .mc-noite { margin-left: auto; font: 700 13px/1 var(--fb); opacity: .75; }
+.mandacaru .mc-lfim .mc-de { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; font-size: 13px; }
+.mandacaru .mc-lfim .mc-de span {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: #fff; border: 1.5px solid var(--dash);
+}
+.mandacaru .mc-lfim .mc-de span.pontos { background: #2a1c13; color: #fbf1dc; border-color: #2a1c13; }
+.mandacaru .mc-lfim .mc-de b { font: 400 14px/1 var(--ft); color: var(--accent); }
+.mandacaru .mc-lfim .mc-de span.pontos b { color: #f3c9a0; }
+.mandacaru .mc-lfim .mc-tot { font: 400 36px/1 var(--ft); text-align: center; min-width: 64px; }
+.mandacaru .mc-lfim .mc-tot small { display: block; font: 800 10px/1 var(--fb); opacity: .6; letter-spacing: .05em; }
+.mandacaru .mc-hostwait { margin: 0; font: 400 18px/1.2 var(--ft); opacity: .8; }
+
+/* ---------- folha de regras ---------- */
+.mandacaru .mc-regras {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 30; width: 470px; padding: 22px 26px 28px; overflow-y: auto; background: var(--panel);
+  border-left: var(--bd); box-shadow: -4px 0 0 #5b3a29; font-size: 14.5px; line-height: 1.45; animation: mc-entra .25s ease;
+  -webkit-user-select: text; user-select: text;
+}
+@keyframes mc-entra { from { transform: translateX(105%); } to { transform: none; } }
+.mandacaru .mc-regras h2 { margin: 0 0 4px; font: 400 32px/1 var(--ft); }
+.mandacaru .mc-regras h3 { margin: 18px 0 6px; font: 400 19px/1.1 var(--ft); color: var(--terra); }
+.mandacaru .mc-regras p { margin: 0 0 6px; }
+.mandacaru .mc-regras ul { margin: 0; padding-left: 18px; }
+.mandacaru .mc-regras li { margin: 0 0 4px; }
+.mandacaru .mc-regras .mc-x { top: 14px; right: 16px; width: 34px; height: 34px; font-size: 18px; }
+.mandacaru .mc-regras .mc-custo b { min-width: 64px; }
+.mandacaru .mc-regras .mc-regras-nota { margin-top: 6px; }
+.mandacaru .mc-cord { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0; }
+.mandacaru .mc-cord .mc-xilo { flex: none; width: 38px; height: 38px; }
+@media (prefers-reduced-motion: reduce) {
+  .mandacaru .mc-regras { animation: none; }
+}

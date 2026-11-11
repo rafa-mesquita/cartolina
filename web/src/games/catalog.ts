@@ -18,7 +18,7 @@ export interface CatalogEntry {
 }
 
 // Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti, o Pictures como Retratim, o Exploding Kittens como
-// Tatubum e o Coup como Cúpi; os ids internos não mudam.
+// Tatubum, o Coup como Cúpi e o jogo de hexágonos como Mandacaru; os ids internos não mudam.
 const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> = {
   ito: {
     name: 'DITU',
@@ -78,6 +78,18 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
     ],
     playable: true,
     mobile: true,
+  },
+  mandacaru: {
+    name: 'Mandacaru',
+    tagline: 'faça a caatinga florir',
+    rules: [
+      'Cada um começa com duas casas e duas estradas na caatinga.',
+      'Na sua vez, role os dados: cada terreno com o número rende madeira, barro, couro, feijão ou pedra pra quem tem casa em volta.',
+      'Troque com a galera ou na feira e construa estradas, casas, vilas e cordéis.',
+      'Saiu 7, o Carcará ataca: trava um terreno e rouba uma carta. Quem chega a 10 pontos na própria vez vence.',
+    ],
+    playable: true,
+    mobile: false,
   },
 };
 

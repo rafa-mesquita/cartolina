@@ -3,6 +3,7 @@ import { withDixitCounters } from './games/dixit/rules';
 import type { DixitState, DixitView } from './games/dixit/types';
 import type { CoupState, CoupView } from './games/coup/types';
 import type { KittensState, KittensView } from './games/kittens/types';
+import type { MandacaruState, MandacaruView } from './games/mandacaru/types';
 import type { PicturesView } from './games/pictures/types';
 import type { ItoState, ItoView } from './games/ito/types';
 import { cleanName, isPlayerColor, type PlayerColor } from './players';
@@ -80,6 +81,12 @@ export function isCoupRoomView(view: RoomView): view is CoupRoomView {
   return view.gameId === 'coup';
 }
 
+export type MandacaruRoomView = RoomView<MandacaruView> & { gameId: 'mandacaru' };
+
+export function isMandacaruRoomView(view: RoomView): view is MandacaruRoomView {
+  return view.gameId === 'mandacaru';
+}
+
 export interface RoomSummary {
   game: GameId;
   phase: GameState['phase'];
@@ -103,6 +110,11 @@ export function dixitStateOf(room: Room): DixitState | null {
 /** Estado do Cúpi, ou null se a sala é de outro jogo. */
 export function coupStateOf(room: Room): CoupState | null {
   return room.gameId === 'coup' ? (room.game as CoupState) : null;
+}
+
+/** Estado do Mandacaru, ou null se a sala é de outro jogo. */
+export function mandacaruStateOf(room: Room): MandacaruState | null {
+  return room.gameId === 'mandacaru' ? (room.game as MandacaruState) : null;
 }
 
 /** Estado do Tatubum, ou null se a sala é de outro jogo. */

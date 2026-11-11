@@ -1,0 +1,1096 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandacaru · protótipo da mesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Mulish:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#4a2e1f; --line:#5b3a29; --panel:#fff6e6; --paper:#f6e0bd; --accent:#b8321f; --terra:#c8643b; --soft:#8a6a4a;
+  --bd:2px solid #5b3a29; --rad:10px; --sh:0 3px 0 #5b3a29; --ft:'Bree Serif',Georgia,serif; --fb:'Mulish',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;height:100%;overflow:hidden}
+body{font-family:var(--fb);font-weight:600;color:var(--ink);-webkit-user-select:none;user-select:none;
+  background:radial-gradient(ellipse at 50% -10%,rgba(255,214,120,.65),transparent 60%),linear-gradient(#f7e6c4,#ecc896) fixed}
+button{font:inherit;color:inherit;cursor:pointer}
+b{font-weight:800}
+
+/* ---------- palco 1440×900 escalado ---------- */
+#app{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%;overflow:hidden;
+  display:grid;grid-template-columns:268px 1fr 292px;grid-template-rows:78px 1fr 166px;column-gap:18px;padding:0 20px 12px}
+
+/* ---------- topo ---------- */
+header{grid-column:1/-1;display:flex;align-items:center;gap:18px}
+.logo{display:flex;align-items:center;gap:10px;width:268px;flex:none}
+.logo h1{margin:0;font:400 34px/1 var(--ft)}
+.logo .sub{font-size:14px;opacity:.75;margin-top:2px}
+.turno{flex:1;display:flex;align-items:center;justify-content:center;gap:14px}
+#vez{font:400 22px/1 var(--ft)}
+.relogio{font:400 21px/1 var(--ft);padding:7px 14px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);min-width:84px;text-align:center}
+.relogio.pouco{background:var(--accent);color:#fff6e6;animation:pisca 1s ease-in-out infinite}
+@keyframes pisca{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.topo-dir{display:flex;align-items:center;gap:8px;width:292px;justify-content:flex-end;flex:none}
+.topo-dir .btn{padding:8px 11px;font-size:16px}
+.dados{display:flex;gap:8px;margin-left:6px}
+.dado{width:46px;height:46px;border:var(--bd);border-radius:8px;background:var(--panel);box-shadow:var(--sh);fill:var(--ink)}
+.dado.rolando{animation:chacoalha .3s linear}
+@keyframes chacoalha{0%{transform:rotate(0)}25%{transform:rotate(-14deg) translateY(-4px)}50%{transform:rotate(10deg)}75%{transform:rotate(-6deg) translateY(-2px)}100%{transform:rotate(0)}}
+
+/* ---------- jogadores (esquerda) ---------- */
+#esq{grid-row:2/4;display:flex;flex-direction:column;gap:10px;padding-top:4px;min-height:0}
+.jog{position:relative;display:flex;align-items:center;gap:10px;padding:10px 12px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);transition:transform .2s}
+.jog.vez{outline:3px solid var(--accent);outline-offset:2px;transform:translateX(4px)}
+.jog .casa{flex:none}
+.jog .info{flex:1;min-width:0}
+.jog .n{font:400 19px/1.1 var(--ft);display:flex;align-items:center;gap:6px}
+.jog .n small{font:800 10px/1 var(--fb);letter-spacing:.06em;text-transform:uppercase;opacity:.55}
+.jog .m{font-size:13px;display:flex;gap:10px;margin-top:4px;align-items:center}
+.jog .m span{display:inline-flex;align-items:center;gap:3px}
+.jog .selos{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.selo{font:800 10.5px/1 var(--fb);padding:3px 6px;border-radius:999px;background:var(--terra);color:#fff6e6;letter-spacing:.02em}
+.selo.comitiva{background:#7a4a2a}
+.jog .pts{font:400 30px/1 var(--ft);text-align:right}
+.jog .pts small{display:block;font:800 10px/1 var(--fb);opacity:.6;letter-spacing:.05em}
+.jog .pts .esc{display:block;font:700 11px/1.2 var(--fb);opacity:.7}
+.jog .relo{position:absolute;left:60px;bottom:-11px;font:400 13px/1 var(--ft);padding:3px 8px;border:var(--bd);border-radius:999px;background:#fff6e6}
+.jog .relo.pouco{background:var(--accent);color:#fff6e6}
+.box{border:var(--bd);border-radius:var(--rad);background:var(--panel);padding:11px 13px;box-shadow:var(--sh)}
+.box h3{margin:0 0 7px;font:400 16px/1 var(--ft)}
+.banco{display:flex;gap:8px;flex-wrap:wrap;font-size:13px}
+.banco span{display:inline-flex;align-items:center;gap:2px}
+.monte{font-size:13px;margin-top:6px}
+
+/* ---------- mesa (centro) ---------- */
+#mesa{grid-row:2;grid-column:2;position:relative;min-height:0;display:grid;place-items:center}
+#board{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#board [data-v],#board [data-e],#board [data-h],#board [data-c]{cursor:pointer}
+.pulse{animation:pulse 1.1s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.pulse-o{animation:pulseo 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.6;transform:scale(.82)}50%{opacity:1;transform:scale(1.12)}}
+@keyframes pulseo{0%,100%{opacity:.45}50%{opacity:1}}
+#soma{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) scale(.6);font:400 150px/1 var(--ft);color:#fff6e6;
+  -webkit-text-stroke:5px #5b3a29;paint-order:stroke fill;text-shadow:0 7px 0 #5b3a29;opacity:0;pointer-events:none;transition:opacity .2s,transform .25s;text-align:center}
+#soma.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#soma.sete{color:#f3c9a0}
+#soma small{display:block;font-size:34px;-webkit-text-stroke:2px #5b3a29;text-shadow:0 3px 0 #5b3a29;margin-top:4px}
+#dica{position:absolute;left:50%;top:6px;transform:translateX(-50%);padding:7px 16px;border:var(--bd);border-radius:999px;background:var(--panel);box-shadow:var(--sh);font:400 16px/1 var(--ft);white-space:nowrap;pointer-events:none}
+
+/* ---------- ações e diário (direita) ---------- */
+#dir{grid-row:2/4;grid-column:3;display:flex;flex-direction:column;gap:11px;padding-top:4px;min-height:0}
+#prompt{font-size:14.5px;line-height:1.4}
+#prompt .alvos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#prompt .oferta{margin-top:6px;padding:6px 8px;border-radius:8px;background:#f6e0bd;font-size:13.5px}
+.btn{border:var(--bd);border-radius:var(--rad);background:var(--terra);color:#fff6e6;padding:10px 12px;font:400 17px/1.1 var(--ft);box-shadow:var(--sh);transition:transform .08s}
+.btn:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 #5b3a29}
+.btn.sec{background:var(--panel);color:var(--ink)}
+.btn.on{background:var(--accent);outline:3px solid #fff6e6;outline-offset:-6px}
+.btn:disabled{opacity:.42;cursor:default}
+.btn.mini{padding:6px 10px;font-size:15px}
+.btn.grande{font-size:21px;padding:13px}
+.acoes{display:flex;flex-direction:column;gap:8px}
+.construir{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.construir .btn{display:flex;align-items:center;justify-content:center;gap:6px}
+.custo{display:flex;align-items:center;gap:4px;margin:4px 0;font-size:13.5px}
+.custo b{min-width:56px;font:400 15px/1 var(--ft)}
+#diario{flex:1;min-height:0;overflow:hidden;font-size:13.5px;line-height:1.4}
+#diario p{margin:0 0 5px}
+#diario p:first-of-type{font-weight:800}
+
+.trocas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ---------- janelas sobre a mesa (troca, feira, cordéis, descarte, oferta de bot) ---------- */
+.janela{position:absolute;left:50%;top:50px;transform:translateX(-50%);z-index:6;width:560px;padding:14px 18px 16px;border:var(--bd);border-radius:14px;background:var(--panel);box-shadow:0 5px 0 #5b3a29}
+.janela.meio{top:50%;transform:translate(-50%,-50%)}
+.janela.estreita{width:470px}
+.janela h3{margin:0 34px 2px 0;font:400 23px/1.1 var(--ft)}
+.janela h4{margin:10px 0 6px;font:400 16px/1 var(--ft)}
+.janela .sub{font-size:13.5px;line-height:1.35;opacity:.8;margin-bottom:8px}
+.janela .x{position:absolute;top:9px;right:10px;width:30px;height:30px;padding:0;border:var(--bd);border-radius:50%;background:#fff6e6;font:400 17px/1 var(--ft);box-shadow:0 2px 0 #5b3a29}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.col{border:1.5px dashed #c9a77a;border-radius:10px;padding:6px 10px 8px}
+.col h4{margin:2px 0 4px}
+.linha{display:flex;align-items:center;gap:6px;padding:2px 0;font-size:14px}
+.linha .nm{flex:1}
+.linha .tem{font-size:11.5px;opacity:.6}
+.step{display:inline-flex;align-items:center;gap:4px}
+.step button{width:28px;height:28px;padding:0;border:var(--bd);border-radius:8px;background:#fff6e6;box-shadow:0 2px 0 #5b3a29;font:400 18px/1 var(--ft)}
+.step button:disabled{opacity:.32;cursor:default}
+.step b{min-width:22px;text-align:center;font:400 19px/1 var(--ft)}
+.rodape{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px}
+.rodape .resumo{flex:1;font-size:13.5px;line-height:1.35}
+.respostas{margin-top:12px;padding-top:10px;border-top:1.5px dashed #c9a77a;display:flex;flex-direction:column;gap:7px;font-size:14px}
+.respostas .tit{font:400 15px/1 var(--ft)}
+.resp{display:flex;align-items:center;gap:8px;min-height:32px}
+.resp .quem{min-width:52px;font:400 16px/1 var(--ft)}
+.resp .meio{flex:1}
+.st{font:800 12px/1 var(--fb);padding:5px 9px;border-radius:999px;background:#ead6b3;white-space:nowrap}
+.st.sim{background:#5f7a3a;color:#fff6e6}
+.st.nao{background:var(--accent);color:#fff6e6}
+.chips{display:inline-flex;align-items:center;gap:1px;vertical-align:middle;margin-right:6px}
+.chips i{font:400 15px/1 var(--ft);font-style:normal;margin-left:1px}
+.escolha{display:flex;gap:7px}
+.opc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px 6px;border:var(--bd);border-radius:10px;background:#fff6e6;box-shadow:0 2px 0 #5b3a29;font-size:13px}
+.opc.on{background:#f3c9a0;outline:3px solid var(--accent);outline-offset:-5px}
+.opc:disabled{opacity:.36;cursor:default}
+.opc small{font:800 11px/1 var(--fb);opacity:.7}
+.opc .taxa{font:400 15px/1 var(--ft);color:var(--accent);opacity:1}
+.qtdlinha{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:14px}
+.cartao .fita{position:absolute;top:-15px;left:18px;padding:5px 12px;border:var(--bd);border-radius:6px;background:var(--terra);color:#fff6e6;font:400 15px/1 var(--ft);box-shadow:0 2px 0 #5b3a29}
+.termos{display:flex;align-items:center;gap:14px;justify-content:center;margin:10px 0 6px}
+.termos > div{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:130px;padding:8px 10px;border:1.5px dashed #c9a77a;border-radius:10px}
+.termos small{font:800 11px/1 var(--fb);letter-spacing:.05em;text-transform:uppercase;opacity:.65}
+.termos .seta{font:400 26px/1 var(--ft);border:0;min-width:0;padding:0}
+.cartao .estado{text-align:center;font-size:14px;margin:6px 0 2px}
+.cartao .botoes{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.descarte .falta{font:400 17px/1 var(--ft)}
+.descarte .falta.ok{color:#5f7a3a}
+[data-descarte].pouco{color:var(--accent)}
+
+/* ---------- mão (embaixo) ---------- */
+#mao{grid-row:3;grid-column:2;display:flex;align-items:flex-end;justify-content:center;gap:14px;padding-bottom:4px}
+.grupo{display:flex;align-items:flex-end}
+.grupo.res,.grupo.cords{gap:6px}
+.carta{position:relative;flex:none;width:76px;height:120px;border:var(--bd);border-radius:var(--rad);background:var(--panel);box-shadow:var(--sh);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:transform .15s}
+.carta:hover{transform:translateY(-8px)}
+.carta .nome{font:400 15px/1 var(--ft)}
+.carta .qtd{position:absolute;top:-10px;right:-10px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff6e6;font:400 16px/1 var(--ft);border:var(--bd)}
+.carta.zero{opacity:.45}
+.carta.zero .qtd{background:#c9b291}
+.cordel{position:relative;flex:none;width:72px;height:124px;border:var(--bd);border-radius:6px;background:var(--paper);box-shadow:var(--sh);
+  display:flex;flex-direction:column;align-items:center;padding:5px 4px;gap:3px;transition:transform .15s}
+.cordel:hover{transform:translateY(-6px);z-index:2}
+.cordel .cap{font:800 8.5px/1 var(--fb);letter-spacing:.18em;opacity:.7}
+.cordel .xilo{width:58px;height:56px;background:#2a1c13;border-radius:2px;display:grid;place-items:center}
+.cordel .tit{font:400 12.5px/1.05 var(--ft);text-align:center;min-height:26px;display:grid;place-items:center}
+.cordel .qtd{position:absolute;top:-10px;right:-9px;min-width:30px;height:28px;padding:0 5px;border-radius:999px;display:grid;place-items:center;background:var(--ink);color:#fff6e6;font:400 15px/1 var(--ft);border:var(--bd)}
+.cordel .novo{position:absolute;top:4px;left:-9px;transform:rotate(-12deg);font:800 10px/1 var(--fb);padding:3px 6px;border-radius:4px;background:var(--accent);color:#fff6e6;border:1.5px solid #5b3a29;letter-spacing:.05em;white-space:nowrap}
+.cordel .jogar{position:absolute;top:-36px;left:50%;transform:translateX(-50%);padding:5px 10px;font-size:14px;white-space:nowrap}
+.cordel.pode{outline:3px solid var(--accent);outline-offset:2px}
+.vazio{font-size:13px;opacity:.6;align-self:center}
+
+/* ---------- lobby, fim, aviso ---------- */
+.veu{position:absolute;inset:0;z-index:10;display:grid;place-items:center;background:rgba(74,46,31,.28)}
+.painel{width:520px;padding:28px 32px;border:var(--bd);border-radius:14px;background:var(--panel);box-shadow:0 6px 0 #5b3a29;text-align:center}
+.painel h2{margin:0;font:400 46px/1 var(--ft)}
+.painel .sub{margin:6px 0 20px;opacity:.75}
+.painel .esc{display:flex;gap:10px;justify-content:center;margin:12px 0 18px}
+.painel .nomes{display:flex;gap:14px;justify-content:center;margin-bottom:22px;font:400 17px/1 var(--ft)}
+.painel .nomes span{display:inline-flex;align-items:center;gap:5px}
+.placar{text-align:left;margin:16px 0 20px}
+.painel.largo{width:680px}
+.lfim{display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1.5px dashed #c9a77a}
+.lfim.venc{background:#f6e0bd;border-radius:10px;border-bottom-color:transparent}
+.lfim .quem{flex:1;min-width:0}
+.lfim .nm{font:400 20px/1.1 var(--ft);display:flex;align-items:center;gap:8px}
+.lfim .noite{margin-left:auto;font:700 13px/1 var(--fb);opacity:.75}
+.lfim .de{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;font-size:13px}
+.lfim .de span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;background:#fff;border:1.5px solid #c9a77a}
+.lfim .de span.pontos{background:#2a1c13;color:#fbf1dc;border-color:#2a1c13}
+.lfim .de b{font:400 14px/1 var(--ft);color:var(--accent)}
+.lfim .de span.pontos b{color:#f3c9a0}
+.lfim .tot{font:400 36px/1 var(--ft);text-align:center;min-width:64px}
+.lfim .tot small{display:block;font:800 10px/1 var(--fb);opacity:.6;letter-spacing:.05em}
+/* ---------- folha de regras ---------- */
+#regras{position:absolute;top:0;right:0;bottom:0;z-index:30;width:470px;padding:22px 26px 28px;overflow-y:auto;background:var(--panel);border-left:var(--bd);
+  box-shadow:-4px 0 0 #5b3a29;transform:translateX(105%);transition:transform .25s ease;font-size:14.5px;line-height:1.45}
+#regras.on{transform:none}
+#regras h2{margin:0 0 4px;font:400 32px/1 var(--ft)}
+#regras h3{margin:18px 0 6px;font:400 19px/1.1 var(--ft);color:var(--terra)}
+#regras p{margin:0 0 6px}
+#regras ul{margin:0;padding-left:18px}
+#regras li{margin:0 0 4px}
+#regras .x{position:absolute;top:14px;right:16px;width:34px;height:34px;padding:0;border:var(--bd);border-radius:50%;background:#fff6e6;font:400 18px/1 var(--ft);box-shadow:0 2px 0 #5b3a29}
+#regras .custo b{min-width:64px}
+#regras .cord{display:flex;gap:10px;align-items:flex-start;margin:6px 0}
+#regras .cord .xilo{flex:none;width:38px;height:38px;background:#2a1c13;border-radius:3px;display:grid;place-items:center}
+#toast{position:absolute;left:50%;bottom:184px;transform:translate(-50%,10px);z-index:20;padding:10px 18px;border:var(--bd);border-radius:999px;background:#4a2e1f;color:#fff6e6;
+  font-size:15px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <span id="logoIcon"></span>
+      <div><h1>Mandacaru</h1><div class="sub">faça a caatinga florir</div></div>
+    </div>
+    <div class="turno"><span id="vez"></span><span class="relogio" id="relogio" hidden>5:00</span></div>
+    <div class="topo-dir">
+      <button class="btn sec" id="bRegras">regras</button>
+      <button class="btn sec" id="bSom" title="liga/desliga o som">🔊</button>
+      <div class="dados" id="dados"></div>
+    </div>
+  </header>
+
+  <aside id="esq">
+    <div id="jogadores" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div class="box" id="bancoBox"></div>
+  </aside>
+
+  <main id="mesa">
+    <svg id="board" viewBox="-356 -324 712 648" preserveAspectRatio="xMidYMid meet">
+      <defs id="defs"></defs><g id="static"></g><g id="dyn"></g>
+    </svg>
+    <div id="dica" hidden></div>
+    <div id="soma"></div>
+    <div id="cartao"></div>
+    <div id="janela"></div>
+  </main>
+
+  <aside id="dir">
+    <div class="box" id="prompt"></div>
+    <div class="acoes">
+      <button class="btn grande" id="bRoll">🎲 rolar os dados</button>
+      <div class="construir">
+        <button class="btn" id="bRoad" data-mode="road">estrada</button>
+        <button class="btn" id="bHouse" data-mode="house">casa</button>
+        <button class="btn" id="bCity" data-mode="city">vila</button>
+        <button class="btn" id="bCordel">cordel</button>
+      </div>
+      <div class="trocas">
+        <button class="btn sec" id="bTrade">⇄ trocar</button>
+        <button class="btn sec" id="bFeira">feira</button>
+      </div>
+      <button class="btn sec" id="bEnd">passar a vez</button>
+    </div>
+    <div class="box" id="custos"></div>
+    <div class="box" id="diario"></div>
+  </aside>
+
+  <section id="mao"></section>
+
+  <div class="veu" id="lobby">
+    <div class="painel">
+      <h2>Mandacaru</h2>
+      <div class="sub">protótipo: você contra os bots, com as regras de verdade</div>
+      <div>com quantos bots?</div>
+      <div class="esc">
+        <button class="btn sec" data-bots="2">2 bots</button>
+        <button class="btn sec" data-bots="3">3 bots</button>
+      </div>
+      <div class="nomes" id="nomesLobby"></div>
+      <div>velocidade dos bots</div>
+      <div class="esc">
+        <button class="btn sec" data-speed="normal">normal</button>
+        <button class="btn sec" data-speed="rapido">rápido (pra testar)</button>
+      </div>
+      <button class="btn grande" id="bStart">começar</button>
+    </div>
+  </div>
+
+  <div class="veu" id="fim" hidden>
+    <div class="painel largo">
+      <h2 id="fimTit"></h2>
+      <div class="sub" id="fimSub"></div>
+      <div class="placar" id="fimPlacar"></div>
+      <div class="esc">
+        <button class="btn grande" id="bRestart">jogar de novo</button>
+        <button class="btn sec" id="bLobby">mudar os bots</button>
+      </div>
+    </div>
+  </div>
+
+  <aside id="regras" aria-label="regras">
+    <button class="x" id="bRegrasX" title="fechar">✕</button>
+    <h2>regras</h2>
+    <p>Quem chega a <b>10 pontos na própria vez</b> vence na hora (contando os Pontos escondidos).</p>
+    <h3>o turno</h3>
+    <ul>
+      <li>Antes dos dados dá pra jogar <b>1 Vaqueiro</b>.</li>
+      <li><b>Dados:</b> cada terreno com o número (sem o Carcará em cima) rende 1 carta por casa e 2 por vila nos cantos dele.</li>
+      <li>Se o banco não tem um recurso pra todos que iam receber, ninguém recebe dele (se só um ia receber, leva o que tiver).</li>
+      <li>Depois, em qualquer ordem: trocar, ir à feira, construir, comprar cordel e jogar <b>1 cordel</b>. Termina com “passar a vez”.</li>
+      <li>Cada turno tem <b>5 minutos</b>; o relógio fica vermelho no último minuto. Acabou o tempo, a mesa termina a vez sozinha.</li>
+    </ul>
+    <h3>quanto custa</h3>
+    <div id="regrasCustos"></div>
+    <p style="margin-top:6px">Casa: canto livre com os 3 cantos vizinhos vazios, encostado numa estrada sua. Vila: no lugar de uma casa sua. Estrada: encostada numa estrada, casa ou vila sua. Peças: 15 estradas, 5 casas, 4 vilas.</p>
+    <h3>saiu 7: lá vem o Carcará</h3>
+    <ul>
+      <li>Quem tem <b>mais de 7 cartas</b> descarta a metade (pra baixo), em até <b>60 s</b>; sem escolher, é sorteado.</li>
+      <li>Quem rolou leva o Carcará pra outro terreno: ele não produz enquanto o Carcará estiver lá.</li>
+      <li>E rouba 1 carta sorteada de alguém com casa ou vila naquele terreno.</li>
+    </ul>
+    <h3>troca</h3>
+    <ul>
+      <li>Só na sua vez, depois dos dados: monte “dou X, quero Y” e mande pra mesa.</li>
+      <li>Os outros respondem <b>aceito</b>, <b>não</b> ou mandam <b>contraproposta</b>. Você fecha com quem quiser.</li>
+      <li>Na vez dos outros, você pode mandar uma proposta pra quem está jogando.</li>
+    </ul>
+    <h3>feira</h3>
+    <p>Troca com o banco: <b>4 por 1</b> sempre; <b>3 por 1</b> com casa ou vila numa feira comum; <b>2 por 1</b> do recurso da feira de 2:1 onde você está.</p>
+    <h3>cordéis</h3>
+    <p>Comprado agora só pode ser jogado no próximo turno. Um por turno.</p>
+    <div id="regrasCordeis"></div>
+    <h3>pontos</h3>
+    <ul>
+      <li>Casa <b>1</b>, vila <b>2</b>, cordel de Ponto <b>1</b> (escondido até o fim).</li>
+      <li><b>Maior estrada</b> (5 ou mais seguidas, maior que todas): <b>+2</b>. Casa de outro no meio corta a estrada.</li>
+      <li><b>Maior comitiva</b> (3 ou mais Vaqueiros jogados, mais que todos): <b>+2</b>.</li>
+      <li>Empate: quem já tinha o selo continua com ele.</li>
+    </ul>
+  </aside>
+
+  <div id="toast"></div>
+</div>
+
+<script src="rules.js"></script>
+<script src="art.js"></script>
+<script src="texts.js"></script>
+<script src="bots.js"></script>
+<script src="sounds.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const app = $('#app');
+const G = Manda.geometry();
+const R = Art.R;
+
+/* ---------- estado e laço ---------- */
+const ME = 'p0';
+const NAMES = { p0: 'você', p1: 'Bia', p2: 'Duda', p3: 'Léo' };
+const nameOf = (id) => NAMES[id] || id;
+let bots = 3;
+let state = null;
+let version = 0;
+let mode = null; // 'road' | 'house' | 'city' na fase principal
+const ids = () => Array.from({ length: bots + 1 }, (_, i) => `p${i}`);
+const ctx = () => ({ hostId: ME, active: ids(), rng: Math.random, now: Date.now() });
+const view = (p = ME) => Manda.mandacaruViewFor(state, p);
+
+/* ---------- utilidades ---------- */
+const timers = new Set();
+const later = (ms, fn) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+const between = (a, b) => a + Math.random() * (b - a);
+function toast(t) { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600); }
+const clockText = (endsAt) => (endsAt === null || endsAt === undefined ? "parado" : mmss(endsAt - Date.now()));
+const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+const vezDe = (id) => (id === ME ? 'sua vez' : `vez ${Txt.de(nameOf(id))}`);
+
+/* ---------- escala do palco ---------- */
+function fit() {
+  const sc = Math.min(innerWidth / 1440, innerHeight / 900);
+  app.style.transform = `translate(-50%,-50%) scale(${sc})`;
+}
+addEventListener('resize', fit);
+fit();
+
+/** Igual ao servidor: o schema valida antes das regras. */
+function send(pid, action) {
+  const parsed = Manda.mandacaruActionSchema.safeParse(action);
+  if (!parsed.success) { console.error('ação inválida (bug do protótipo)', pid, action, parsed.error); if (pid === ME) toast('ação inválida (bug do protótipo — veja o console)'); return false; }
+  const res = Manda.applyMandacaruAction(state, pid, parsed.data, ctx());
+  if (!res.ok) {
+    if (pid === ME) toast(Txt.ERR[res.error] || res.error);
+    else console.warn('bot recusado', nameOf(pid), action, res.error);
+    return false;
+  }
+  state = res.state;
+  changed();
+  return true;
+}
+
+/** O "alarme" do servidor: prazos (turno de 5 min, descarte de 60 s). */
+function tick() {
+  if (!state) return;
+  const next = Manda.settleMandacaru(state, ctx());
+  if (next !== state) { state = next; changed(); }
+  scheduleBots();
+  clocks();
+}
+setInterval(tick, 250);
+
+/* ---------- bots ---------- */
+/** Velocidade dos bots (escolhida no lobby): normal pra jogar, rápido pra testar uma partida inteira. */
+let speed = 'normal';
+const botDelay = () => (speed === 'rapido' ? between(150, 250) : between(700, 1100));
+/** Quanto o bot da vez espera antes de passar a vez enquanto você monta uma proposta pra ele. */
+const COMPOSE_WAIT_MS = 8000;
+/** Um plano por bot; qualquer mudança no estado recomeça o atraso (700–1100 ms a partir da situação nova). */
+const plans = new Map();
+const fails = new Map();
+function scheduleBots() {
+  if (!state || state.phase === 'lobby' || state.phase === 'over') return;
+  for (const p of state.players) {
+    if (p === ME) continue;
+    const cur = plans.get(p);
+    if (cur && cur.version === version) continue;
+    if (cur) { clearTimeout(cur.timer); timers.delete(cur.timer); }
+    plans.set(p, { version, timer: later(botDelay(), () => { plans.delete(p); fire(p); }) });
+  }
+}
+function fire(p) {
+  if (!state || !state.players.includes(p)) return;
+  const v = view(p);
+  const d = Bot.decide(v, p, Math.random);
+  if (!d) return;
+  // Você está montando uma proposta pra este bot: ele segura o "passar a vez" um pouco.
+  if (d.type === 'end_turn' && ui.panel === 'trade' && ui.composeSince && v.turn === p && Date.now() - ui.composeSince < COMPOSE_WAIT_MS) return;
+  if (send(p, d)) { fails.delete(p); return; }
+  // Recusado: tenta de novo; se insistir no erro, passa a vez pra não travar a mesa.
+  const n = (fails.get(p) || 0) + 1;
+  fails.set(p, n);
+  if (n >= 3 && v.can.endTurn) { fails.delete(p); send(p, { type: 'end_turn' }); }
+}
+
+/* ---------- partida ---------- */
+function clearTimers() { for (const t of timers) clearTimeout(t); timers.clear(); plans.clear(); fails.clear(); }
+function newGame() {
+  clearTimers();
+  mode = null; lastLayout = undefined; lastEntry = null; lastTurn = null; closePanel(); ui.hiddenOffer = null;
+  Som.unlock();
+  state = Manda.initialMandacaruState();
+  $('#lobby').hidden = true;
+  send(ME, { type: 'start' });
+}
+function restart() { clearTimers(); mode = null; closePanel(); send(ME, { type: 'restart' }); }
+function toLobby() { clearTimers(); state = null; version++; $('#fim').hidden = true; $('#relogio').hidden = true; $('#lobby').hidden = false; lobby(); }
+
+/* ---------- mudanças: diário novo, dados, render ---------- */
+let lastEntry = null;
+let lastTurn = null;
+/** Som de cada linha do diário (no máximo um de cada tipo por mudança). */
+const SOUND_OF = { roll: 'dados', place: 'construir', build: 'construir', buy_cordel: 'carta', play: 'carta', trade: 'carta', feira: 'carta', carcara: 'carcara', steal: 'carta', win: 'vitoria' };
+function changed() {
+  version++;
+  const v = view();
+  // Linhas novas do diário (as entradas são as mesmas referências de um estado pro outro).
+  const log = v.log;
+  const i = lastEntry ? log.lastIndexOf(lastEntry) : -1;
+  const fresh = lastEntry && i < 0 ? log.slice(-1) : log.slice(i + 1);
+  lastEntry = log[log.length - 1] || null;
+  const sounds = new Set(fresh.map((e) => SOUND_OF[e.t]).filter(Boolean));
+  if (v.turn === ME && lastTurn !== ME && v.phase !== 'over' && v.phase !== 'lobby') sounds.add('vez');
+  lastTurn = v.turn;
+  let delay = 0;
+  for (const name of sounds) { const n = name; setTimeout(() => Som.play(n), delay); delay += 160; }
+  for (const e of fresh) {
+    if (e.t === 'roll') rollFx(e.dice);
+    if (e.t === 'trade' && (e.a === ME || e.b === ME)) {
+      // Sua troca saiu: fecha o painel (a proposta/oferta sumiu) e avisa.
+      if (ui.panel === 'trade') closePanel();
+      const other = e.a === ME ? e.b : e.a;
+      toast(`troca feita ${Txt.com(nameOf(other))}: você deu ${Txt.resList(e.a === ME ? e.aGives : e.bGives)}`);
+    }
+    if (e.t === 'steal' && v.stolen && (e.player === ME || e.from === ME)) {
+      const r = Txt.RES[v.stolen.resource];
+      toast(e.player === ME ? `você roubou 1 ${r} ${Txt.de(nameOf(e.from))}` : `o Carcará ${Txt.de(nameOf(e.player))} levou 1 ${r} seu`);
+    }
+  }
+  if (mode && (v.phase !== 'main' || v.turn !== ME || modeSpots(v).length === 0)) mode = null;
+  render(v);
+}
+
+/* ---------- dados ---------- */
+let rolling = false;
+function diceSvg(n) { return `<svg class="dado" viewBox="0 0 100 100">${Art.diceFace(n)}</svg>`; }
+function rollFx(dice) {
+  rolling = true;
+  const box = $('#dados');
+  let k = 0;
+  const spin = setInterval(() => {
+    box.innerHTML = diceSvg(1 + Math.floor(Math.random() * 6)) + diceSvg(1 + Math.floor(Math.random() * 6));
+    box.querySelectorAll('.dado').forEach((d) => d.classList.add('rolando'));
+    if (++k >= 5) {
+      clearInterval(spin);
+      rolling = false;
+      box.innerHTML = diceSvg(dice[0]) + diceSvg(dice[1]);
+      const sum = dice[0] + dice[1];
+      const soma = $('#soma');
+      soma.innerHTML = sum === 7 ? `7<small>lá vem o Carcará!</small>` : String(sum);
+      soma.classList.toggle('sete', sum === 7);
+      soma.classList.add('on');
+      clearTimeout(rollFx.t);
+      rollFx.t = setTimeout(() => soma.classList.remove('on'), 1000);
+    }
+  }, 60);
+}
+
+/* ---------- tabuleiro ---------- */
+$('#defs').innerHTML = Art.defs;
+let lastLayout; // undefined = nada desenhado ainda
+function renderStatic(v) {
+  if (v.layout === lastLayout) return;
+  lastLayout = v.layout;
+  if (!v.layout) { $('#static').innerHTML = Art.border(); return; }
+  let s = Art.border();
+  G.hexes.forEach((h, i) => { s += Art.hex(h, v.layout.hexes[i]); });
+  G.ports.forEach((p, i) => { s += Art.port(p, v.layout.ports[i]); });
+  G.hexes.forEach((h, i) => { const n = v.layout.hexes[i].number; if (n !== null) s += Art.token(h, n); });
+  $('#static').innerHTML = s;
+}
+
+/** Os lugares da fase principal pro modo de construir ligado. */
+function modeSpots(v) {
+  if (mode === 'road') return v.can.buildRoad;
+  if (mode === 'house') return v.can.buildHouse;
+  if (mode === 'city') return v.can.buildCity;
+  return [];
+}
+/** O que pulsa agora: cantos (casa), lados (estrada), casas (vila), terrenos (Carcará). */
+function spotsOf(v) {
+  const c = v.can;
+  const out = { v: [], e: [], c: [], h: [] };
+  if (c.placeHouse.length) out.v = c.placeHouse;
+  else if (c.placeRoad.length) out.e = c.placeRoad;
+  else if (c.carcara.length) out.h = c.carcara;
+  else if (v.phase === 'mutirao' && v.turn === ME) out.e = c.buildRoad;
+  else if (mode === 'road') out.e = c.buildRoad;
+  else if (mode === 'house') out.v = c.buildHouse;
+  else if (mode === 'city') out.c = c.buildCity;
+  return out;
+}
+
+function renderDyn(v) {
+  if (!v.layout) { $('#dyn').innerHTML = ''; return; }
+  let s = '';
+  // Terreno do Carcará escurecido (não produz).
+  const ch = G.hexes[v.carcara];
+  const cc = Art.at(ch);
+  s += `<path d="${Art.hexPath(Art.corners(cc.x, cc.y), 0.88, cc.x, cc.y - 2)}" fill="#2a1c13" opacity=".22" pointer-events="none"/>`;
+  v.roads.forEach((o, e) => { if (o) s += Art.road(Art.at(G.vertices[G.edges[e].a]), Art.at(G.vertices[G.edges[e].b]), Art.COLORS[o]); });
+  v.buildings.forEach((b, i) => {
+    if (!b) return;
+    const p = Art.at(G.vertices[i]);
+    s += b.kind === 'city' ? Art.city(p.x, p.y, Art.COLORS[b.owner]) : Art.house(p.x, p.y, Art.COLORS[b.owner]);
+  });
+  const desert = v.layout.hexes[v.carcara].number === null;
+  s += desert ? Art.carcara(cc.x, cc.y - 4, 0.95) : Art.carcara(cc.x + 2, cc.y - 31, 0.78);
+
+  const sp = spotsOf(v);
+  for (const h of sp.h) {
+    const c = Art.at(G.hexes[h]);
+    const d = Art.hexPath(Art.corners(c.x, c.y), 0.86, c.x, c.y - 2);
+    s += `<g data-h="${h}"><path d="${d}" fill="#fff6e6" fill-opacity=".22" stroke="#fff6e6" stroke-width="4" class="pulse-o"/><path d="${d}" fill="transparent"/></g>`;
+  }
+  for (const e of sp.e) {
+    const a = Art.at(G.vertices[G.edges[e].a]);
+    const b = Art.at(G.vertices[G.edges[e].b]);
+    const ax = a.x + (b.x - a.x) * 0.18, ay = a.y + (b.y - a.y) * 0.18, bx = b.x + (a.x - b.x) * 0.18, by = b.y + (a.y - b.y) * 0.18;
+    s += `<g data-e="${e}"><line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#5b3a29" stroke-width="11" stroke-linecap="round" opacity=".5" class="pulse-o"/>
+      <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#fff6e6" stroke-width="6" stroke-linecap="round" stroke-dasharray="3 7" class="pulse-o"/>
+      <line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="transparent" stroke-width="22"/></g>`;
+  }
+  for (const i of sp.v) {
+    const p = Art.at(G.vertices[i]);
+    s += `<g data-v="${i}"><circle cx="${p.x}" cy="${p.y}" r="10" fill="#fff6e6" stroke="#b8321f" stroke-width="3" class="pulse"/><circle cx="${p.x}" cy="${p.y}" r="18" fill="transparent"/></g>`;
+  }
+  for (const i of sp.c) {
+    const p = Art.at(G.vertices[i]);
+    s += `<g data-c="${i}"><circle cx="${p.x}" cy="${p.y - 2}" r="22" fill="#fff6e6" fill-opacity=".25" stroke="#fff6e6" stroke-width="3.5" stroke-dasharray="5 4" class="pulse"/><circle cx="${p.x}" cy="${p.y}" r="22" fill="transparent"/></g>`;
+  }
+  $('#dyn').innerHTML = s;
+}
+
+$('#board').addEventListener('click', (ev) => {
+  if (!state) return;
+  const v = view();
+  const t = ev.target.closest('[data-v],[data-e],[data-c],[data-h]');
+  if (!t) return;
+  if (t.dataset.v !== undefined) {
+    const vertex = Number(t.dataset.v);
+    send(ME, v.can.placeHouse.length ? { type: 'place_house', vertex } : { type: 'build_house', vertex });
+    mode = null;
+  } else if (t.dataset.e !== undefined) {
+    const edge = Number(t.dataset.e);
+    send(ME, v.can.placeRoad.length ? { type: 'place_road', edge } : { type: 'build_road', edge });
+  } else if (t.dataset.c !== undefined) {
+    send(ME, { type: 'build_city', vertex: Number(t.dataset.c) });
+    mode = null;
+  } else if (t.dataset.h !== undefined) {
+    send(ME, { type: 'move_carcara', hex: Number(t.dataset.h) });
+  }
+  render(view());
+});
+
+/* ---------- painéis ---------- */
+const resMini = (r, n = 20) => Art.resIcon(r, n);
+const costIcons = (piece) => Txt.ORDER.flatMap((r) => Array(Manda.COSTS[piece][r]).fill(resMini(r))).join('');
+
+function renderPlayers(v) {
+  const seats = v.seats.length ? v.seats : ids().map((id) => ({ id, points: 0, resCount: 0, cordelCount: 0, knights: 0 }));
+  $('#jogadores').innerHTML = seats.map((s) => {
+    const mine = s.id === ME;
+    const hidden = mine && v.myPoints !== null ? v.myPoints - s.points : 0;
+    const vez = v.turn === s.id && v.phase !== 'over';
+    const selos = (v.longestRoad === s.id ? '<span class="selo">maior estrada +2</span>' : '') + (v.largestArmy === s.id ? '<span class="selo comitiva">maior comitiva +2</span>' : '');
+    const wins = v.wins[s.id] ? `<span title="vitórias da noite">🏆 ${v.wins[s.id]}</span>` : '';
+    return `<div class="jog ${vez ? 'vez' : ''}">
+      <svg class="casa" width="38" height="38" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[s.id])}</svg>
+      <div class="info">
+        <div class="n">${nameOf(s.id)}${mine ? '' : '<small>bot</small>'}</div>
+        <div class="m"><span title="cartas de recurso">🂠 ${s.resCount}</span><span title="cordéis na mão">📜 ${s.cordelCount}</span>
+          <span title="Vaqueiros jogados">${Art.svgIcon('chapeu', Art.STYLE, 17)} ${s.knights}</span>${wins}</div>
+        ${selos ? `<div class="selos">${selos}</div>` : ''}
+      </div>
+      <div class="pts">${s.points}<small>PONTOS</small>${hidden > 0 ? `<span class="esc">+${hidden} escondido</span>` : ''}</div>
+      ${vez ? `<span class="relo" data-relo>⏱ ${clockText(v.turnEndsAt)}</span>` : ''}
+    </div>`;
+  }).join('');
+  $('#bancoBox').innerHTML = `<h3>banco</h3><div class="banco">${Txt.ORDER.map((r) => `<span title="${Txt.RES[r]}">${resMini(r, 22)}${v.bank[r]}</span>`).join('')}</div>
+    <div class="monte">📜 monte de cordel: <b>${v.deckSize}</b></div>`;
+}
+
+function renderHeader(v) {
+  const vez = $('#vez');
+  if (!state || v.phase === 'lobby') vez.textContent = '';
+  else if (v.phase === 'over') vez.textContent = `${nameOf(v.winner)} venceu!`;
+  else vez.textContent = vezDe(v.turn) + (v.phase === 'setup' ? ' · preparação' : '');
+  if (!rolling) $('#dados').innerHTML = v.dice ? diceSvg(v.dice[0]) + diceSvg(v.dice[1]) : diceSvg(5) + diceSvg(2);
+}
+
+/** Atualiza só os relógios (a cada 250 ms). */
+function clocks() {
+  if (!state) return;
+  const v = view();
+  // Prazo null no meio da partida = relógio parado (mesa vazia).
+  const ends = v.phase === 'discard' ? v.discardEndsAt : v.turnEndsAt;
+  const left = ends === null ? Infinity : ends - Date.now();
+  const rel = $('#relogio');
+  rel.hidden = v.phase === 'lobby' || v.phase === 'over';
+  rel.textContent = (v.phase === 'discard' ? 'descarte ' : '') + clockText(ends);
+  rel.classList.toggle('pouco', left < 60_000 && v.phase !== 'discard');
+  const r = document.querySelector('[data-relo]');
+  if (r) { const t = v.turnEndsAt === null ? Infinity : v.turnEndsAt - Date.now(); r.textContent = `⏱ ${clockText(v.turnEndsAt)}`; r.classList.toggle('pouco', t < 60_000); }
+  const dl = document.querySelector('[data-descarte]');
+  if (dl && v.discardEndsAt) { const t = v.discardEndsAt - Date.now(); dl.textContent = mmss(t); dl.classList.toggle('pouco', t < 10_000); }
+}
+
+function promptFor(v) {
+  const c = v.can;
+  const mine = v.turn === ME;
+  const who = nameOf(v.turn);
+  switch (v.phase) {
+    case 'setup':
+      if (c.placeHouse.length) return { text: `<b>Sua vez na preparação.</b> Escolha onde pôr a casa: os cantos que pulsam.`, dica: 'clique num canto que pulsa' };
+      if (c.placeRoad.length) return { text: `<b>Agora a estrada</b>, encostada na casa que você pôs.`, dica: 'clique num lado que pulsa' };
+      return { text: `${who} está escolhendo ${v.setup && v.setup.house !== null ? 'a estrada' : 'onde pôr a casa'}…` };
+    case 'roll':
+      return mine ? { text: '<b>Sua vez!</b> Role os dados.' } : { text: `${who} vai rolar os dados…` };
+    case 'discard': {
+      const pend = Object.entries(v.discards).filter(([p]) => p !== ME).map(([p, n]) => `${nameOf(p)} (${n})`);
+      if (c.discard > 0) {
+        return { text: `<b>Saiu 7!</b> Você tem mais de 7 cartas: escolha <b>${c.discard}</b> pra descartar na janela.` };
+      }
+      return { text: `Saiu 7: esperando o descarte${pend.length ? ' de ' + Txt.joinE(pend) : ''}…` };
+    }
+    case 'carcara':
+      return mine ? { text: '<b>Leve o Carcará</b> pra outro terreno: clique num terreno aceso.', dica: 'clique num terreno pro Carcará' } : { text: `${who} está levando o Carcará…` };
+    case 'steal':
+      if (c.steal.length) return { text: `<b>De quem o Carcará rouba?</b><div class="alvos">${c.steal.map((p) => `<button class="btn mini" data-steal="${p}">${nameOf(p)} · 🂠 ${v.seats.find((s) => s.id === p).resCount}</button>`).join('')}</div>` };
+      return { text: `${who} está escolhendo de quem roubar…` };
+    case 'mutirao':
+      return mine ? { text: `<b>Mutirão!</b> Ponha ${v.mutiraoLeft} estrada${v.mutiraoLeft > 1 ? 's' : ''} de graça.`, dica: 'clique num lado que pulsa' } : { text: `${who} está fazendo um mutirão…` };
+    case 'main': {
+      if (!mine) {
+        const o = v.offer;
+        const of = o ? `<div class="oferta">${who} oferece ${Txt.resList(o.give)} por ${Txt.resList(o.want)}${o.accepted.length ? ` · aceitaram: ${Txt.joinE(o.accepted.map(nameOf))}` : ''}</div>` : '';
+        return { text: `${vezDe(v.turn)[0].toUpperCase() + vezDe(v.turn).slice(1)}.${of}` };
+      }
+      if (mode === 'road') return { text: '<b>Estrada:</b> clique num lado que pulsa. (clique no botão de novo pra sair)', dica: 'clique num lado que pulsa' };
+      if (mode === 'house') return { text: '<b>Casa:</b> clique num canto que pulsa.', dica: 'clique num canto que pulsa' };
+      if (mode === 'city') return { text: '<b>Vila:</b> clique numa casa sua.', dica: 'clique numa casa sua' };
+      const trade = v.offer || v.proposals.length;
+      const st = v.offer ? `Sua oferta está na mesa (${v.offer.accepted.length ? `aceitaram: ${Txt.joinE(v.offer.accepted.map(nameOf))}` : 'esperando respostas'}).` : '';
+      const pr = v.proposals.length ? ` ${v.proposals.length === 1 ? 'Chegou 1 proposta' : `Chegaram ${v.proposals.length} propostas`} pra você.` : '';
+      return { text: `<b>Sua vez.</b> Construa, troque, compre cordel ou passe a vez.${trade && ui.panel !== 'trade' ? `<div class="oferta">${st}${pr} <button class="btn mini" data-act="trade">ver a troca</button></div>` : ''}` };
+    }
+    default:
+      return { text: '' };
+  }
+}
+
+function renderActions(v) {
+  const c = v.can;
+  const p = promptFor(v);
+  $('#prompt').innerHTML = p.text || '&nbsp;';
+  const dica = $('#dica');
+  dica.hidden = !p.dica;
+  if (p.dica) dica.textContent = p.dica;
+  $('#bRoll').disabled = !c.roll;
+  $('#bRoad').disabled = c.buildRoad.length === 0 || v.phase !== 'main';
+  $('#bHouse').disabled = c.buildHouse.length === 0;
+  $('#bCity').disabled = c.buildCity.length === 0;
+  $('#bCordel').disabled = !c.buyCordel;
+  $('#bTrade').disabled = !(v.phase === 'main' && (c.offer || c.propose));
+  $('#bTrade').textContent = v.turn === ME || v.phase !== 'main' ? '⇄ trocar' : '⇄ propor';
+  $('#bTrade').classList.toggle('on', ui.panel === 'trade');
+  $('#bFeira').disabled = !(v.phase === 'main' && v.turn === ME);
+  $('#bFeira').classList.toggle('on', ui.panel === 'feira');
+  $('#bEnd').disabled = !c.endTurn;
+  for (const b of document.querySelectorAll('[data-mode]')) b.classList.toggle('on', b.dataset.mode === mode);
+}
+
+$('#regrasCustos').innerHTML = ['road', 'house', 'city', 'cordel'].map((k) => `<div class="custo"><b>${Txt.PIECE[k]}</b>${costIcons(k)}</div>`).join('');
+$('#regrasCordeis').innerHTML = ['vaqueiro', 'point', 'mutirao', 'chuva', 'atravessador'].map((k) => `<div class="cord"><span class="xilo">${Art.svgIcon(Art.CORDEL_ICON[k], Art.WOODCUT, 30)}</span>
+  <span><b>${Txt.CORDEL[k]}${k === 'point' ? ` (${Txt.joinE(Txt.POINT_NAMES)})` : ''}:</b> ${Txt.CORDEL_DESC[k]}.</span></div>`).join('');
+$('#bRegras').addEventListener('click', () => $('#regras').classList.toggle('on'));
+$('#bRegrasX').addEventListener('click', () => $('#regras').classList.remove('on'));
+$('#custos').innerHTML = `<h3>quanto custa</h3>` + ['road', 'house', 'city', 'cordel'].map((k) => `<div class="custo"><b>${Txt.PIECE[k]}</b>${costIcons(k)}</div>`).join('');
+
+function renderHand(v) {
+  if (!v.myRes) { $('#mao').innerHTML = ''; return; }
+  const res = Txt.ORDER.map((r) => `<div class="carta ${v.myRes[r] ? '' : 'zero'}" title="${Txt.RES[r]}">${Art.resIcon(r, 50)}<span class="nome">${Txt.RES[r]}</span><span class="qtd">${v.myRes[r]}</span></div>`).join('');
+  // Cordéis agrupados por tipo, com contador ("Vaqueiro ×3"); "jogar" em cima dos que dá pra jogar agora.
+  const cs = v.myCordeis;
+  const groups = ['vaqueiro', 'point', 'mutirao', 'chuva', 'atravessador']
+    .map((kind) => ({ kind, n: cs.filter((c) => c.kind === kind).length, fresh: cs.filter((c) => c.kind === kind && c.fresh).length }))
+    .filter((g) => g.n > 0);
+  const cords = groups.length ? groups.map((g) => {
+    const names = Txt.POINT_NAMES.slice(0, g.n);
+    const tit = g.kind === 'point' ? (g.n === 1 ? `Ponto · ${names[0]}` : 'Pontos') : Txt.CORDEL[g.kind];
+    const desc = g.kind === 'point' ? `${names.join(', ')}: ${Txt.CORDEL_DESC.point}` : `${Txt.CORDEL[g.kind]}: ${Txt.CORDEL_DESC[g.kind]}`;
+    const can = g.kind !== 'point' && v.can.play.includes(g.kind);
+    const novo = g.fresh ? `<span class="novo">${g.fresh === g.n ? 'novo' : `${g.fresh} novo${g.fresh > 1 ? 's' : ''}`}</span>` : '';
+    return `<div class="cordel ${can ? 'pode' : ''}" title="${desc}">
+      <span class="cap">CORDEL</span><span class="xilo">${Art.svgIcon(Art.CORDEL_ICON[g.kind], Art.WOODCUT, 44)}</span><span class="tit">${tit}</span>
+      ${g.n > 1 ? `<span class="qtd">×${g.n}</span>` : ''}${novo}${can ? `<button class="btn mini jogar" data-play="${g.kind}">jogar</button>` : ''}</div>`;
+  }).join('') : '<span class="vazio">sem cordéis</span>';
+  $('#mao').innerHTML = `<div class="grupo res">${res}</div><div class="grupo cords">${cords}</div>`;
+}
+$('#mao').addEventListener('click', (ev) => {
+  const t = ev.target.closest('[data-play]');
+  if (!t || !state) return;
+  const v = view();
+  const k = t.dataset.play;
+  if (k === 'vaqueiro') { closePanel(); send(ME, { type: 'play_vaqueiro' }); }
+  else if (k === 'mutirao') { closePanel(); send(ME, { type: 'play_mutirao' }); }
+  else { openPanel(k, v); render(view()); }
+});
+
+function renderLog(v) {
+  const lines = v.log.slice(-8).reverse().map((e) => Txt.line(e, nameOf, v)).filter(Boolean);
+  $('#diario').innerHTML = `<h3>diário</h3>` + lines.map((l) => `<p>${l[0].toUpperCase() + l.slice(1)}</p>`).join('');
+}
+
+function renderEnd(v) {
+  const over = v.phase === 'over';
+  $('#fim').hidden = !over;
+  if (!over) return;
+  $('#fimTit').textContent = v.winner === ME ? 'Você venceu!' : `${nameOf(v.winner)} venceu!`;
+  $('#fimSub').textContent = `partida ${v.match} · de onde veio cada ponto`;
+  // Nomes dos Pontos: os seus primeiro (os mesmos da sua mão), depois os dos outros na ordem da mesa.
+  const order = [ME, ...v.players.filter((p) => p !== ME)];
+  const pointNames = {};
+  let k = 0;
+  for (const p of order) { const n = v.pointCards ? v.pointCards[p] || 0 : 0; pointNames[p] = Txt.POINT_NAMES.slice(k, k + n); k += n; }
+  const rows = [...v.seats].sort((a, b) => (b.id === v.winner) - (a.id === v.winner) || b.points - a.points).map((s) => {
+    let casas = 0, vilas = 0;
+    v.buildings.forEach((b) => { if (b && b.owner === s.id) { if (b.kind === 'house') casas++; else vilas++; } });
+    const parts = [];
+    if (casas) parts.push(`<span>${casas} casa${casas > 1 ? 's' : ''} <b>+${casas}</b></span>`);
+    if (vilas) parts.push(`<span>${vilas} vila${vilas > 1 ? 's' : ''} <b>+${2 * vilas}</b></span>`);
+    if (v.longestRoad === s.id) parts.push(`<span>maior estrada (${s.roadLength}) <b>+2</b></span>`);
+    if (v.largestArmy === s.id) parts.push(`<span>maior comitiva (${s.knights} Vaqueiros) <b>+2</b></span>`);
+    const pn = pointNames[s.id] || [];
+    if (pn.length) parts.push(`<span class="pontos">${Art.svgIcon('igreja', Art.STYLE, 16)} ${Txt.joinE(pn)} <b>+${pn.length}</b></span>`);
+    const wins = v.wins[s.id] || 0;
+    return `<div class="lfim ${s.id === v.winner ? 'venc' : ''}">
+      <svg width="34" height="34" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[s.id])}</svg>
+      <div class="quem"><div class="nm">${nameOf(s.id)}${s.id === v.winner ? ' <span class="selo">venceu!</span>' : ''}<span class="noite" title="vitórias da noite">🏆 ${wins}</span></div>
+        <div class="de">${parts.join('') || '<span>nenhum ponto</span>'}</div></div>
+      <div class="tot">${s.points}<small>PONTOS</small></div></div>`;
+  }).join('');
+  $('#fimPlacar').innerHTML = rows;
+}
+
+/* ---------- janelas: troca, feira, Chuva, Atravessador, descarte, oferta de bot ---------- */
+const none = () => ({ wood: 0, brick: 0, leather: 0, beans: 0, stone: 0 });
+const total = (res) => Txt.ORDER.reduce((n, r) => n + res[r], 0);
+const covers = (have, cost) => Txt.ORDER.every((r) => have[r] >= cost[r]);
+/** "[ícone]2 [ícone]1" pra um punhado de recursos. */
+const chips = (res, size = 24) => {
+  const parts = Txt.ORDER.filter((r) => res[r] > 0).map((r) => `<span class="chips" title="${res[r]} ${Txt.RES[r]}">${Art.resIcon(r, size)}<i>${res[r]}</i></span>`);
+  return parts.length ? parts.join('') : '<span class="chips">nada</span>';
+};
+/** O que está aberto e o que já foi escolhido nos painéis. */
+const ui = {
+  panel: null, // 'trade' | 'feira' | 'chuva' | 'atravessador'
+  give: none(), want: none(),
+  feira: { give: null, want: null, count: 1 },
+  chuva: none(), atrav: null,
+  discard: none(), discardKey: null,
+  hiddenOffer: null, // oferta de bot que você fechou o cartão
+  composeSince: 0, // quando abriu a proposta na vez de um bot (o bot espera um pouco antes de passar a vez)
+};
+function openPanel(name, v) {
+  ui.panel = name;
+  if (name === 'feira') ui.feira = { give: null, want: null, count: 1 };
+  if (name === 'chuva') ui.chuva = none();
+  if (name === 'atravessador') ui.atrav = null;
+  if (name === 'trade') ui.composeSince = v.turn === ME ? 0 : Date.now();
+  mode = null;
+}
+function closePanel() { ui.panel = null; ui.composeSince = 0; }
+
+/** O painel aberto ainda faz sentido agora? */
+function panelOk(v) {
+  const c = v.can;
+  switch (ui.panel) {
+    case 'trade': return v.phase === 'main' && (v.turn === ME ? c.offer : c.propose);
+    case 'feira': return v.phase === 'main' && v.turn === ME;
+    case 'chuva': return c.play.includes('chuva');
+    case 'atravessador': return c.play.includes('atravessador');
+    default: return false;
+  }
+}
+
+function stepper(attr, n, minus, plus) {
+  return `<span class="step"><button data-${attr}="-1" ${minus ? '' : 'disabled'}>−</button><b>${n}</b><button data-${attr}="1" ${plus ? '' : 'disabled'}>+</button></span>`;
+}
+
+function tradeHtml(v) {
+  const have = v.myRes;
+  const mine = v.turn === ME;
+  for (const r of Txt.ORDER) ui.give[r] = Math.min(ui.give[r], have[r]);
+  const rows = (side) => Txt.ORDER.map((r) => {
+    const n = ui[side][r];
+    const other = side === 'give' ? ui.want[r] : ui.give[r];
+    const max = side === 'give' ? have[r] : 19;
+    return `<div class="linha">${Art.resIcon(r, 26)}<span class="nm">${Txt.RES[r]}${side === 'give' ? ` <span class="tem">tem ${have[r]}</span>` : ''}</span>
+      ${stepper(`tr="${side}:${r}" data-d`, n, n > 0, n < max && other === 0)}</div>`;
+  }).join('');
+  const valid = total(ui.give) > 0 && total(ui.want) > 0;
+  const head = mine
+    ? `<h3>troca com a mesa</h3><div class="sub">Monte o que você dá e o que quer. Os outros respondem; você fecha com quem aceitar.</div>`
+    : `<h3>proposta pra ${nameOf(v.turn)}</h3><div class="sub">É a vez ${Txt.de(nameOf(v.turn))}: ${nameOf(v.turn)} aceita ou não a sua proposta.</div>`;
+  const send = mine ? `<button class="btn" data-send="offer" ${valid ? '' : 'disabled'}>${v.offer ? 'trocar a oferta' : 'mandar pra mesa'}</button>`
+    : `<button class="btn" data-send="propose" ${valid ? '' : 'disabled'}>mandar proposta</button>`;
+  let resp = '';
+  if (mine && v.offer) {
+    const o = v.offer;
+    const canGive = covers(have, o.give);
+    const lines = v.players.filter((p) => p !== ME).map((p) => {
+      const st = o.accepted.includes(p) ? `<span class="st sim">✓ aceito</span><button class="btn mini" data-deal="${p}" ${canGive ? '' : 'disabled'}>fechar com ${nameOf(p)}</button>`
+        : o.rejected.includes(p) ? '<span class="st nao">✗ não</span>' : '<span class="st">pensando…</span>';
+      return `<div class="resp"><span class="quem">${nameOf(p)}</span><span class="meio"></span>${st}</div>`;
+    }).join('');
+    resp += `<div class="respostas"><div class="tit">na mesa: você dá ${chips(o.give, 20)} e quer ${chips(o.want, 20)}</div>${lines}
+      <div class="rodape" style="margin-top:2px"><button class="btn sec mini" data-send="cancel">retirar a oferta</button></div></div>`;
+  }
+  if (mine && v.proposals.length) {
+    resp += `<div class="respostas"><div class="tit">propostas pra você</div>` + v.proposals.map((p) => {
+      const ok = covers(have, p.want);
+      return `<div class="resp"><span class="quem">${nameOf(p.from)}</span><span class="meio">te dá ${chips(p.give, 20)} e quer ${chips(p.want, 20)}</span>
+        <button class="btn mini" data-prop="${p.from}:${p.id}" ${ok ? '' : 'disabled'} title="${ok ? '' : 'faltam cartas'}">aceitar</button></div>`;
+    }).join('') + '</div>';
+  }
+  if (!mine) {
+    const p = v.proposals.find((x) => x.from === ME);
+    if (p) {
+      const said = Bot.verdict(v.turn, p.id);
+      const st = said === false ? `<span class="st nao">✗ ${nameOf(v.turn)} não quis</span>` : `<span class="st">esperando ${nameOf(v.turn)}…</span>`;
+      resp = `<div class="respostas"><div class="resp"><span class="meio">sua proposta: você dá ${chips(p.give, 20)} e quer ${chips(p.want, 20)}</span>${st}</div></div>`;
+    }
+  }
+  return `<div class="janela"><button class="x" data-close="1" title="fechar">✕</button>${head}
+    <div class="cols"><div class="col"><h4>você dá</h4>${rows('give')}</div><div class="col"><h4>você quer</h4>${rows('want')}</div></div>
+    <div class="rodape"><span class="resumo">${valid ? `você dá ${Txt.resList(ui.give)} e quer ${Txt.resList(ui.want)}` : 'escolha pelo menos 1 carta de cada lado'}</span>${send}</div>${resp}</div>`;
+}
+
+function feiraHtml(v) {
+  const have = v.myRes;
+  const rates = v.can.feira;
+  const f = ui.feira;
+  if (f.give && have[f.give] < rates[f.give]) f.give = null;
+  if (f.want && (f.want === f.give || v.bank[f.want] === 0)) f.want = null;
+  const max = f.give && f.want ? Math.min(Math.floor(have[f.give] / rates[f.give]), v.bank[f.want]) : 1;
+  f.count = Math.max(1, Math.min(f.count, max));
+  const gives = Txt.ORDER.map((r) => `<button class="opc ${f.give === r ? 'on' : ''}" data-fg="${r}" ${have[r] >= rates[r] ? '' : 'disabled'}>
+    ${Art.resIcon(r, 34)}<span>${Txt.RES[r]}</span><small class="taxa">${rates[r]}:1</small><small>tem ${have[r]}</small></button>`).join('');
+  const wants = Txt.ORDER.map((r) => `<button class="opc ${f.want === r ? 'on' : ''}" data-fw="${r}" ${v.bank[r] > 0 && r !== f.give ? '' : 'disabled'}>
+    ${Art.resIcon(r, 34)}<span>${Txt.RES[r]}</span><small>banco ${v.bank[r]}</small></button>`).join('');
+  const ready = f.give && f.want;
+  return `<div class="janela"><button class="x" data-close="1" title="fechar">✕</button><h3>feira</h3>
+    <div class="sub">Troca com o banco: 4 por 1; 3 por 1 com casa ou vila numa feira comum; 2 por 1 na feira do recurso.</div>
+    <h4>você dá</h4><div class="escolha">${gives}</div>
+    <h4>você quer</h4><div class="escolha">${wants}</div>
+    <div class="qtdlinha">quantas? ${stepper('fc', f.count, ready && f.count > 1, ready && f.count < max)}</div>
+    <div class="rodape"><span class="resumo">${ready ? `você dá <b>${f.count * rates[f.give]} ${Txt.RES[f.give]}</b> e recebe <b>${f.count} ${Txt.RES[f.want]}</b>` : 'escolha o que dá e o que quer'}</span>
+      <button class="btn" data-send="feira" ${ready ? '' : 'disabled'}>trocar na feira</button></div></div>`;
+}
+
+function chuvaHtml(v) {
+  const n = total(ui.chuva);
+  const rows = Txt.ORDER.map((r) => `<div class="linha">${Art.resIcon(r, 26)}<span class="nm">${Txt.RES[r]} <span class="tem">banco ${v.bank[r]}</span></span>
+    ${stepper(`ch="${r}" data-d`, ui.chuva[r], ui.chuva[r] > 0, n < 2 && ui.chuva[r] < v.bank[r])}</div>`).join('');
+  return `<div class="janela estreita"><button class="x" data-close="1" title="fechar">✕</button><h3>Chuva no sertão</h3>
+    <div class="sub">Pegue 2 recursos quaisquer do banco (podem ser iguais).</div>${rows}
+    <div class="rodape"><span class="resumo">${n === 2 ? `você pega ${Txt.resList(ui.chuva)}` : `escolha mais ${2 - n}`}</span>
+      <button class="btn" data-send="chuva" ${n === 2 ? '' : 'disabled'}>jogar a Chuva</button></div></div>`;
+}
+
+function atravHtml() {
+  const opts = Txt.ORDER.map((r) => `<button class="opc ${ui.atrav === r ? 'on' : ''}" data-at="${r}">${Art.resIcon(r, 34)}<span>${Txt.RES[r]}</span></button>`).join('');
+  return `<div class="janela estreita"><button class="x" data-close="1" title="fechar">✕</button><h3>Atravessador</h3>
+    <div class="sub">Escolha um recurso: todo mundo te entrega o que tem dele.</div><div class="escolha">${opts}</div>
+    <div class="rodape"><span class="resumo">${ui.atrav ? `todo mundo te entrega ${Txt.RES_ART[ui.atrav]} ${Txt.RES[ui.atrav]} que tem` : 'escolha um recurso'}</span>
+      <button class="btn" data-send="atravessador" ${ui.atrav ? '' : 'disabled'}>jogar o Atravessador</button></div></div>`;
+}
+
+function discardHtml(v) {
+  const need = v.can.discard;
+  const have = v.myRes;
+  if (ui.discardKey !== v.discardEndsAt) { ui.discardKey = v.discardEndsAt; ui.discard = none(); }
+  const n = total(ui.discard);
+  const rows = Txt.ORDER.map((r) => `<div class="linha">${Art.resIcon(r, 26)}<span class="nm">${Txt.RES[r]} <span class="tem">tem ${have[r]}</span></span>
+    ${stepper(`dc="${r}" data-d`, ui.discard[r], ui.discard[r] > 0, n < need && ui.discard[r] < have[r])}</div>`).join('');
+  const left = need - n;
+  return `<div class="janela meio estreita descarte"><h3>Saiu 7! Descarte ${need} ${need === 1 ? 'carta' : 'cartas'}</h3>
+    <div class="sub">Você tem ${total(have)} cartas (mais de 7). Sem escolher, o descarte é sorteado em <b data-descarte>${clockText(v.discardEndsAt)}</b>.</div>${rows}
+    <div class="rodape"><span class="resumo falta ${left === 0 ? 'ok' : ''}">${left === 0 ? 'pronto!' : `faltam ${left}`}</span>
+      <button class="btn sec" data-send="suggest">sugerir</button><button class="btn" data-send="discard" ${left === 0 ? '' : 'disabled'}>descartar</button></div></div>`;
+}
+
+/** Cartão no alto quando um bot oferece troca na vez dele. */
+function offerCardHtml(v) {
+  const o = v.offer;
+  if (!o || v.turn === ME || v.phase !== 'main' || ui.panel === 'trade' || ui.hiddenOffer === o.id || !v.myRes) return '';
+  const who = nameOf(v.turn);
+  const can = covers(v.myRes, o.want);
+  const yes = o.accepted.includes(ME);
+  const no = o.rejected.includes(ME);
+  const others = v.players.filter((p) => p !== ME && p !== v.turn).map((p) => `${nameOf(p)} ${o.accepted.includes(p) ? '<span class="st sim">✓</span>' : o.rejected.includes(p) ? '<span class="st nao">✗</span>' : '<span class="st">…</span>'}`).join(' &nbsp; ');
+  const estado = yes ? `Você aceitou: esperando ${who} fechar…` : no ? 'Você disse não.' : can ? '' : `Você não tem ${Txt.resList(o.want)} pra dar.`;
+  return `<div class="janela cartao estreita"><span class="fita">oferta ${Txt.de(who)}</span><button class="x" data-hide="${o.id}" title="esconder">✕</button>
+    <div class="termos"><div><small>${who} te dá</small>${chips(o.give, 34)}</div><div class="seta">⇄</div><div><small>e quer</small>${chips(o.want, 34)}</div></div>
+    ${estado ? `<div class="estado">${estado}</div>` : ''}${others ? `<div class="estado" style="opacity:.8">${others}</div>` : ''}
+    <div class="botoes"><button class="btn" data-resp="1" ${can && !yes ? '' : 'disabled'}>aceito</button><button class="btn sec" data-resp="0" ${no ? 'disabled' : ''}>não</button>
+      <button class="btn sec" data-counter="1">contraproposta</button></div></div>`;
+}
+
+function renderJanela(v) {
+  if (ui.panel && !panelOk(v)) closePanel();
+  let html = '';
+  if (v.can.discard > 0 && v.myRes) html = discardHtml(v);
+  else if (ui.panel === 'trade') html = tradeHtml(v);
+  else if (ui.panel === 'feira') html = feiraHtml(v);
+  else if (ui.panel === 'chuva') html = chuvaHtml(v);
+  else if (ui.panel === 'atravessador') html = atravHtml(v);
+  $('#janela').innerHTML = html;
+  $('#cartao').innerHTML = html ? '' : offerCardHtml(v);
+}
+
+function onJanela(ev) {
+  const t = ev.target.closest('button');
+  if (!t || t.disabled || !state) return;
+  const v = view();
+  const d = t.dataset;
+  const delta = Number(d.d);
+  if (d.close) closePanel();
+  else if (d.tr) {
+    const [side, r] = d.tr.split(':');
+    ui[side][r] = Math.max(0, ui[side][r] + delta);
+  } else if (d.fg) ui.feira.give = d.fg;
+  else if (d.fw) ui.feira.want = d.fw;
+  else if (d.fc) ui.feira.count += Number(d.fc);
+  else if (d.ch) ui.chuva[d.ch] = Math.max(0, ui.chuva[d.ch] + delta);
+  else if (d.at) ui.atrav = d.at;
+  else if (d.dc) ui.discard[d.dc] = Math.max(0, ui.discard[d.dc] + delta);
+  else if (d.deal) send(ME, { type: 'close_deal', with: d.deal, source: 'offer', id: v.offer.id }) && closePanel();
+  else if (d.prop) {
+    const [from, id] = d.prop.split(':');
+    if (send(ME, { type: 'close_deal', with: from, source: 'proposal', id: Number(id) })) closePanel();
+  } else if (d.hide) ui.hiddenOffer = Number(d.hide);
+  else if (d.resp) send(ME, { type: 'respond', offerId: v.offer.id, accept: d.resp === '1' });
+  else if (d.counter) {
+    // Contraproposta: o painel já vem com a oferta invertida (você dá o que ele quer, quer o que ele dá).
+    ui.give = { ...v.offer.want };
+    ui.want = { ...v.offer.give };
+    openPanel('trade', v);
+  } else if (d.send) {
+    const s = d.send;
+    if (s === 'offer') send(ME, { type: 'offer', give: { ...ui.give }, want: { ...ui.want } });
+    else if (s === 'propose') send(ME, { type: 'propose', give: { ...ui.give }, want: { ...ui.want } });
+    else if (s === 'cancel') send(ME, { type: 'cancel_offer' });
+    else if (s === 'feira') {
+      const f = ui.feira;
+      if (send(ME, { type: 'feira', give: f.give, want: f.want, count: f.count })) ui.feira = { give: f.give, want: null, count: 1 };
+    } else if (s === 'chuva') {
+      const rs = Txt.ORDER.flatMap((r) => Array(ui.chuva[r]).fill(r));
+      if (send(ME, { type: 'play_chuva', resources: rs })) closePanel();
+    } else if (s === 'atravessador') {
+      if (send(ME, { type: 'play_atravessador', resource: ui.atrav })) closePanel();
+    } else if (s === 'suggest') ui.discard = Bot.chooseDiscard(v.myRes, v.can.discard);
+    else if (s === 'discard') send(ME, { type: 'discard', cards: { ...ui.discard } });
+  }
+  render(view());
+}
+$('#janela').addEventListener('click', onJanela);
+$('#cartao').addEventListener('click', onJanela);
+
+function render(v) {
+  renderStatic(v);
+  renderDyn(v);
+  renderPlayers(v);
+  renderHeader(v);
+  renderActions(v);
+  renderHand(v);
+  renderLog(v);
+  renderJanela(v);
+  renderEnd(v);
+  clocks();
+}
+
+/* ---------- botões ---------- */
+$('#bRoll').addEventListener('click', () => send(ME, { type: 'roll' }));
+$('#bCordel').addEventListener('click', () => send(ME, { type: 'buy_cordel' }));
+$('#bEnd').addEventListener('click', () => { mode = null; closePanel(); send(ME, { type: 'end_turn' }); });
+$('#bTrade').addEventListener('click', () => {
+  const v = view();
+  if (ui.panel === 'trade') closePanel();
+  else {
+    // O painel começa com a sua oferta aberta (na sua vez) ou a sua proposta (na vez de bot), se houver.
+    const p = v.turn !== ME ? v.proposals.find((x) => x.from === ME) : v.offer;
+    ui.give = p ? { ...p.give } : none();
+    ui.want = p ? { ...p.want } : none();
+    openPanel('trade', v);
+  }
+  render(view());
+});
+$('#bFeira').addEventListener('click', () => { if (ui.panel === 'feira') closePanel(); else openPanel('feira', view()); render(view()); });
+for (const b of document.querySelectorAll('[data-mode]')) {
+  b.addEventListener('click', () => { const m = mode === b.dataset.mode ? null : b.dataset.mode; closePanel(); mode = m; render(view()); });
+}
+$('#prompt').addEventListener('click', (ev) => {
+  const t = ev.target.closest('button');
+  if (!t || !state) return;
+  if (t.dataset.steal) send(ME, { type: 'steal', from: t.dataset.steal });
+  if (t.dataset.act === 'trade') { const v = view(); ui.give = v.offer ? { ...v.offer.give } : none(); ui.want = v.offer ? { ...v.offer.want } : none(); openPanel('trade', v); render(view()); }
+});
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if ($('#regras').classList.contains('on')) { $('#regras').classList.remove('on'); return; }
+  if (!state) return;
+  if (mode || ui.panel) { mode = null; closePanel(); render(view()); }
+});
+$('#bStart').addEventListener('click', newGame);
+const somIcon = () => { $('#bSom').textContent = Som.on ? '🔊' : '🔇'; };
+$('#bSom').addEventListener('click', () => { Som.toggle(); somIcon(); });
+somIcon();
+$('#bRestart').addEventListener('click', restart);
+$('#bLobby').addEventListener('click', toLobby);
+
+/* ---------- lobby ---------- */
+function lobby() {
+  for (const b of document.querySelectorAll('[data-bots]')) b.classList.toggle('on', Number(b.dataset.bots) === bots);
+  for (const b of document.querySelectorAll('[data-speed]')) b.classList.toggle('on', b.dataset.speed === speed);
+  $('#nomesLobby').innerHTML = ids().map((id) => `<span><svg width="26" height="26" viewBox="-19 -22 38 38">${Art.house(0, 0, Art.COLORS[id])}</svg>${nameOf(id)}</span>`).join('');
+}
+for (const b of document.querySelectorAll('[data-bots]')) b.addEventListener('click', () => { bots = Number(b.dataset.bots); lobby(); });
+for (const b of document.querySelectorAll('[data-speed]')) b.addEventListener('click', () => { speed = b.dataset.speed; lobby(); });
+$('#logoIcon').innerHTML = `<svg width="46" height="46" viewBox="0 0 100 100"><path d="M44 86 V26 Q44 18 50 18 Q56 18 56 26 V86 Z M44 58 H34 Q28 58 28 52 V38 Q28 33 32 33 Q36 33 36 38 V50 H44 M56 50 H64 V34 Q64 29 68 29 Q72 29 72 34 V50 Q72 58 66 58 H56" fill="#5f7a3a" stroke="#4a2e1f" stroke-width="3.6" stroke-linejoin="round"/><circle cx="50" cy="16" r="4.5" fill="#e0582a" stroke="#4a2e1f" stroke-width="2"/><path d="M14 86 H86" stroke="#4a2e1f" stroke-width="3.6" stroke-linecap="round"/></svg>`;
+lobby();
+// Antes da partida: o tabuleiro vazio com a borda e os painéis zerados.
+renderStatic({ layout: null });
+renderHeader({ phase: 'lobby', dice: null });
+</script>
+</body>
+</html>

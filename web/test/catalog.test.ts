@@ -49,6 +49,12 @@ describe('catálogo de jogos do site', () => {
     expect(entry?.hasHistory).toBe(true);
   });
 
+  it('Mandacaru aparece na estante, jogável e só no computador', () => {
+    const entry = catalogEntry('mandacaru');
+    expect(entry).toMatchObject({ name: 'Mandacaru', playable: true, hasHistory: false, players: '3 a 4 pessoas' });
+    expect(entry?.mobile).toBeFalsy();
+  });
+
   it('DITU, Cúpi e Tatubum funcionam no celular; Diquisti e Retratim ainda não', () => {
     expect(catalogEntry('ito')?.mobile).toBe(true);
     expect(catalogEntry('coup')?.mobile).toBe(true);

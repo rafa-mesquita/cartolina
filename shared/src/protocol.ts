@@ -113,6 +113,18 @@ export const ERROR_CODES = [
   'not_losing',
   'bad_exchange',
   'bad_block',
+  // Mandacaru (`not_your_turn`, `bad_target`, `need_3_players` e `bad_phase` já existem)
+  'bad_spot',
+  'cannot_afford',
+  'no_pieces',
+  'bank_empty',
+  'deck_empty',
+  'cordel_used',
+  'cordel_fresh',
+  'no_cordel',
+  'bad_trade',
+  'stale_offer',
+  'bad_discard',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -181,6 +193,17 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_losing: 'Não é você que perde carta agora.',
   bad_exchange: 'Fique com o mesmo número de cartas que você tinha.',
   bad_block: 'Esse personagem não bloqueia essa ação.',
+  bad_spot: 'Não dá pra construir aí.',
+  cannot_afford: 'Faltam cartas pra isso.',
+  no_pieces: 'Acabaram essas peças.',
+  bank_empty: 'O banco não tem essas cartas.',
+  deck_empty: 'Acabou o monte de cordel.',
+  cordel_used: 'Você já jogou um cordel neste turno.',
+  cordel_fresh: 'Cordel comprado agora só vale no próximo turno.',
+  no_cordel: 'Você não tem esse cordel.',
+  bad_trade: 'Troca inválida.',
+  stale_offer: 'Essa oferta já mudou.',
+  bad_discard: 'Descarte o número certo de cartas.',
 };
 
 export function errorMessage(code: string): string {

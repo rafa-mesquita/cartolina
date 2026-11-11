@@ -10,6 +10,15 @@ import { dixit } from './dixit/view';
 import { kittensActionSchema } from './kittens/schema';
 import { KITTENS_MAX_PLAYERS, KITTENS_MIN_PLAYERS, type KittensAction, type KittensState, type KittensView } from './kittens/types';
 import { kittens } from './kittens/view';
+import { mandacaruActionSchema } from './mandacaru/schema';
+import {
+  MANDACARU_MAX_PLAYERS,
+  MANDACARU_MIN_PLAYERS,
+  type MandacaruAction,
+  type MandacaruState,
+  type MandacaruView,
+} from './mandacaru/types';
+import { mandacaru } from './mandacaru/view';
 import { ito } from './ito/rules';
 import { itoActionSchema } from './ito/schema';
 import type { ItoAction, ItoState, ItoView } from './ito/types';
@@ -17,11 +26,11 @@ import { picturesActionSchema } from './pictures/schema';
 import { PICTURES_MAX_PLAYERS, PICTURES_MIN_PLAYERS, type PicturesAction, type PicturesState, type PicturesView } from './pictures/types';
 import { pictures } from './pictures/view';
 
-export const GAME_IDS = ['ito', 'dixit', 'pictures', 'kittens', 'coup'] as const;
+export const GAME_IDS = ['ito', 'dixit', 'pictures', 'kittens', 'coup', 'mandacaru'] as const;
 export type GameId = (typeof GAME_IDS)[number];
-export type GameState = ItoState | DixitState | PicturesState | KittensState | CoupState;
-export type GameView = ItoView | DixitView | PicturesView | KittensView | CoupView;
-export type GameAction = ItoAction | DixitAction | PicturesAction | KittensAction | CoupAction;
+export type GameState = ItoState | DixitState | PicturesState | KittensState | CoupState | MandacaruState;
+export type GameView = ItoView | DixitView | PicturesView | KittensView | CoupView | MandacaruView;
+export type GameAction = ItoAction | DixitAction | PicturesAction | KittensAction | CoupAction | MandacaruAction;
 
 export interface GameEntry {
   id: GameId;
@@ -99,6 +108,17 @@ export const GAMES: Record<GameId, GameEntry> = {
     liveCursors: false,
     // Cada partida terminada vai pro histórico (sem bots).
     recordsHistory: true,
+  }),
+  mandacaru: defineGame({
+    id: 'mandacaru',
+    module: mandacaru,
+    actionSchema: mandacaruActionSchema,
+    minPlayers: MANDACARU_MIN_PLAYERS,
+    maxPlayers: MANDACARU_MAX_PLAYERS,
+    // Cursor em cima da mão entregaria o recurso.
+    liveCursors: false,
+    // O histórico do Mandacaru vem no M3.
+    recordsHistory: false,
   }),
 };
 

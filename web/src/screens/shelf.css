@@ -51,6 +51,13 @@
 .cover-coup { background: linear-gradient(#c8312b 0 16px, #efe6d2 16px); color: #1d1a17; }
 .cover-coup b { font: 400 48px/0.95 'Bebas Neue', Impact, sans-serif; letter-spacing: 0.03em; }
 .cover-coup span:not(.cover-badge) { font: 400 14px/1.25 'Oswald', system-ui, sans-serif; color: #6b6152; }
+/* Mandacaru: ilustração chapada sob o sol da tarde, creme-pêssego com brilho de sol no alto */
+.cover-mandacaru {
+  background: radial-gradient(ellipse at 50% -10%, rgba(255, 214, 120, 0.65), transparent 60%), linear-gradient(#f7e6c4, #ecc896);
+  color: #4a2e1f;
+}
+.cover-mandacaru b { font: 400 44px/1 'Bree Serif', serif; }
+.cover-mandacaru span:not(.cover-badge) { font: 600 14px/1.25 'Mulish', system-ui, sans-serif; }
 /* número decorativo no canto, como o da carta da mão */
 .shelf .cover-ito::after {
   content: '87'; content: '87' / ''; position: absolute; right: 10px; top: 10px; font: 700 18px/1 var(--font-ui); background: var(--paper);
@@ -70,6 +77,7 @@
 .cover-pictures.mini { font: 700 19px/1 'Caveat', cursive; }
 .cover-pictures.mini::before, .cover-pictures.mini::after { display: none; }
 .cover-coup.mini { font: 400 22px/1 'Bebas Neue', Impact, sans-serif; }
+.cover-mandacaru.mini { font: 400 22px/1 'Bree Serif', serif; }
 /* Cor de cada jogo na página dele (a mesma da capa): o "criar sala" segue. Jogo sem cor aqui fica no rosa. */
 .game-ito { --game: var(--pink); --game-ink: var(--ink); }
 .game-dixit { --game: #2f5d50; --game-ink: #f4ecd8; }
@@ -108,6 +116,7 @@
   .cover b { font-size: 26px; }
   .cover-dixit b { font-size: 24px; }
   .cover-coup b { font-size: 34px; }
+  .cover-mandacaru b { font-size: 32px; }
   .cover span { font-size: 15px; }
   /* Retratim: foto e fitinha menores, pra o título e a frase caberem embaixo sem ficar tampados */
   .cover-pictures b { font-size: 32px; }

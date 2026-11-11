@@ -1,4 +1,4 @@
-import { isCoupRoomView, isDixitRoomView, isItoRoomView, isKittensRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
+import { isCoupRoomView, isDixitRoomView, isItoRoomView, isKittensRoomView, isMandacaruRoomView, isPicturesRoomView, type DixitPhase, type MandacaruPhase, type RoomView } from '@cartolina/shared';
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
@@ -20,6 +20,10 @@ const KittensTable = lazy(() => import('../games/kittens/KittensTable').then((m)
 const CoupLobby = lazy(() => import('../games/coup/CoupLobby').then((m) => ({ default: m.CoupLobby })));
 const CoupTable = lazy(() => import('../games/coup/CoupTable').then((m) => ({ default: m.CoupTable })));
 
+// O Mandacaru (tabuleiro em SVG, sons) também fica num chunk à parte.
+const MandacaruLobby = lazy(() => import('../games/mandacaru/MandacaruLobby').then((m) => ({ default: m.MandacaruLobby })));
+const MandacaruTable = lazy(() => import('../games/mandacaru/MandacaruTable').then((m) => ({ default: m.MandacaruTable })));
+
 export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot; view: RoomView }) {
   // Fase do Diquisti no último render: a mesa monta já na 1ª rodada (o lobby é outra tela) e precisa saber
   // que veio do lobby pra tocar o "plim" de quem narra.
@@ -27,6 +31,12 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
   const lastDixitPhase = useRef<DixitPhase | undefined>(dixitPhase);
   useEffect(() => {
     lastDixitPhase.current = dixitPhase;
+  });
+  // O mesmo pro Mandacaru: vindo do lobby, quem joga primeiro ouve "sua vez" já na primeira visão da mesa.
+  const mandacaruPhase = isMandacaruRoomView(view) ? view.game.phase : undefined;
+  const lastMandacaruPhase = useRef<MandacaruPhase | undefined>(mandacaruPhase);
+  useEffect(() => {
+    lastMandacaruPhase.current = mandacaruPhase;
   });
   // Celular em pé (tela estreita): o DITU usa a mesa em pé.
   const layout = useLayout();
@@ -73,6 +83,21 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
         {reconnecting}
         <Suspense fallback={null}>
           {view.game.phase === 'lobby' ? <CoupLobby view={view} conn={conn} /> : <CoupTable view={view} conn={conn} serverOffset={snap.serverOffset} status={snap.status} />}
+        </Suspense>
+      </>
+    );
+  }
+  if (isMandacaruRoomView(view)) {
+    // Sala de Mandacaru (id interno `mandacaru`): a mesa tem os próprios avisos; só computador por enquanto.
+    return (
+      <>
+        {reconnecting}
+        <Suspense fallback={null}>
+          {view.game.phase === 'lobby' ? (
+            <MandacaruLobby view={view} conn={conn} />
+          ) : (
+            <MandacaruTable view={view} conn={conn} serverOffset={snap.serverOffset} status={snap.status} fromPhase={lastMandacaruPhase.current} />
+          )}
         </Suspense>
       </>
     );

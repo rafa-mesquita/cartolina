@@ -1,6 +1,6 @@
 /**
  * Controles de bots (modo teste). No DITU e no Tatubum aparecem também no site no ar; nos outros jogos (Diquisti, Retratim,
- * Cúpi), só em dev (o lobby deles só renderiza isto em dev). Os bots do Cúpi ainda saem do build de produção pelo teste
+ * Cúpi, Mandacaru), só em dev (o lobby deles só renderiza isto em dev). Os bots do Cúpi e do Mandacaru ainda saem do build de produção pelo teste
  * `import.meta.env.DEV` no `API`.
  */
 import { GAMES, type GameId } from '@cartolina/shared';
@@ -9,6 +9,13 @@ import { addBot, botsIn, botsVersion, removeAllBots, subscribeBots } from './bot
 import { addCoupBot, coupBotsIn, coupBotsVersion, removeAllCoupBots, subscribeCoupBots } from './coupBots';
 import { addDixitBot, dixitBotsIn, dixitBotsVersion, removeAllDixitBots, subscribeDixitBots } from './dixitBots';
 import { addKittensBot, kittensBotsIn, kittensBotsVersion, removeAllKittensBots, subscribeKittensBots } from './kittensBots';
+import {
+  addMandacaruBot,
+  mandacaruBotsIn,
+  mandacaruBotsVersion,
+  removeAllMandacaruBots,
+  subscribeMandacaruBots,
+} from './mandacaruBots';
 import { addPicturesBot, picturesBotsIn, picturesBotsVersion, removeAllPicturesBots, subscribePicturesBots } from './picturesBots';
 
 type GameKey = GameId;
@@ -31,6 +38,10 @@ const API: Record<GameKey, Api> = {
   // os bots do Cúpi só existem em dev: no build de produção este ramo some e leva o módulo junto (o lobby do Cúpi nem renderiza isto)
   coup: import.meta.env.DEV
     ? { subscribe: subscribeCoupBots, version: coupBotsVersion, count: coupBotsIn, add: addCoupBot, removeAll: removeAllCoupBots }
+    : NO_BOTS,
+  // os bots do Mandacaru também só existem em dev (mesmo esquema do Cúpi)
+  mandacaru: import.meta.env.DEV
+    ? { subscribe: subscribeMandacaruBots, version: mandacaruBotsVersion, count: mandacaruBotsIn, add: addMandacaruBot, removeAll: removeAllMandacaruBots }
     : NO_BOTS,
 };
 

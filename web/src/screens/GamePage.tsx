@@ -83,6 +83,9 @@ function HistoryTab({ game }: { game: GameId }) {
       return <KittensHistory />;
     case 'coup':
       return <CoupHistory />;
+    case 'mandacaru':
+      // histórico do Mandacaru vem no M3 (sem `recordsHistory`, a aba nem aparece)
+      return null;
     default: {
       const _never: never = game;
       throw new Error(`jogo sem histórico: ${String(_never)}`);
