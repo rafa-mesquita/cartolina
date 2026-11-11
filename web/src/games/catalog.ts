@@ -88,7 +88,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
       'Troque com a galera ou na feira e construa estradas, casas, vilas e cordéis.',
       'Saiu 7, o Carcará ataca: trava um terreno e rouba uma carta. Quem chega a 10 pontos na própria vez vence.',
     ],
-    playable: false,
+    playable: true,
     mobile: false,
   },
 };

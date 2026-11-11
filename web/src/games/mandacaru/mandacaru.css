@@ -1,0 +1,75 @@
+/* Mandacaru: caatinga ao sol (estilo D do protótipo `prototipo/hexa/`). Tudo escopado em `.mandacaru`, classes com prefixo `mc-`. */
+.mandacaru {
+  --ink: #4a2e1f; --line: #5b3a29; --panel: #fff6e6; --paper: #f6e0bd; --accent: #b8321f; --terra: #c8643b; --soft: #8a6a4a;
+  --green: #5f7a3a; --dash: #c9a77a;
+  --bd: 2px solid #5b3a29; --rad: 10px; --sh: 0 3px 0 #5b3a29;
+  --ft: 'Bree Serif', Georgia, serif; --fb: 'Mulish', system-ui, sans-serif;
+  position: fixed; inset: 0; overflow: hidden; color: var(--ink);
+  font-family: var(--fb); font-weight: 600; -webkit-user-select: none; user-select: none;
+  /* fundo de sol: brilho no alto sobre o barro claro */
+  background: radial-gradient(ellipse at 50% -10%, rgba(255, 214, 120, .65), transparent 60%), linear-gradient(#f7e6c4, #ecc896);
+}
+.mandacaru *, .mandacaru *::before, .mandacaru *::after { box-sizing: border-box; }
+.mandacaru [hidden] { display: none !important; }
+.mandacaru button { font: inherit; color: inherit; cursor: pointer; }
+.mandacaru b { font-weight: 800; }
+
+/* ---------- botões, caixas e pílulas (borda 2px e sombra chapada) ---------- */
+.mandacaru .mc-btn {
+  border: var(--bd); border-radius: var(--rad); background: var(--terra); color: #fff6e6; padding: 10px 12px;
+  font: 400 17px/1.1 var(--ft); box-shadow: var(--sh); transition: transform .08s;
+}
+.mandacaru .mc-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #5b3a29; }
+.mandacaru .mc-btn.sec { background: var(--panel); color: var(--ink); }
+.mandacaru .mc-btn.on { background: var(--accent); outline: 3px solid #fff6e6; outline-offset: -6px; }
+.mandacaru .mc-btn:disabled { opacity: .42; cursor: default; }
+.mandacaru .mc-btn.mini { padding: 6px 10px; font-size: 15px; }
+.mandacaru .mc-btn.grande { font-size: 21px; padding: 13px; }
+.mandacaru .mc-box { border: var(--bd); border-radius: var(--rad); background: var(--panel); padding: 11px 13px; box-shadow: var(--sh); }
+.mandacaru .mc-box h3 { margin: 0 0 7px; font: 400 16px/1 var(--ft); }
+/* o botão de som do site (SoundPill) na cara do Mandacaru */
+.mandacaru .dx-pill {
+  align-self: flex-start; padding: 8px 12px; border: var(--bd); border-radius: 999px; background: var(--panel); color: var(--ink);
+  box-shadow: 0 2px 0 #5b3a29; font: 400 15px/1 var(--ft); white-space: nowrap;
+}
+@media (hover: hover) {
+  .mandacaru .mc-btn:hover:not(:disabled) { filter: brightness(1.06); }
+}
+
+/* ---------- lobby ---------- */
+.mandacaru .mc-lobby {
+  position: relative; height: 100%; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 32px 16px 40px;
+}
+.mandacaru .mc-head { width: min(560px, 100%); display: flex; align-items: center; gap: 14px; flex: none; }
+.mandacaru .mc-head h1 { margin: 0; font: 400 52px/1 var(--ft); }
+.mandacaru .mc-head .mc-sub { margin-top: 4px; font-size: 16px; opacity: .75; }
+.mandacaru .mc-head .mc-room { margin-left: auto; text-align: right; font-size: 13px; opacity: .8; }
+.mandacaru .mc-head .mc-code {
+  display: inline-block; margin-top: 4px; padding: 6px 12px; border: var(--bd); border-radius: var(--rad); background: var(--panel);
+  box-shadow: var(--sh); font: 400 24px/1 var(--ft); letter-spacing: 3px; color: var(--accent); opacity: 1;
+}
+.mandacaru .mc-sheet {
+  width: min(560px, 100%); padding: 18px 22px; border: var(--bd); border-radius: 14px; background: var(--panel); box-shadow: 0 5px 0 #5b3a29;
+  display: flex; flex-direction: column; gap: 12px; flex: none;
+}
+.mandacaru .mc-sheet h2 { margin: 0; font: 400 24px/1.1 var(--ft); }
+.mandacaru .mc-sheet p { margin: 0; font-size: 15px; line-height: 1.4; }
+.mandacaru .mc-people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.mandacaru .mc-people li { display: flex; align-items: center; gap: 8px; font: 400 17px/1.1 var(--ft); }
+.mandacaru .mc-people li.off { opacity: .45; }
+.mandacaru .mc-people .critter { width: 34px; height: 34px; }
+.mandacaru .mc-rules { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.4; }
+.mandacaru .mc-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mandacaru .mc-link { width: 100%; padding: 8px 10px; border: var(--bd); border-radius: var(--rad); background: #fff; color: var(--ink); font: inherit; }
+.mandacaru .mc-sheet p.mc-note { font-weight: 800; }
+.mandacaru .mc-sheet p.mc-warn { color: var(--accent); font-weight: 800; }
+.mandacaru .mc-home { width: min(560px, 100%); flex: none; }
+
+/* ---------- aviso curto (toast) ---------- */
+.mandacaru .mc-toast {
+  position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 40; max-width: calc(100% - 32px); padding: 10px 18px;
+  border: var(--bd); border-radius: 999px; background: var(--ink); color: #fff6e6; font-size: 15px; pointer-events: none;
+}
+
+/* ---------- mesa (a Task 3 troca o aviso pela mesa de verdade) ---------- */
+.mandacaru .mc-building { height: 100%; display: grid; place-items: center; }
