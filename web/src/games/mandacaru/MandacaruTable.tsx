@@ -117,26 +117,26 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
   const host = view.hostId !== null && view.hostId === view.you;
   const connected = view.seats.filter((s) => s.connected).length;
 
-  // Trava contra envio duplo: uma ação por visão; solta com visão nova (passado um mínimo de HOLD_MS, pra a visão de
-  // outra pessoa no meio de um clique duplo não soltar), recusa do servidor ou depois de alguns segundos.
+  // Trava contra envio duplo: uma ação por visão; solta com visão nova, recusa do servidor ou depois de alguns segundos.
+  // Clique duplo: a MESMA ação de novo em menos de HOLD_MS não sai, mesmo que a visão de outra pessoa chegue no meio
+  // (senão "cordel" duas vezes compraria 2). Ação diferente (a estrada logo depois da casa) sai assim que a visão chega.
   // `send` devolve se mandou (a feira só zera a escolha quando a troca saiu).
-  const [lock, setLock] = useState<{ at: MandacaruRoomView; held: boolean } | null>(null);
-  const sent = lock !== null && (lock.held || lock.at === view);
+  const [lock, setLock] = useState<{ at: MandacaruRoomView } | null>(null);
+  const last = useRef<{ key: string; t: number } | null>(null);
+  const sent = lock !== null && lock.at === view;
   const send = useCallback(
     (a: MandacaruAction): boolean => {
       if (sent) return false;
-      setLock({ at: view, held: true });
+      const key = JSON.stringify(a);
+      const now = Date.now();
+      if (last.current !== null && last.current.key === key && now - last.current.t < HOLD_MS) return false;
+      last.current = { key, t: now };
+      setLock({ at: view });
       conn.sendAction(a);
       return true;
     },
     [conn, sent, view],
   );
-  const held = lock?.held ?? false;
-  useEffect(() => {
-    if (!held) return undefined;
-    const t = setTimeout(() => setLock((l) => (l ? { ...l, held: false } : l)), HOLD_MS);
-    return () => clearTimeout(t);
-  }, [held]);
   useEffect(() => {
     if (!sent) return undefined;
     const t = setTimeout(() => setLock(null), UNLOCK_MS);
@@ -149,6 +149,7 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
       conn.onError((code, message) => {
         if (JOIN_ERRORS.has(code)) return;
         setLock(null);
+        last.current = null; // recusada: tentar a mesma jogada de novo vale (não é clique duplo)
         say(message);
         playMandacaruSound('error');
       }),

@@ -296,7 +296,7 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
     expect(c.sendAction).toHaveBeenCalledTimes(2);
   });
 
-  it('a trava segura uns 400 ms mesmo com visão nova chegando (clique duplo não manda 2)', () => {
+  it('clique duplo: a MESMA ação em menos de 400 ms não sai duas vezes, mesmo com visão de outra coisa no meio', () => {
     const room = afterSetup(mandacaruRoom(3, 1));
     const turn = turnOf(room);
     const v = viewOf(room, turn);
@@ -304,24 +304,34 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
     const { rerender } = mesa(v, c);
     const again = (view: MandacaruRoomView) => rerender(<MandacaruTable view={view} conn={c} serverOffset={0} status="joined" />);
     fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
-    // chegou a visão de outra coisa no meio do clique duplo: ainda travado
+    // chegou a visão de outra coisa no meio do clique duplo: a mesma ação não sai de novo
     again({ ...v });
     fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
     expect(c.sendAction).toHaveBeenCalledTimes(1);
+    // passados os 400 ms (e com visão nova), a mesma ação vale de novo
     rtlAct(() => {
       vi.advanceTimersByTime(400);
     });
     fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
     expect(c.sendAction).toHaveBeenCalledTimes(2);
-    // passados os 400 ms sem visão nova, segue travado até ela chegar
-    rtlAct(() => {
-      vi.advanceTimersByTime(500);
-    });
+    // sem visão nova, segue travado até ela chegar
     fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
     expect(c.sendAction).toHaveBeenCalledTimes(2);
-    again({ ...v });
-    fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
-    expect(c.sendAction).toHaveBeenCalledTimes(3);
+  });
+
+  it('jogada seguida e diferente sai na hora em que a visão nova chega (casa e logo a estrada)', () => {
+    let room = mandacaruRoom(3, 1);
+    const turn = turnOf(room);
+    const c = conn();
+    const { rerender } = mesa(viewOf(room, turn), c);
+    fireEvent.click(screen.getAllByRole('button', { name: /casa no canto/ })[0]!);
+    const sentHouse = c.sendAction.mock.calls[0]![0] as { type: 'place_house'; vertex: number };
+    room = step(room, turn, sentHouse);
+    rerender(<MandacaruTable view={viewOf(room, turn)} conn={c} serverOffset={0} status="joined" />);
+    // menos de 400 ms depois: a estrada é outra ação e tem que sair
+    fireEvent.click(screen.getAllByRole('button', { name: /estrada no lado/ })[0]!);
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+    expect(c.sendAction.mock.calls[1]![0]).toMatchObject({ type: 'place_road' });
   });
 
   it('depois de reconectar, as linhas da queda não chacoalham os dados (o welcome chega antes da visão)', () => {
