@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { mandacaruStateOf, type CordelKind, type MandacaruRoomView, type MandacaruState, type Resources, type Room } from '@cartolina/shared';
 import { MandacaruTable } from '../src/games/mandacaru/MandacaruTable';
@@ -74,6 +74,18 @@ describe('Mandacaru: troca', () => {
     expect(btn('mais pedra que você dá').disabled).toBe(true);
     click('mandar pra mesa');
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'offer', give: res(3, 0, 0, 0, 0), want: res(0, 0, 0, 0, 1) });
+  });
+
+  it('cliques seguidos na mesma passada não se apagam (dá e quer juntos)', () => {
+    const base = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(base);
+    mesa(viewOf(mainWith(base, { [turn]: res(0, 0, 0, 1, 1) }), turn));
+    click(/trocar/);
+    act(() => {
+      btn('mais pedra que você dá').click();
+      btn('mais madeira que você quer').click();
+    });
+    expect(screen.getByText(/você dá 1 pedra e quer 1 madeira/)).toBeTruthy();
   });
 
   it('com a oferta aberta: as respostas, "fechar com" leva o id da oferta e "retirar" cancela', () => {

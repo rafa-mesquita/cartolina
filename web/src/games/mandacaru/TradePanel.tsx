@@ -37,13 +37,17 @@ export const TradePanel = memo(function TradePanel({ game: g, me, nameOf, seed, 
   const have = g.myRes ?? none();
   const mine = g.turn === me;
   // não dá mais do que tem (a mão pode ter mudado com o painel aberto)
-  const give = { ...terms.give };
-  for (const r of RES_ORDER) give[r] = Math.min(give[r], have[r]);
+  const capped = (x: Resources): Resources => {
+    const out = { ...x };
+    for (const r of RES_ORDER) out[r] = Math.min(out[r], have[r]);
+    return out;
+  };
+  const give = capped(terms.give);
   const want = terms.want;
   const valid = total(give) > 0 && total(want) > 0;
   const stepTo = (side: 'give' | 'want', r: Resource, d: 1 | -1) =>
     setTerms((t) => {
-      const next = { give: { ...give }, want: { ...t.want } };
+      const next = { give: capped(t.give), want: { ...t.want } };
       next[side][r] = Math.max(0, next[side][r] + d);
       return next;
     });
@@ -98,7 +102,7 @@ export const TradePanel = memo(function TradePanel({ game: g, me, nameOf, seed, 
       </div>
       {o && (
         <div className="mc-respostas">
-          <div className="mc-tit">
+          <div className="mc-rtit">
             na mesa: você dá <Chips res={o.give} size={20} /> e quer <Chips res={o.want} size={20} />
           </div>
           {g.players
@@ -135,7 +139,7 @@ export const TradePanel = memo(function TradePanel({ game: g, me, nameOf, seed, 
       )}
       {mine && g.proposals.length > 0 && (
         <div className="mc-respostas">
-          <div className="mc-tit">propostas pra você</div>
+          <div className="mc-rtit">propostas pra você</div>
           {g.proposals.map((p) => {
             const ok = covers(have, p.want);
             return (

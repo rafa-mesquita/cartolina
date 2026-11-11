@@ -75,7 +75,7 @@ export const FeiraPanel = memo(function FeiraPanel({ game: g, send, onClose }: P
       </div>
       <div className="mc-qtdlinha">
         quantas?{' '}
-        <Stepper n={count} label="quantas" minus={ready && count > 1} plus={ready && count < max} onStep={(d) => setPick((p) => ({ ...p, count: count + d }))} />
+        <Stepper n={count} label="quantas" minus={ready && count > 1} plus={ready && count < max} onStep={(d) => setPick((p) => ({ ...p, count: Math.max(1, Math.min(p.count, max)) + d }))} />
       </div>
       <div className="mc-rodape">
         <span className="mc-resumo">

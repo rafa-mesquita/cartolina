@@ -238,7 +238,7 @@
 .mandacaru .mc-respostas {
   margin-top: 12px; padding-top: 10px; border-top: 1.5px dashed var(--dash); display: flex; flex-direction: column; gap: 7px; font-size: 14px;
 }
-.mandacaru .mc-respostas .mc-tit { font: 400 15px/1 var(--ft); }
+.mandacaru .mc-respostas .mc-rtit { font: 400 15px/1.6 var(--ft); }
 .mandacaru .mc-resp { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 .mandacaru .mc-resp .mc-quem { min-width: 52px; font: 400 16px/1 var(--ft); }
 .mandacaru .mc-resp .mc-meio { flex: 1; }
