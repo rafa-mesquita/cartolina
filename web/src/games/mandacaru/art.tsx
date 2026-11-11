@@ -444,7 +444,8 @@ function Building(p: { x: number; y: number; color: string; href: string; ratio:
         <circle className="mc-base" cx="0" cy="3" r={p.r} fill={p.color} stroke={LINE} strokeWidth="2.6" />
       </g>
       <circle cx="0" cy="3" r={p.r - 4.5} fill="none" stroke={LINE} strokeWidth="1" strokeOpacity=".35" />
-      <image href={p.href} x={-w / 2} y={-p.h / 2 - 3} width={w} height={p.h} />
+      {/* centrada na ficha (o centro da ficha é y = 3) */}
+      <image href={p.href} x={-w / 2} y={3 - p.h / 2} width={w} height={p.h} />
     </g>
   );
 }
