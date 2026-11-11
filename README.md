@@ -1,6 +1,6 @@
 # cartolina~
 
-Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável), **Retratim**, a nossa versão do Pictures (id `pictures`) e **Cúpi**, a nossa versão do Coup (id `coup`; jogável no computador e no celular). Vem aí o **Mandacaru** — jogo de hexágonos com tema caatinga (id `mandacaru`; em breve: só as regras).
+Jogos de tabuleiro pra jogar com os amigos na call. Jogos: **DITU**, a nossa versão do ITO (no código, id `ito`), **Diquisti**, a nossa versão do Dixit (id `dixit`; mesa jogável), **Retratim**, a nossa versão do Pictures (id `pictures`), **Cúpi**, a nossa versão do Coup (id `coup`; jogável no computador e no celular) e **Mandacaru**, o nosso jogo de hexágonos com tema caatinga (id `mandacaru`; jogável no computador).
 
 ## Estrutura
 

@@ -12,7 +12,7 @@ No ar: site https://rafa-mesquita.github.io/cartolina/ · servidor https://carto
 | **Retratim** (nosso Pictures) | `pictures` | jogável no computador; histórico/museu ainda não |
 | **Tatubum** (nosso Exploding Kittens) | `kittens` | jogável no computador, com bots também no site publicado; histórico e celular ainda não |
 | **Cúpi** (nosso Coup) | `coup` | jogável no computador e no celular; artes dos 5 personagens do Flow prontas (C3 feito) |
-| **Mandacaru** (hexágonos, caatinga) | `mandacaru` | regras prontas (M1); mesa ainda não |
+| **Mandacaru** (hexágonos, caatinga) | `mandacaru` | jogável no computador; histórico e celular ainda não |
 
 O id interno nunca muda: rotas, banco, registro e testes usam `ito`/`dixit`/`pictures`/`kittens`/`coup`/`mandacaru`. Só o que o jogador vê usa o nome novo.
 
@@ -61,7 +61,7 @@ Comandos: `npm install`, `npm test`, `npm run typecheck`, `npm run dev:server` (
 4. **Site**:
    - `web/src/games/catalog.ts`: nome de vitrine, frase, "como jogar", `playable` e `mobile`;
    - a mesa do jogo em `web/src/games/<id>/`, escolhida por jogo em `web/src/screens/Game.tsx`;
-   - cada jogo tem identidade visual própria. DITU: papel cartolina. Diquisti: "conto ilustrado", verde-floresta com mostarda e pintura a óleo de fundo. Retratim: "álbum de fotos". Tatubum: pixel art "cerrado" (fundo que amanhece e anoitece, mesa imperativa em `web/src/games/kittens/mesa.ts` portada do protótipo `prototipo/tatubum/`).
+   - cada jogo tem identidade visual própria. DITU: papel cartolina. Diquisti: "conto ilustrado", verde-floresta com mostarda e pintura a óleo de fundo. Retratim: "álbum de fotos". Tatubum: pixel art "cerrado" (fundo que amanhece e anoitece, mesa imperativa em `web/src/games/kittens/mesa.ts` portada do protótipo `prototipo/tatubum/`). Mandacaru: "caatinga ao sol" (estilo D do protótipo `prototipo/hexa/`: terra rachada, terracota e creme, tabuleiro em SVG; os lugares clicáveis têm `aria-label` "casa no canto N", "estrada no lado N"…).
 5. **Histórico** (opcional): cada jogo grava as rodadas reveladas numa tabela própria do D1 (migração nova em `server/migrations/`).
    - O registro sai de uma função pura no `shared`: `pendingHistoryRecord` em `shared/src/history.ts`, com `switch` exaustivo por jogo.
    - O Durable Object guarda o pendente no mesmo `put` do estado, e o `INSERT` usa `ON CONFLICT DO NOTHING`. Assim a rodada grava uma vez só.
@@ -85,7 +85,7 @@ Comandos: `npm install`, `npm test`, `npm run typecheck`, `npm run dev:server` (
 - **Servidores próprios:** a porta 8787 costuma estar ocupada por outra sessão. Suba os seus em outras portas: servidor com `npx wrangler dev --port 87xx --inspector-port 92xx`, dentro de `server/`, e site com `npx vite --port 51xx --strictPort`, dentro de `web/`, com `web/.env.development.local` contendo `VITE_SERVER_URL=http://127.0.0.1:87xx`.
   - Pelo `preview_start`, use entradas **temporárias** no `.claude/launch.json` da pasta mãe (com `cwd`) e **remova logo depois** de subir.
 - **Viewport:** emule 1280×800 (`resize_window`). A mesa é um palco fixo de 1440×900 escalado. O Diquisti mostra aviso de celular abaixo de 640px.
-- **Bots:** "🤖 adicionar bot" no lobby, só em dev. Os bots vivem na aba: recarregar derruba eles.
+- **Bots:** "🤖 adicionar bot" no lobby, só em dev. Os bots vivem na aba: recarregar derruba eles. Ficam em `web/src/dev/` (um arquivo por jogo, ex. `web/src/dev/mandacaruBots.ts`), ligados pelo `BotControls.tsx`.
 - **Ser o narrador no Diquisti:** o host clica em "destravar" até a vez cair em você.
 - **Agir por script:** dá pra clicar em botões com `.click()` via JS e jogar carta com foco + `keydown Enter`.
 - **Captura de tela:** às vezes sai miniaturizada. Nesse caso, meça com `getBoundingClientRect` via JS.

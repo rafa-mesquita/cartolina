@@ -125,12 +125,21 @@ export const Board = memo(function Board({ game: g, spots, onSpot }: Props) {
           {g.roads.map((o, e) => {
             if (!o) return null;
             const ed = geo.edges[e]!;
-            return <Road key={`r${e}`} a={at(geo.vertices[ed.a]!)} b={at(geo.vertices[ed.b]!)} color={tint(o)} />;
+            // `data-peca`: o E2E conta as peças na tela
+            return (
+              <g key={`r${e}`} data-peca="road">
+                <Road a={at(geo.vertices[ed.a]!)} b={at(geo.vertices[ed.b]!)} color={tint(o)} />
+              </g>
+            );
           })}
           {g.buildings.map((b: Building | null, i) => {
             if (!b) return null;
             const p = at(geo.vertices[i]!);
-            return b.kind === 'city' ? <City key={`b${i}`} x={p.x} y={p.y} color={tint(b.owner)} /> : <House key={`b${i}`} x={p.x} y={p.y} color={tint(b.owner)} />;
+            return (
+              <g key={`b${i}`} data-peca={b.kind}>
+                {b.kind === 'city' ? <City x={p.x} y={p.y} color={tint(b.owner)} /> : <House x={p.x} y={p.y} color={tint(b.owner)} />}
+              </g>
+            );
           })}
           {carcara}
           {spots.h.map((h) => {
