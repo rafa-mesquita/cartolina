@@ -7,6 +7,7 @@ import { catalogEntry } from '../catalog';
 import { SoundPill } from '../dixit/DixitTopBar';
 import { useToast } from '../dixit/useToast';
 import { MandacaruLogo } from './art';
+import { FUNDO_STYLE, preloadMandacaruArt } from './assets';
 import { installMandacaruAudioUnlock, playMandacaruSound } from './sounds';
 import './mandacaru.css';
 
@@ -32,6 +33,8 @@ export function MandacaruLobby({ view, conn }: { view: MandacaruRoomView; conn: 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => void (timer.current && clearTimeout(timer.current)), []);
   useEffect(() => installMandacaruAudioUnlock(), []);
+  // a mesa vem logo depois: já baixa o fundo, os terrenos e as peças
+  useEffect(() => preloadMandacaruArt(), []);
   const link = roomLink(view.code);
 
   // "começar" trava depois do clique (clique duplo = um start só): a mesa troca de tela quando a fase muda; uma recusa
@@ -74,7 +77,7 @@ export function MandacaruLobby({ view, conn }: { view: MandacaruRoomView; conn: 
   }
 
   return (
-    <div className="mandacaru">
+    <div className="mandacaru" style={FUNDO_STYLE}>
       <main className="mc-lobby">
         <header className="mc-head">
           <MandacaruLogo size={64} />

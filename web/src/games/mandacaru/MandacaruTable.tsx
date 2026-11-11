@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { JOIN_ERRORS, type ConnSnapshot, type GameConn } from '../../net/connection';
 import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
+import { FUNDO_STYLE, preloadMandacaruArt } from './assets';
 import { Actions, hintFor, type Panel, type SimpleAction } from './Actions';
 import { Board, spotAction, spotsOf, type BuildMode } from './Board';
 import { CordelChoice } from './CordelChoice';
@@ -86,6 +87,7 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
   const { scale, width } = useStageFit();
   const { toast, say } = useToast(TOAST_MS);
   useEffect(() => installMandacaruAudioUnlock(), []);
+  useEffect(() => preloadMandacaruArt(), []);
   useMandacaruSounds(view, status, fromPhase);
 
   const turnLeft = useTurnClock(g.turnEndsAt, serverOffset);
@@ -264,7 +266,7 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
   const offerCard =
     !discarding && panel === null && me !== null && g.phase === 'main' && g.turn !== me && g.offer !== null && ui.hiddenOffer !== g.offer.id && g.myRes !== null;
   return (
-    <div className="mandacaru">
+    <div className="mandacaru" style={FUNDO_STYLE}>
       <div className="mc-app" style={stage}>
         <TopBar game={g} nameOf={nameOf} left={left} rollId={rollFx?.id ?? 0} onRules={onRules} rulesOpen={rulesOpen} />
         <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={nameOf} turnLeft={turnLeft} />

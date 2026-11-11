@@ -168,7 +168,7 @@ function Prompt({ game: g, me, nameOf, mode, onSteal, onTrade }: PromptProps): R
 }
 
 /** Os ícones do custo de uma peça ("madeira + barro" vira 2 ícones). */
-export function CostIcons({ piece, size = 20 }: { piece: Piece; size?: number }) {
+export function CostIcons({ piece, size = 22 }: { piece: Piece; size?: number }) {
   return (
     <>
       {RES_ORDER.flatMap((r) => Array.from({ length: COSTS[piece][r] }, (_, i) => <ResIcon key={`${r}${i}`} kind={r} size={size} />))}

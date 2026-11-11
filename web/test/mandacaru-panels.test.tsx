@@ -383,6 +383,8 @@ describe('Mandacaru: fim', () => {
     expect(rows[0]!.textContent).toContain('2 casas');
     expect(rows[0]!.textContent).toContain('maior estrada');
     expect(rows[0]!.textContent).toContain('Igrejinha');
+    // o Ponto revelado aparece com a arte dele (Igrejinha = point-1)
+    expect(rows[0]!.querySelector('.pontos img')?.getAttribute('src')).toBe(`${import.meta.env.BASE_URL}mandacaru/cordeis/point-1.webp`);
     expect(rows).toHaveLength(3);
     click('jogar de novo');
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'restart' });

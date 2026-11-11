@@ -6,8 +6,8 @@
   --ft: 'Bree Serif', Georgia, serif; --fb: 'Mulish', system-ui, sans-serif;
   position: fixed; inset: 0; overflow: hidden; color: var(--ink);
   font-family: var(--fb); font-weight: 600; -webkit-user-select: none; user-select: none;
-  /* fundo de sol: brilho no alto sobre o barro claro */
-  background: radial-gradient(ellipse at 50% -10%, rgba(255, 214, 120, .65), transparent 60%), linear-gradient(#f7e6c4, #ecc896);
+  /* fundo: pintura armorial da caatinga (arte do Flow, `--mc-fundo` vem do `FUNDO_STYLE`) com um véu creme leve por cima */
+  background: linear-gradient(rgba(247, 230, 196, .22), rgba(247, 230, 196, .22)), var(--mc-fundo, none) center / cover no-repeat, linear-gradient(#f7e6c4, #ecc896);
 }
 .mandacaru *, .mandacaru *::before, .mandacaru *::after { box-sizing: border-box; }
 .mandacaru [hidden] { display: none !important; }
@@ -22,7 +22,12 @@
 .mandacaru .mc-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 #5b3a29; }
 .mandacaru .mc-btn.sec { background: var(--panel); color: var(--ink); }
 .mandacaru .mc-btn.on { background: var(--accent); outline: 3px solid #fff6e6; outline-offset: -6px; }
-.mandacaru .mc-btn:disabled { opacity: .42; cursor: default; }
+/* apagado sem transparência: a pintura do fundo não vaza pelo botão */
+.mandacaru .mc-btn:disabled {
+  cursor: default; background: color-mix(in srgb, var(--terra) 42%, #f7e6c4); color: rgba(255, 246, 230, .85);
+  border-color: rgba(91, 58, 41, .45); box-shadow: 0 3px 0 rgba(91, 58, 41, .4);
+}
+.mandacaru .mc-btn.sec:disabled { background: #f4e7cf; color: rgba(74, 46, 31, .45); }
 .mandacaru .mc-btn.mini { padding: 6px 10px; font-size: 15px; }
 .mandacaru .mc-btn.grande { font-size: 21px; padding: 13px; }
 .mandacaru .mc-box { border: var(--bd); border-radius: var(--rad); background: var(--panel); padding: 11px 13px; box-shadow: var(--sh); }
@@ -83,6 +88,8 @@
 /* topo */
 .mandacaru .mc-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; min-width: 0; }
 .mandacaru .mc-logo { display: flex; align-items: center; gap: 10px; width: 268px; flex: none; }
+/* texto solto sobre a pintura do fundo: um halo creme pra ler */
+.mandacaru .mc-logo, .mandacaru .mc-vezbox, .mandacaru .mc-head { text-shadow: 0 0 4px #fbf1dc, 0 0 8px #fbf1dc, 0 0 12px #fbf1dc; }
 .mandacaru .mc-logo h1 { margin: 0; font: 400 34px/1 var(--ft); }
 .mandacaru .mc-logo .mc-sub { font-size: 14px; opacity: .75; margin-top: 2px; }
 .mandacaru .mc-turno { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 14px; }
@@ -99,7 +106,7 @@
 .mandacaru .mc-topo-dir .dx-pill { align-self: center; }
 .mandacaru .mc-dados { display: flex; gap: 8px; margin-left: 6px; }
 .mandacaru .mc-dado { width: 46px; height: 46px; border: var(--bd); border-radius: 8px; background: var(--panel); box-shadow: var(--sh); fill: var(--ink); }
-.mandacaru .mc-dado.apagado { opacity: .5; }
+.mandacaru .mc-dado.apagado { background: #f4e7cf; fill: rgba(74, 46, 31, .4); border-color: rgba(91, 58, 41, .5); }
 .mandacaru .mc-dado.rolando { animation: mc-chacoalha .35s linear; }
 @keyframes mc-chacoalha {
   0% { transform: rotate(0); } 25% { transform: rotate(-14deg) translateY(-4px); } 50% { transform: rotate(10deg); }
@@ -128,7 +135,7 @@
 .mandacaru .mc-seat-pts .mc-esc { display: block; font: 700 11px/1.2 var(--fb); opacity: .7; }
 .mandacaru .mc-relo { position: absolute; left: 60px; bottom: -11px; font: 400 13px/1 var(--ft); padding: 3px 8px; border: var(--bd); border-radius: 999px; background: #fff6e6; }
 .mandacaru .mc-relo.pouco { background: var(--accent); color: #fff6e6; }
-.mandacaru .mc-bank-res { display: flex; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.mandacaru .mc-bank-res { display: flex; gap: 3px; flex-wrap: wrap; font-size: 13px; }
 .mandacaru .mc-bank-res span { display: inline-flex; align-items: center; gap: 2px; }
 .mandacaru .mc-deck { font-size: 13px; margin-top: 6px; }
 
@@ -182,15 +189,23 @@
   position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
   background: var(--accent); color: #fff6e6; font: 400 16px/1 var(--ft); border: var(--bd);
 }
-.mandacaru .mc-carta.zero { opacity: .45; }
+.mandacaru .mc-carta.zero { background: #f4e7cf; border-color: rgba(91, 58, 41, .5); }
+.mandacaru .mc-carta.zero > :not(.mc-qtd) { opacity: .42; }
 .mandacaru .mc-carta.zero .mc-qtd { background: #c9b291; }
 .mandacaru .mc-cordel {
   position: relative; flex: none; width: 72px; height: 124px; border: var(--bd); border-radius: 6px; background: var(--paper); box-shadow: var(--sh);
   display: flex; flex-direction: column; align-items: center; padding: 5px 4px; gap: 3px; transition: transform .15s;
 }
 .mandacaru .mc-cordel:hover { transform: translateY(-6px); z-index: 2; }
-.mandacaru .mc-cap { font: 800 8.5px/1 var(--fb); letter-spacing: .18em; opacity: .7; }
-.mandacaru .mc-xilo { width: 58px; height: 56px; background: #2a1c13; border-radius: 2px; display: grid; place-items: center; }
+.mandacaru .mc-xilo { width: 58px; height: 56px; background: #2a1c13; border-radius: 2px; display: grid; place-items: center; overflow: hidden; }
+/* arte do Flow do cordel (quando houver): a cena enche o bloco */
+.mandacaru .mc-xilo > .mc-art-cordel { width: 100%; height: 100%; object-fit: cover; }
+/* cordel na mão: cartinha com a capa (arte) em cima e o nome embaixo */
+.mandacaru .mc-cordel > .mc-xilo { width: 64px; height: 74px; border: 1.5px solid #5b3a29; border-radius: 4px; }
+.mandacaru .mc-art-cordel { border-radius: 2px; }
+/* Pontos revelados no fim: a capa de cada um, miudinha */
+.mandacaru .mc-lfim .mc-de .mc-art-cordel { border: 1px solid #fbf1dc; }
+.mandacaru .mc-art-res { object-fit: contain; flex: none; }
 .mandacaru .mc-tit { font: 400 12.5px/1.05 var(--ft); text-align: center; min-height: 26px; display: grid; place-items: center; }
 .mandacaru .mc-cqtd {
   position: absolute; top: -10px; right: -9px; min-width: 30px; height: 28px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;

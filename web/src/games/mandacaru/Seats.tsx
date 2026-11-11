@@ -36,7 +36,7 @@ export const Seats = memo(function Seats({ game: g, roomSeats, you, nameOf, turn
           const wins = g.wins[id] ?? 0;
           return (
             <div key={id} className={`mc-seat${turn ? ' vez' : ''}`} data-seat={id}>
-              <svg className="mc-seat-house" width="38" height="38" viewBox="-19 -22 38 38" aria-hidden="true">
+              <svg className="mc-seat-house" width="38" height="38" viewBox="-23 -20 46 46" aria-hidden="true">
                 <House x={0} y={0} color={PLAYER_TINTS[i] ?? PLAYER_TINTS[3]} />
               </svg>
               <div className="mc-seat-info">
@@ -74,7 +74,7 @@ export const Seats = memo(function Seats({ game: g, roomSeats, you, nameOf, turn
         <div className="mc-bank-res">
           {RES_ORDER.map((r) => (
             <span key={r} title={RES_NAME[r]}>
-              <ResIcon kind={r} size={22} />
+              <ResIcon kind={r} size={21} />
               {g.bank[r]}
             </span>
           ))}

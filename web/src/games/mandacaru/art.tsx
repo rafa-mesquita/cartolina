@@ -5,6 +5,7 @@
  */
 import { mandacaruGeometry, type CordelKind, type HexTile, type PortKind, type Resource, type Terrain } from '@cartolina/shared';
 import type { ReactNode } from 'react';
+import { PIECE_ART, PIECE_RATIO, RES_ART, TERRAIN_ART, cordelArtUrl } from './assets';
 
 export const R = 58;
 const SQ3 = Math.sqrt(3);
@@ -56,7 +57,17 @@ export function hexPath(pts: Pt[], k = 1, cx = 0, cy = 0): string {
   return 'M' + pts.map((p) => `${(cx + (p.x - cx) * k).toFixed(1)},${(cy + (p.y - cy) * k).toFixed(1)}`).join(' L') + ' Z';
 }
 
-/** Defs do tabuleiro: sombra chapada, sombra suave, grão, terra rachada e luz de sol. Uma vez por SVG. */
+/** Hexágono em pé numa caixa 1×1 (a largura dele é √3/2 da altura). */
+const HEX_CLIP = (() => {
+  const pts: string[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 180) * (60 * i - 90);
+    pts.push(`${(0.5 + 0.5 * Math.cos(a)).toFixed(4)},${(0.5 + 0.5 * Math.sin(a)).toFixed(4)}`);
+  }
+  return `M${pts.join(' L')} Z`;
+})();
+
+/** Defs do tabuleiro: sombra chapada, sombra suave, grão, terra rachada, recorte do hexágono e luz de sol. Uma vez por SVG. */
 export function BoardDefs() {
   return (
     <defs>
@@ -81,6 +92,10 @@ export function BoardDefs() {
           strokeLinejoin="round"
         />
       </pattern>
+      {/* recorte do hexágono em pé, em unidades da caixa da imagem (quadrada, da altura do hexágono) */}
+      <clipPath id="mc-hexclip" clipPathUnits="objectBoundingBox">
+        <path d={HEX_CLIP} />
+      </clipPath>
       <linearGradient id="mc-sol" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stopColor="#fff" stopOpacity=".28" />
         <stop offset=".55" stopColor="#fff" stopOpacity="0" />
@@ -229,11 +244,39 @@ export function SvgIcon({ kind, size = 40, s = STYLE, title }: { kind: IconKind;
   );
 }
 
-/** Ícone de um recurso (madeira, barro, couro, feijão, pedra). */
-export const ResIcon = ({ kind, size = 40, s = STYLE }: { kind: Resource; size?: number; s?: IconStyle }) => <SvgIcon kind={RES_ICON[kind]} size={size} s={s} />;
+/** Imagem de arte do Flow no lugar de um ícone (decorativa: o nome vem do texto em volta). */
+function ArtImg({ src, size, width = size, className }: { src: string; size: number; width?: number; className: string }) {
+  return <img className={className} src={src} width={width} height={size} alt="" aria-hidden="true" draggable={false} />;
+}
 
-/** Ícone de um cordel em xilogravura (creme), pra pôr sobre o bloco escuro do folheto. */
-export const CordelIcon = ({ kind, size = 40, s = WOODCUT }: { kind: CordelKind; size?: number; s?: IconStyle }) => <SvgIcon kind={CORDEL_ICON[kind]} size={size} s={s} />;
+/** Ícone de um recurso (madeira, barro, couro, feijão, pedra): a arte do Flow se já existe (`RES_ART`), senão o desenho. */
+export function ResIcon({ kind, size = 40, s = STYLE }: { kind: Resource; size?: number; s?: IconStyle }) {
+  const src = RES_ART[kind];
+  // os recursos são recortados rente e mais largos que altos: a caixa é mais larga, pra não encolherem
+  if (src) return <ArtImg src={src} size={size} width={Math.round(size * 1.25)} className="mc-art-res" />;
+  return <SvgIcon kind={RES_ICON[kind]} size={size} s={s} />;
+}
+
+/** Um recurso dentro de um SVG, na caixa (x, y, size): a arte se já existe, senão o desenho. */
+export function ResShape({ kind, x, y, size }: { kind: Resource; x: number; y: number; size: number }) {
+  const src = RES_ART[kind];
+  if (src) return <image href={src} x={x} y={y} width={size} height={size} preserveAspectRatio="xMidYMid meet" />;
+  return (
+    <g transform={`translate(${x},${y}) scale(${size / 100})`}>
+      <IconShape kind={RES_ICON[kind]} />
+    </g>
+  );
+}
+
+/**
+ * Ícone de um cordel: a arte do Flow (cena quadrada que enche o bloco do folheto) se já existe (`CORDEL_ART`), senão a
+ * xilogravura creme pra pôr sobre o bloco escuro. `point` = qual Ponto (índice em `POINT_NAMES`; 0 = Igrejinha).
+ */
+export function CordelIcon({ kind, size = 40, s = WOODCUT, point = 0 }: { kind: CordelKind; size?: number; s?: IconStyle; point?: number }) {
+  const src = cordelArtUrl(kind, point);
+  if (src) return <ArtImg src={src} size={size} className="mc-art-cordel" />;
+  return <SvgIcon kind={CORDEL_ICON[kind]} size={size} s={s} />;
+}
 
 /** Logo: o mandacaru com a florzinha. */
 export function MandacaruLogo({ size = 46 }: { size?: number }) {
@@ -255,22 +298,33 @@ export function MandacaruLogo({ size = 46 }: { size?: number }) {
 /** Chance de um número sair (em 36): quantas bolinhas a ficha mostra. */
 const pipCount = (n: number) => 6 - Math.abs(7 - n);
 
-/** Um terreno: peça com borda em relevo, luz por cima, grão fino e o ícone do terreno. (cx, cy) em pixels. */
+/** Lado da caixa da arte do terreno: a altura do hexágono de dentro (0,88 do raio). */
+const TILE_ART = 2 * R * 0.88;
+
+/**
+ * Um terreno: peça com borda em relevo na cor do terreno, a arte do Flow recortada no hexágono (`mc-hexclip`, das
+ * `BoardDefs`), luz por cima e contorno marrom fino. (cx, cy) em pixels.
+ */
 export function Hex({ tile, cx, cy }: { tile: HexTile; cx: number; cy: number }) {
   const pts = corners(cx, cy);
   const inner = hexPath(pts, 0.88, cx, cy - 2);
-  const big = tile.number !== null;
   return (
-    <g>
+    <g data-terrain={tile.terrain}>
       <g filter="url(#mc-som)">
         <path d={hexPath(pts, 0.97, cx, cy)} fill={RIM[tile.terrain]} stroke={LINE} strokeWidth="2.5" />
       </g>
       <path d={inner} fill={FILL[tile.terrain]} />
-      <path d={inner} fill="url(#mc-grao)" />
+      <image
+        href={TERRAIN_ART[tile.terrain]}
+        x={cx - TILE_ART / 2}
+        y={cy - 2 - TILE_ART / 2}
+        width={TILE_ART}
+        height={TILE_ART}
+        preserveAspectRatio="xMidYMid slice"
+        clipPath="url(#mc-hexclip)"
+      />
       <path d={inner} fill="url(#mc-sol)" />
-      <g transform={`translate(${cx - 25},${cy - (big ? 54 : 30)}) scale(.5)`}>
-        <IconShape kind={TERRAIN_ICON[tile.terrain]} />
-      </g>
+      <path d={inner} fill="none" stroke={LINE} strokeWidth="1.6" strokeOpacity=".7" />
     </g>
   );
 }
@@ -338,29 +392,29 @@ export function portPlacement(i: number): { x: number; y: number; a: Pt; b: Pt }
   return { x: mx + ((mx - c.x) / len) * 0.55 * R, y: my + ((my - c.y) / len) * 0.55 * R, a, b };
 }
 
-/** Feira: barraca de toldo listrado com a estradinha de terra até as duas pontas do lado. */
+/** Altura da barraca da feira (arte do Flow) no tabuleiro. */
+const FEIRA_H = 46;
+
+/** Feira: a barraca (arte do Flow) com o selo da taxa embaixo e a estradinha de terra até as duas pontas do lado. */
 export function Port({ kind, x, y, a, b }: { kind: PortKind; x: number; y: number; a: Pt; b: Pt }) {
+  const w = FEIRA_H * PIECE_RATIO.feira;
   return (
-    <g>
+    <g data-feira={kind}>
       <path d={`M${a.x},${a.y} L${x},${y} L${b.x},${b.y}`} fill="none" stroke="#7a4a2a" strokeWidth="5" strokeLinecap="round" strokeDasharray="1 8" />
+      <image href={PIECE_ART.feira} x={x - w / 2} y={y - 38} width={w} height={FEIRA_H} filter="url(#mc-sombra)" />
       <g filter="url(#mc-som)">
-        <rect x={x - 23} y={y - 6} width="44" height="22" rx="3" fill="#fbf1dc" stroke={LINE} strokeWidth="2" />
+        <rect x={x - 22} y={y + 3} width="44" height="21" rx="4" fill="#fbf1dc" stroke={LINE} strokeWidth="2" />
       </g>
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <path key={i} d={`M${x - 24 + i * 8} ${y - 14} h8 l-2 9 h-8 Z`} fill={i % 2 ? '#fbf1dc' : RED} stroke={LINE} strokeWidth="1.2" />
-      ))}
       {kind === 'generic' ? (
-        <text x={x - 1} y={y + 11} textAnchor="middle" fontFamily="Bree Serif" fontSize="14" fill={INK}>
+        <text x={x} y={y + 19} textAnchor="middle" fontFamily="Bree Serif" fontSize="14" fill={INK}>
           3:1
         </text>
       ) : (
         <>
-          <text x={x - 9} y={y + 11} textAnchor="middle" fontFamily="Bree Serif" fontSize="12" fill={INK}>
+          <text x={x - 9} y={y + 19} textAnchor="middle" fontFamily="Bree Serif" fontSize="13" fill={INK}>
             2:1
           </text>
-          <g transform={`translate(${x + 2},${y - 5}) scale(.19)`}>
-            <IconShape kind={RES_ICON[kind]} />
-          </g>
+          <ResShape kind={kind} x={x + 2} y={y + 4} size={19} />
         </>
       )}
     </g>
@@ -377,51 +431,42 @@ export function Road({ a, b, color }: { a: Pt; b: Pt; color: string }) {
   );
 }
 
-/** Casa de taipa: parede na cor do jogador, telhado de telha. */
+/**
+ * Peça de construção: a arte do Flow em pé sobre uma ficha redonda na cor do dono (contorno marrom e sombra chapada).
+ * A ficha sobra em volta e embaixo da arte, então a cor lê de longe até no branco e no vermelho (a casa tem parede
+ * branca e telhado vermelho). (x, y) = o canto do tabuleiro.
+ */
+function Building(p: { x: number; y: number; color: string; href: string; ratio: number; h: number; r: number }) {
+  const w = p.h * p.ratio;
+  return (
+    <g transform={`translate(${p.x},${p.y})`}>
+      <g filter="url(#mc-som)">
+        <circle className="mc-base" cx="0" cy="3" r={p.r} fill={p.color} stroke={LINE} strokeWidth="2.6" />
+      </g>
+      <circle cx="0" cy="3" r={p.r - 4.5} fill="none" stroke={LINE} strokeWidth="1" strokeOpacity=".35" />
+      <image href={p.href} x={-w / 2} y={-p.h / 2 - 3} width={w} height={p.h} />
+    </g>
+  );
+}
+
+/** Casa de taipa (arte do Flow) sobre a ficha na cor do jogador. */
 export function House({ x, y, color }: { x: number; y: number; color: string }) {
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <g filter="url(#mc-som)">
-        <path d="M-12 10 V-3 H12 V10 Z" fill={color} stroke={LINE} strokeWidth="2.2" />
-      </g>
-      <path d="M-15 -2 L0 -14 L15 -2 Z" fill="#a4462a" stroke={LINE} strokeWidth="2.2" strokeLinejoin="round" />
-      <rect x="-3" y="2" width="6" height="8" fill={LINE} />
-    </g>
-  );
+  return <Building x={x} y={y} color={color} href={PIECE_ART.casa} ratio={PIECE_RATIO.casa} h={25} r={19} />;
 }
 
-/** Vila: casario com a torre da igrejinha. */
+/** Vila (casario com a igrejinha, arte do Flow) sobre a ficha maior na cor do jogador. */
 export function City({ x, y, color }: { x: number; y: number; color: string }) {
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <g filter="url(#mc-som)">
-        <path d="M-19 11 V-2 H0 V-16 H12 V11 Z" fill={color} stroke={LINE} strokeWidth="2.2" />
-      </g>
-      <path d="M-22 -1 L-10 -11 L2 -1 Z" fill="#a4462a" stroke={LINE} strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M-2 -15 L6 -25 L14 -15 Z" fill="#a4462a" stroke={LINE} strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M6 -10 V-4 M3 -7 H9" stroke={LINE} strokeWidth="2" />
-      <rect x="-13" y="3" width="6" height="8" fill={LINE} />
-    </g>
-  );
+  return <Building x={x} y={y} color={color} href={PIECE_ART.vila} ratio={PIECE_RATIO.vila} h={35} r={24} />;
 }
 
-/** Carcará de pé: capuz preto, cara vermelha, peito claro listrado. (x, y) = onde ficam os pés. */
+/** Carcará (arte do Flow, pousado no galho) com a sombra no chão. (x, y) = onde ficam os pés. */
 export function Carcara({ x, y, k = 1 }: { x: number; y: number; k?: number }) {
+  const h = 74;
+  const w = h * PIECE_RATIO.carcara;
   return (
-    <g transform={`translate(${x},${y}) scale(${k})`}>
-      <ellipse cx="0" cy="30" rx="16" ry="4" fill={LINE} opacity=".3" />
-      <path d="M-4 18 V29 M4 18 V29" stroke="#e8b23a" strokeWidth="3" strokeLinecap="round" />
-      <path d="M-8 18 L-13 34 L2 32 L1 18 Z" fill="#3e2a1d" stroke="#2a1c13" strokeWidth="1.5" />
-      <path d="M-11 34 L-11 30 M-6 33 L-6 29" stroke="#efe2c4" strokeWidth="1.4" />
-      <path d="M-14 4 Q-17 -14 -2 -17 Q13 -17 14 0 Q14 16 1 21 Q-11 18 -14 4 Z" fill="#5a3a26" stroke="#2a1c13" strokeWidth="1.8" />
-      <path d="M-1 -15 Q11 -13 11 -1 Q8 7 -1 6 Q-6 -4 -1 -15 Z" fill="#efe2c4" />
-      <path d="M1 -8 H9 M0 -3 H9 M1 2 H8" stroke="#8a6a4a" strokeWidth="1.3" />
-      <path d="M-12 -2 Q-8 8 -2 16" fill="none" stroke="#2a1c13" strokeWidth="1.5" />
-      <circle cx="2" cy="-24" r="9.5" fill="#efe2c4" stroke="#2a1c13" strokeWidth="1.8" />
-      <path d="M-7.5 -26 Q1 -38 11.5 -26 Q2 -30 -7.5 -26 Z" fill="#1d1a17" />
-      <path d="M4 -26 Q12 -27 12 -21 Q8 -18 4 -22 Z" fill="#e0582a" />
-      <circle cx="6" cy="-24" r="1.6" fill="#1d1a17" />
-      <path d="M11 -25 Q19 -23 15 -16 L12.5 -19 Z" fill="#cfc6b2" stroke="#2a1c13" strokeWidth="1.2" />
+    <g transform={`translate(${x},${y}) scale(${k})`} data-peca-arte="carcara">
+      <ellipse cx="0" cy="30" rx="18" ry="4.5" fill={LINE} opacity=".35" />
+      <image href={PIECE_ART.carcara} x={-w / 2} y={-40} width={w} height={h} filter="url(#mc-sombra)" />
     </g>
   );
 }

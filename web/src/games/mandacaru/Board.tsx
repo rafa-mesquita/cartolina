@@ -111,8 +111,9 @@ export const Board = memo(function Board({ game: g, spots, onSpot }: Props) {
     const desert = g.layout.hexes[g.carcara]?.number === null;
     carcara = (
       <g pointerEvents="none">
-        <path d={hexPath(corners(c.x, c.y), 0.88, c.x, c.y - 2)} fill="#2a1c13" opacity=".22" />
-        {desert ? <Carcara x={c.x} y={c.y - 4} k={0.95} /> : <Carcara x={c.x + 2} y={c.y - 31} k={0.78} />}
+        <path d={hexPath(corners(c.x, c.y), 0.88, c.x, c.y - 2)} fill="#2a1c13" opacity=".3" />
+        {/* fora do rio seco, pousado em cima da ficha (o número continua à mostra) */}
+        {desert ? <Carcara x={c.x} y={c.y - 4} k={1.1} /> : <Carcara x={c.x} y={c.y - 32} k={0.95} />}
       </g>
     );
   }

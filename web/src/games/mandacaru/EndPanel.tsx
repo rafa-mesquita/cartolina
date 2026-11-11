@@ -1,6 +1,6 @@
 import { MANDACARU_MAX_PLAYERS, MANDACARU_MIN_PLAYERS, type MandacaruView } from '@cartolina/shared';
 import { memo, useEffect, useRef } from 'react';
-import { House, PLAYER_TINTS, SvgIcon } from './art';
+import { CordelIcon, House, PLAYER_TINTS } from './art';
 import { POINT_NAMES } from './names';
 import { YOU, joinE, type NameOf } from './texts';
 
@@ -10,6 +10,8 @@ export interface PointPart {
   points: number;
   /** Cordéis de Ponto (desenhados de outro jeito). */
   cordel?: boolean;
+  /** Quais Pontos (índices em `POINT_NAMES`), pra mostrar a arte de cada um. */
+  pointIdx?: number[];
 }
 
 /**
@@ -19,10 +21,12 @@ export interface PointPart {
 export function pointParts(g: MandacaruView, me: string | null): Record<string, PointPart[]> {
   const order = me !== null && g.players.includes(me) ? [me, ...g.players.filter((p) => p !== me)] : g.players;
   const names: Record<string, string[]> = {};
+  const firsts: Record<string, number> = {};
   let k = 0;
   for (const p of order) {
     const n = g.pointCards?.[p] ?? 0;
     names[p] = POINT_NAMES.slice(k, k + n);
+    firsts[p] = k;
     k += n;
   }
   const out: Record<string, PointPart[]> = {};
@@ -40,7 +44,7 @@ export function pointParts(g: MandacaruView, me: string | null): Record<string, 
     if (g.longestRoad === s.id) parts.push({ text: `maior estrada (${s.roadLength})`, points: 2 });
     if (g.largestArmy === s.id) parts.push({ text: `maior comitiva (${s.knights} Vaqueiros)`, points: 2 });
     const pn = names[s.id] ?? [];
-    if (pn.length) parts.push({ text: joinE(pn), points: pn.length, cordel: true });
+    if (pn.length) parts.push({ text: joinE(pn), points: pn.length, cordel: true, pointIdx: pn.map((_, i) => (firsts[s.id] ?? 0) + i) });
     out[s.id] = parts;
   }
   return out;
@@ -83,7 +87,7 @@ export const EndPanel = memo(function EndPanel({ game: g, me, nameOf, host, conn
             const ps = parts[s.id] ?? [];
             return (
               <div key={s.id} className={`mc-lfim${s.id === g.winner ? ' venc' : ''}`} data-testid="mc-fim-linha">
-                <svg width="34" height="34" viewBox="-19 -22 38 38" aria-hidden="true">
+                <svg width="34" height="34" viewBox="-23 -20 46 46" aria-hidden="true">
                   <House x={0} y={0} color={PLAYER_TINTS[i] ?? PLAYER_TINTS[3]} />
                 </svg>
                 <div className="mc-quem">
@@ -100,7 +104,7 @@ export const EndPanel = memo(function EndPanel({ game: g, me, nameOf, host, conn
                     ) : (
                       ps.map((p) => (
                         <span key={p.text} className={p.cordel ? 'pontos' : undefined}>
-                          {p.cordel && <SvgIcon kind="igreja" size={16} />} {p.text} <b>+{p.points}</b>
+                          {p.cordel && (p.pointIdx ?? [0]).map((i) => <CordelIcon key={i} kind="point" point={i} size={20} />)} {p.text} <b>+{p.points}</b>
                         </span>
                       ))
                     )}

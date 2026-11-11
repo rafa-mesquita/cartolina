@@ -34,7 +34,7 @@ export const Hand = memo(function Hand({ game: g, onPlay }: Props) {
       <div className="mc-grupo">
         {RES_ORDER.map((r) => (
           <div key={r} className={`mc-carta${res[r] ? '' : ' zero'}`} title={RES_NAME[r]} data-res={r}>
-            <ResIcon kind={r} size={50} />
+            <ResIcon kind={r} size={54} />
             <span className="mc-carta-nome">{RES_NAME[r]}</span>
             <span className="mc-qtd">{res[r]}</span>
           </div>
@@ -52,9 +52,8 @@ export const Hand = memo(function Hand({ game: g, onPlay }: Props) {
             const can = kind !== null && g.can.play.includes(kind);
             return (
               <div key={x.kind} className={`mc-cordel${can ? ' pode' : ''}`} title={desc} data-cordel={x.kind}>
-                <span className="mc-cap">CORDEL</span>
                 <span className="mc-xilo">
-                  <CordelIcon kind={x.kind} size={44} />
+                  <CordelIcon kind={x.kind} size={44} point={0} />
                 </span>
                 <span className="mc-tit">{title}</span>
                 {x.n > 1 && <span className="mc-cqtd">×{x.n}</span>}

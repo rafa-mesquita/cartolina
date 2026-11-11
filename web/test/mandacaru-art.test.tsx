@@ -103,7 +103,9 @@ describe('Mandacaru: arte', () => {
       </div>,
     );
     expect(container.querySelectorAll('line[stroke="#2f6fa8"]')).toHaveLength(1);
-    expect(container.querySelectorAll('svg')).toHaveLength(4);
+    // o tabuleiro e o logo em SVG; recurso e cordel já com a arte do Flow
+    expect(container.querySelectorAll('svg')).toHaveLength(2);
+    expect(container.querySelectorAll('img')).toHaveLength(2);
   });
 
   it('cada face do dado tem n pontos', () => {
