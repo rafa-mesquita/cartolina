@@ -6,7 +6,7 @@ import { PIECE_NAME, RES_ORDER } from './names';
 import { YOU, joinE, resList, type NameOf } from './texts';
 
 /**
- * Janelas sobre a mesa que a Task 4 do plano M2 traz (troca, feira, Chuva no sertão, Atravessador).
+ * Janelas sobre a mesa que se abrem por botão (troca, feira, Chuva no sertão, Atravessador).
  * O descarte, o cartão de oferta e o fim não precisam de botão: abrem sozinhos pela fase.
  */
 export type Panel = 'trade' | 'feira' | 'chuva' | 'atravessador';
@@ -32,7 +32,7 @@ interface PromptProps {
   nameOf: NameOf;
   mode: BuildMode | null;
   onSteal: (from: string) => void;
-  /** "ver a troca" (só aparece quando a janela de troca já existe). */
+  /** "ver a troca" (some com a janela de troca aberta). */
   onTrade?: () => void;
 }
 
@@ -186,19 +186,17 @@ interface Props {
   onMode: (m: BuildMode) => void;
   onAction: (a: SimpleAction) => void;
   panel: Panel | null;
-  /** Abre/fecha uma janela; os botões das janelas que ainda não existem ficam apagados com "em breve". */
+  /** Abre/fecha uma janela (troca, feira). */
   onPanel: (p: Panel) => void;
-  panelReady: (p: Panel) => boolean;
 }
 
 /** Coluna da direita (em cima do diário): o aviso da fase, rolar, construir, cordel, trocar, feira, passar a vez e "quanto custa". */
-export const Actions = memo(function Actions({ game: g, me, nameOf, mode, onMode, onAction, panel, onPanel, panelReady }: Props) {
+export const Actions = memo(function Actions({ game: g, me, nameOf, mode, onMode, onAction, panel, onPanel }: Props) {
   const c = g.can;
   const mine = me !== null && g.turn === me;
   const main = g.phase === 'main';
-  const tradeOk = main && (c.offer || c.propose) && panelReady('trade');
-  const feiraOk = main && mine && panelReady('feira');
-  const soon = (ready: boolean) => (ready ? undefined : 'em breve');
+  const tradeOk = main && (c.offer || c.propose) && g.myRes !== null;
+  const feiraOk = main && mine && Object.keys(c.feira).length > 0;
   const modeBtn = (m: BuildMode, list: number[]) => (
     <button
       type="button"
@@ -219,7 +217,7 @@ export const Actions = memo(function Actions({ game: g, me, nameOf, mode, onMode
           nameOf={nameOf}
           mode={mode}
           onSteal={(from) => onAction({ type: 'steal', from })}
-          onTrade={panelReady('trade') && panel !== 'trade' ? () => onPanel('trade') : undefined}
+          onTrade={panel !== 'trade' ? () => onPanel('trade') : undefined}
         />
       </div>
       <div className="mc-acoes">
@@ -238,8 +236,8 @@ export const Actions = memo(function Actions({ game: g, me, nameOf, mode, onMode
           <button
             type="button"
             className={`mc-btn sec${panel === 'trade' ? ' on' : ''}`}
+            aria-pressed={panel === 'trade'}
             disabled={!tradeOk}
-            title={soon(panelReady('trade'))}
             onClick={() => onPanel('trade')}
           >
             {mine || !main ? '⇄ trocar' : '⇄ propor'}
@@ -247,8 +245,8 @@ export const Actions = memo(function Actions({ game: g, me, nameOf, mode, onMode
           <button
             type="button"
             className={`mc-btn sec${panel === 'feira' ? ' on' : ''}`}
+            aria-pressed={panel === 'feira'}
             disabled={!feiraOk}
-            title={soon(panelReady('feira'))}
             onClick={() => onPanel('feira')}
           >
             feira

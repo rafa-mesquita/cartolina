@@ -32,12 +32,13 @@ interface Props {
   left: number | null;
   /** Muda a cada rolagem nova (reinicia a chacoalhada dos dados). */
   rollId: number;
-  /** Abre/fecha a folha de regras; sem ela (Task 4), o botão fica apagado com "em breve". */
-  onRules?: () => void;
+  /** Abre/fecha a folha de regras. */
+  onRules: () => void;
+  rulesOpen: boolean;
 }
 
 /** Topo: logo, de quem é a vez, relógio (vermelho no último minuto, "parado" sem prazo), placar da noite, regras, som e dados. */
-export const TopBar = memo(function TopBar({ game: g, nameOf, left, rollId, onRules }: Props) {
+export const TopBar = memo(function TopBar({ game: g, nameOf, left, rollId, onRules, rulesOpen }: Props) {
   const discard = g.phase === 'discard';
   const clock = left === null ? 'parado' : formatClock(left);
   const low = left !== null && left < LOW_MS && !discard;
@@ -64,7 +65,7 @@ export const TopBar = memo(function TopBar({ game: g, nameOf, left, rollId, onRu
         )}
       </div>
       <div className="mc-topo-dir">
-        <button type="button" className="mc-btn sec mini" onClick={onRules} disabled={!onRules} title={onRules ? undefined : 'em breve'}>
+        <button type="button" className={`mc-btn sec mini${rulesOpen ? ' on' : ''}`} aria-pressed={rulesOpen} onClick={onRules}>
           regras
         </button>
         <SoundPill />

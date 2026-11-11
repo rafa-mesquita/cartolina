@@ -204,3 +204,121 @@
 .mandacaru .mc-jogar:active:not(:disabled) { transform: translateX(-50%) translateY(2px); }
 .mandacaru .mc-cordel.pode { outline: 3px solid var(--accent); outline-offset: 2px; }
 .mandacaru .mc-vazio { font-size: 13px; opacity: .6; align-self: center; }
+
+/* ---------- janelas sobre a mesa (troca, feira, cordéis, descarte, cartão de oferta) ---------- */
+.mandacaru .mc-janela {
+  position: absolute; left: 50%; top: 50px; transform: translateX(-50%); z-index: 6; width: 560px; padding: 14px 18px 16px;
+  border: var(--bd); border-radius: 14px; background: var(--panel); box-shadow: 0 5px 0 #5b3a29; font-size: 14px;
+}
+.mandacaru .mc-janela.meio { top: 50%; transform: translate(-50%, -50%); }
+.mandacaru .mc-janela.estreita { width: 470px; }
+.mandacaru .mc-janela h3 { margin: 0 34px 2px 0; font: 400 23px/1.1 var(--ft); outline: none; }
+.mandacaru .mc-janela h4 { margin: 10px 0 6px; font: 400 16px/1 var(--ft); }
+.mandacaru .mc-janela .mc-sub { font-size: 13.5px; line-height: 1.35; opacity: .8; margin-bottom: 8px; }
+.mandacaru .mc-x {
+  position: absolute; top: 9px; right: 10px; width: 30px; height: 30px; padding: 0; border: var(--bd); border-radius: 50%;
+  background: #fff6e6; font: 400 17px/1 var(--ft); box-shadow: 0 2px 0 #5b3a29;
+}
+.mandacaru .mc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mandacaru .mc-col { border: 1.5px dashed var(--dash); border-radius: 10px; padding: 6px 10px 8px; }
+.mandacaru .mc-col h4 { margin: 2px 0 4px; }
+.mandacaru .mc-linha { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 14px; }
+.mandacaru .mc-linha .mc-nm { flex: 1; }
+.mandacaru .mc-tem { font-size: 11.5px; opacity: .6; }
+.mandacaru .mc-step { display: inline-flex; align-items: center; gap: 4px; }
+.mandacaru .mc-step button {
+  width: 28px; height: 28px; padding: 0; border: var(--bd); border-radius: 8px; background: #fff6e6; box-shadow: 0 2px 0 #5b3a29;
+  font: 400 18px/1 var(--ft);
+}
+.mandacaru .mc-step button:disabled { opacity: .32; cursor: default; }
+.mandacaru .mc-step b { min-width: 22px; text-align: center; font: 400 19px/1 var(--ft); }
+.mandacaru .mc-rodape { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+.mandacaru .mc-rodape.mc-rodape-mini { margin-top: 2px; }
+.mandacaru .mc-resumo { flex: 1; font-size: 13.5px; line-height: 1.35; }
+.mandacaru .mc-respostas {
+  margin-top: 12px; padding-top: 10px; border-top: 1.5px dashed var(--dash); display: flex; flex-direction: column; gap: 7px; font-size: 14px;
+}
+.mandacaru .mc-respostas .mc-tit { font: 400 15px/1 var(--ft); }
+.mandacaru .mc-resp { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.mandacaru .mc-resp .mc-quem { min-width: 52px; font: 400 16px/1 var(--ft); }
+.mandacaru .mc-resp .mc-meio { flex: 1; }
+.mandacaru .mc-st { font: 800 12px/1 var(--fb); padding: 5px 9px; border-radius: 999px; background: #ead6b3; white-space: nowrap; }
+.mandacaru .mc-st.sim { background: var(--green); color: #fff6e6; }
+.mandacaru .mc-st.nao { background: var(--accent); color: #fff6e6; }
+.mandacaru .mc-chips { display: inline-flex; align-items: center; gap: 1px; vertical-align: middle; margin-right: 6px; }
+.mandacaru .mc-chips i { font: 400 15px/1 var(--ft); font-style: normal; margin-left: 1px; }
+.mandacaru .mc-escolha { display: flex; gap: 7px; }
+.mandacaru .mc-opc {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 2px 6px; border: var(--bd); border-radius: 10px;
+  background: #fff6e6; box-shadow: 0 2px 0 #5b3a29; font-size: 13px;
+}
+.mandacaru .mc-opc.on { background: #f3c9a0; outline: 3px solid var(--accent); outline-offset: -5px; }
+.mandacaru .mc-opc:disabled { opacity: .36; cursor: default; }
+.mandacaru .mc-opc small { font: 800 11px/1 var(--fb); opacity: .7; }
+.mandacaru .mc-opc .mc-taxa { font: 400 15px/1 var(--ft); color: var(--accent); opacity: 1; }
+.mandacaru .mc-qtdlinha { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 14px; }
+/* cartão da oferta (quem está na vez mandou pra mesa) */
+.mandacaru .mc-cartao { padding-top: 18px; }
+.mandacaru .mc-fita {
+  position: absolute; top: -15px; left: 18px; padding: 5px 12px; border: var(--bd); border-radius: 6px; background: var(--terra); color: #fff6e6;
+  font: 400 15px/1 var(--ft); box-shadow: 0 2px 0 #5b3a29;
+}
+.mandacaru .mc-termos { display: flex; align-items: center; gap: 14px; justify-content: center; margin: 10px 0 6px; }
+.mandacaru .mc-termos > div {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 130px; padding: 8px 10px; border: 1.5px dashed var(--dash); border-radius: 10px;
+}
+.mandacaru .mc-termos small { font: 800 11px/1 var(--fb); letter-spacing: .05em; text-transform: uppercase; opacity: .65; }
+.mandacaru .mc-termos > .mc-seta { font: 400 26px/1 var(--ft); border: 0; min-width: 0; padding: 0; }
+.mandacaru .mc-estado { text-align: center; font-size: 14px; margin: 6px 0 2px; }
+.mandacaru .mc-estado.mc-outros { opacity: .8; display: flex; gap: 14px; justify-content: center; }
+.mandacaru .mc-botoes { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+/* descarte */
+.mandacaru .mc-descarte .mc-falta { font: 400 17px/1 var(--ft); }
+.mandacaru .mc-descarte .mc-falta.ok { color: var(--green); }
+.mandacaru .mc-prazo.pouco { color: var(--accent); }
+
+/* ---------- fim da partida ---------- */
+.mandacaru .mc-veu { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(74, 46, 31, .28); }
+.mandacaru .mc-painel {
+  width: 520px; padding: 28px 32px; border: var(--bd); border-radius: 14px; background: var(--panel); box-shadow: 0 6px 0 #5b3a29; text-align: center;
+}
+.mandacaru .mc-painel.largo { width: 680px; }
+.mandacaru .mc-painel h2 { margin: 0; font: 400 46px/1 var(--ft); outline: none; }
+.mandacaru .mc-painel .mc-sub { margin: 6px 0 0; opacity: .75; }
+.mandacaru .mc-placar { text-align: left; margin: 16px 0 20px; }
+.mandacaru .mc-lfim { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-bottom: 1.5px dashed var(--dash); }
+.mandacaru .mc-lfim.venc { background: var(--paper); border-radius: 10px; border-bottom-color: transparent; }
+.mandacaru .mc-lfim .mc-quem { flex: 1; min-width: 0; }
+.mandacaru .mc-lfim .mc-nm { font: 400 20px/1.1 var(--ft); display: flex; align-items: center; gap: 8px; }
+.mandacaru .mc-lfim .mc-noite { margin-left: auto; font: 700 13px/1 var(--fb); opacity: .75; }
+.mandacaru .mc-lfim .mc-de { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; font-size: 13px; }
+.mandacaru .mc-lfim .mc-de span {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: #fff; border: 1.5px solid var(--dash);
+}
+.mandacaru .mc-lfim .mc-de span.pontos { background: #2a1c13; color: #fbf1dc; border-color: #2a1c13; }
+.mandacaru .mc-lfim .mc-de b { font: 400 14px/1 var(--ft); color: var(--accent); }
+.mandacaru .mc-lfim .mc-de span.pontos b { color: #f3c9a0; }
+.mandacaru .mc-lfim .mc-tot { font: 400 36px/1 var(--ft); text-align: center; min-width: 64px; }
+.mandacaru .mc-lfim .mc-tot small { display: block; font: 800 10px/1 var(--fb); opacity: .6; letter-spacing: .05em; }
+.mandacaru .mc-hostwait { margin: 0; font: 400 18px/1.2 var(--ft); opacity: .8; }
+
+/* ---------- folha de regras ---------- */
+.mandacaru .mc-regras {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 30; width: 470px; padding: 22px 26px 28px; overflow-y: auto; background: var(--panel);
+  border-left: var(--bd); box-shadow: -4px 0 0 #5b3a29; font-size: 14.5px; line-height: 1.45; animation: mc-entra .25s ease;
+  -webkit-user-select: text; user-select: text;
+}
+@keyframes mc-entra { from { transform: translateX(105%); } to { transform: none; } }
+.mandacaru .mc-regras h2 { margin: 0 0 4px; font: 400 32px/1 var(--ft); }
+.mandacaru .mc-regras h3 { margin: 18px 0 6px; font: 400 19px/1.1 var(--ft); color: var(--terra); }
+.mandacaru .mc-regras p { margin: 0 0 6px; }
+.mandacaru .mc-regras ul { margin: 0; padding-left: 18px; }
+.mandacaru .mc-regras li { margin: 0 0 4px; }
+.mandacaru .mc-regras .mc-x { top: 14px; right: 16px; width: 34px; height: 34px; font-size: 18px; }
+.mandacaru .mc-regras .mc-custo b { min-width: 64px; }
+.mandacaru .mc-regras .mc-regras-nota { margin-top: 6px; }
+.mandacaru .mc-cord { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0; }
+.mandacaru .mc-cord .mc-xilo { flex: none; width: 38px; height: 38px; }
+@media (prefers-reduced-motion: reduce) {
+  .mandacaru .mc-regras { animation: none; }
+}

@@ -7,16 +7,15 @@ export type PlayableCordel = Exclude<CordelKind, 'point'>;
 
 interface Props {
   game: MandacaruView;
-  /** "jogar" num cordel; `ready(kind)` diz se o cordel já tem como ser jogado aqui (os de janela chegam na Task 4). */
+  /** "jogar" num cordel (Chuva e Atravessador abrem a janela de escolha). */
   onPlay: (kind: PlayableCordel) => void;
-  ready: (kind: PlayableCordel) => boolean;
 }
 
 /**
  * Embaixo: sua mão. Os 5 recursos em cartas com a quantidade (zerados apagados) e os cordéis agrupados por tipo
  * ("×N"), com selo "novo" nos comprados agora e "jogar" nos que `can.play` deixa. Quem assiste vê o aviso.
  */
-export const Hand = memo(function Hand({ game: g, onPlay, ready }: Props) {
+export const Hand = memo(function Hand({ game: g, onPlay }: Props) {
   if (!g.myRes) {
     return (
       <section className="mc-hand">
@@ -51,7 +50,6 @@ export const Hand = memo(function Hand({ game: g, onPlay, ready }: Props) {
             const desc = x.kind === 'point' ? `${names.join(', ')}: ${CORDEL_DESC.point}` : `${CORDEL_NAME[x.kind]}: ${CORDEL_DESC[x.kind]}`;
             const kind = x.kind === 'point' ? null : x.kind;
             const can = kind !== null && g.can.play.includes(kind);
-            const ok = kind !== null && ready(kind);
             return (
               <div key={x.kind} className={`mc-cordel${can ? ' pode' : ''}`} title={desc} data-cordel={x.kind}>
                 <span className="mc-cap">CORDEL</span>
@@ -65,8 +63,6 @@ export const Hand = memo(function Hand({ game: g, onPlay, ready }: Props) {
                   <button
                     type="button"
                     className="mc-btn mini mc-jogar"
-                    disabled={!ok}
-                    title={ok ? undefined : 'em breve'}
                     aria-label={`jogar ${CORDEL_NAME[kind]}`}
                     onClick={() => onPlay(kind)}
                   >

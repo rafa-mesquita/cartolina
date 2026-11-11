@@ -5,14 +5,21 @@ import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
 import { Actions, hintFor, type Panel, type SimpleAction } from './Actions';
 import { Board, spotAction, spotsOf, type BuildMode } from './Board';
+import { CordelChoice } from './CordelChoice';
+import { DiscardPanel } from './DiscardPanel';
+import { EndPanel } from './EndPanel';
+import { FeiraPanel } from './FeiraPanel';
 import { useTurnClock } from './clock';
 import { Diary, freshEntries } from './Diary';
 import { Hand, type PlayableCordel } from './Hand';
 import { RES_NAME } from './names';
+import { OfferCard } from './OfferCard';
+import { RulesSheet } from './RulesSheet';
 import { Seats } from './Seats';
 import { installMandacaruAudioUnlock, playMandacaruSound } from './sounds';
-import { nameFrom } from './texts';
+import { nameFrom, resList } from './texts';
 import { TopBar } from './TopBar';
+import { TradePanel, tradeSeed, type TradeTerms } from './TradePanel';
 import './mandacaru.css';
 
 const TOAST_MS = 2600;
@@ -21,17 +28,8 @@ const UNLOCK_MS = 4000;
 /** Quanto tempo a soma dos dados fica grande no meio do tabuleiro. */
 const SUM_MS = 1000;
 
-/**
- * Ponto de extensão da Task 4 (plano M2): as janelas que já existem. A Task 4 acrescenta 'trade', 'feira', 'chuva' e
- * 'atravessador' aqui e desenha cada uma em `PanelSlot`; enquanto não estão aqui, os botões delas ficam apagados
- * com "em breve". (O descarte, o cartão de oferta, o fim e a folha de regras também entram na Task 4.)
- */
-const READY_PANELS: ReadonlySet<Panel> = new Set<Panel>();
-const panelReady = (p: Panel) => READY_PANELS.has(p);
-/** Cordéis que se jogam sem janela; os outros esperam a janela deles. */
-const DIRECT_CORDEIS: ReadonlySet<PlayableCordel> = new Set<PlayableCordel>(['vaqueiro', 'mutirao']);
+/** Cordéis que pedem escolha abrem a janela deles; Vaqueiro e Mutirão se jogam direto. */
 const PANEL_OF_CORDEL: Partial<Record<PlayableCordel, Panel>> = { chuva: 'chuva', atravessador: 'atravessador' };
-const cordelReady = (k: PlayableCordel) => DIRECT_CORDEIS.has(k) || (PANEL_OF_CORDEL[k] !== undefined && panelReady(PANEL_OF_CORDEL[k]));
 
 interface Props {
   view: MandacaruRoomView;
@@ -42,24 +40,29 @@ interface Props {
 }
 
 /**
- * O que é só da interface, preso a uma situação (`at` = partida:fase:vez): a peça escolhida pra construir e a janela
- * aberta. Mudou a partida, a fase ou a vez = tudo zerado. A peça também some quando os lugares dela acabam.
+ * O que é só da interface, preso a uma situação (`at` = partida:fase:vez): a peça escolhida pra construir, a janela
+ * aberta (com os números com que a troca abre e um contador que remonta a janela a cada abertura) e a oferta cujo
+ * cartão foi escondido. Mudou a partida, a fase ou a vez = tudo zerado. A peça também some quando os lugares dela acabam.
  */
 interface Ui {
   at: string;
   mode: BuildMode | null;
   panel: Panel | null;
+  seed: TradeTerms | null;
+  opened: number;
+  hiddenOffer: number | null;
 }
-const freshUi = (at: string): Ui => ({ at, mode: null, panel: null });
+const freshUi = (at: string): Ui => ({ at, mode: null, panel: null, seed: null, opened: 0, hiddenOffer: null });
 
-/** A janela aberta ainda faz sentido agora? (A Task 4 refina por janela.) */
+/** A janela aberta ainda faz sentido agora? */
 function panelOk(p: Panel, g: MandacaruRoomView['game'], me: string | null): boolean {
   const mine = me !== null && g.turn === me;
+  if (g.myRes === null) return false;
   switch (p) {
     case 'trade':
       return g.phase === 'main' && (mine ? g.can.offer : g.can.propose);
     case 'feira':
-      return g.phase === 'main' && mine;
+      return g.phase === 'main' && mine && Object.keys(g.can.feira).length > 0;
     case 'chuva':
     case 'atravessador':
       return g.can.play.includes(p);
@@ -96,7 +99,9 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
   );
   const modeSpots = ui.mode === 'road' ? g.can.buildRoad : ui.mode === 'house' ? g.can.buildHouse : ui.mode === 'city' ? g.can.buildCity : [];
   const mode = g.phase === 'main' && modeSpots.length > 0 ? ui.mode : null;
-  const panel = ui.panel !== null && panelReady(ui.panel) && panelOk(ui.panel, g, me) ? ui.panel : null;
+  const panel = ui.panel !== null && panelOk(ui.panel, g, me) ? ui.panel : null;
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const host = view.hostId !== null && view.hostId === view.you;
 
   // Trava contra envio duplo: uma ação por visão; solta com visão nova, recusa do servidor ou depois de alguns segundos.
   const [sentAt, setSentAt] = useState<MandacaruRoomView | null>(null);
@@ -145,6 +150,13 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
       const r = RES_NAME[g.stolen.resource];
       say(steal.player === me ? `você roubou 1 ${r} de ${nameOf(steal.from)}` : `o Carcará de ${nameOf(steal.player)} levou 1 ${r} seu`);
     }
+    // Sua troca saiu: fecha a janela da troca (a oferta e as propostas sumiram) e avisa o que você deu.
+    const trade = fresh.find((e) => e.t === 'trade' && me !== null && (e.a === me || e.b === me));
+    if (trade && trade.t === 'trade') {
+      const other = trade.a === me ? trade.b : trade.a;
+      say(`troca feita com ${nameOf(other)}: você deu ${resList(trade.a === me ? trade.aGives : trade.bGives)}`);
+      setUi((u) => (u.panel === 'trade' ? { ...u, panel: null, seed: null } : u));
+    }
   }, [g.log, g.stolen, me, nameOf, reconnecting, say]);
   useEffect(() => {
     if (!sumOn) return undefined;
@@ -162,13 +174,22 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
     [g, patch, send],
   );
   const onMode = useCallback((m: BuildMode) => patch((u) => ({ mode: u.mode === m ? null : m, panel: null })), [patch]);
+  /** Abre (ou fecha, se já aberta) uma janela; a troca abre com a oferta/proposta que você já tem na mesa. */
   const onPanel = useCallback(
-    (p: Panel) => {
-      if (!panelReady(p)) return;
-      patch((u) => ({ panel: u.panel === p ? null : p, mode: null }));
-    },
-    [patch],
+    (p: Panel) =>
+      patch((u) =>
+        u.panel === p ? { panel: null, seed: null } : { panel: p, mode: null, seed: p === 'trade' ? tradeSeed(g, me) : null, opened: u.opened + 1 },
+      ),
+    [g, me, patch],
   );
+  const closePanel = useCallback(() => patch(() => ({ panel: null, seed: null })), [patch]);
+  /** Contraproposta: a troca abre com a oferta invertida (você dá o que ela quer e quer o que ela dá). */
+  const onCounter = useCallback(() => {
+    const o = g.offer;
+    if (!o) return;
+    patch((u) => ({ panel: 'trade', mode: null, seed: { give: { ...o.want }, want: { ...o.give } }, opened: u.opened + 1 }));
+  }, [g.offer, patch]);
+  const onHideOffer = useCallback(() => patch(() => ({ hiddenOffer: g.offer?.id ?? null })), [g.offer, patch]);
   const onAction = useCallback(
     (a: SimpleAction) => {
       if (a.type === 'end_turn') patch(() => ({ mode: null, panel: null }));
@@ -188,26 +209,34 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
     },
     [onPanel, patch, send],
   );
+  const onRules = useCallback(() => setRulesOpen((o) => !o), []);
+  const onRestart = useCallback(() => send({ type: 'restart' }), [send]);
 
-  // Esc larga a peça escolhida e fecha a janela.
+  // Esc fecha a folha de regras; sem ela, larga a peça escolhida e fecha a janela.
   const hasUi = mode !== null || panel !== null;
   useEffect(() => {
-    if (!hasUi) return undefined;
+    if (!hasUi && !rulesOpen) return undefined;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setUi((u) => ({ ...u, mode: null, panel: null }));
+      if (e.key !== 'Escape') return;
+      if (rulesOpen) setRulesOpen(false);
+      else setUi((u) => ({ ...u, mode: null, panel: null, seed: null }));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [hasUi]);
+  }, [hasUi, rulesOpen]);
 
   const hint = hintFor(g, mode);
   const left = g.phase === 'discard' ? discardLeft : turnLeft;
   const stage = { width, transform: `translate(-50%, -50%) scale(${scale})` } as CSSProperties;
   const sum = rollFx?.sum ?? 0;
+  // O descarte manda sobre as outras janelas; o cartão da oferta só aparece sem janela aberta.
+  const discarding = g.phase === 'discard' && g.can.discard > 0 && g.myRes !== null;
+  const offerCard =
+    !discarding && panel === null && me !== null && g.phase === 'main' && g.turn !== me && g.offer !== null && ui.hiddenOffer !== g.offer.id && g.myRes !== null;
   return (
     <div className="mandacaru">
       <div className="mc-app" style={stage}>
-        <TopBar game={g} nameOf={nameOf} left={left} rollId={rollFx?.id ?? 0} />
+        <TopBar game={g} nameOf={nameOf} left={left} rollId={rollFx?.id ?? 0} onRules={onRules} rulesOpen={rulesOpen} />
         <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={nameOf} turnLeft={turnLeft} />
         <main className="mc-mesa">
           <Board game={g} spots={spots} onSpot={onSpot} />
@@ -221,23 +250,26 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
               sum
             ) : null}
           </div>
-          <PanelSlot panel={panel} />
+          {discarding ? (
+            <DiscardPanel key={`${g.match}:${g.discardEndsAt ?? '-'}`} game={g} left={discardLeft} send={send} />
+          ) : panel === 'trade' && me !== null ? (
+            <TradePanel key={ui.opened} game={g} me={me} nameOf={nameOf} seed={ui.seed} send={send} onClose={closePanel} />
+          ) : panel === 'feira' ? (
+            <FeiraPanel key={ui.opened} game={g} send={send} onClose={closePanel} />
+          ) : panel === 'chuva' || panel === 'atravessador' ? (
+            <CordelChoice key={ui.opened} kind={panel} game={g} send={send} onClose={closePanel} />
+          ) : null}
+          {offerCard && me !== null && (
+            <OfferCard key={g.offer?.id} game={g} me={me} nameOf={nameOf} send={send} onCounter={onCounter} onHide={onHideOffer} />
+          )}
         </main>
         <aside className="mc-right">
-          <Actions
-            game={g}
-            me={me}
-            nameOf={nameOf}
-            mode={mode}
-            onMode={onMode}
-            onAction={onAction}
-            panel={panel}
-            onPanel={onPanel}
-            panelReady={panelReady}
-          />
+          <Actions game={g} me={me} nameOf={nameOf} mode={mode} onMode={onMode} onAction={onAction} panel={panel} onPanel={onPanel} />
           <Diary log={g.log} nameOf={nameOf} layout={g.layout} />
         </aside>
-        <Hand game={g} onPlay={onPlay} ready={cordelReady} />
+        <Hand game={g} onPlay={onPlay} />
+        {g.phase === 'over' && <EndPanel key={g.match} game={g} me={me} nameOf={nameOf} host={host} onRestart={onRestart} />}
+        {rulesOpen && <RulesSheet onClose={() => setRulesOpen(false)} />}
         <div role="status" aria-live="polite">
           {toast && (
             <div key={toast.id} className="mc-toast">
@@ -248,13 +280,4 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
       </div>
     </div>
   );
-}
-
-/**
- * Onde as janelas sobre o tabuleiro aparecem. A Task 4 desenha aqui a janela de `panel` (troca, feira, Chuva,
- * Atravessador) e, pela fase, o descarte, o cartão de oferta e o fim. Por enquanto nada abre.
- */
-function PanelSlot({ panel }: { panel: Panel | null }) {
-  if (panel === null) return null;
-  return null;
 }

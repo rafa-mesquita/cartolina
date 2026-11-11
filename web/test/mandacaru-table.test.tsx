@@ -240,15 +240,16 @@ describe('Mesa do Mandacaru: turno', () => {
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'play_vaqueiro' });
   });
 
-  it('trocar e feira ficam apagados até a janela existir', () => {
+  it('trocar e feira: apagados antes dos dados, acesos na fase principal', () => {
     const base = afterSetup(mandacaruRoom(3, 1));
     const turn = turnOf(base);
+    const { unmount } = mesa(viewOf(base, turn));
+    expect((screen.getByRole('button', { name: /trocar/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'feira' }) as HTMLButtonElement).disabled).toBe(true);
+    unmount();
     mesa(viewOf(mainWith(base, res(4, 0, 0, 0, 0)), turn));
-    const trade = screen.getByRole('button', { name: /trocar/ }) as HTMLButtonElement;
-    const feira = screen.getByRole('button', { name: 'feira' }) as HTMLButtonElement;
-    expect(trade.disabled).toBe(true);
-    expect(trade.title).toBe('em breve');
-    expect(feira.disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /trocar/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole('button', { name: 'feira' }) as HTMLButtonElement).disabled).toBe(false);
   });
 });
 
