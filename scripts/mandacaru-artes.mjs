@@ -9,8 +9,8 @@
  *                                 → terrenos/<id>.webp (quadradas, 512×512; o código recorta no hexágono)
  *   carcara casa vila feira       → pecas/<nome>.webp (fundo liso tirado, beirada suave)
  *   wood brick leather beans stone → recursos/<id>.webp (fundo liso tirado)
- *   vaqueiro mutirao chuva atravessador point-<n>
- *                                 → cordeis/<nome>.webp (fundo liso tirado)
+ *   vaqueiro mutirao chuva atravessador point-1 … point-5
+ *                                 → cordeis/<nome>.webp (cena cheia, como capa de folheto; quadrada 512×512)
  *
  * O recorte do fundo preenche a partir da borda tudo que é parecido com a cor da borda (mediana), sem furar
  * partes de dentro da mesma cor (como o Tatubum fez com as artes dele).
@@ -105,4 +105,10 @@ for (const t of TERRAINS) {
 }
 for (const p of PIECES) await piece(p, 'pecas', 384);
 for (const r of RESOURCES) await piece(r, 'recursos', 256);
-for (const c of CORDEIS) await piece(c, 'cordeis', 384);
+for (const c of CORDEIS) {
+  const file = fileOf(c);
+  if (!file) continue;
+  mkdirSync(join(OUT, 'cordeis'), { recursive: true });
+  await sharp(file).resize(512, 512, { fit: 'cover' }).webp({ quality: 80 }).toFile(join(OUT, 'cordeis', `${c}.webp`));
+  console.log(`cordeis/${c}.webp`);
+}

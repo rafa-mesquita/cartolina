@@ -51,3 +51,32 @@ Final fixo dos terrenos: `The scene fills the whole square edge to edge, seen fr
 - **casa:** `A small whitewashed rammed-earth house (taipa) of the Brazilian sertão with a terracotta tile roof, a blue wooden door and one small window, front three-quarter view.`
 - **vila:** `A small cluster of whitewashed sertão houses with terracotta roofs around a little white chapel with a bell tower and a cross, front three-quarter view.`
 - **feira:** `A small country-fair market stall of the Brazilian Northeast: wooden stall with a red and cream striped awning, baskets of beans and cassava on the counter.`
+
+### Escolha do Rafa na rodada 2 (2026-11-11)
+
+Um coração em cada: barraca de feira, vila, casa, rio seco, lajedo, barreiro, roçado, malhada, caatinga.
+Convertidas com `npm run mandacaru:artes -- <pasta>` (terrenos 512×512; peças recortadas).
+
+## Rodada 3 — recursos e cordéis (2026-11-11)
+
+Recursos (1:1, fundo liso pra recortar; ícone das cartas da mão), com o estilo e o final fixo das peças soltas:
+
+- **madeira (wood):** `A bundle of firewood sticks tied with a rope.`
+- **barro (brick):** `A small stack of handmade clay bricks next to a round clay pot.`
+- **couro (leather):** `A folded piece of tanned brown leather with a leather cowboy hat of the sertão on top.`
+- **feijão (beans):** `A woven straw basket full of brown beans, with a few beans spilled beside it.`
+- **pedra (stone):** `A small pile of rough grey granite stones.`
+
+Cordéis (1:1, **cena cheia**, como a capa de um folheto de cordel), estilo da rodada 2 +
+`The scene fills the whole square, like the woodcut on the cover of a cordel booklet. No text, no letters, no frame, no border.`
+Pessoas com dignidade, de várias cores de pele (inclusive pessoas negras em destaque).
+
+- **Vaqueiro:** `A proud Black vaqueiro of the sertão in full leather gear (leather hat, leather jacket and leggings) riding a horse through the caatinga, chasing a runaway steer.`
+- **Mutirão:** `A mutirão: neighbors of different skin tones working together with hoes and wheelbarrows to open a dirt road in the sertão, smiling, under the sun.`
+- **Chuva no sertão:** `Rain finally falling over the caatinga: dark clouds, rain lines, the grey trees turning green, a happy family watching the rain from the door of their house.`
+- **Atravessador:** `A traveling trader of the sertão leading a donkey loaded with full sacks along a dusty road, a market town far behind.`
+- **Ponto · Igrejinha (point-1):** `A small white chapel of the sertão with a bell tower, on a hill, with a few people arriving for the feast.`
+- **Ponto · Açude (point-2):** `A small earth dam reservoir (açude) full of water in the sertão, children swimming and a woman fetching water.`
+- **Ponto · Cisterna (point-3):** `A round white rainwater cistern next to a small rural house in the sertão, a Black woman proudly standing by it.`
+- **Ponto · Escola (point-4):** `A small rural schoolhouse in the sertão with children of different skin tones arriving with their notebooks, a teacher at the door.`
+- **Ponto · Casa de Farinha (point-5):** `A casa de farinha: a rustic shed where a family makes cassava flour, one roasting the flour in a large clay oven, others peeling cassava.`
