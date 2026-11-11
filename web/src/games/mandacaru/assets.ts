@@ -11,8 +11,13 @@ const art = (file: string) => `${import.meta.env.BASE_URL}mandacaru/${file}`;
 
 /** Pintura armorial da caatinga (16:9, meio vazio): fundo da mesa e do lobby. */
 export const FUNDO_ART = art('fundo.webp');
-/** Estilo da raiz `.mandacaru` (mesa e lobby): a pintura entra pela variável `--mc-fundo` do CSS. */
-export const FUNDO_STYLE = { '--mc-fundo': `url("${FUNDO_ART}")` } as CSSProperties;
+/**
+ * Estilo da raiz `.mandacaru` (mesa e lobby): a pintura entra pela variável `--mc-fundo` do CSS.
+ * Endereço ABSOLUTO: um `url()` relativo dentro de variável do CSS resolve pela pasta do `.css` (no site publicado,
+ * `assets/`), não pela página — o fundo dava 404 no GitHub Pages, onde `BASE_URL` é relativa.
+ */
+const absolute = (url: string) => (typeof document === 'undefined' ? url : new URL(url, document.baseURI).href);
+export const FUNDO_STYLE = { '--mc-fundo': `url("${absolute(FUNDO_ART)}")` } as CSSProperties;
 
 /** Cada terreno (quadrado 512×512), recortado no hexágono. */
 export const TERRAIN_ART: Record<Terrain, string> = {

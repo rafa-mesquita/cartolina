@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { City, CordelIcon, Hex, House, PLAYER_TINTS, Port, ResIcon, portPlacement } from '../src/games/mandacaru/art';
-import { CORDEL_ART, FUNDO_ART, PIECE_ART, RES_ART, TERRAIN_ART, allArtUrls, cordelArtUrl } from '../src/games/mandacaru/assets';
+import { CORDEL_ART, FUNDO_ART, FUNDO_STYLE, PIECE_ART, RES_ART, TERRAIN_ART, allArtUrls, cordelArtUrl } from '../src/games/mandacaru/assets';
 
 const base = import.meta.env.BASE_URL;
 
@@ -18,6 +18,12 @@ describe('Mandacaru: artes do Flow', () => {
     for (const k of Object.keys(CORDEL_ART)) delete CORDEL_ART[k as keyof typeof CORDEL_ART];
     Object.assign(RES_ART, res);
     Object.assign(CORDEL_ART, cordel);
+  });
+
+  it('o fundo entra no CSS com endereço absoluto (url() numa variável do CSS resolve pela pasta do .css, não da página)', () => {
+    const v = (FUNDO_STYLE as Record<string, string>)['--mc-fundo']!;
+    expect(v).toBe(`url("${new URL(FUNDO_ART, document.baseURI).href}")`);
+    expect(v).toMatch(/^url\("https?:\/\//);
   });
 
   it('as URLs saem da base do site; todas as artes no mapa', () => {
