@@ -174,6 +174,22 @@ describe('Mesa do Mandacaru: turno', () => {
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'build_road', edge: view.game.can.buildRoad[0] });
   });
 
+  it('estrada: quando os lugares acabam, a peça é largada (não volta sozinha ao ganhar cartas)', () => {
+    const base = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(base);
+    const rich = viewOf(mainWith(base, res(1, 1, 0, 0, 0)), turn);
+    const broke = viewOf(mainWith(base, res(0, 0, 0, 0, 0)), turn);
+    const c = conn();
+    const { rerender } = mesa(rich, c);
+    const again = (view: MandacaruRoomView) => rerender(<MandacaruTable view={view} conn={c} serverOffset={0} status="joined" />);
+    fireEvent.click(screen.getByRole('button', { name: 'estrada' }));
+    expect(screen.getAllByRole('button', { name: /estrada no lado/ }).length).toBeGreaterThan(0);
+    again(broke);
+    expect(screen.queryAllByRole('button', { name: /estrada no lado/ })).toHaveLength(0);
+    again(rich);
+    expect(screen.queryAllByRole('button', { name: /estrada no lado/ })).toHaveLength(0);
+  });
+
   it('vila: as casas suas acendem e mandam build_city', () => {
     const base = afterSetup(mandacaruRoom(3, 1));
     const turn = turnOf(base);
@@ -278,6 +294,58 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
     expect(c.sendAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('a trava segura uns 400 ms mesmo com visão nova chegando (clique duplo não manda 2)', () => {
+    const room = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(room);
+    const v = viewOf(room, turn);
+    const c = conn();
+    const { rerender } = mesa(v, c);
+    const again = (view: MandacaruRoomView) => rerender(<MandacaruTable view={view} conn={c} serverOffset={0} status="joined" />);
+    fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
+    // chegou a visão de outra coisa no meio do clique duplo: ainda travado
+    again({ ...v });
+    fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    rtlAct(() => {
+      vi.advanceTimersByTime(400);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+    // passados os 400 ms sem visão nova, segue travado até ela chegar
+    rtlAct(() => {
+      vi.advanceTimersByTime(500);
+    });
+    fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
+    again({ ...v });
+    fireEvent.click(screen.getByRole('button', { name: /rolar/ }));
+    expect(c.sendAction).toHaveBeenCalledTimes(3);
+  });
+
+  it('depois de reconectar, as linhas da queda não chacoalham os dados (o welcome chega antes da visão)', () => {
+    const room = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(room);
+    const c = conn();
+    const v = viewOf(room, turn);
+    const { container, rerender } = mesa(v, c);
+    const again = (view: MandacaruRoomView, status: ConnStatus) =>
+      rerender(<MandacaruTable view={view} conn={c} serverOffset={0} status={status} />);
+    again(v, 'reconnecting');
+    // welcome: o status volta a 'joined' ainda com a visão velha
+    again(v, 'joined');
+    // a visão nova traz o que aconteceu na queda (dados rolados)
+    const rolled = step(room, turn, { type: 'roll' });
+    again(viewOf(rolled, turn), 'joined');
+    expect(container.querySelector('.mc-soma.on')).toBeNull();
+    expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(0);
+    // dali pra frente, linhas novas voltam a valer
+    const passed = withGame(rolled, (s) => ({ ...s, phase: 'main' }));
+    const ended = step(passed, turn, { type: 'end_turn' });
+    const rolled2 = step(ended, turnOf(ended), { type: 'roll' });
+    again(viewOf(rolled2, turn), 'joined');
+    expect(container.querySelector('.mc-soma.on')).toBeTruthy();
   });
 
   it('relógio do turno: corre, fica vermelho no último minuto', () => {

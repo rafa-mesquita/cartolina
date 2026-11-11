@@ -1,4 +1,4 @@
-import type { MandacaruAction, MandacaruLogEntry, MandacaruRoomView } from '@cartolina/shared';
+import type { MandacaruAction, MandacaruLogEntry, MandacaruPhase, MandacaruRoomView } from '@cartolina/shared';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { JOIN_ERRORS, type ConnSnapshot, type GameConn } from '../../net/connection';
 import { useStageFit } from '../dixit/useStageFit';
@@ -26,6 +26,8 @@ import './mandacaru.css';
 const TOAST_MS = 2600;
 /** Trava contra envio duplo: solta sozinha depois disso (ms), se nem visão nova nem recusa chegarem. */
 const UNLOCK_MS = 4000;
+/** Mínimo que a trava segura depois de mandar, mesmo com visão nova chegando (ms). */
+const HOLD_MS = 400;
 /** Quanto tempo a soma dos dados fica grande no meio do tabuleiro. */
 const SUM_MS = 1000;
 
@@ -38,6 +40,8 @@ interface Props {
   /** Hora do servidor menos a do PC (os prazos não dependem do relógio local). */
   serverOffset: number;
   status: ConnSnapshot['status'];
+  /** Fase no render de antes (o `Game` passa): `'lobby'` = a mesa montou na primeira visão da partida. */
+  fromPhase?: MandacaruPhase;
 }
 
 /**
@@ -75,14 +79,14 @@ function panelOk(p: Panel, g: MandacaruRoomView['game'], me: string | null): boo
  * jogadores à esquerda, o tabuleiro no meio, as ações e o diário à direita e a mão embaixo.
  * Tudo que é jogo vem de `view.game`; aqui só mora o estado da interface (peça escolhida, janela aberta, trava).
  */
-export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
+export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: Props) {
   const g = view.game;
   const me = view.you !== null && g.players.includes(view.you) ? view.you : null;
   const nameOf = useMemo(() => nameFrom(view), [view]);
   const { scale, width } = useStageFit();
   const { toast, say } = useToast(TOAST_MS);
   useEffect(() => installMandacaruAudioUnlock(), []);
-  useMandacaruSounds(view, status);
+  useMandacaruSounds(view, status, fromPhase);
 
   const turnLeft = useTurnClock(g.turnEndsAt, serverOffset);
   const discardLeft = useTurnClock(g.phase === 'discard' ? g.discardEndsAt : null, serverOffset);
@@ -101,24 +105,39 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
   );
   const modeSpots = ui.mode === 'road' ? g.can.buildRoad : ui.mode === 'house' ? g.can.buildHouse : ui.mode === 'city' ? g.can.buildCity : [];
   const mode = g.phase === 'main' && modeSpots.length > 0 ? ui.mode : null;
+  // Os lugares da peça acabaram: larga a peça de vez (senão ela volta a acender sozinha quando chegam cartas).
+  const noSpots = ui.mode !== null && modeSpots.length === 0;
+  useEffect(() => {
+    if (noSpots) patch(() => ({ mode: null }));
+  }, [noSpots, patch]);
   const panel = ui.panel !== null && panelOk(ui.panel, g, me) ? ui.panel : null;
   const [rulesOpen, setRulesOpen] = useState(false);
   const host = view.hostId !== null && view.hostId === view.you;
+  const connected = view.seats.filter((s) => s.connected).length;
 
-  // Trava contra envio duplo: uma ação por visão; solta com visão nova, recusa do servidor ou depois de alguns segundos.
-  const [sentAt, setSentAt] = useState<MandacaruRoomView | null>(null);
-  const sent = sentAt === view;
+  // Trava contra envio duplo: uma ação por visão; solta com visão nova (passado um mínimo de HOLD_MS, pra a visão de
+  // outra pessoa no meio de um clique duplo não soltar), recusa do servidor ou depois de alguns segundos.
+  // `send` devolve se mandou (a feira só zera a escolha quando a troca saiu).
+  const [lock, setLock] = useState<{ at: MandacaruRoomView; held: boolean } | null>(null);
+  const sent = lock !== null && (lock.held || lock.at === view);
   const send = useCallback(
-    (a: MandacaruAction) => {
-      if (sent) return;
-      setSentAt(view);
+    (a: MandacaruAction): boolean => {
+      if (sent) return false;
+      setLock({ at: view, held: true });
       conn.sendAction(a);
+      return true;
     },
     [conn, sent, view],
   );
+  const held = lock?.held ?? false;
+  useEffect(() => {
+    if (!held) return undefined;
+    const t = setTimeout(() => setLock((l) => (l ? { ...l, held: false } : l)), HOLD_MS);
+    return () => clearTimeout(t);
+  }, [held]);
   useEffect(() => {
     if (!sent) return undefined;
-    const t = setTimeout(() => setSentAt(null), UNLOCK_MS);
+    const t = setTimeout(() => setLock(null), UNLOCK_MS);
     return () => clearTimeout(t);
   }, [sent]);
 
@@ -127,7 +146,7 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
     () =>
       conn.onError((code, message) => {
         if (JOIN_ERRORS.has(code)) return;
-        setSentAt(null);
+        setLock(null);
         say(message);
         playMandacaruSound('error');
       }),
@@ -138,9 +157,18 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
   const [rollFx, setRollFx] = useState<{ id: number; sum: number } | null>(null);
   const [sumOn, setSumOn] = useState(false);
   const prevLog = useRef<MandacaruLogEntry[] | null>(null);
-  const reconnecting = status !== 'joined';
+  // Fora do ar: o `welcome` da volta chega antes da visão nova, então a próxima visão (a que traz a queda) é só a base.
+  const rebase = useRef(false);
   useEffect(() => {
-    const fresh = reconnecting ? [] : freshEntries(prevLog.current, g.log);
+    if (status !== 'joined') rebase.current = true;
+  }, [status]);
+  useEffect(() => {
+    if (rebase.current) {
+      rebase.current = false;
+      prevLog.current = g.log;
+      return;
+    }
+    const fresh = freshEntries(prevLog.current, g.log);
     prevLog.current = g.log;
     const roll = [...fresh].reverse().find((e) => e.t === 'roll');
     if (roll && roll.t === 'roll') {
@@ -159,7 +187,7 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
       say(`troca feita com ${nameOf(other)}: você deu ${resList(trade.a === me ? trade.aGives : trade.bGives)}`);
       setUi((u) => (u.panel === 'trade' ? { ...u, panel: null, seed: null } : u));
     }
-  }, [g.log, g.stolen, me, nameOf, reconnecting, say]);
+  }, [g.log, g.stolen, me, nameOf, say]);
   useEffect(() => {
     if (!sumOn) return undefined;
     const t = setTimeout(() => setSumOn(false), SUM_MS);
@@ -270,7 +298,7 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
           <Diary log={g.log} nameOf={nameOf} layout={g.layout} />
         </aside>
         <Hand game={g} onPlay={onPlay} />
-        {g.phase === 'over' && <EndPanel key={g.match} game={g} me={me} nameOf={nameOf} host={host} onRestart={onRestart} />}
+        {g.phase === 'over' && <EndPanel key={g.match} game={g} me={me} nameOf={nameOf} host={host} connected={connected} onRestart={onRestart} />}
         {rulesOpen && <RulesSheet onClose={() => setRulesOpen(false)} />}
         <div role="status" aria-live="polite">
           {toast && (

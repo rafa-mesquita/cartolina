@@ -1,4 +1,4 @@
-import type { MandacaruView } from '@cartolina/shared';
+import { MANDACARU_MAX_PLAYERS, MANDACARU_MIN_PLAYERS, type MandacaruView } from '@cartolina/shared';
 import { memo, useEffect, useRef } from 'react';
 import { House, PLAYER_TINTS, SvgIcon } from './art';
 import { POINT_NAMES } from './names';
@@ -51,6 +51,8 @@ interface Props {
   me: string | null;
   nameOf: NameOf;
   host: boolean;
+  /** Quantos estão conectados na sala (`view.seats`), como no lobby: o servidor só recomeça com 3 a 4. */
+  connected: number;
   onRestart: () => void;
 }
 
@@ -58,7 +60,8 @@ interface Props {
  * O fim da partida (porte do `renderEnd` do protótipo): véu sobre a mesa, "X venceu!", cada jogador com os pontos e de
  * onde vieram (casas, vilas, selos, cordéis de Ponto revelados), vitórias da noite e "jogar de novo" só pro anfitrião.
  */
-export const EndPanel = memo(function EndPanel({ game: g, me, nameOf, host, onRestart }: Props) {
+export const EndPanel = memo(function EndPanel({ game: g, me, nameOf, host, connected, onRestart }: Props) {
+  const enough = connected >= MANDACARU_MIN_PLAYERS && connected <= MANDACARU_MAX_PLAYERS;
   const head = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     head.current?.focus({ preventScroll: true });
@@ -112,9 +115,16 @@ export const EndPanel = memo(function EndPanel({ game: g, me, nameOf, host, onRe
           })}
         </div>
         {host ? (
-          <button type="button" className="mc-btn grande" onClick={onRestart}>
-            jogar de novo
-          </button>
+          <>
+            <button type="button" className="mc-btn grande" disabled={!enough} onClick={onRestart}>
+              jogar de novo
+            </button>
+            {!enough && (
+              <p className="mc-hostwait">
+                precisa de {MANDACARU_MIN_PLAYERS} a {MANDACARU_MAX_PLAYERS} pessoas conectadas (tem {connected})
+              </p>
+            )}
+          </>
         ) : (
           <p className="mc-hostwait">esperando o anfitrião começar outra…</p>
         )}

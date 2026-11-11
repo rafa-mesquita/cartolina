@@ -37,6 +37,29 @@ describe('useMandacaruSounds', () => {
     expect(tocados()).toEqual([]);
   });
 
+  it('vindo do lobby: a primeira visão toca turn se a vez já é sua (e só isso)', () => {
+    const mine = com(base, { turn: me, carcara: (base.game.carcara + 1) % 19 });
+    renderHook(() => useMandacaruSounds(mine, 'joined', 'lobby'));
+    espera();
+    expect(tocados()).toEqual(['turn']);
+  });
+
+  it('vindo do lobby, sem ser a sua vez: nada', () => {
+    renderHook(() => useMandacaruSounds(base, 'joined', 'lobby'));
+    espera();
+    expect(tocados()).toEqual([]);
+  });
+
+  it('o fromPhase só vale na primeira visão', () => {
+    const other = base.game.players.find((p) => p !== me && p !== turn)!;
+    const { rerender } = renderHook((p: { view: MandacaruRoomView }) => useMandacaruSounds(p.view, 'joined', 'lobby'), {
+      initialProps: { view: base },
+    });
+    rerender({ view: com(base, { turn: other }) });
+    espera();
+    expect(tocados()).toEqual([]);
+  });
+
   it('mesma visão de novo não toca nada', () => {
     const { rerender } = monta(base);
     rerender({ view: { ...base } });

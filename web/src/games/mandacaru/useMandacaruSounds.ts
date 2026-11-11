@@ -1,4 +1,4 @@
-import type { MandacaruLogEntry, MandacaruRoomView, MandacaruView } from '@cartolina/shared';
+import type { MandacaruLogEntry, MandacaruPhase, MandacaruRoomView, MandacaruView } from '@cartolina/shared';
 import { useEffect, useRef } from 'react';
 import type { ConnStatus } from '../../net/connection';
 import { freshEntries } from './Diary';
@@ -39,7 +39,7 @@ function seenOf(g: MandacaruView, you: string | null): Seen {
 /**
  * Sons pelo que mudou na mesa do Mandacaru (porte do `changed()` do protótipo), no molde do `useCoupSounds`.
  *
- * Uso (a `MandacaruTable` chama uma vez): `useMandacaruSounds(view, status)`. Compara cada visão nova com a anterior e
+ * Uso (a `MandacaruTable` chama uma vez): `useMandacaruSounds(view, status, fromPhase)`. Compara cada visão nova com a anterior e
  * toca, espaçando 160 ms os sons que saem juntos, nesta ordem:
  * - `dice`: linha nova de dados no diário;
  * - `build`: estrada, casa ou vila nova (de qualquer um);
@@ -50,10 +50,13 @@ function seenOf(g: MandacaruView, you: string | null): Seen {
  *
  * Quem assiste não ouve `card` nem `turn`. Nada toca na primeira visão (só vira a base), nem na primeira visão depois
  * de uma reconexão (o que aconteceu na queda não toca atrasado). Partida nova (`match` mudou) também só vira base,
- * fora o `turn` se a primeira vez for sua.
+ * fora o `turn` se a primeira vez for sua. A exceção da primeira visão: vindo do lobby (`fromPhase === 'lobby'`, a mesa
+ * monta já na primeira visão da partida), toca `turn` se a vez já é sua.
  */
-export function useMandacaruSounds(view: MandacaruRoomView, status: ConnStatus): void {
+export function useMandacaruSounds(view: MandacaruRoomView, status: ConnStatus, fromPhase?: MandacaruPhase): void {
   const seen = useRef<Seen | null>(null);
+  // só a fase de quando a mesa montou importa
+  const from = useRef(fromPhase);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const { game, you } = view;
 
@@ -69,7 +72,10 @@ export function useMandacaruSounds(view: MandacaruRoomView, status: ConnStatus):
     const now = seenOf(game, you);
     const prev = seen.current;
     seen.current = now;
-    if (prev === null) return;
+    if (prev === null) {
+      if (from.current === 'lobby' && now.myTurn) playMandacaruSound('turn');
+      return;
+    }
     if (rebase.current) {
       rebase.current = false;
       return;

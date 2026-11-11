@@ -109,6 +109,26 @@ describe('Mandacaru: troca', () => {
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'close_deal', with: a, source: 'offer', id: 5 });
   });
 
+  it('"trocar a oferta" fica apagado com os mesmos números da oferta aberta', () => {
+    const base = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(base);
+    const room = mainWith(base, { [turn]: res(2, 0, 0, 0, 0) }, (s) => ({
+      ...s,
+      tradeSeq: 5,
+      offer: { id: 5, give: res(2, 0, 0, 0, 0), want: res(0, 0, 0, 0, 1), accepted: [], rejected: [] },
+    }));
+    const c = conn();
+    mesa(viewOf(room, turn), c);
+    click(/trocar/);
+    expect(btn('trocar a oferta').disabled).toBe(true);
+    click('trocar a oferta');
+    expect(c.sendAction).not.toHaveBeenCalled();
+    click('mais pedra que você quer');
+    expect(btn('trocar a oferta').disabled).toBe(false);
+    click('menos pedra que você quer');
+    expect(btn('trocar a oferta').disabled).toBe(true);
+  });
+
   it('troca fechada: a janela fecha e o aviso diz o que você deu', () => {
     const base = afterSetup(mandacaruRoom(3, 1));
     const turn = turnOf(base);
@@ -237,6 +257,27 @@ describe('Mandacaru: feira', () => {
     click('trocar na feira');
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'feira', give: 'wood', want: 'stone', count: 2 });
   });
+
+  it('se a trava segura a troca na feira, a escolha fica', () => {
+    const base = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(base);
+    const v = viewOf(mainWith(base, { [turn]: res(9, 0, 0, 0, 0) }), turn);
+    const c = conn();
+    mesa(v, c);
+    click('feira');
+    click('dar madeira');
+    click('querer pedra');
+    click('trocar na feira');
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    // mandou: o "quer" zera
+    expect(btn('querer pedra').getAttribute('aria-pressed')).toBe('false');
+    click('querer barro');
+    click('trocar na feira');
+    // travado: não mandou e a escolha continua
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    expect(btn('querer barro').getAttribute('aria-pressed')).toBe('true');
+    expect(btn('trocar na feira').disabled).toBe(false);
+  });
 });
 
 describe('Mandacaru: cordéis com escolha', () => {
@@ -350,6 +391,17 @@ describe('Mandacaru: fim', () => {
     expect(screen.getByRole('dialog', { name: 'Você venceu!' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'jogar de novo' })).toBeNull();
     expect(screen.getByText(/esperando o anfitrião/)).toBeTruthy();
+  });
+
+  it('"jogar de novo" apagado com menos de 3 conectados, com o motivo', () => {
+    const v = viewOf(overRoom(), 'p0');
+    const off = { ...v, seats: v.seats.map((s) => (s.id === 'p2' ? { ...s, connected: false } : s)) };
+    const c = conn();
+    mesa(off, c);
+    expect(btn('jogar de novo').disabled).toBe(true);
+    click('jogar de novo');
+    expect(c.sendAction).not.toHaveBeenCalled();
+    expect(screen.getByText(/precisa de 3 a 4 pessoas conectadas \(tem 2\)/)).toBeTruthy();
   });
 });
 

@@ -14,6 +14,8 @@ import './mandacaru.css';
 const BotControls = import.meta.env.DEV ? lazy(() => import('../../dev/BotControls')) : null;
 
 const TOAST_MS = 3200;
+/** "começar" destrava sozinho depois disso (ms), se nem a mesa nem uma recusa chegarem (o mesmo teto da mesa). */
+const START_UNLOCK_MS = 4000;
 
 /** Lobby do Mandacaru (estilo D, caatinga ao sol): quem está na mesa, como jogar e começar. */
 export function MandacaruLobby({ view, conn }: { view: MandacaruRoomView; conn: GameConn }) {
@@ -32,11 +34,26 @@ export function MandacaruLobby({ view, conn }: { view: MandacaruRoomView; conn: 
   useEffect(() => installMandacaruAudioUnlock(), []);
   const link = roomLink(view.code);
 
+  // "começar" trava depois do clique (clique duplo = um start só): a mesa troca de tela quando a fase muda; uma recusa
+  // ou o teto de alguns segundos destravam.
+  const [starting, setStarting] = useState(false);
+  useEffect(() => {
+    if (!starting) return undefined;
+    const t = setTimeout(() => setStarting(false), START_UNLOCK_MS);
+    return () => clearTimeout(t);
+  }, [starting]);
+  function start() {
+    if (starting) return;
+    setStarting(true);
+    conn.sendAction({ type: 'start' });
+  }
+
   // Recusas do servidor (que não são de entrada na sala) viram aviso na tela.
   useEffect(
     () =>
       conn.onError((code, message) => {
         if (JOIN_ERRORS.has(code)) return;
+        setStarting(false);
         say(message);
         playMandacaruSound('error');
       }),
@@ -105,7 +122,7 @@ export function MandacaruLobby({ view, conn }: { view: MandacaruRoomView; conn: 
         </section>
         <section className="mc-sheet">
           {host ? (
-            <button className="mc-btn grande" type="button" disabled={!enough} onClick={() => conn.sendAction({ type: 'start' })}>
+            <button className="mc-btn grande" type="button" disabled={!enough || starting} onClick={start}>
               começar
             </button>
           ) : (

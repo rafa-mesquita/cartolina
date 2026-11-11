@@ -6,7 +6,8 @@ import { Stepper, Window, none } from './widgets';
 
 interface Props {
   game: MandacaruView;
-  send: (a: MandacaruAction) => void;
+  /** Devolve se mandou (`false` = a trava contra envio duplo segurou). */
+  send: (a: MandacaruAction) => boolean;
   onClose: () => void;
 }
 
@@ -93,8 +94,8 @@ export const FeiraPanel = memo(function FeiraPanel({ game: g, send, onClose }: P
           disabled={!ready}
           onClick={() => {
             if (!give || !want) return;
-            send({ type: 'feira', give, want, count });
-            setPick({ give, want: null, count: 1 });
+            // segurada pela trava, a escolha fica pra tentar de novo
+            if (send({ type: 'feira', give, want, count })) setPick({ give, want: null, count: 1 });
           }}
         >
           trocar na feira

@@ -1,4 +1,4 @@
-import { isCoupRoomView, isDixitRoomView, isItoRoomView, isKittensRoomView, isMandacaruRoomView, isPicturesRoomView, type DixitPhase, type RoomView } from '@cartolina/shared';
+import { isCoupRoomView, isDixitRoomView, isItoRoomView, isKittensRoomView, isMandacaruRoomView, isPicturesRoomView, type DixitPhase, type MandacaruPhase, type RoomView } from '@cartolina/shared';
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import { DixitLobby } from '../games/dixit/DixitLobby';
 import { DixitTable } from '../games/dixit/DixitTable';
@@ -31,6 +31,12 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
   const lastDixitPhase = useRef<DixitPhase | undefined>(dixitPhase);
   useEffect(() => {
     lastDixitPhase.current = dixitPhase;
+  });
+  // O mesmo pro Mandacaru: vindo do lobby, quem joga primeiro ouve "sua vez" já na primeira visão da mesa.
+  const mandacaruPhase = isMandacaruRoomView(view) ? view.game.phase : undefined;
+  const lastMandacaruPhase = useRef<MandacaruPhase | undefined>(mandacaruPhase);
+  useEffect(() => {
+    lastMandacaruPhase.current = mandacaruPhase;
   });
   // Celular em pé (tela estreita): o DITU usa a mesa em pé.
   const layout = useLayout();
@@ -90,7 +96,7 @@ export function Game({ conn, snap, view }: { conn: GameConn; snap: ConnSnapshot;
           {view.game.phase === 'lobby' ? (
             <MandacaruLobby view={view} conn={conn} />
           ) : (
-            <MandacaruTable view={view} conn={conn} serverOffset={snap.serverOffset} status={snap.status} />
+            <MandacaruTable view={view} conn={conn} serverOffset={snap.serverOffset} status={snap.status} fromPhase={lastMandacaruPhase.current} />
           )}
         </Suspense>
       </>

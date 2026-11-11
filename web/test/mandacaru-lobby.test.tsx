@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { MandacaruLobby } from '../src/games/mandacaru/MandacaruLobby';
 import type { ConnSnapshot, GameConn } from '../src/net/connection';
 import { Game } from '../src/screens/Game';
+import { mandacaruStateOf } from '@cartolina/shared';
+import { playMandacaruSound } from '../src/games/mandacaru/sounds';
 import { mandacaruLobbyRoom, mandacaruRoom, viewOf } from './mandacaru-fixtures';
 
 vi.mock('../src/games/mandacaru/sounds', () => ({
@@ -40,6 +42,25 @@ describe('lobby do Mandacaru', () => {
     expect(screen.queryByText(/precisa de 3 a 4 pessoas/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'começar' }));
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'start' });
+  });
+
+  it('"começar" trava depois do clique (clique duplo manda um start só) e destrava com recusa', () => {
+    let notify: (code: string, message: string) => void = () => {};
+    const c = conn();
+    c.onError = vi.fn<GameConn['onError']>((fn) => {
+      notify = fn;
+      return () => {};
+    });
+    render(<MandacaruLobby view={viewOf(mandacaruLobbyRoom(3), 'p0')} conn={c} />);
+    const start = screen.getByRole('button', { name: 'começar' }) as HTMLButtonElement;
+    fireEvent.click(start);
+    fireEvent.click(start);
+    expect(c.sendAction).toHaveBeenCalledTimes(1);
+    expect(start.disabled).toBe(true);
+    act(() => notify('need_3_players', 'Precisa de 3.'));
+    expect(start.disabled).toBe(false);
+    fireEvent.click(start);
+    expect(c.sendAction).toHaveBeenCalledTimes(2);
   });
 
   it('quem não é anfitrião não vê "começar"', () => {
@@ -118,5 +139,28 @@ describe('rota da sala de Mandacaru', () => {
     rerender(<Game conn={conn()} snap={snap(playing)} view={playing} />);
     expect(await screen.findByRole('button', { name: /rolar os dados/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'começar' })).toBeNull();
+  });
+
+  it('vindo do lobby, quem joga primeiro ouve "sua vez" já na primeira visão da mesa', async () => {
+    const started = mandacaruRoom(3, 1);
+    const first = mandacaruStateOf(started)!.turn!;
+    const lobby = viewOf(mandacaruLobbyRoom(3), first);
+    const { rerender } = render(<Game conn={conn()} snap={snap(lobby)} view={lobby} />);
+    await screen.findByRole('heading', { name: 'na mesa' });
+    vi.mocked(playMandacaruSound).mockClear();
+    const playing = viewOf(started, first);
+    rerender(<Game conn={conn()} snap={snap(playing)} view={playing} />);
+    await screen.findByRole('button', { name: /rolar os dados/ });
+    expect(vi.mocked(playMandacaruSound).mock.calls.map((x) => x[0])).toContain('turn');
+  });
+
+  it('abrindo a mesa no meio da partida (sem lobby antes), a vez não toca', async () => {
+    const started = mandacaruRoom(3, 1);
+    const first = mandacaruStateOf(started)!.turn!;
+    vi.mocked(playMandacaruSound).mockClear();
+    const playing = viewOf(started, first);
+    render(<Game conn={conn()} snap={snap(playing)} view={playing} />);
+    await screen.findByRole('button', { name: /rolar os dados/ });
+    expect(vi.mocked(playMandacaruSound).mock.calls.map((x) => x[0])).not.toContain('turn');
   });
 });

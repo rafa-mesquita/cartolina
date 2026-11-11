@@ -45,6 +45,9 @@ export const TradePanel = memo(function TradePanel({ game: g, me, nameOf, seed, 
   const give = capped(terms.give);
   const want = terms.want;
   const valid = total(give) > 0 && total(want) > 0;
+  // "trocar a oferta" com os mesmos números só apagaria os aceites (oferta nova, id novo)
+  const same = (a: Resources, b: Resources) => RES_ORDER.every((r) => a[r] === b[r]);
+  const unchanged = mine && g.offer !== null && same(give, g.offer.give) && same(want, g.offer.want);
   const stepTo = (side: 'give' | 'want', r: Resource, d: 1 | -1) =>
     setTerms((t) => {
       const next = { give: capped(t.give), want: { ...t.want } };
@@ -94,7 +97,8 @@ export const TradePanel = memo(function TradePanel({ game: g, me, nameOf, seed, 
         <button
           type="button"
           className="mc-btn"
-          disabled={!valid}
+          disabled={!valid || unchanged}
+          title={unchanged ? 'é a oferta que já está na mesa' : undefined}
           onClick={() => send({ type: mine ? 'offer' : 'propose', give: { ...give }, want: { ...want } })}
         >
           {mine ? (g.offer ? 'trocar a oferta' : 'mandar pra mesa') : 'mandar proposta'}
