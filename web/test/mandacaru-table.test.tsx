@@ -337,6 +337,8 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
     const soma = container.querySelector('.mc-soma.on')!;
     expect(soma.textContent).toContain(String(dice[0] + dice[1]));
     expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(2);
+    // a mesa liga os sons: dados rolados tocam
+    expect(playMandacaruSound).toHaveBeenCalledWith('dice');
     rtlAct(() => {
       vi.advanceTimersByTime(1100);
     });

@@ -20,6 +20,7 @@ import { installMandacaruAudioUnlock, playMandacaruSound } from './sounds';
 import { nameFrom, resList } from './texts';
 import { TopBar } from './TopBar';
 import { TradePanel, tradeSeed, type TradeTerms } from './TradePanel';
+import { useMandacaruSounds } from './useMandacaruSounds';
 import './mandacaru.css';
 
 const TOAST_MS = 2600;
@@ -81,6 +82,7 @@ export function MandacaruTable({ view, conn, serverOffset, status }: Props) {
   const { scale, width } = useStageFit();
   const { toast, say } = useToast(TOAST_MS);
   useEffect(() => installMandacaruAudioUnlock(), []);
+  useMandacaruSounds(view, status);
 
   const turnLeft = useTurnClock(g.turnEndsAt, serverOffset);
   const discardLeft = useTurnClock(g.phase === 'discard' ? g.discardEndsAt : null, serverOffset);
