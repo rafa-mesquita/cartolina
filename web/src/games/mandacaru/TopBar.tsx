@@ -1,5 +1,5 @@
 import type { MandacaruView } from '@cartolina/shared';
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { SoundPill } from '../dixit/DixitTopBar';
 import { DiceFace, MandacaruLogo } from './art';
 import { formatClock } from './clock';
@@ -30,20 +30,21 @@ interface Props {
   nameOf: NameOf;
   /** Ms que faltam no relógio da fase (descarte na fase `discard`, turno nas outras); `null` = parado. */
   left: number | null;
-  /** Muda a cada rolagem nova (reinicia a chacoalhada dos dados). */
+  /** Muda a cada rolagem nova (reinicia a rolagem dos dados). */
   rollId: number;
+  /** Os dados estão rolando agora (faces sorteadas até pousar no resultado); falso com movimento reduzido. */
+  rolling: boolean;
   /** Abre/fecha a folha de regras. */
   onRules: () => void;
   rulesOpen: boolean;
 }
 
 /** Topo: logo, de quem é a vez, relógio (vermelho no último minuto, "parado" sem prazo), placar da noite, regras, som e dados. */
-export const TopBar = memo(function TopBar({ game: g, nameOf, left, rollId, onRules, rulesOpen }: Props) {
+export const TopBar = memo(function TopBar({ game: g, nameOf, left, rollId, rolling, onRules, rulesOpen }: Props) {
   const discard = g.phase === 'discard';
   const clock = left === null ? 'parado' : formatClock(left);
   const low = left !== null && left < LOW_MS && !discard;
   const score = winners(g.wins).map((p) => `${nameOf(p)} ${g.wins[p]}`);
-  const dice = g.dice ?? [5, 2];
   return (
     <header className="mc-top">
       <div className="mc-logo">
@@ -69,14 +70,37 @@ export const TopBar = memo(function TopBar({ game: g, nameOf, left, rollId, onRu
           regras
         </button>
         <SoundPill />
-        <div className="mc-dados" aria-label={g.dice ? `dados: ${g.dice[0]} e ${g.dice[1]}` : 'dados'} role="img">
-          {dice.map((n, i) => (
-            <svg key={`${rollId}-${i}`} className={`mc-dado${rollId > 0 ? ' rolando' : ''}${g.dice ? '' : ' apagado'}`} viewBox="0 0 100 100" aria-hidden="true">
-              <DiceFace n={n} />
-            </svg>
-          ))}
-        </div>
+        <Dice dice={g.dice} rollId={rollId} rolling={rolling} />
       </div>
     </header>
   );
 });
+
+/** Troca de face enquanto rola (ms). */
+const FACE_MS = 75;
+const randomFace = () => 1 + Math.floor(Math.random() * 6);
+
+/**
+ * Os dois dados do topo. Rolando: cambalhotas (CSS) com faces sorteadas a cada 75 ms; parou = o resultado de verdade,
+ * com um quiquezinho. Sem rolagem nenhuma ainda (`rollId` 0), parados; sem dados na partida, apagados.
+ */
+function Dice({ dice, rollId, rolling }: { dice: [number, number] | null; rollId: number; rolling: boolean }) {
+  const [faces, setFaces] = useState<[number, number]>(() => [randomFace(), randomFace()]);
+  useEffect(() => {
+    if (!rolling) return undefined;
+    const t = setInterval(() => setFaces([randomFace(), randomFace()]), FACE_MS);
+    return () => clearInterval(t);
+  }, [rolling, rollId]);
+  const shown = rolling ? faces : (dice ?? [5, 2]);
+  const fx = rollId > 0 ? (rolling ? ' rolando' : ' pousou') : '';
+  // o nome é sempre o resultado de verdade (as faces que giram são só enfeite)
+  return (
+    <div className="mc-dados" aria-label={dice ? `dados: ${dice[0]} e ${dice[1]}` : 'dados'} role="img">
+      {shown.map((n, i) => (
+        <svg key={`${rollId}-${i}`} className={`mc-dado${fx}${dice ? '' : ' apagado'}`} viewBox="0 0 100 100" aria-hidden="true">
+          <DiceFace n={n} />
+        </svg>
+      ))}
+    </div>
+  );
+}

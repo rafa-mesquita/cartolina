@@ -6,9 +6,9 @@
 import { mandacaruGeometry, type CordelKind, type HexTile, type PortKind, type Resource, type Terrain } from '@cartolina/shared';
 import type { ReactNode } from 'react';
 import { PIECE_ART, PIECE_RATIO, RES_ART, TERRAIN_ART, cordelArtUrl } from './assets';
+import { RES_NAME } from './names';
 
 export const R = 58;
-const SQ3 = Math.sqrt(3);
 export const INK = '#4a2e1f';
 export const LINE = '#5b3a29';
 export const RED = '#b8321f';
@@ -16,7 +16,12 @@ export const RED = '#b8321f';
 export const PLAYER_TINTS = ['#b8321f', '#2f6fa8', '#7b4a9a', '#f4efe3'] as const;
 
 export const FILL: Record<Terrain, string> = { forest: '#8f9c6c', pasture: '#d4b878', fields: '#9db35a', hills: '#c8643b', mountains: '#aaa49a', desert: '#e8cd96' };
-export const RIM: Record<Terrain, string> = { forest: '#67724a', pasture: '#a98c4f', fields: '#728a35', hills: '#963f22', mountains: '#7c766c', desert: '#bf9f62' };
+/**
+ * Aro grosso de cada terreno, numa cor forte por recurso (bem diferentes entre si e das cores dos jogadores: vermelho,
+ * azul, roxo e branco): madeira verde-escuro, barro laranja-tijolo, couro caramelo, feijão verde-limão, pedra
+ * cinza-azulado; o rio seco fica na cor de areia.
+ */
+export const RIM: Record<Terrain, string> = { forest: '#2f6b2c', hills: '#e0701c', pasture: '#9b6230', fields: '#a5c83a', mountains: '#6d8496', desert: '#e3cf9a' };
 
 export type IconKind = 'catingueira' | 'bode' | 'feijao' | 'pote' | 'lajedo' | 'rachado' | 'causo' | 'chapeu' | 'igreja' | 'enxada' | 'chuva' | 'saco';
 export const TERRAIN_ICON: Record<Terrain, IconKind> = { forest: 'catingueira', pasture: 'bode', fields: 'feijao', hills: 'pote', mountains: 'lajedo', desert: 'rachado' };
@@ -96,6 +101,15 @@ export function BoardDefs() {
       <clipPath id="mc-hexclip" clipPathUnits="objectBoundingBox">
         <path d={HEX_CLIP} />
       </clipPath>
+      {/* pintura do terreno mais clara e menos saturada: o selo, a ficha e as peças saltam por cima */}
+      <filter id="mc-claro" colorInterpolationFilters="sRGB">
+        <feColorMatrix type="saturate" values=".72" />
+        <feComponentTransfer>
+          <feFuncR type="linear" slope=".8" intercept=".2" />
+          <feFuncG type="linear" slope=".8" intercept=".19" />
+          <feFuncB type="linear" slope=".8" intercept=".16" />
+        </feComponentTransfer>
+      </filter>
       <linearGradient id="mc-sol" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stopColor="#fff" stopOpacity=".28" />
         <stop offset=".55" stopColor="#fff" stopOpacity="0" />
@@ -239,31 +253,47 @@ export function IconShape({ kind, s = STYLE }: { kind: IconKind; s?: IconStyle }
 export function SvgIcon({ kind, size = 40, s = STYLE, title }: { kind: IconKind; size?: number; s?: IconStyle; title?: string }) {
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} aria-hidden={title ? undefined : true} role={title ? 'img' : undefined} aria-label={title}>
+      {title && <title>{title}</title>}
       <IconShape kind={kind} s={s} />
     </svg>
   );
 }
 
-/** Imagem de arte do Flow no lugar de um ícone (decorativa: o nome vem do texto em volta). */
-function ArtImg({ src, size, width = size, className }: { src: string; size: number; width?: number; className: string }) {
+/**
+ * Imagem de arte do Flow no lugar de um ícone. Sem `label`, decorativa (o nome vem do texto em volta); com `label`, o
+ * nome vira a dica do mouse (`title`) e o nome pro leitor de tela (`alt`).
+ */
+function ArtImg({ src, size, width = size, className, label }: { src: string; size: number; width?: number; className: string; label?: string }) {
+  if (label) return <img className={className} src={src} width={width} height={size} alt={label} title={label} draggable={false} />;
   return <img className={className} src={src} width={width} height={size} alt="" aria-hidden="true" draggable={false} />;
 }
 
-/** Ícone de um recurso (madeira, barro, couro, feijão, pedra): a arte do Flow se já existe (`RES_ART`), senão o desenho. */
+/**
+ * Ícone de um recurso (madeira, barro, couro, feijão, pedra): a arte do Flow se já existe (`RES_ART`), senão o desenho.
+ * Passar o mouse mostra o nome do recurso (e o leitor de tela lê o nome).
+ */
 export function ResIcon({ kind, size = 40, s = STYLE }: { kind: Resource; size?: number; s?: IconStyle }) {
   const src = RES_ART[kind];
+  const name = RES_NAME[kind];
   // os recursos são recortados rente e mais largos que altos: a caixa é mais larga, pra não encolherem
-  if (src) return <ArtImg src={src} size={size} width={Math.round(size * 1.25)} className="mc-art-res" />;
-  return <SvgIcon kind={RES_ICON[kind]} size={size} s={s} />;
+  if (src) return <ArtImg src={src} size={size} width={Math.round(size * 1.25)} className="mc-art-res" label={name} />;
+  return <SvgIcon kind={RES_ICON[kind]} size={size} s={s} title={name} />;
 }
 
-/** Um recurso dentro de um SVG, na caixa (x, y, size): a arte se já existe, senão o desenho. */
+/** Um recurso dentro de um SVG, na caixa (x, y, size): a arte se já existe, senão o desenho; com o nome na dica do mouse. */
 export function ResShape({ kind, x, y, size }: { kind: Resource; x: number; y: number; size: number }) {
   const src = RES_ART[kind];
-  if (src) return <image href={src} x={x} y={y} width={size} height={size} preserveAspectRatio="xMidYMid meet" />;
+  const name = RES_NAME[kind];
   return (
-    <g transform={`translate(${x},${y}) scale(${size / 100})`}>
-      <IconShape kind={RES_ICON[kind]} />
+    <g role="img" aria-label={name}>
+      <title>{name}</title>
+      {src ? (
+        <image href={src} x={x} y={y} width={size} height={size} preserveAspectRatio="xMidYMid meet" />
+      ) : (
+        <g transform={`translate(${x},${y}) scale(${size / 100})`}>
+          <IconShape kind={RES_ICON[kind]} />
+        </g>
+      )}
     </g>
   );
 }
@@ -298,61 +328,78 @@ export function MandacaruLogo({ size = 46 }: { size?: number }) {
 /** Chance de um número sair (em 36): quantas bolinhas a ficha mostra. */
 const pipCount = (n: number) => 6 - Math.abs(7 - n);
 
-/** Lado da caixa da arte do terreno: a altura do hexágono de dentro (0,88 do raio). */
-const TILE_ART = 2 * R * 0.88;
+/** Tamanho do hexágono da pintura (fração do raio); entre ele e 0,98 fica o aro grosso na cor do recurso. */
+export const INNER = 0.8;
+/** Lado da caixa da arte do terreno: a altura do hexágono de dentro. */
+const TILE_ART = 2 * R * INNER;
 
 /**
- * Um terreno: peça com borda em relevo na cor do terreno, a arte do Flow recortada no hexágono (`mc-hexclip`, das
- * `BoardDefs`), luz por cima e contorno marrom fino. (cx, cy) em pixels.
+ * Um terreno: peça com aro grosso na cor forte do recurso (`RIM`), a arte do Flow recortada no hexágono
+ * (`mc-hexclip`, das `BoardDefs`) e clareada (`mc-claro`), luz por cima e contorno marrom. (cx, cy) em pixels.
  */
 export function Hex({ tile, cx, cy }: { tile: HexTile; cx: number; cy: number }) {
   const pts = corners(cx, cy);
-  const inner = hexPath(pts, 0.88, cx, cy - 2);
+  const inner = hexPath(pts, INNER, cx, cy - 1);
   return (
     <g data-terrain={tile.terrain}>
       <g filter="url(#mc-som)">
-        <path d={hexPath(pts, 0.97, cx, cy)} fill={RIM[tile.terrain]} stroke={LINE} strokeWidth="2.5" />
+        <path d={hexPath(pts, 0.98, cx, cy)} fill={RIM[tile.terrain]} stroke={LINE} strokeWidth="2.5" />
       </g>
+      {/* luzinha na beira do aro, pra ele parecer em relevo */}
+      <path d={hexPath(pts, 0.91, cx, cy)} fill="none" stroke="#fff" strokeOpacity=".22" strokeWidth="2" />
       <path d={inner} fill={FILL[tile.terrain]} />
       <image
         href={TERRAIN_ART[tile.terrain]}
         x={cx - TILE_ART / 2}
-        y={cy - 2 - TILE_ART / 2}
+        y={cy - 1 - TILE_ART / 2}
         width={TILE_ART}
         height={TILE_ART}
         preserveAspectRatio="xMidYMid slice"
         clipPath="url(#mc-hexclip)"
+        filter="url(#mc-claro)"
       />
       <path d={inner} fill="url(#mc-sol)" />
-      <path d={inner} fill="none" stroke={LINE} strokeWidth="1.6" strokeOpacity=".7" />
+      <path d={inner} fill="none" stroke={LINE} strokeWidth="2.2" />
     </g>
   );
 }
 
-/** Os terrenos de um anel de raio `radius` em volta do centro (coordenadas axiais). */
-const DIRS: [number, number][] = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
-function ring(radius: number): { q: number; r: number }[] {
-  const out: { q: number; r: number }[] = [];
-  let q = DIRS[4]![0] * radius;
-  let r = DIRS[4]![1] * radius;
-  for (let side = 0; side < 6; side++) {
-    for (let step = 0; step < radius; step++) {
-      out.push({ q, r });
-      q += DIRS[side]![0];
-      r += DIRS[side]![1];
-    }
-  }
-  return out;
+/** Raio do selo do recurso (unidades do tabuleiro; ~32 px no palco com o tabuleiro maior). */
+export const BADGE_R = 13.5;
+
+/**
+ * Selo do recurso que o terreno dá: disco creme com contorno marrom e a arte do recurso, no alto do hexágono (acima da
+ * ficha do número). O rio seco não tem. (cx, cy) = centro do terreno.
+ */
+export function ResBadge({ kind, cx, cy }: { kind: Resource; cx: number; cy: number }) {
+  const y = cy - 25;
+  const s = 22;
+  return (
+    <g data-selo={kind}>
+      <g filter="url(#mc-som)">
+        <circle cx={cx} cy={y} r={BADGE_R} fill="#fbf1dc" stroke={LINE} strokeWidth="2.4" />
+      </g>
+      <ResShape kind={kind} x={cx - s / 2} y={y - s / 2} size={s} />
+    </g>
+  );
 }
 
-/** O anel 3 (fora da ilha): terra rachada no lugar do mar. */
+/**
+ * Terra rachada em volta da ilha, rente à costa: cada terreno da ilha aumentado (`k`) e todos juntos fazem uma faixa
+ * fina que acompanha o recorte da costa (por baixo, uma faixa um tiquinho maior em marrom faz o contorno).
+ */
 export function Border() {
+  const geo = mandacaruGeometry();
+  const k = 1.62;
   return (
     <g>
-      {ring(3).map(({ q, r }) => {
-        const x = R * SQ3 * (q + r / 2);
-        const y = R * 1.5 * r;
-        return <path key={`${q},${r}`} d={hexPath(corners(x, y), 1.01, x, y)} fill="url(#mc-racha)" />;
+      {geo.hexes.map((h, i) => {
+        const p = at(h);
+        return <path key={`o${i}`} d={hexPath(corners(p.x, p.y), k + 0.06, p.x, p.y)} fill={LINE} />;
+      })}
+      {geo.hexes.map((h, i) => {
+        const p = at(h);
+        return <path key={`r${i}`} d={hexPath(corners(p.x, p.y), k, p.x, p.y)} fill="url(#mc-racha)" />;
       })}
     </g>
   );
@@ -363,17 +410,18 @@ export function NumberToken({ number, cx, cy }: { number: number; cx: number; cy
   const red = number === 6 || number === 8;
   const c = red ? RED : INK;
   const n = pipCount(number);
+  const y = cy + 12;
   return (
     <g>
       <g filter="url(#mc-som)">
-        <circle cx={cx} cy={cy + 10} r="21" fill="#fbf1dc" stroke={LINE} strokeWidth="2.5" />
+        <circle cx={cx} cy={y} r="21" fill="#fbf1dc" stroke={LINE} strokeWidth="2.5" />
       </g>
-      <circle cx={cx} cy={cy + 10} r="17" fill="none" stroke="#c8643b" strokeWidth="1.5" />
-      <text x={cx} y={cy + 17} textAnchor="middle" fontFamily="Bree Serif" fontSize="20" fill={c}>
+      <circle cx={cx} cy={y} r="17" fill="none" stroke="#c8643b" strokeWidth="1.5" />
+      <text x={cx} y={y + 7} textAnchor="middle" fontFamily="Bree Serif" fontSize="20" fill={c}>
         {number}
       </text>
       {Array.from({ length: n }, (_, i) => (
-        <circle key={i} cx={cx + (i - (n - 1) / 2) * 5} cy={cy + 25} r="1.8" fill={c} />
+        <circle key={i} cx={cx + (i - (n - 1) / 2) * 5} cy={y + 15} r="1.8" fill={c} />
       ))}
     </g>
   );

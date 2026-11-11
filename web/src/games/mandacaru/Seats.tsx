@@ -2,6 +2,7 @@ import type { MandacaruView, SeatView } from '@cartolina/shared';
 import { memo } from 'react';
 import { House, PLAYER_TINTS, ResIcon, SvgIcon } from './art';
 import { formatClock } from './clock';
+import { CostBox } from './Costs';
 import { RES_NAME, RES_ORDER } from './names';
 import type { NameOf } from './texts';
 
@@ -20,7 +21,8 @@ interface Props {
 
 /**
  * Coluna da esquerda: os jogadores na ordem da partida (casinha na cor, nome, cartas, cordéis, Vaqueiros, vitórias da
- * noite, selos de maior estrada/comitiva, pontos e, de quem está na vez, o relógio), e embaixo o banco e o monte.
+ * noite, selos de maior estrada/comitiva, pontos e, de quem está na vez, o relógio), embaixo o banco e o monte e, por
+ * último, o "quanto custa".
  */
 export const Seats = memo(function Seats({ game: g, roomSeats, you, nameOf, turnLeft }: Props) {
   return (
@@ -83,6 +85,7 @@ export const Seats = memo(function Seats({ game: g, roomSeats, you, nameOf, turn
           📜 monte de cordel: <b>{g.deckSize}</b>
         </div>
       </div>
+      <CostBox />
     </aside>
   );
 });

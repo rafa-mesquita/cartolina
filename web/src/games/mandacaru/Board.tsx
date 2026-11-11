@@ -1,6 +1,6 @@
-import { mandacaruGeometry, type BoardLayout, type Building, type MandacaruView } from '@cartolina/shared';
+import { TERRAIN_RESOURCE, mandacaruGeometry, type BoardLayout, type Building, type MandacaruView } from '@cartolina/shared';
 import { memo, type KeyboardEvent, type ReactNode } from 'react';
-import { BoardDefs, Border, Carcara, City, Hex, House, NumberToken, PLAYER_TINTS, Port, Road, at, corners, hexPath, portPlacement } from './art';
+import { BoardDefs, Border, Carcara, City, Hex, House, INNER, NumberToken, PLAYER_TINTS, Port, ResBadge, Road, at, corners, hexPath, portPlacement } from './art';
 
 /** Peça escolhida pra construir na fase principal (os lugares dela pulsam). */
 export type BuildMode = 'road' | 'house' | 'city';
@@ -49,10 +49,13 @@ export function spotAction(g: MandacaruView, kind: 'v' | 'e' | 'c' | 'h', n: num
   return { type: 'move_carcara', hex: n };
 }
 
-/** A caixa do desenho (centrada; igual ao protótipo). */
-const VIEWBOX = '-356 -324 712 648';
+/**
+ * A caixa do desenho: rente à ilha, à faixa de terra rachada e às feiras (as barracas de cima e os selos de baixo são o
+ * que vai mais longe), pra o tabuleiro ocupar o máximo do meio da mesa.
+ */
+const VIEWBOX = '-310 -287 600 563';
 
-/** Terrenos, feiras e fichas: só muda quando o tabuleiro sorteado muda. */
+/** Terrenos, feiras, selos dos recursos e fichas: só muda quando o tabuleiro sorteado muda. */
 const StaticBoard = memo(function StaticBoard({ layout }: { layout: BoardLayout | null }) {
   const geo = mandacaruGeometry();
   if (!layout) return <Border />;
@@ -61,17 +64,27 @@ const StaticBoard = memo(function StaticBoard({ layout }: { layout: BoardLayout 
       <Border />
       {geo.hexes.map((h, i) => {
         const p = at(h);
-        return <Hex key={`h${i}`} tile={layout.hexes[i]!} cx={p.x} cy={p.y} />;
+        return (
+          <g key={`h${i}`} data-hex={i}>
+            <Hex tile={layout.hexes[i]!} cx={p.x} cy={p.y} />
+          </g>
+        );
       })}
       {geo.ports.map((_, i) => {
         const pl = portPlacement(i);
         return <Port key={`p${i}`} kind={layout.ports[i]!} x={pl.x} y={pl.y} a={pl.a} b={pl.b} />;
       })}
       {geo.hexes.map((h, i) => {
-        const n = layout.hexes[i]!.number;
-        if (n === null) return null;
+        const tile = layout.hexes[i]!;
+        const r = TERRAIN_RESOURCE[tile.terrain];
+        if (tile.number === null || r === null) return null;
         const p = at(h);
-        return <NumberToken key={`n${i}`} number={n} cx={p.x} cy={p.y} />;
+        return (
+          <g key={`n${i}`}>
+            <ResBadge kind={r} cx={p.x} cy={p.y} />
+            <NumberToken number={tile.number} cx={p.x} cy={p.y} />
+          </g>
+        );
       })}
     </g>
   );
@@ -111,7 +124,7 @@ export const Board = memo(function Board({ game: g, spots, onSpot }: Props) {
     const desert = g.layout.hexes[g.carcara]?.number === null;
     carcara = (
       <g pointerEvents="none">
-        <path d={hexPath(corners(c.x, c.y), 0.88, c.x, c.y - 2)} fill="#2a1c13" opacity=".3" />
+        <path d={hexPath(corners(c.x, c.y), INNER, c.x, c.y - 1)} fill="#2a1c13" opacity=".3" />
         {/* fora do rio seco, pousado em cima da ficha (o número continua à mostra) */}
         {desert ? <Carcara x={c.x} y={c.y - 4} k={1.1} /> : <Carcara x={c.x} y={c.y - 32} k={0.95} />}
       </g>
