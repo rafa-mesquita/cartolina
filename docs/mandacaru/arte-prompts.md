@@ -80,3 +80,9 @@ Pessoas com dignidade, de várias cores de pele (inclusive pessoas negras em des
 - **Ponto · Cisterna (point-3):** `A round white rainwater cistern next to a small rural house in the sertão, a Black woman proudly standing by it.`
 - **Ponto · Escola (point-4):** `A small rural schoolhouse in the sertão with children of different skin tones arriving with their notebooks, a teacher at the door.`
 - **Ponto · Casa de Farinha (point-5):** `A casa de farinha: a rustic shed where a family makes cassava flour, one roasting the flour in a large clay oven, others peeling cassava.`
+
+### Escolha do Rafa na rodada 3 (2026-11-12)
+
+Um coração em cada um dos 14 (recursos e cordéis). Convertidos com `npm run mandacaru:artes -- <pasta>`:
+`recursos/<wood|brick|leather|beans|stone>.webp` (recortados) e `cordeis/<vaqueiro|mutirao|chuva|atravessador|point-1..5>.webp`
+(cena cheia; point-1 Igrejinha, point-2 Açude, point-3 Cisterna, point-4 Escola, point-5 Casa de Farinha).
