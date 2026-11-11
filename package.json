@@ -16,7 +16,8 @@
     "pictures:fotos": "node scripts/pictures-fotos.mjs",
     "coup:cartas": "node scripts/coup-cartas.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "e2e": "playwright test -c e2e/playwright.config.ts"
+    "e2e": "playwright test -c e2e/playwright.config.ts",
+    "mandacaru:artes": "node scripts/mandacaru-artes.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
