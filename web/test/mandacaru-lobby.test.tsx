@@ -116,7 +116,7 @@ describe('rota da sala de Mandacaru', () => {
     expect(await screen.findByRole('button', { name: 'começar' })).toBeTruthy();
     const playing = viewOf(mandacaruRoom(3, 1), 'p0');
     rerender(<Game conn={conn()} snap={snap(playing)} view={playing} />);
-    expect(await screen.findByText(/mesa em construção/)).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /rolar os dados/ })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'começar' })).toBeNull();
   });
 });
