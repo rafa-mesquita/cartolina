@@ -1,6 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { LANDSCAPE_PHONE_QUERY, PHONE_LAYOUT_QUERY, useIsLandscapePhone, useLayout } from '../src/lib/device';
+import { phoneOrientationOf } from '../src/games/catalog';
+import {
+  LAND_LAYOUT_QUERY,
+  LANDSCAPE_PHONE_QUERY,
+  PHONE_LAYOUT_QUERY,
+  PHONE_QUERY,
+  useGameLayout,
+  useIsLandscapePhone,
+  useLayout,
+} from '../src/lib/device';
 import { RotateNotice } from '../src/screens/RotateNotice';
 
 function media(matching: string[]) {
@@ -12,6 +21,9 @@ function media(matching: string[]) {
 
 function LayoutProbe() {
   return <p>{useLayout()}</p>;
+}
+function GameLayoutProbe({ o }: { o: 'portrait' | 'landscape' }) {
+  return <p>{useGameLayout(o)}</p>;
 }
 function LandscapeProbe() {
   return <p>{useIsLandscapePhone() ? 'deitado' : 'ok'}</p>;
@@ -68,6 +80,47 @@ describe('layout do celular', () => {
     vi.stubGlobal('orientation', 90);
     render(<LandscapeProbe />);
     expect(screen.getByText('deitado')).toBeTruthy();
+  });
+
+  it('jogo de celular deitado: "land" com a tela deitada e baixa; o jogo de jogar em pé segue o useLayout', () => {
+    expect(LAND_LAYOUT_QUERY).toBe('(orientation: landscape) and (max-height: 500px)');
+    media([LAND_LAYOUT_QUERY]);
+    const a = render(<GameLayoutProbe o="landscape" />);
+    expect(screen.getByText('land')).toBeTruthy();
+    a.unmount();
+    const b = render(<GameLayoutProbe o="portrait" />);
+    expect(screen.getByText('desktop')).toBeTruthy();
+    b.unmount();
+    media([PHONE_LAYOUT_QUERY]);
+    render(<GameLayoutProbe o="landscape" />);
+    expect(screen.getByText('phone')).toBeTruthy();
+  });
+
+  it('teclado aberto com o celular em pé não vira mesa deitada', () => {
+    media([LAND_LAYOUT_QUERY, PHONE_LAYOUT_QUERY]);
+    vi.stubGlobal('screen', { orientation: { type: 'portrait-primary', addEventListener: vi.fn(), removeEventListener: vi.fn() } });
+    render(<GameLayoutProbe o="landscape" />);
+    expect(screen.getByText('phone')).toBeTruthy();
+  });
+
+  it('o Tatubum é de jogar deitado; os outros, em pé', () => {
+    expect(phoneOrientationOf('kittens')).toBe('landscape');
+    for (const g of ['ito', 'coup', 'dixit', 'pictures', 'nada']) expect(phoneOrientationOf(g)).toBe('portrait');
+  });
+
+  it('jogo de jogar deitado: em pé pede pra deitar; deitado e no computador, nada', () => {
+    media([PHONE_QUERY, PHONE_LAYOUT_QUERY]);
+    const a = render(<RotateNotice orientation="landscape" />);
+    expect(screen.getByRole('alert').textContent).toContain('vira o celular deitado');
+    a.unmount();
+    media([LANDSCAPE_PHONE_QUERY, LAND_LAYOUT_QUERY, PHONE_QUERY]);
+    const b = render(<RotateNotice orientation="landscape" />);
+    expect(b.container.innerHTML).toBe('');
+    b.unmount();
+    // Janela estreita no computador (sem toque): não pede nada.
+    media([PHONE_LAYOUT_QUERY]);
+    const c = render(<RotateNotice orientation="landscape" />);
+    expect(c.container.innerHTML).toBe('');
   });
 
   it('aviso de virar o celular só aparece deitado', () => {

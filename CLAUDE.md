@@ -126,7 +126,8 @@ As cartas do Diquisti (191 até agora) e as fotos do Retratim são geradas no **
 
 ## Versão de celular
 
-- **Detecção:** `web/src/lib/device.ts`. `useLayout()` dá `'phone'` até 640px; `useIsPhone()` detecta aparelho de toque; celular deitado mostra "vira o celular em pé".
+- **Detecção:** `web/src/lib/device.ts`. `useLayout()` dá `'phone'` até 640px; `useIsPhone()` detecta aparelho de toque.
+- **Em pé ou deitado:** `phoneOrientation` no catálogo (padrão em pé). Jogo em pé com o celular deitado mostra "vira o celular em pé"; o **Tatubum é deitado** (2026-11-12): em pé mostra "vira o celular deitado", e deitado a mesa usa o layout `'land'` (`useGameLayout`, classe `kt-land`, seta ◀ na direita abre o diário). Testar numa janela de 844×390 (não precisa de toque). E2E com `newLandscapePlayer(browser)`.
 - **Quais jogos:** `mobile: true` em `web/src/games/catalog.ts` libera o jogo no celular. Sem isso, o celular vê "esse jogo por enquanto é pra jogar no computador 💻" e nenhuma conexão é aberta.
 - **Mesa do celular do DITU:** fica em `web/src/table/phone/`, separada da mesa do computador (`web/src/table/engine.ts`). Mesa mista funciona: cada um vê o arrasto do outro no lugar certo. E2E com `newPhonePlayer(browser)` em `e2e/helpers.ts`.
 - **Diquisti e Retratim no celular:** ainda não. Não mude o `mobile` deles sem planejar junto com o Rafa.

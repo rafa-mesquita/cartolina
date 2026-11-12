@@ -56,3 +56,26 @@ export function useIsLandscapePhone(): boolean {
   // Girar o celular também muda a media query, então ela já re-renderiza; aqui só se confirma a orientação.
   return lowAndWide && (screenIsLandscape() ?? true);
 }
+
+/**
+ * Tela deitada e baixa (celular deitado, ou janela baixa no computador): a mesa deitada dos jogos de celular deitado
+ * (`phoneOrientation: 'landscape'` no catálogo). Não olha se é de toque, pra dar pra testar numa janela de computador.
+ */
+export const LAND_LAYOUT_QUERY = '(orientation: landscape) and (max-height: 500px)';
+
+/** Layout da mesa de um jogo: o de `useLayout()` ou, nos jogos de celular deitado, `'land'` com a tela deitada e baixa. */
+export type GameLayout = Layout | 'land';
+
+export function useGameLayout(orientation: 'portrait' | 'landscape'): GameLayout {
+  const lowAndWide = useMedia(LAND_LAYOUT_QUERY);
+  const base = useLayout();
+  // Teclado aberto com o celular em pé também deixa a tela "deitada e baixa": confirma pela orientação da tela.
+  return orientation === 'landscape' && lowAndWide && (screenIsLandscape() ?? true) ? 'land' : base;
+}
+
+/** Celular (aparelho de toque) em pé: nos jogos de celular deitado, pede pra deitar. */
+export function useIsPortraitPhone(): boolean {
+  const touch = useMedia(PHONE_QUERY);
+  const narrow = useMedia(PHONE_LAYOUT_QUERY);
+  return touch && narrow;
+}

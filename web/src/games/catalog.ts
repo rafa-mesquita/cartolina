@@ -15,6 +15,11 @@ export interface CatalogEntry {
   hasHistory: boolean;
   /** Joga no celular (aparelho de toque). Sem isso, o celular vê "abre no computador". Ausente = só no computador. */
   mobile?: boolean;
+  /**
+   * Como joga no celular: em pé (`'portrait'`, o padrão) ou deitado (`'landscape'`). O aviso de virar segue isso
+   * (pedido do Rafa, 2026-11-12: o Tatubum é deitado).
+   */
+  phoneOrientation?: 'portrait' | 'landscape';
 }
 
 // Nomes de vitrine: o ITO aparece como DITU, o Dixit como Diquisti, o Pictures como Retratim, o Exploding Kittens como
@@ -66,6 +71,7 @@ const TEXT: Record<GameId, Omit<CatalogEntry, 'id' | 'hasHistory' | 'players'>> 
     ],
     playable: true,
     mobile: true,
+    phoneOrientation: 'landscape',
   },
   coup: {
     name: 'Cúpi',
@@ -102,4 +108,9 @@ export const CATALOG: CatalogEntry[] = GAME_IDS.map((id) => ({
 
 export function catalogEntry(id: string): CatalogEntry | null {
   return isGameId(id) ? (CATALOG.find((g) => g.id === id) ?? null) : null;
+}
+
+/** Orientação do jogo no celular (jogo desconhecido: em pé). */
+export function phoneOrientationOf(id: string): 'portrait' | 'landscape' {
+  return catalogEntry(id)?.phoneOrientation ?? 'portrait';
 }
