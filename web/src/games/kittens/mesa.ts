@@ -152,7 +152,7 @@ const PAIR_DETAIL: Partial<Record<KittensCardKind, string>> = {
   peixe: '<b>PAR DE PEIXE-BETA</b>: só você vê as <b>3 cartas de cima</b> do monte e elas ficam à mostra pra você, como no Espiar. Você decide o destino da <b>segunda</b> (30 segundos; depois ela fica onde está): <b>fica com ela</b>, <b>deixa onde está</b> ou <b>manda pro fundo</b>.<br>Ficar com ela não é comprar: a sua vez continua e quem está cego continua cego. Se for Tatubum: Desarme ou explode.',
   onca: '<b>PAR DE ONÇA-PINTADA</b>: só você vê a <b>carta do topo e a do fundo</b> do monte, e <b>pega uma carta do descarte</b> pra sua mão, menos Desarme (30 segundos; depois vai uma ao acaso). Vale o descarte de antes da jogada. Todo mundo vê qual você pegou. A do topo fica à mostra pra você.',
   sapo: '<b>PAR DE SAPO</b>: só vale quando <b>você é o alvo</b> de um Favor, Mau-olhado, par de Tucano ou par de Latidores que está no ar. Aparece o botão <b>SAPO!</b>, e o par faz a magia <b>voltar pra quem mandou</b>. Ela fica mais 5 segundos no ar: quem recebeu pode refletir de volta com outro par, e qualquer um pode dar Nem vem!.<br>O par pode ser 2 Sapos, Sapo + Boto ou 2 Botos. Não vale no trio de Favor, no Tucano do 1x1, nem pra quem está cego. Na sua vez, o par de Sapo não faz nada.',
-  pombo: '<b>PAR DE POMBO-CORREIO</b>: até <b>5 cartas</b> sorteadas do descarte voltam pro monte. Uma delas, sorteada, vai pro <b>topo</b>; as outras vão pra lugares sorteados. Ninguém vê qual foi pro topo, nem você. Vale o descarte de antes da jogada. As espiadas de todo mundo somem, porque o monte mudou. A sua vez continua.',
+  pombo: '<b>PAR DE POMBO-CORREIO</b>: até <b>5 cartas</b> sorteadas do descarte voltam pro monte, e o <b>monte inteiro é embaralhado</b> com elas. Depois uma das 5, sorteada, vai pro <b>topo</b>. Ninguém vê qual foi pro topo, nem você. Vale o descarte de antes da jogada. As espiadas de todo mundo somem, porque o monte mudou. A sua vez continua.',
   boto: 'O <b>BOTO</b> é o bicho coringa e vale por qualquer bicho:<br><b>Boto + um bicho</b> = o par daquele bicho (Boto + Quati = PAR DE QUATI).<br><b>Dois Botos</b> = o par do bicho que você escolher.<br>Com carta de ação não forma par. No <b>trio</b> ele completa bichos iguais (2 Micos + Boto), e 3 Botos também é trio. Nos <b>4 bichos diferentes</b> conta como um bicho a mais (só um Boto). No par de Preguiça, um Boto na mão de alguém não conta como o bicho pedido.',
 };
 const DETAIL: Partial<Record<KittensCardKind, string>> = {
@@ -188,7 +188,7 @@ const ABOUT: Record<KittensCardKind, string> = {
   tucano: 'Par: sua vez acaba sem comprar e a próxima vez de um adversário é pulada (no 1x1, só a sua vez acaba).',
   peixe: 'Par: vê as 3 de cima e fica com a segunda, deixa ela onde está ou manda pro fundo. A vez continua.',
   onca: 'Par: vê o topo e o fundo do monte e pega uma carta do descarte (menos Desarme).',
-  pombo: 'Par: até 5 cartas do descarte voltam pro monte, uma no topo (ninguém vê qual). A vez continua.',
+  pombo: 'Par: até 5 cartas do descarte voltam pro monte, que é embaralhado; uma delas vai pro topo (ninguém vê qual). A vez continua.',
   sapo: 'Par, quando você é o alvo: a magia volta pra quem mandou (Favor, Mau-olhado, par de Tucano, par de Latidores). Vale 2 Sapos, Sapo + Boto ou 2 Botos.',
   latido: 'Todo mundo que tiver Latidor (na mão ou na frente) joga um Desarme ou explode, um de cada vez. Ninguém tem: fica na sua frente. Par: o adversário escolhido joga um Desarme ou explode.',
   olhado: 'Um adversário fica cego até comprar: a mão dele vira e ele joga às cegas.',

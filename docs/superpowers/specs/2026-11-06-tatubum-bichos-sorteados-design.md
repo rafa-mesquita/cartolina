@@ -44,8 +44,8 @@ Pedido do Rafa, 2026-11-06. Aprovado por ele na conversa. O desenho geral do jog
 
 - Até **5 cartas** (`KITTENS_POMBO_CARDS`) sorteadas do descarte de **antes da jogada** (sem as cartas do próprio par,
   como na Onça) voltam pro monte. Menos de 5 no descarte: vão todas. Descarte vazio: nada acontece.
-- Uma delas, sorteada, vai pro **topo**; as outras entram em posições sorteadas do monte. O resto do monte mantém a
-  ordem entre si.
+- O monte é **embaralhado inteiro** junto com elas (pedido do Rafa, 2026-11-12; antes elas entravam em posições sorteadas e o
+  resto do monte mantinha a ordem). Depois uma delas, sorteada, vai pro **topo**.
 - Ninguém sabe qual foi pro topo, nem quem jogou. O evento `mailed` é público e traz só os **tipos** das cartas, em ordem
   alfabética (o descarte já era público; o id de carta que está no monte não aparece pra ninguém).
 - O monte mudou de ordem: as espiadas de todos somem, como no Embaralhar (com o descarte vazio, ficam). A vez continua,

@@ -113,16 +113,15 @@ export const KITTENS_POMBO_CARDS = 5;
 
 /**
  * Par de Pombo-correio (pedido do Rafa, 2026-11-08): até `KITTENS_POMBO_CARDS` cartas sorteadas do descarte de antes da
- * jogada (`before`) voltam pro monte. Uma delas, sorteada, vai pro topo; as outras, pra posições sorteadas. Ninguém sabe
+ * jogada (`before`) voltam pro monte, que é embaralhado inteiro com elas (pedido do Rafa, 2026-11-12; antes o resto do
+ * monte mantinha a ordem). Depois uma delas, sorteada, vai pro topo. Ninguém sabe
  * qual foi pro topo, nem quem jogou. O monte mudou de ordem: as espiadas de todos somem, como no Embaralhar. A vez continua.
  */
 function pombo(s: KittensState, by: string, before: string[], rng: Rng): KittensState {
   const sent = shuffle(rng, before).slice(0, KITTENS_POMBO_CARDS);
   if (sent.length === 0) return logged(s, { t: 'mailed', by, kinds: [] });
   const [top, ...rest] = sent;
-  const draw = [...s.draw];
-  for (const card of rest) draw.splice(randomInt(rng, draw.length + 1), 0, card);
-  draw.push(top!);
+  const draw = [...shuffle(rng, [...s.draw, ...rest]), top!];
   const gone = new Set(sent);
   const next = clearPeeks({ ...s, draw, discard: s.discard.filter((c) => !gone.has(c)) });
   return logged(next, { t: 'mailed', by, kinds: sent.map((c) => kittensKindOf(c)!).sort() });
