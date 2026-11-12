@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { closePlayers, join, newPhonePlayer, newPlayer } from './helpers';
+import { closePlayers, join, newLandscapePlayer, newPhonePlayer, newPlayer } from './helpers';
 
 test.afterEach(closePlayers);
 
@@ -77,10 +77,21 @@ test('partida do Tatubum com dois navegadores', async ({ browser }) => {
   await expect(turn(first)).toContainText('SUA VEZ');
 });
 
-test('Tatubum no celular: entra pelo link, a mesa fica em pé e compra', async ({ browser }) => {
-  test.setTimeout(200_000);
+test('Tatubum no celular em pé: pede pra deitar', async ({ browser }) => {
   const a = await newPlayer(browser);
   const b = await newPhonePlayer(browser);
+  await a.goto('/');
+  await a.getByRole('link', { name: /Tatubum/ }).click();
+  await a.getByRole('button', { name: 'criar sala' }).click();
+  await expect(a).toHaveURL(/#\/sala\/[A-Z0-9]{4}$/);
+  await b.goto(a.url());
+  await expect(b.getByRole('alert')).toContainText('vira o celular deitado');
+});
+
+test('Tatubum no celular deitado: entra pelo link, a mesa fica deitada e compra', async ({ browser }) => {
+  test.setTimeout(200_000);
+  const a = await newPlayer(browser);
+  const b = await newLandscapePlayer(browser);
   await a.goto('/');
   await a.getByRole('link', { name: /Tatubum/ }).click();
   await a.getByRole('button', { name: 'criar sala' }).click();
@@ -92,15 +103,16 @@ test('Tatubum no celular: entra pelo link, a mesa fica em pé e compra', async (
   await expect(b.getByText('esperando o host começar…')).toBeVisible();
   await a.getByRole('button', { name: 'COMEÇAR' }).click();
 
-  // no celular: palco em pé (kt-phone), as 8 cartas, a tira do diário e o botão DIÁRIO
-  await expect(b.locator('.kt-mesa #stage.kt-phone')).toBeVisible();
-  await expect(a.locator('.kt-mesa #stage.kt-phone')).toHaveCount(0);
+  // no celular deitado: palco deitado (kt-land), as 8 cartas e a setinha da direita abrindo e fechando o diário
+  await expect(b.locator('.kt-mesa #stage.kt-land')).toBeVisible();
+  await expect(b.getByRole('alert')).toHaveCount(0);
+  await expect(a.locator('.kt-mesa #stage.kt-land')).toHaveCount(0);
   await expect(hand(b)).toHaveCount(8);
-  await expect(b.locator('.kt-mesa #lastline')).toBeVisible();
-  await b.locator('.kt-mesa #diary').tap();
-  await expect(b.locator('.kt-mesa #log')).toBeVisible();
-  await b.locator('.kt-mesa #log .kt-close').tap();
-  await expect(b.locator('.kt-mesa #log')).toBeHidden();
+  await expect(b.locator('.kt-mesa #lastline')).toBeHidden();
+  await b.locator('.kt-mesa #logtab').tap();
+  await expect(b.locator('.kt-mesa #stage.kt-logopen')).toHaveCount(1);
+  await b.locator('.kt-mesa #log .kt-logclose').tap();
+  await expect(b.locator('.kt-mesa #stage.kt-logopen')).toHaveCount(0);
 
   // tocar e segurar uma carta da mão (toque de verdade, pelo protocolo do Chrome): ela levanta e, ao soltar, abre o zoom
   // (as cartas ainda voando da distribuição ficam invisíveis e o toque passaria por elas)

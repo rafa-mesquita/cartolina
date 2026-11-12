@@ -2952,6 +2952,13 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     Sound.play('select');
   };
 
+  function unscrollStage(): void {
+    if (stage.scrollLeft || stage.scrollTop) {
+      stage.scrollLeft = 0;
+      stage.scrollTop = 0;
+    }
+  }
+
   // ---------------------------------------------------------------- liga tudo
   window.addEventListener('resize', fit);
   window.addEventListener('keydown', onKey);
@@ -2959,6 +2966,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
   stage.addEventListener('wheel', onWheel, { passive: false });
   stage.addEventListener('pointerdown', onPressDown);
   stage.addEventListener('contextmenu', onContextMenu);
+  // O palco tem overflow: hidden, mas ainda rola por código (foco, scrollIntoView): a gaveta do diário fora da tela
+  // (celular deitado) puxava a mesa toda pro lado. O palco nunca fica rolado.
+  stage.addEventListener('scroll', unscrollStage);
   wrap.addEventListener('click', onClickCapture, true);
   window.addEventListener('pointermove', onPressMove);
   window.addEventListener('pointerup', onPressUp);
@@ -3029,6 +3039,7 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
       stage.removeEventListener('wheel', onWheel);
       stage.removeEventListener('pointerdown', onPressDown);
       stage.removeEventListener('contextmenu', onContextMenu);
+      stage.removeEventListener('scroll', unscrollStage);
       stage.removeEventListener('touchmove', onTouchMove);
       wrap.removeEventListener('click', onClickCapture, true);
       window.removeEventListener('pointermove', onPressMove);
