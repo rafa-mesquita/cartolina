@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameId } from '@cartolina/shared';
-import { catalogEntry } from '../games/catalog';
+import { catalogEntry, phoneOrientationOf } from '../games/catalog';
 import { useIsPhone } from '../lib/device';
 import { gameHash, goHome, goToRoom } from '../lib/router';
 import { createRoom, getRoomInfo, type RoomInfo } from '../net/api';
@@ -170,7 +170,7 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
     return (
       <>
         <Game conn={conn} snap={snap} view={snap.view} />
-        <RotateNotice />
+        <RotateNotice orientation={phoneOrientationOf(snap.view.gameId)} />
         <LeaveGuard exitTo={gameHash(snap.view.gameId)} />
       </>
     );
@@ -194,7 +194,7 @@ export function RoomScreen({ code, createSocket }: { code: string; createSocket?
       </h1>
       <p className="tagline">sala {code}</p>
       <JoinForm takenColors={takenColors} initial={initial} busy={busy} error={snap?.joinError ?? null} onSubmit={submit} />
-      <RotateNotice />
+      <RotateNotice orientation={phoneOrientationOf(info.game)} />
     </main>
   );
 }
