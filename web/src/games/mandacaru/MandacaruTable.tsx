@@ -10,6 +10,8 @@ import { CordelChoice } from './CordelChoice';
 import { DiscardPanel } from './DiscardPanel';
 import { EndPanel } from './EndPanel';
 import { FeiraPanel } from './FeiraPanel';
+import { Flights } from './Flights';
+import { motionOk, rollFlights, type Flight } from './rollFlights';
 import { useTurnClock } from './clock';
 import { Diary, freshEntries } from './Diary';
 import { Hand, type PlayableCordel } from './Hand';
@@ -31,6 +33,18 @@ const UNLOCK_MS = 4000;
 const HOLD_MS = 400;
 /** Quanto tempo a soma dos dados fica grande no meio do tabuleiro. */
 const SUM_MS = 1000;
+/** Quanto tempo os dados rolam antes de pousar no resultado (ms). */
+export const TUMBLE_MS = 700;
+
+/** A rolagem que está passando na tela: os dados rolando, depois a soma (e as cartas voando), depois nada. */
+interface RollFx {
+  id: number;
+  sum: number;
+  /** Com animação (falso com movimento reduzido ou aba escondida). */
+  motion: boolean;
+  flights: Flight[];
+  stage: 'roll' | 'sum' | 'off';
+}
 
 /** Cordéis que pedem escolha abrem a janela deles; Vaqueiro e Mutirão se jogam direto. */
 const PANEL_OF_CORDEL: Partial<Record<PlayableCordel, Panel>> = { chuva: 'chuva', atravessador: 'atravessador' };
@@ -156,9 +170,10 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
     [conn, say],
   );
 
-  // Linhas novas do diário: chacoalha os dados, mostra a soma e avisa do roubo pros dois envolvidos.
-  const [rollFx, setRollFx] = useState<{ id: number; sum: number } | null>(null);
-  const [sumOn, setSumOn] = useState(false);
+  // Linhas novas do diário: rola os dados, mostra a soma, manda as cartas voando pra quem ganhou e avisa do roubo pros
+  // dois envolvidos. A rolagem vai por etapas: `roll` (dados rolando) → `sum` (soma grande e cartas no ar) → `off`.
+  // Sem movimento (`prefers-reduced-motion` ou aba escondida), pula direto pra soma e ninguém voa.
+  const [rollFx, setRollFx] = useState<RollFx | null>(null);
   const prevLog = useRef<MandacaruLogEntry[] | null>(null);
   // Fora do ar: o `welcome` da volta chega antes da visão nova, então a próxima visão (a que traz a queda) é só a base.
   const rebase = useRef(false);
@@ -175,8 +190,9 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
     prevLog.current = g.log;
     const roll = [...fresh].reverse().find((e) => e.t === 'roll');
     if (roll && roll.t === 'roll') {
-      setRollFx((r) => ({ id: (r?.id ?? 0) + 1, sum: roll.dice[0] + roll.dice[1] }));
-      setSumOn(true);
+      const motion = motionOk();
+      const flights = motion ? rollFlights(roll, g.layout, g.buildings, g.carcara, g.players) : [];
+      setRollFx((r) => ({ id: (r?.id ?? 0) + 1, sum: roll.dice[0] + roll.dice[1], motion, flights, stage: motion ? 'roll' : 'sum' }));
     }
     const steal = fresh.find((e) => e.t === 'steal');
     if (steal && steal.t === 'steal' && g.stolen && me !== null && (steal.player === me || steal.from === me)) {
@@ -190,12 +206,19 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
       say(`troca feita com ${nameOf(other)}: você deu ${resList(trade.a === me ? trade.aGives : trade.bGives)}`);
       setUi((u) => (u.panel === 'trade' ? { ...u, panel: null, seed: null } : u));
     }
-  }, [g.log, g.stolen, me, nameOf, say]);
+    // (cada visão chega como JSON novo: `g.log` muda junto com o resto, então as outras dependências não rodam a mais)
+  }, [g.log, g.layout, g.buildings, g.carcara, g.players, g.stolen, me, nameOf, say]);
+  const fxId = rollFx?.id ?? 0;
+  const fxStage = rollFx?.stage ?? 'off';
   useEffect(() => {
-    if (!sumOn) return undefined;
-    const t = setTimeout(() => setSumOn(false), SUM_MS);
+    if (fxStage === 'off') return undefined;
+    const t = setTimeout(
+      () => setRollFx((r) => (r && r.id === fxId ? { ...r, stage: r.stage === 'roll' ? 'sum' : 'off' } : r)),
+      fxStage === 'roll' ? TUMBLE_MS : SUM_MS,
+    );
     return () => clearTimeout(t);
-  }, [sumOn, rollFx]);
+  }, [fxId, fxStage]);
+  const sumOn = fxStage === 'sum';
 
   const spots = useMemo(() => spotsOf(g, mode), [g, mode]);
   const onSpot = useCallback(
@@ -269,7 +292,7 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
   return (
     <div className="mandacaru" style={FUNDO_STYLE}>
       <div className="mc-app" style={stage}>
-        <TopBar game={g} nameOf={nameOf} left={left} rollId={rollFx?.id ?? 0} onRules={onRules} rulesOpen={rulesOpen} />
+        <TopBar game={g} nameOf={nameOf} left={left} rollId={fxId} rolling={fxStage === 'roll'} onRules={onRules} rulesOpen={rulesOpen} />
         <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={nameOf} turnLeft={turnLeft} />
         <main className="mc-mesa">
           <Board game={g} spots={spots} onSpot={onSpot} />
@@ -301,6 +324,9 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
           <Diary log={g.log} nameOf={nameOf} layout={g.layout} />
         </aside>
         <Hand game={g} onPlay={onPlay} />
+        {rollFx && rollFx.motion && rollFx.stage !== 'roll' && rollFx.flights.length > 0 && (
+          <Flights key={rollFx.id} flights={rollFx.flights} me={me} />
+        )}
         {g.phase === 'over' && <EndPanel key={g.match} game={g} me={me} nameOf={nameOf} host={host} connected={connected} onRestart={onRestart} />}
         {rulesOpen && <RulesSheet onClose={() => setRulesOpen(false)} />}
         <div role="status" aria-live="polite">

@@ -1,7 +1,8 @@
 import { mandacaruGeometry } from '@cartolina/shared';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
+  BADGE_R,
   BoardDefs,
   Border,
   Carcara,
@@ -16,6 +17,8 @@ import {
   PLAYER_TINTS,
   Port,
   R,
+  RIM,
+  ResBadge,
   ResIcon,
   Road,
   at,
@@ -63,13 +66,53 @@ describe('Mandacaru: arte', () => {
     expect(R).toBe(58);
   });
 
-  it('borda de terra rachada: os 18 terrenos do anel 3', () => {
+  it('borda de terra rachada rente à costa: um contorno e uma faixa por terreno da ilha (19 + 19)', () => {
     const { container } = render(
       <svg>
         <Border />
       </svg>,
     );
-    expect(container.querySelectorAll('path')).toHaveLength(18);
+    expect(container.querySelectorAll('path')).toHaveLength(38);
+    expect(container.querySelectorAll('path[fill="url(#mc-racha)"]')).toHaveLength(19);
+  });
+
+  it('aro forte por recurso: 6 cores diferentes entre si e das cores dos jogadores', () => {
+    const colors = Object.values(RIM).map((c) => c.toLowerCase());
+    expect(new Set(colors).size).toBe(6);
+    for (const c of colors) expect(PLAYER_TINTS.map((t) => t.toLowerCase())).not.toContain(c);
+    // o terreno usa o aro e a pintura clareada
+    const { container } = render(
+      <svg>
+        <Hex tile={{ terrain: 'forest', number: 5 }} cx={0} cy={0} />
+      </svg>,
+    );
+    expect(container.querySelector(`path[fill="${RIM.forest}"]`)).toBeTruthy();
+    expect(container.querySelector('image')?.getAttribute('filter')).toBe('url(#mc-claro)');
+  });
+
+  it('selo do recurso: disco creme com a arte e o nome (dica do mouse e leitor de tela)', () => {
+    const { container } = render(
+      <svg>
+        <ResBadge kind="beans" cx={0} cy={0} />
+      </svg>,
+    );
+    const disc = container.querySelector('[data-selo="beans"] circle')!;
+    expect(Number(disc.getAttribute('r'))).toBe(BADGE_R);
+    expect(disc.getAttribute('fill')).toBe('#fbf1dc');
+    expect(screen.getByRole('img', { name: 'feijão' })).toBeTruthy();
+    expect(container.querySelector('[data-selo="beans"] title')?.textContent).toBe('feijão');
+  });
+
+  it('ícone de recurso tem o nome: dica nativa e nome acessível', () => {
+    render(
+      <div>
+        <ResIcon kind="wood" />
+        <ResIcon kind="stone" size={20} />
+      </div>,
+    );
+    const wood = screen.getByRole('img', { name: 'madeira' });
+    expect(wood.getAttribute('title')).toBe('madeira');
+    expect(screen.getByRole('img', { name: 'pedra' })).toBeTruthy();
   });
 
   it('feira: barraca fora da ilha, entre os dois cantos', () => {

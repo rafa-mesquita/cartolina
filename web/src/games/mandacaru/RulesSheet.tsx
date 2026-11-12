@@ -11,7 +11,7 @@ import {
   type Piece,
 } from '@cartolina/shared';
 import { memo, useEffect, useRef } from 'react';
-import { CostIcons } from './Actions';
+import { CostIcons } from './Costs';
 import { CordelIcon, WOODCUT } from './art';
 import { CORDEL_DESC, CORDEL_NAME, PIECE_NAME, POINT_NAMES } from './names';
 import { joinE } from './texts';

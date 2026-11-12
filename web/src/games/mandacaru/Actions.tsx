@@ -1,8 +1,7 @@
-import { COSTS, type MandacaruView, type Piece } from '@cartolina/shared';
+import type { MandacaruView } from '@cartolina/shared';
 import { memo, type ReactNode } from 'react';
-import { ResIcon } from './art';
 import type { BuildMode } from './Board';
-import { PIECE_NAME, RES_ORDER } from './names';
+import { PIECE_NAME } from './names';
 import { YOU, joinE, resList, type NameOf } from './texts';
 
 /**
@@ -167,16 +166,6 @@ function Prompt({ game: g, me, nameOf, mode, onSteal, onTrade }: PromptProps): R
   }
 }
 
-/** Os ícones do custo de uma peça ("madeira + barro" vira 2 ícones). */
-export function CostIcons({ piece, size = 22 }: { piece: Piece; size?: number }) {
-  return (
-    <>
-      {RES_ORDER.flatMap((r) => Array.from({ length: COSTS[piece][r] }, (_, i) => <ResIcon key={`${r}${i}`} kind={r} size={size} />))}
-    </>
-  );
-}
-
-const PIECES: Piece[] = ['road', 'house', 'city', 'cordel'];
 
 interface Props {
   game: MandacaruView;
@@ -255,15 +244,6 @@ export const Actions = memo(function Actions({ game: g, me, nameOf, mode, onMode
         <button type="button" className="mc-btn sec" disabled={!c.endTurn} onClick={() => onAction({ type: 'end_turn' })}>
           passar a vez
         </button>
-      </div>
-      <div className="mc-box mc-custos">
-        <h3>quanto custa</h3>
-        {PIECES.map((k) => (
-          <div key={k} className="mc-custo">
-            <b>{PIECE_NAME[k]}</b>
-            <CostIcons piece={k} />
-          </div>
-        ))}
       </div>
     </>
   );

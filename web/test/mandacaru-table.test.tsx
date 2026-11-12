@@ -2,7 +2,7 @@ import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { mandacaruGeometry, mandacaruHouseSpots, mandacaruStateOf, type MandacaruRoomView, type MandacaruState, type Room } from '@cartolina/shared';
 import { freshEntries } from '../src/games/mandacaru/Diary';
-import { MandacaruTable } from '../src/games/mandacaru/MandacaruTable';
+import { MandacaruTable, TUMBLE_MS } from '../src/games/mandacaru/MandacaruTable';
 import { playMandacaruSound } from '../src/games/mandacaru/sounds';
 import type { ConnStatus, GameConn } from '../src/net/connection';
 import { T0, afterSetup, mandacaruRoom, step, viewOf, withGame } from './mandacaru-fixtures';
@@ -355,6 +355,10 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
     const ended = step(passed, turn, { type: 'end_turn' });
     const rolled2 = step(ended, turnOf(ended), { type: 'roll' });
     again(viewOf(rolled2, turn), 'joined');
+    expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(2);
+    rtlAct(() => {
+      vi.advanceTimersByTime(TUMBLE_MS);
+    });
     expect(container.querySelector('.mc-soma.on')).toBeTruthy();
   });
 
@@ -412,15 +416,90 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
     const rolled = step(room, turn, { type: 'roll' });
     rerender(<MandacaruTable view={viewOf(rolled, turn)} conn={c} serverOffset={0} status="joined" />);
     const dice = mandacaruStateOf(rolled)!.dice!;
+    // primeiro os dados rolam (faces sorteadas); a soma só aparece quando eles pousam
+    expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(2);
+    expect(container.querySelector('.mc-soma.on')).toBeNull();
+    rtlAct(() => {
+      vi.advanceTimersByTime(TUMBLE_MS);
+    });
+    expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(0);
+    expect(container.querySelectorAll('.mc-dado.pousou')).toHaveLength(2);
+    expect(screen.getByRole('img', { name: `dados: ${dice[0]} e ${dice[1]}` })).toBeTruthy();
     const soma = container.querySelector('.mc-soma.on')!;
     expect(soma.textContent).toContain(String(dice[0] + dice[1]));
-    expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(2);
     // a mesa liga os sons: dados rolados tocam
     expect(playMandacaruSound).toHaveBeenCalledWith('dice');
     rtlAct(() => {
       vi.advanceTimersByTime(1100);
     });
     expect(container.querySelector('.mc-soma.on')).toBeNull();
+  });
+
+  it('cartas voando: rolagem nova com ganho cria as cartinhas (pra mão e pro assento); a primeira visão não', () => {
+    const base = afterSetup(mandacaruRoom(3, 1));
+    const s0 = mandacaruStateOf(base)!;
+    const geo = mandacaruGeometry();
+    // um terreno com número encostado numa casa de p0 e um numa de p1, com o mesmo número
+    const touching = (p: string) =>
+      s0.buildings.flatMap((b, v) => (b?.owner === p ? geo.vertices[v]!.hexes : [])).filter((h) => s0.layout!.hexes[h]!.number !== null && h !== s0.carcara);
+    const h0 = touching('p0')[0]!;
+    const tile = s0.layout!.hexes[h0]!;
+    const n = tile.number!;
+    const res0 = ({ forest: 'wood', hills: 'brick', pasture: 'leather', fields: 'beans', mountains: 'stone' } as const)[tile.terrain as 'forest'];
+    const gains = { p0: { ...res(0, 0, 0, 0, 0), [res0]: 1 } };
+    const entry = { t: 'roll' as const, player: s0.turn!, dice: [Math.min(6, n - 1), n - Math.min(6, n - 1)] as [number, number], gains, short: [] };
+    const rolled = withGame(base, (s) => ({ ...s, log: [...s.log, entry] }));
+    // primeira visão já com a rolagem: nada voa
+    const first = mesa(viewOf(rolled, 'p0'));
+    rtlAct(() => {
+      vi.advanceTimersByTime(TUMBLE_MS + 10);
+    });
+    expect(first.container.querySelector('.mc-voos')).toBeNull();
+    first.unmount();
+    // rolagem que chega depois: os dados rolam e, quando pousam, a carta sai pra mão de p0
+    const c = conn();
+    const { container, rerender } = mesa(viewOf(base, 'p0'), c);
+    rerender(<MandacaruTable view={viewOf(rolled, 'p0')} conn={c} serverOffset={0} status="joined" />);
+    expect(container.querySelector('.mc-voos')).toBeNull();
+    rtlAct(() => {
+      vi.advanceTimersByTime(TUMBLE_MS);
+    });
+    const cards = [...container.querySelectorAll('.mc-voos .mc-voo')];
+    expect(cards).toHaveLength(1);
+    expect(cards[0]!.getAttribute('data-voo')).toBe('p0');
+    expect(cards[0]!.getAttribute('data-res')).toBe(res0);
+    expect(container.querySelector('.mc-voos')!.getAttribute('aria-hidden')).toBe('true');
+    // a camada some sozinha
+    rtlAct(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(container.querySelector('.mc-voos')).toBeNull();
+  });
+
+  it('movimento reduzido: dados sem rolar, a soma na hora e nenhuma carta voando', () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(prefers-reduced-motion: reduce)', media: q, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    try {
+      const room = afterSetup(mandacaruRoom(3, 1));
+      const turn = turnOf(room);
+      const c = conn();
+      const { container, rerender } = mesa(viewOf(room, turn), c);
+      rerender(<MandacaruTable view={viewOf(step(room, turn, { type: 'roll' }), turn)} conn={c} serverOffset={0} status="joined" />);
+      expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(0);
+      expect(container.querySelector('.mc-soma.on')).toBeTruthy();
+      expect(container.querySelector('.mc-voos')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('quanto custa fica na coluna da esquerda, com os repetidos agrupados e o nome dos recursos', () => {
+    const { container } = mesa(viewOf(afterSetup(mandacaruRoom(3, 1)), 'p0'));
+    const box = container.querySelector('.mc-left .mc-custos')!;
+    expect(box).toBeTruthy();
+    expect(container.querySelector('.mc-right .mc-custos')).toBeNull();
+    const vila = [...box.querySelectorAll('.mc-custo')].find((d) => d.textContent?.includes('vila'))!;
+    expect([...vila.querySelectorAll('.mc-custo-item')].map((i) => i.getAttribute('title'))).toEqual(['2 × feijão', '3 × pedra']);
+    expect(vila.querySelectorAll('img[alt="pedra"]')).toHaveLength(1);
   });
 
   it('quem assiste vê o tabuleiro e o aviso', () => {

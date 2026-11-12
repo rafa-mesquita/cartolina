@@ -56,7 +56,7 @@
   background: radial-gradient(ellipse at 50% -10%, rgba(255, 214, 120, 0.65), transparent 60%), linear-gradient(#f7e6c4, #ecc896);
   color: #4a2e1f;
 }
-.cover-mandacaru b { font: 400 44px/1 'Bree Serif', serif; }
+.cover-mandacaru b { font: 400 29px/1 'Bree Serif', serif; overflow-wrap: normal; white-space: nowrap; }
 .cover-mandacaru span:not(.cover-badge) { font: 600 14px/1.25 'Mulish', system-ui, sans-serif; }
 /* número decorativo no canto, como o da carta da mão */
 .shelf .cover-ito::after {
@@ -116,7 +116,7 @@
   .cover b { font-size: 26px; }
   .cover-dixit b { font-size: 24px; }
   .cover-coup b { font-size: 34px; }
-  .cover-mandacaru b { font-size: 32px; }
+  .cover-mandacaru b { font-size: 22px; }
   .cover span { font-size: 15px; }
   /* Retratim: foto e fitinha menores, pra o título e a frase caberem embaixo sem ficar tampados */
   .cover-pictures b { font-size: 32px; }
