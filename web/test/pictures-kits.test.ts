@@ -349,16 +349,16 @@ describe('fotos provisórias', () => {
     expect(lights.size).toBeGreaterThan(5);
   });
 
-  it('as 100 fotos do baralho têm foto real', () => {
-    expect(PICTURES_PHOTOS_READY.size).toBe(100);
+  it('as 150 fotos do baralho têm foto real', () => {
+    expect(PICTURES_PHOTOS_READY.size).toBe(150);
     for (const { id } of PICTURES_DECK) expect(PICTURES_PHOTOS_READY.has(id)).toBe(true);
   });
 
   it('photoSrc: miniatura na grade, cheia no zoom; id sem foto real é null (nada de 404)', () => {
     const base = import.meta.env.BASE_URL;
     expect(photoSrc('p001', 'thumb')).toBe(`${base}pictures/fotos/p001-thumb.webp`);
-    expect(photoSrc('p100', 'full')).toBe(`${base}pictures/fotos/p100.webp`);
-    expect(photoSrc('p101', 'thumb')).toBeNull();
+    expect(photoSrc('p150', 'full')).toBe(`${base}pictures/fotos/p150.webp`);
+    expect(photoSrc('p151', 'thumb')).toBeNull();
     expect(photoSrc('x', 'full')).toBeNull();
   });
 
