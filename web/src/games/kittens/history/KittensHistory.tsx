@@ -1,5 +1,5 @@
-import type { KittensExitHow, KittensMatchRecord, KittensStatEntry, KittensStats } from '@cartolina/shared';
-import { useId } from 'react';
+import { KITTENS_TOP_PEOPLE, type KittensExitHow, type KittensMatchRecord, type KittensStatEntry, type KittensStats } from '@cartolina/shared';
+import { useId, useState } from 'react';
 import { TOO_MANY_MESSAGE } from '../../../net/errors';
 import { PixelCritter } from '../PixelCritter';
 import { useKittensHistory } from './useKittensHistory';
@@ -69,11 +69,14 @@ function Board({
   empty = 'joguem mais umas partidas',
 }: {
   title: string;
+  /** Mais que `KITTENS_TOP_PEOPLE`: mostra os 3 primeiros e um botão pra abrir o resto (até o top 10). */
   rows: KittensStatEntry[];
   detail: (e: KittensStatEntry) => string;
   empty?: string;
 }) {
   const titleId = useId();
+  const [open, setOpen] = useState(false);
+  const shown = open ? rows : rows.slice(0, KITTENS_TOP_PEOPLE);
   return (
     <section className="kt-hx-board" aria-labelledby={titleId}>
       <h3 id={titleId}>{title}</h3>
@@ -81,7 +84,7 @@ function Board({
         <p className="kt-hx-muted">{empty}</p>
       ) : (
         <ol>
-          {rows.map((r) => (
+          {shown.map((r) => (
             <li key={r.name}>
               <PixelCritter className="kt-hx-face" color={r.color} />
               <span>
@@ -92,11 +95,16 @@ function Board({
           ))}
         </ol>
       )}
+      {rows.length > KITTENS_TOP_PEOPLE && (
+        <button className="kt-hx-expand" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? 'ver só o top 3' : `ver o top ${rows.length}`}
+        </button>
+      )}
     </section>
   );
 }
 
-/** Um quadro com o top 3 de cada estatística (abaixo do mínimo de partidas, o quadro pede mais partidas). */
+/** Um quadro com o top 3 de cada estatística, que abre até o top 10 (abaixo do mínimo de partidas, o quadro pede mais partidas). */
 function GaleraBoards({ stats }: { stats: KittensStats }) {
   const titleId = useId();
   return (
@@ -127,7 +135,12 @@ function GaleraBoards({ stats }: { stats: KittensStats }) {
         <Board
           title="alvo preferido"
           rows={stats.targeted ?? []}
-          detail={(e) => `alvo de ${decimal.format(e.rate)} magias por partida · ${e.count} em ${plural(e.matches, 'partida', 'partidas')}`}
+          detail={(e) =>
+            e.total === undefined
+              ? `${e.count} em ${plural(e.matches, 'partida', 'partidas')}`
+              : `${percent(e.rate)} das magias · ${e.count} de ${e.total} em ${plural(e.matches, 'partida', 'partidas')}`
+          }
+          empty="só entra quem tem 7 partidas ou mais"
         />
       </div>
     </section>

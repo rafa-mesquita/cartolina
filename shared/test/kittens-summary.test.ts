@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { KittensMatchRecord, KittensPerson } from '../src/games/kittens/record';
-import { KITTENS_RATE_MIN_MATCHES, KITTENS_STATS_MIN_MATCHES, KITTENS_TOP_PEOPLE, summarizeKittensHistory } from '../src/games/kittens/summary';
+import {
+  KITTENS_BOARD_TOP,
+  KITTENS_RATE_MIN_MATCHES,
+  KITTENS_STATS_MIN_MATCHES,
+  KITTENS_TARGET_MIN_MATCHES,
+  KITTENS_TOP_PEOPLE,
+  summarizeKittensHistory,
+} from '../src/games/kittens/summary';
 import { PLAYER_COLORS } from '../src/players';
 
 const P = (name: string, i: number): KittensPerson => ({ name, color: PLAYER_COLORS[i]! });
@@ -73,6 +80,7 @@ describe('estatísticas da galera do Tatubum', () => {
       ['Caio', 9, 9],
       ['Ana', 6, 10],
       ['Beto', 3, 10],
+      ['Duda', 1, 10],
     ]);
   });
 
@@ -90,6 +98,8 @@ describe('estatísticas da galera do Tatubum', () => {
       ['Beto', 3, 6],
       ['Caio', 3, 6],
       ['Duda', 3, 6],
+      ['Ana', 3, 8],
+      ['Eli', 2, 2],
     ]);
   });
 
@@ -112,7 +122,7 @@ describe('estatísticas da galera do Tatubum', () => {
     ]);
   });
 
-  it('rei do Nem vem!: média por partida; só os 3 primeiros; ninguém com zero', () => {
+  it('rei do Nem vem!: média por partida; ninguém com zero', () => {
     const ms = times(3, () => match([ANA, BETO, CAIO, DUDA, ELI], ANA, [BETO, CAIO, DUDA, ELI], { Ana: 1, Beto: 3, Caio: 2, Duda: 2 }));
     ms.push(match([DUDA, ANA], DUDA, [ANA], { Duda: 4 }));
     const s = summarizeKittensHistory(ms);
@@ -121,21 +131,49 @@ describe('estatísticas da galera do Tatubum', () => {
       { name: 'Beto', color: BETO.color, count: 9, matches: 3, rate: 3 },
       { name: 'Duda', color: DUDA.color, count: 10, matches: 4, rate: 2.5 },
       { name: 'Caio', color: CAIO.color, count: 6, matches: 3, rate: 2 },
+      { name: 'Ana', color: ANA.color, count: 3, matches: 4, rate: 0.75 },
     ]);
   });
 
-  it('alvo preferido: média por partida, contando só as partidas gravadas com a contagem de alvo', () => {
+  it('todos os quadros vão até o top 10 (a tela mostra 3 e abre o resto)', () => {
+    expect(KITTENS_BOARD_TOP).toBe(10);
+    const people = Array.from({ length: 12 }, (_, i) => P(`J${String(i).padStart(2, '0')}`, i % PLAYER_COLORS.length));
+    const nopes = Object.fromEntries(people.map((p, i) => [p.name, i + 1]));
+    const s = summarizeKittensHistory(times(3, () => match(people, people[0]!, people.slice(1), nopes)));
+    expect(s.nopeKings).toHaveLength(10);
+    expect(s.nopeKings[0]!.name).toBe('J11');
+  });
+
+  it('alvo preferido: % das magias com alvo nas partidas dele, mínimo de 7 partidas com a contagem', () => {
+    expect(KITTENS_TARGET_MIN_MATCHES).toBe(7);
+    const FRED = P('Fred', 5);
+    const GABI = P('Gabi', 6);
     const ms = [
-      // Partidas antigas (sem a contagem): não entram na média de ninguém.
+      // Partidas antigas (sem a contagem): não entram na conta de ninguém.
       ...times(5, () => match([ANA, BETO, CAIO], ANA, [BETO, CAIO])),
-      ...times(3, () => match([ANA, BETO, CAIO], ANA, [BETO, CAIO], {}, ++seq, { Ana: 1, Beto: 4, Caio: 0 })),
-      // Duda: só 2 partidas com a contagem, fica de fora (mínimo de 3).
-      ...times(2, () => match([DUDA, ELI], DUDA, [ELI], {}, ++seq, { Duda: 9, Eli: 0 })),
+      // 5 magias por partida: Beto 4 (80%), Ana 1 (20%), Caio nenhuma (fica de fora).
+      ...times(7, () => match([ANA, BETO, CAIO], ANA, [BETO, CAIO], {}, ++seq, { Ana: 1, Beto: 4, Caio: 0 })),
+      // Duda: só 6 partidas com a contagem, fica de fora mesmo com 90%.
+      ...times(6, () => match([DUDA, ELI], DUDA, [ELI], {}, ++seq, { Duda: 9, Eli: 1 })),
+      // Fred e Gabi: muito mais magias que o Beto, mas só 50%: a ordem é pela %. Empate: pelo nome.
+      ...times(7, () => match([FRED, GABI], FRED, [GABI], {}, ++seq, { Fred: 10, Gabi: 10 })),
     ];
     expect(summarizeKittensHistory(ms).targeted).toEqual([
-      { name: 'Beto', color: BETO.color, count: 12, matches: 3, rate: 4 },
-      { name: 'Ana', color: ANA.color, count: 3, matches: 3, rate: 1 },
+      { name: 'Beto', color: BETO.color, count: 28, matches: 7, total: 35, rate: 0.8 },
+      { name: 'Fred', color: FRED.color, count: 70, matches: 7, total: 140, rate: 0.5 },
+      { name: 'Gabi', color: GABI.color, count: 70, matches: 7, total: 140, rate: 0.5 },
+      { name: 'Ana', color: ANA.color, count: 7, matches: 7, total: 35, rate: 0.2 },
     ]);
+  });
+
+  it('alvo preferido mostra até o top 10', () => {
+    expect(KITTENS_BOARD_TOP).toBe(10);
+    const people = Array.from({ length: 12 }, (_, i) => P(`J${String(i).padStart(2, '0')}`, i % PLAYER_COLORS.length));
+    const hits = Object.fromEntries(people.map((p, i) => [p.name, i + 1]));
+    const ms = times(7, () => match(people, people[0]!, people.slice(1), {}, ++seq, hits));
+    const top = summarizeKittensHistory(ms).targeted!;
+    expect(top).toHaveLength(10);
+    expect(top.map((e) => e.name)).toEqual(people.slice(2).reverse().map((p) => p.name));
   });
 
   it('a pessoa é o nome; o bichinho é o da partida mais recente (pela data, não pela ordem da lista)', () => {

@@ -71,7 +71,12 @@ const STATS: KittensStats = {
   ],
   firstOut: [{ ...CAIO, count: 1, matches: 3, rate: 1 / 3 }],
   nopeKings: [{ ...BETO, count: 10, matches: 4, rate: 2.5 }],
-  targeted: [{ ...CAIO, count: 7, matches: 5, rate: 1.4 }],
+  targeted: [
+    { ...CAIO, count: 12, matches: 8, total: 40, rate: 0.3 },
+    { ...ANA, count: 10, matches: 9, total: 40, rate: 0.25 },
+    { ...BETO, count: 4, matches: 7, total: 20, rate: 0.2 },
+    { name: 'Duda', color: PLAYER_COLORS[3]!, count: 2, matches: 7, total: 20, rate: 0.1 },
+  ],
 };
 
 function response(matches: KittensMatchRecord[], nextBefore: number | null = null, stats: KittensStats | null = NO_STATS): KittensHistoryResponse {
@@ -145,7 +150,17 @@ describe('aba histórico do Tatubum', () => {
     expect(within(wins).getByText('1 vitória em 10 partidas')).toBeTruthy();
     expect(within(board('quem explode primeiro')).getByText('joguem mais umas partidas')).toBeTruthy();
     expect(within(board('rei do Nem vem!')).getByText('2,5 por partida · 10 em 4 partidas')).toBeTruthy();
-    expect(within(board('alvo preferido')).getByText('alvo de 1,4 magias por partida · 7 em 5 partidas')).toBeTruthy();
+    const alvo = board('alvo preferido');
+    expect(within(alvo).getByText('30% das magias · 12 de 40 em 8 partidas')).toBeTruthy();
+    // Top 3 fechado; o botão abre até o top 10 (aqui, 4).
+    const names = () => [...alvo.querySelectorAll('li b')].map((b) => b.textContent);
+    expect(names()).toEqual(['Caio', 'Ana', 'Beto']);
+    fireEvent.click(within(alvo).getByRole('button', { name: 'ver o top 4' }));
+    expect(names()).toEqual(['Caio', 'Ana', 'Beto', 'Duda']);
+    fireEvent.click(within(alvo).getByRole('button', { name: 'ver só o top 3' }));
+    expect(names()).toEqual(['Caio', 'Ana', 'Beto']);
+    // Os outros quadros (top 3) não têm botão.
+    expect(within(board('rei do Nem vem!')).queryByRole('button')).toBeNull();
   });
 
   it('servidor antigo (sem o quadro do alvo): o quadro aparece vazio', async () => {
@@ -153,7 +168,7 @@ describe('aba histórico do Tatubum', () => {
     vi.mocked(api.getHistory).mockResolvedValue(response([NEWER], null, old));
     render(<KittensHistory />);
     const galera = (await screen.findByRole('heading', { name: 'a galera' })).closest('section')!;
-    expect(within(within(galera).getByRole('region', { name: 'alvo preferido' })).getByText('joguem mais umas partidas')).toBeTruthy();
+    expect(within(within(galera).getByRole('region', { name: 'alvo preferido' })).getByText('só entra quem tem 7 partidas ou mais')).toBeTruthy();
   });
 
   it('maior % de vitórias vazio: diz que precisa de 10 partidas', async () => {

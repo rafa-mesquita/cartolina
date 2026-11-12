@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tatubum deitado — opções</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#2b1a10; --paper:#f4e9d0; --yellow:#f2c14e; --cream:#fff3e0; --btn:#e0605a; --night:#050510; --navy:#141f42; --dim:#9aa6c8; --px:'Press Start 2P',monospace; --vt:'VT323',monospace; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: #1b1b22; color: var(--cream); font-family: var(--vt); display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 18px 16px 40px; }
+  .pick { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .pick button { font: 400 10px/1 var(--px); padding: 10px 12px; border: none; background: #2c3a66; color: var(--cream); cursor: pointer; box-shadow: 0 0 0 3px var(--night); }
+  .pick button.on { background: var(--yellow); color: var(--ink); }
+  .about { max-width: 860px; font-size: 22px; line-height: 1.15; text-align: center; color: #d8d2c4; min-height: 52px; }
+  .about b { color: var(--yellow); font-weight: 400; }
+
+  /* Celular deitado (iPhone 14: 844×390), com o recorte da câmera na esquerda */
+  .phone { position: relative; width: 844px; height: 390px; border-radius: 34px; overflow: hidden; box-shadow: 0 0 0 10px #000, 0 0 0 12px #333; flex: none;
+    background: linear-gradient(#1d2b5a 0%, #3b3f7a 45%, #6b4a6e 70%, #2d3b26 71%, #22301e 100%); }
+  .phone::before { content: ''; position: absolute; left: 10px; top: 50%; translate: 0 -50%; width: 28px; height: 110px; border-radius: 16px; background: #000; z-index: 50; }
+  .phone .ground { position: absolute; inset: auto 0 0 0; height: 30%; background: repeating-linear-gradient(90deg, #2d3b26 0 16px, #314228 16px 32px); opacity: .9; }
+
+  .card { position: relative; width: var(--w); height: calc(var(--w) * 1.393); background: var(--paper) center / cover no-repeat; box-shadow: 0 0 0 3px var(--ink), 3px 4px 0 rgba(0,0,0,.45); image-rendering: pixelated; flex: none; }
+  .card.back { background-image: url(../../web/src/games/kittens/art/verso.webp); }
+  .card.sel { translate: 0 -14px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--yellow), 3px 4px 0 rgba(0,0,0,.45); }
+
+  .seat { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; background: rgba(20,31,66,.9); box-shadow: 0 0 0 3px #2c3a66; font: 400 8px/1.3 var(--px); white-space: nowrap; }
+  .seat .face { width: 26px; height: 26px; background: var(--c); box-shadow: inset -4px -4px 0 rgba(0,0,0,.25); flex: none; }
+  .seat small { display: block; font: 400 15px/1 var(--vt); color: var(--dim); }
+  .seat.turn { box-shadow: 0 0 0 3px var(--yellow); }
+  .seat .tag { margin-left: 4px; padding: 2px 4px; background: #5b3f9e; font-size: 7px; }
+
+  .slot { display: flex; flex-direction: column; align-items: center; gap: 4px; font: 400 7px/1 var(--px); color: var(--cream); text-shadow: 2px 2px 0 var(--night); }
+  .slot .n { font: 400 18px/1 var(--vt); }
+  .air { width: var(--w); height: calc(var(--w) * 1.393); border: 3px dashed rgba(244,233,208,.35); display: flex; align-items: center; justify-content: center; text-align: center; font-size: 15px; color: rgba(244,233,208,.55); }
+
+  .btn { font: 400 9px/1 var(--px); padding: 10px 12px; border: none; color: var(--cream); background: var(--btn); text-shadow: 2px 2px 0 #8c2f2f; box-shadow: inset 0 3px 0 #f08a80, inset 0 -4px 0 #b8423e, 0 0 0 3px var(--night); }
+  .btn.y { background: var(--yellow); color: var(--ink); text-shadow: none; box-shadow: inset 0 3px 0 #f7d886, inset 0 -4px 0 #c9962c, 0 0 0 3px var(--night); }
+  .btn.g { background: #2c3a66; text-shadow: none; box-shadow: 0 0 0 3px var(--night); }
+  .turnbar { font: 400 8px/1 var(--px); color: var(--yellow); text-shadow: 2px 2px 0 var(--night); }
+
+  /* Diário: setinha na borda direita, abre por cima */
+  .tab { position: absolute; right: 0; top: 50%; translate: 0 -50%; width: 26px; height: 64px; background: rgba(20,31,66,.95); box-shadow: 0 0 0 3px #2c3a66; display: flex; align-items: center; justify-content: center; font: 400 12px/1 var(--px); color: var(--yellow); z-index: 30; cursor: pointer; border: none; }
+  .drawer { position: absolute; top: 0; right: 0; bottom: 0; width: 300px; background: rgba(12,18,40,.97); box-shadow: -3px 0 0 #2c3a66; z-index: 40; translate: 100% 0; transition: translate .18s steps(4); padding: 14px 14px 14px 40px; display: flex; flex-direction: column; gap: 6px; }
+  .drawer.open { translate: 0 0; }
+  .drawer h3 { margin: 0 0 6px; font: 400 9px/1 var(--px); color: var(--yellow); }
+  .drawer p { margin: 0; font-size: 18px; line-height: 1.05; color: var(--cream); }
+  .drawer p i { color: var(--dim); font-style: normal; }
+  .drawer .close { position: absolute; left: 0; top: 50%; translate: 0 -50%; width: 26px; height: 64px; border: none; background: #2c3a66; color: var(--yellow); font: 400 12px/1 var(--px); cursor: pointer; }
+
+  .opt { position: absolute; inset: 0; display: none; }
+  .opt.on { display: block; }
+
+  /* A: mão escondida embaixo (Hearthstone, Arena) */
+  #A .seats { position: absolute; top: 10px; left: 56px; right: 40px; display: flex; gap: 10px; justify-content: center; }
+  #A .table { position: absolute; left: 0; right: 0; top: 72px; display: flex; justify-content: center; align-items: flex-end; gap: 46px; --w: 78px; }
+  #A .turnbar { position: absolute; left: 56px; top: 64px; }
+  #A .hand { position: absolute; left: 120px; right: 120px; bottom: -58px; display: flex; justify-content: center; --w: 74px; transition: bottom .15s steps(3); }
+  #A .hand .card { margin: 0 -14px; rotate: var(--r); transform-origin: 50% 160%; }
+  #A .hand.up { bottom: 8px; left: 56px; right: 150px; --w: 84px; }
+  #A .hand.up .card { margin: 0 -6px; rotate: 0deg; }
+  #A .shade { position: absolute; inset: 0; background: rgba(5,5,16,.55); display: none; z-index: 5; }
+  #A .hand.up ~ .shade { display: block; }
+  #A .hand { z-index: 6; }
+  #A .acts { position: absolute; right: 40px; bottom: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 7; }
+  #A .hint { position: absolute; left: 50%; translate: -50% 0; bottom: 76px; font: 400 7px/1 var(--px); color: var(--dim); z-index: 6; }
+  #A .hand.up ~ .hint { display: none; }
+
+  /* B: mão sempre à mostra, botões na direita */
+  #B .seats { position: absolute; top: 8px; left: 56px; right: 150px; display: flex; gap: 8px; }
+  #B .turnbar { position: absolute; right: 40px; top: 18px; }
+  #B .table { position: absolute; left: 56px; right: 150px; top: 60px; display: flex; justify-content: center; align-items: flex-end; gap: 34px; --w: 64px; }
+  #B .hand { position: absolute; left: 50px; right: 150px; bottom: 10px; display: flex; gap: 6px; overflow-x: auto; padding: 16px 8px 4px; --w: 66px; background: rgba(5,5,16,.35); box-shadow: 0 0 0 3px rgba(44,58,102,.8); }
+  #B .acts { position: absolute; right: 40px; top: 70px; bottom: 12px; width: 98px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; }
+  #B .acts .btn { width: 100%; }
+
+  /* C: adversários numa coluna na esquerda, mesa no meio, mão embaixo */
+  #C .seats { position: absolute; top: 10px; bottom: 10px; left: 50px; width: 150px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding: 3px; }
+  #C .turnbar { position: absolute; left: 214px; top: 14px; }
+  #C .table { position: absolute; left: 210px; right: 40px; top: 40px; display: flex; justify-content: center; align-items: flex-end; gap: 40px; --w: 72px; }
+  #C .hand { position: absolute; left: 214px; right: 150px; bottom: 10px; display: flex; justify-content: center; --w: 70px; }
+  #C .hand .card { margin: 0 -10px; }
+  #C .acts { position: absolute; right: 40px; bottom: 14px; display: flex; flex-direction: column; gap: 10px; width: 100px; }
+  #C .acts .btn { width: 100%; }
+</style>
+</head>
+<body>
+  <div class="pick">
+    <button type="button" data-o="A" class="on">A · MÃO ESCONDIDA</button>
+    <button type="button" data-o="B">B · MÃO À MOSTRA</button>
+    <button type="button" data-o="C">C · GALERA NA ESQUERDA</button>
+  </div>
+  <div class="about" id="about"></div>
+  <div class="phone">
+    <div class="ground"></div>
+
+    <section class="opt on" id="A">
+      <div class="seats"></div>
+      <div class="turnbar">SUA VEZ · 2 TURNOS</div>
+      <div class="table"></div>
+      <div class="hand"></div>
+      <div class="shade"></div>
+      <div class="hint">TOQUE NA MÃO PRA ABRIR</div>
+      <div class="acts"><button class="btn y" type="button">JOGAR</button><button class="btn" type="button">NEM VEM!</button></div>
+    </section>
+
+    <section class="opt" id="B">
+      <div class="seats"></div>
+      <div class="turnbar">SUA VEZ</div>
+      <div class="table"></div>
+      <div class="hand"></div>
+      <div class="acts"><button class="btn g" type="button">AS CARTAS</button><button class="btn" type="button">NEM VEM!</button><button class="btn y" type="button">JOGAR</button></div>
+    </section>
+
+    <section class="opt" id="C">
+      <div class="seats"></div>
+      <div class="turnbar">SUA VEZ</div>
+      <div class="table"></div>
+      <div class="hand"></div>
+      <div class="acts"><button class="btn" type="button">NEM VEM!</button><button class="btn y" type="button">JOGAR</button></div>
+    </section>
+
+    <button class="tab" type="button" aria-label="Abrir o diário">◀</button>
+    <aside class="drawer" aria-label="Diário">
+      <button class="close" type="button" aria-label="Fechar o diário">▶</button>
+      <h3>DIÁRIO</h3>
+      <p><i>Beto</i> jogou Ataque: você joga 2 turnos.</p>
+      <p><i>Caio</i> deu Nem vem! no Ataque.</p>
+      <p><i>Ana</i> deu Nem vem! no Nem vem!.</p>
+      <p><i>Duda</i> jogou par de Tucano em <i>Eli</i>.</p>
+      <p><i>Eli</i> foi pulado.</p>
+      <p><i>Fred</i> comprou uma carta.</p>
+      <p><i>Gabi</i> jogou Espiar.</p>
+      <p><i>Beto</i> jogou Favor em você.</p>
+      <p>Você deu um Cafuné pro <i>Beto</i>.</p>
+    </aside>
+  </div>
+  <p class="about">A setinha <b>◀</b> na borda direita abre o diário por cima da mesa, nas três opções. Toque nela pra ver.</p>
+
+<script>
+  const ART = (k) => `../../web/src/games/kittens/art/${k}.png`;
+  const people = [
+    ['Beto', '#e0605a', '6 cartas', true], ['Caio', '#5fb0e8', '4 cartas'], ['Duda', '#8fd16b', '7 cartas', false, 'CEGO'],
+    ['Eli', '#c9a6e8', '3 cartas'], ['Fred', '#f2c14e', '5 cartas'], ['Gabi', '#ef9a8a', '2 cartas'],
+  ];
+  const hand = ['cafune', 'nemvem', 'favor', 'ataque', 'capivara', 'capivara', 'espiar', 'pular', 'tucano'];
+  const seat = ([n, c, s, turn, tag]) => `<div class="seat${turn ? ' turn' : ''}" style="--c:${c}"><div class="face"></div><div>${n}${tag ? `<span class="tag">${tag}</span>` : ''}<small>${s}</small></div></div>`;
+  const table = () => `<div class="slot"><div class="card back"></div><span>MONTE</span><span class="n">23</span></div>
+    <div class="slot"><div class="air">carta<br>no ar</div><span>&nbsp;</span><span class="n">&nbsp;</span></div>
+    <div class="slot"><div class="card" style="background-image:url(${ART('embaralhar')})"></div><span>DESCARTE</span><span class="n">&nbsp;</span></div>`;
+  const cards = (fan) => hand.map((k, i) => {
+    const r = fan ? (i - (hand.length - 1) / 2) * 4 : 0;
+    return `<div class="card${i === 4 || i === 5 ? ' sel' : ''}" style="background-image:url(${ART(k)});--r:${r}deg"></div>`;
+  }).join('');
+  for (const id of ['A', 'B', 'C']) {
+    const el = document.getElementById(id);
+    el.querySelector('.seats').innerHTML = people.map(seat).join('');
+    el.querySelector('.table').innerHTML = table();
+    el.querySelector('.hand').innerHTML = cards(id === 'A');
+  }
+  const handA = document.querySelector('#A .hand');
+  handA.onclick = () => handA.classList.add('up');
+  document.querySelector('#A .shade').onclick = () => handA.classList.remove('up');
+
+  const ABOUT = {
+    A: '<b>A · Mão escondida</b> (como no Hearthstone e no Arena): a mão fica meio escondida embaixo, em leque. Toque nela e ela sobe grande por cima da mesa; toque fora e ela desce. A mesa e a galera ficam com mais espaço.',
+    B: '<b>B · Mão à mostra</b>: a mão fica sempre inteira, numa fileira que rola pro lado, e os botões ficam numa coluna na direita. Cartas menores, mas nada se esconde.',
+    C: '<b>C · Galera na esquerda</b>: os adversários ficam numa coluna que rola na esquerda (cabe 7 sem apertar), e a mesa e a mão ficam no meio. Parece mais com a mesa do computador.',
+  };
+  const about = document.getElementById('about');
+  const show = (o) => {
+    document.querySelectorAll('.opt').forEach((x) => x.classList.toggle('on', x.id === o));
+    document.querySelectorAll('.pick button').forEach((b) => b.classList.toggle('on', b.dataset.o === o));
+    about.innerHTML = ABOUT[o];
+    handA.classList.remove('up');
+  };
+  document.querySelectorAll('.pick button').forEach((b) => (b.onclick = () => show(b.dataset.o)));
+  show('A');
+  const drawer = document.querySelector('.drawer');
+  document.querySelector('.tab').onclick = () => drawer.classList.add('open');
+  document.querySelector('.drawer .close').onclick = () => drawer.classList.remove('open');
+</script>
+</body>
+</html>

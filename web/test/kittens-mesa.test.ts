@@ -16,7 +16,7 @@ import {
 } from '@cartolina/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fxSrc from '../src/games/kittens/fx.ts?raw';
-import { createMesa, type Mesa } from '../src/games/kittens/mesa';
+import { createMesa, type Mesa, type MesaLayout } from '../src/games/kittens/mesa';
 import mesaSrc from '../src/games/kittens/mesa.ts?raw';
 
 /**
@@ -89,11 +89,11 @@ function viewOf(room: Room, me: string | null): KittensRoomView {
   return v;
 }
 
-function mount(): { root: HTMLElement; mesa: Mesa; sent: GameAction[] } {
+function mount(layout?: MesaLayout): { root: HTMLElement; mesa: Mesa; sent: GameAction[] } {
   const root = document.createElement('div');
   document.body.appendChild(root);
   const sent: GameAction[] = [];
-  const mesa = createMesa(root, { send: (a) => sent.push(a), now: () => Date.now(), seed: 7 });
+  const mesa = createMesa(root, { send: (a) => sent.push(a), now: () => Date.now(), seed: 7, ...(layout ? { layout } : {}) });
   return { root, mesa, sent };
 }
 
@@ -523,11 +523,11 @@ describe('mesa do Tatubum', () => {
     other.mesa.destroy();
   });
 
-  it.each(['desktop', 'phone'] as const)('Quati novo (%s): o painel mostra o topo e o fundo e os 3 botões mandam `quati`', (layout) => {
+  it.each(['desktop', 'phone', 'land'] as const)('Quati novo (%s): o painel mostra o topo e o fundo e os 3 botões mandam `quati`', (layout) => {
     const v = midGame('p1');
     v.game.choice = { kind: 'quati', who: 'p1', deadline: Date.now() + 30_000, seen: { top: 'tatubum-9', bottom: 'pular-9' } };
     const { root, mesa, sent } = mount();
-    if (layout === 'phone') mesa.setLayout('phone');
+    if (layout !== 'desktop') mesa.setLayout(layout);
     mesa.update(toMesa(v));
     expect(root.querySelector('#panel h2')?.textContent).toContain('O QUATI VIU O TOPO E O FUNDO');
     expect([...root.querySelectorAll('#panel .cards .kt-card')].map((el) => el.getAttribute('data-id'))).toEqual(['tatubum-9', 'pular-9']);
@@ -715,7 +715,7 @@ describe('mesa do Tatubum', () => {
     mesa.destroy();
   });
 
-  it.each(['desktop', 'phone'] as const)(
+  it.each(['desktop', 'phone', 'land'] as const)(
     'espera de 2 s depois de um Nem vem! (%s): botão apagado com o tempo; N e arrastar não fazem nada; depois volta',
     async (layout) => {
       const v = midGame('p1');
@@ -729,7 +729,7 @@ describe('mesa do Tatubum', () => {
         resolvesAt: Date.now() + 5000,
       };
       const { root, mesa, sent } = mount();
-      if (layout === 'phone') mesa.setLayout('phone');
+      if (layout !== 'desktop') mesa.setLayout(layout);
       mesa.update(toMesa(v));
       const btn = () => root.querySelector<HTMLButtonElement>('#nope')!;
       expect(btn().disabled).toBe(true);
@@ -1500,5 +1500,147 @@ describe('mesa do Tatubum', () => {
       }
     }
     expect(leaks).toEqual([]);
+  });
+});
+
+describe('mesa deitada (land)', () => {
+  const stageOf = (root: HTMLElement) => root.querySelector<HTMLElement>('#stage')!;
+
+  it('liga kt-land (e não kt-phone), troca "clique" por "toque" e tira a última linha do diário', () => {
+    const v = midGame('p1');
+    v.game.hand = ['olhado-90', ...v.game.hand];
+    const { root, mesa } = mount('land');
+    mesa.update(toMesa(v));
+    const stage = stageOf(root);
+    expect(stage.classList.contains('kt-land')).toBe(true);
+    expect(stage.classList.contains('kt-phone')).toBe(false);
+    expect(stage.classList.contains('kt-short')).toBe(false);
+    expect(root.querySelector('#lastline')!.hasAttribute('hidden')).toBe(true);
+    // sem a escala fixa de 1440×900: o palco tem o tamanho da tela
+    expect(stage.style.transform).toMatch(/^scale\(/);
+    expect(stage.style.height).not.toBe('');
+    clickCard(root, 'olhado-90');
+    buttonByText(root, 'JOGAR MAU-OLHADO')!.click();
+    expect(root.querySelector('#actions')?.textContent).toContain('toque num adversário');
+    mesa.destroy();
+  });
+
+  it('a seta da direita abre o diário e a seta da gaveta fecha (o fundo e o Esc também)', () => {
+    const { root, mesa } = mount('land');
+    mesa.update(toMesa(midGame('p0')));
+    const stage = stageOf(root);
+    const tab = root.querySelector<HTMLButtonElement>('#logtab')!;
+    expect(tab.getAttribute('aria-expanded')).toBe('false');
+    // a gaveta tem a seta de fechar e as linhas (sem o FECHAR da folha do celular em pé)
+    expect(root.querySelector('#log .kt-close')).toBeNull();
+    expect(root.querySelector('#log .kt-logbody')?.textContent).toContain('comprou');
+    tab.click();
+    expect(stage.classList.contains('kt-logopen')).toBe(true);
+    expect(tab.getAttribute('aria-expanded')).toBe('true');
+    expect(root.querySelector('#log')!.getAttribute('role')).toBe('dialog');
+    root.querySelector<HTMLButtonElement>('#log .kt-logclose')!.click();
+    expect(stage.classList.contains('kt-logopen')).toBe(false);
+    expect(tab.getAttribute('aria-expanded')).toBe('false');
+    tab.click();
+    root.querySelector<HTMLElement>('#scrim')!.click();
+    expect(stage.classList.contains('kt-logopen')).toBe(false);
+    tab.click();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(stage.classList.contains('kt-logopen')).toBe(false);
+    mesa.destroy();
+  });
+
+  it('no computador a seta não abre nada (o diário fica no canto da mesa)', () => {
+    const { root, mesa } = mount();
+    mesa.update(toMesa(midGame('p0')));
+    root.querySelector<HTMLButtonElement>('#logtab')!.click();
+    expect(stageOf(root).classList.contains('kt-logopen')).toBe(false);
+    expect(root.querySelector('#log .kt-logclose')).toBeNull();
+    mesa.destroy();
+  });
+
+  it('setLayout troca entre desktop, phone e land na mesma mesa', () => {
+    const { root, mesa } = mount();
+    mesa.update(toMesa(midGame('p0')));
+    const stage = stageOf(root);
+    const lastline = root.querySelector('#lastline')!;
+    mesa.setLayout('land');
+    expect(stage.classList.contains('kt-land')).toBe(true);
+    expect(lastline.hasAttribute('hidden')).toBe(true);
+    expect(root.querySelector('#log .kt-logclose')).not.toBeNull();
+    // aberta no deitado, a gaveta fecha ao trocar de layout
+    root.querySelector<HTMLButtonElement>('#logtab')!.click();
+    mesa.setLayout('phone');
+    expect(stage.classList.contains('kt-land')).toBe(false);
+    expect(stage.classList.contains('kt-phone')).toBe(true);
+    expect(stage.classList.contains('kt-logopen')).toBe(false);
+    expect(lastline.hasAttribute('hidden')).toBe(false);
+    expect(root.querySelector('#log .kt-logclose')).toBeNull();
+    expect(root.querySelector('#log .kt-close')).not.toBeNull();
+    mesa.setLayout('land');
+    mesa.setLayout('desktop');
+    expect(stage.classList.contains('kt-land')).toBe(false);
+    expect(stage.classList.contains('kt-phone')).toBe(false);
+    expect(stage.style.transform).toMatch(/^translate\(-50%, -50%\) scale\(/);
+    expect(root.querySelector<HTMLElement>('.kt-seat')!.style.left).not.toBe('');
+    mesa.destroy();
+  });
+
+  it('o palco fica na escala 1 na tela deitada e só encolhe abaixo de 740×340', () => {
+    vi.stubGlobal('innerWidth', 844);
+    vi.stubGlobal('innerHeight', 390);
+    try {
+      const { root, mesa } = mount('land');
+      mesa.update(toMesa(viewOf(started(3), 'p0')));
+      const stage = stageOf(root);
+      expect(stage.style.transform).toBe('scale(1)');
+      expect(stage.style.width).toBe('844px');
+      expect(stage.style.height).toBe('390px');
+      vi.stubGlobal('innerWidth', 740);
+      vi.stubGlobal('innerHeight', 360);
+      window.dispatchEvent(new Event('resize'));
+      expect(stage.style.transform).toBe('scale(1)');
+      // baixa demais: encolhe pela altura
+      vi.stubGlobal('innerWidth', 800);
+      vi.stubGlobal('innerHeight', 320);
+      window.dispatchEvent(new Event('resize'));
+      expect(stage.style.transform).toBe(`scale(${320 / 340})`);
+      expect(stage.classList.contains('kt-short')).toBe(false);
+      // estreita demais: encolhe pela largura
+      vi.stubGlobal('innerWidth', 666);
+      vi.stubGlobal('innerHeight', 375);
+      window.dispatchEvent(new Event('resize'));
+      expect(stage.style.transform).toBe(`scale(${666 / 740})`);
+      mesa.destroy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('a mão é uma fileira de cartas menores que não se cobrem; os adversários numa fileira, sem as setinhas da vez', () => {
+    const { root, mesa } = mount('land');
+    mesa.update(toMesa(viewOf(started(3), 'p0')));
+    const lefts = [...root.querySelectorAll<HTMLElement>('#hand .kt-card')].map((c) => parseFloat(c.style.left));
+    expect(lefts).toHaveLength(8);
+    for (let i = 1; i < lefts.length; i++) {
+      expect(lefts[i]! - lefts[i - 1]!).toBeGreaterThanOrEqual(66);
+      expect(lefts[i]! - lefts[i - 1]!).toBeLessThan(112);
+    }
+    expect(root.querySelector<HTMLElement>('.kt-seat')!.style.left).toBe('');
+    expect(root.querySelector('.turnflow')).toBeNull();
+    mesa.destroy();
+  });
+
+  it('as faixas da sua vez ficam por cima da mesa, e tocar num adversário mostra tudo dele', () => {
+    const v = midGame('p0');
+    v.game = { ...v.game, current: 'p0', owed: 3 };
+    const { root, mesa } = mount('land');
+    mesa.update(toMesa(v));
+    expect(root.querySelector('#table #banners .kt-owedtag')?.textContent).toContain('FALTAM 3 TURNOS');
+    expect(root.querySelector('#hand .kt-owedtag')).toBeNull();
+    root.querySelector<HTMLElement>('.kt-seat[data-p="p1"]')!.click();
+    expect(root.querySelector('#viewer')?.textContent).toContain('P1');
+    expect(stageOf(root).classList.contains('kt-dim')).toBe(true);
+    mesa.destroy();
   });
 });

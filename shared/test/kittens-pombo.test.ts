@@ -36,8 +36,8 @@ describe('par de Pombo-correio', () => {
     // As 2 que sobraram no descarte continuam lá.
     expect(s.discard.filter((c) => DISCARD.includes(c))).toHaveLength(2);
     expect(s).toMatchObject({ current: 'p0', owed: 1, choice: null, pending: null });
-    // O monte de antes continua na mesma ordem relativa (as que voltaram entram entre elas).
-    expect(s.draw.filter((c) => DRAW.includes(c))).toEqual(DRAW);
+    // O monte inteiro foi embaralhado junto (pedido do Rafa, 2026-11-12): as cartas de antes estão todas lá.
+    expect([...s.draw.filter((c) => DRAW.includes(c))].sort()).toEqual([...DRAW].sort());
   });
 
   it('o diário diz os tipos que voltaram (públicos), em ordem alfabética, sem os ids e sem dizer qual foi pro topo', () => {
@@ -52,16 +52,19 @@ describe('par de Pombo-correio', () => {
     }
   });
 
-  it('a carta do topo e as posições mudam com o sorteio', () => {
+  it('a carta do topo e as posições mudam com o sorteio, e o monte de antes também muda de ordem', () => {
     const tops = new Set<string>();
     const places = new Set<string>();
+    const old = new Set<string>();
     for (let seed = 1; seed <= 30; seed++) {
       const s = mailed(DISCARD, seed);
       tops.add(s.draw.at(-1)!);
       places.add(s.draw.join());
+      old.add(s.draw.filter((c) => DRAW.includes(c)).join());
     }
     expect(tops.size).toBeGreaterThan(2);
     expect(places.size).toBeGreaterThan(10);
+    expect(old.size).toBeGreaterThan(10);
   });
 
   it('menos de 5 no descarte: vão todas; descarte vazio: nada acontece', () => {

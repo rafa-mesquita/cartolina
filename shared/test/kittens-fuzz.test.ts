@@ -311,6 +311,7 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
   // Histórico: os contadores e as saídas batem com o diário (lido a cada passo, antes de ele perder as entradas velhas).
   const logNopes = new Map<string, number>();
   const logDefuses = new Map<string, number>();
+  const logTargeted = new Map<string, number>();
   const logExits: string[] = [];
   let readUpTo = s.seq;
   const bump = (m: Map<string, number>, p: string) => m.set(p, (m.get(p) ?? 0) + 1);
@@ -319,12 +320,19 @@ function playGame(n: number, seed: number, seen: Set<string> = new Set(), rig?: 
       if (n < readUpTo) continue;
       if (ev.t === 'nope') bump(logNopes, ev.by);
       if (ev.t === 'cafune') bump(logDefuses, ev.by);
+      // Alvo de magia: jogada com alvo, ou a magia refletida pelo Sapo.
+      if (ev.t === 'play' && ev.target !== null) bump(logTargeted, ev.target);
+      if (ev.t === 'reflected') bump(logTargeted, ev.target);
       if (ev.t === 'boom' || ev.t === 'left') logExits.push(`${ev.by}:${ev.t}`);
     }
     readUpTo = s.seq;
     for (const p of players) {
       const mine = s.stats[p] ?? { nopes: 0, defuses: 0 };
-      if (mine.nopes !== (logNopes.get(p) ?? 0) || mine.defuses !== (logDefuses.get(p) ?? 0)) {
+      if (
+        mine.nopes !== (logNopes.get(p) ?? 0) ||
+        mine.defuses !== (logDefuses.get(p) ?? 0) ||
+        (mine.targeted ?? 0) !== (logTargeted.get(p) ?? 0)
+      ) {
         throw new Error(`contadores de ${p} ${JSON.stringify(mine)} não batem com o diário\n  ${where()}`);
       }
     }

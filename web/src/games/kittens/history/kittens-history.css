@@ -57,6 +57,12 @@
 .kt-history .kt-hx-board b { font-weight: 400; color: var(--kt-hx-cream); overflow-wrap: anywhere; }
 .kt-history .kt-hx-board small { font-size: 18px; color: var(--kt-hx-dim); }
 .kt-history .kt-hx-muted { margin: 0; color: var(--kt-hx-dim); }
+.kt-history .kt-hx-expand {
+  display: block; margin: 12px 0 0; padding: 6px 0 0; border: none; background: none; color: var(--kt-hx-yellow);
+  font: 400 9px/1.4 var(--kt-hx-px); text-decoration: underline; text-underline-offset: 3px;
+}
+.kt-history .kt-hx-expand:hover { color: var(--kt-hx-cream); }
+.kt-history .kt-hx-expand:focus-visible { outline: 3px solid var(--kt-hx-yellow); outline-offset: 3px; }
 
 /* Partidas */
 .kt-history .kt-hx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }

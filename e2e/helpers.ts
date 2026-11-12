@@ -16,7 +16,14 @@ export async function newPhonePlayer(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
-/** Fecha os contextos criados por `newPlayer` e `newPhonePlayer` (chamar no `afterEach`). */
+/** Celular deitado (Pixel 7 de lado, com toque): o Tatubum é jogado assim (pedido do Rafa, 2026-11-12). */
+export async function newLandscapePlayer(browser: Browser): Promise<Page> {
+  const context = await browser.newContext({ ...devices['Pixel 7 landscape'] });
+  contexts.push(context);
+  return context.newPage();
+}
+
+/** Fecha os contextos criados por `newPlayer`, `newPhonePlayer` e `newLandscapePlayer` (chamar no `afterEach`). */
 export async function closePlayers(): Promise<void> {
   await Promise.all(contexts.splice(0).map((c) => c.close()));
 }
