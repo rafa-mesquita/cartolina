@@ -2064,6 +2064,9 @@ export function createMesa(root: HTMLElement, opts: MesaOptions): Mesa {
     $('#log').innerHTML = land()
       ? `<button type="button" class="kt-logclose" aria-label="Fechar o diário">▶</button><div class="kt-logbody">${lines}</div>`
       : (phone() ? '<button type="button" class="kt-btn small ghost kt-close"><span>FECHAR</span></button>' : '') + lines;
+    // Gaveta deitada com mais linhas do que cabe: começa mostrando as mais novas (no pé).
+    const body = q('#log .kt-logbody');
+    if (body) body.scrollTop = body.scrollHeight;
     const last = logLines[logLines.length - 1];
     $('#lastline').innerHTML = `<span class="kt-lltxt ${last?.cls ?? ''}">${last?.text ?? 'diário da partida'}</span><b>DIÁRIO ›</b>`;
   }

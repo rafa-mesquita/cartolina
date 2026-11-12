@@ -601,6 +601,222 @@
   .kittens .kt-mesa #stage.kt-phone #logo { font-size: 8px; }
 }
 
+/* ================================================================ Celular deitado (classe kt-land no #stage)
+ * Layout B do protótipo prototipo/tatubum-deitado (mão à mostra). O palco tem o tamanho da tela, na escala 1 (só
+ * encolhe abaixo de 740×340), e o #board some (display: contents): cada bloco fica solto no palco, em posição
+ * absoluta. Em cima, a fileira dos adversários (rola pro lado); no meio, a mesa com monte, carta no ar e descarte; embaixo,
+ * a legenda e a mão numa fileira que rola; na direita, uma coluna com a vez, AS CARTAS e SOM em cima e os botões
+ * embaixo (perto do polegar); na borda direita, a setinha ◀ (#logtab) que abre o diário numa gaveta. A tira #lastline
+ * não aparece (a setinha faz o papel dela). Painéis, zoom, descarte, galeria e fim ficam por cima, como no celular em
+ * pé. As margens respeitam o recorte da câmera (env(safe-area-inset-*)):
+ * --kt-l: margem da esquerda; --kt-r: margem da direita (a setinha fica nela); --kt-cr e --kt-col: onde fica e quanto
+ * mede a coluna dos botões; --kt-rr: até onde vão a galera, a mesa e a mão (antes da coluna); --kt-hb: pé da mão;
+ * --hand-h: altura da mão; --kt-cap: altura da legenda. */
+.kittens .kt-mesa #logtab { display: none; }
+.kittens .kt-mesa #stage.kt-land { --kt-l: calc(10px + env(safe-area-inset-left, 0px)); --kt-r: env(safe-area-inset-right, 0px); --kt-col: 110px; --kt-cr: calc(var(--kt-r) + 36px); --kt-rr: calc(var(--kt-cr) + var(--kt-col) + 10px);
+  --kt-hb: calc(8px + env(safe-area-inset-bottom, 0px)); --hand-h: 112px; --kt-cap: 36px;
+  left: 0; top: 0; transform-origin: 0 0; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.kittens .kt-mesa #stage.kt-land #bg { object-fit: cover; }
+.kittens .kt-mesa #stage.kt-land #board { display: contents; }
+/* coluna da direita, em cima: a vez (em até 3 linhas), AS CARTAS e SOM; o logo sai */
+.kittens .kt-mesa #stage.kt-land #topbar { left: auto; right: var(--kt-cr); top: 6px; width: var(--kt-col); height: auto; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 6px; padding: 0; background: none; box-shadow: none; z-index: 7; }
+.kittens .kt-mesa #stage.kt-land #logo { display: none; }
+.kittens .kt-mesa #stage.kt-land #turn { font-size: 8px; line-height: 12px; text-align: center; text-shadow: 2px 2px 0 #050510; }
+.kittens .kt-mesa #stage.kt-land #turn:empty { display: none; }
+.kittens .kt-mesa #stage.kt-land #turn .owed { display: block; margin-left: 0; }
+.kittens .kt-mesa #stage.kt-land #topright { flex-direction: column; gap: 6px; }
+.kittens .kt-mesa #stage.kt-land #topright .kt-btn { width: 100%; height: 30px; }
+.kittens .kt-mesa #stage.kt-land #topright .kt-btn > span { font-size: 8px; padding: 0 8px; }
+/* adversários: fileira de fichas compactas (bichinho, nome e quantas cartas), rola pro lado se não couber. O respiro de
+ * cima e de baixo da fileira guarda o lugar das marcas (PRÓXIMO, pensando…, TURNOS, PULA), que ficam nas bordas da ficha */
+.kittens .kt-mesa #stage.kt-land #seats { position: absolute; left: var(--kt-l); right: var(--kt-rr); top: 0; height: 60px; display: flex; justify-content: safe center; align-items: flex-start; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 12px 8px 0; scrollbar-width: none; touch-action: pan-x; z-index: 6; }
+.kittens .kt-mesa #stage.kt-land #seats::-webkit-scrollbar { display: none; }
+.kittens .kt-mesa #stage.kt-land .kt-seat { position: relative; flex: none; width: auto; max-width: 160px; height: 38px; transform: none; display: grid; grid-template-columns: 28px auto; grid-template-rows: auto auto; grid-auto-columns: auto; column-gap: 6px; align-items: center; justify-items: start; align-content: center;
+  padding: 4px 8px 4px 4px; background: rgba(20,31,66,.9); box-shadow: 0 0 0 3px #2c3a66; cursor: pointer; }
+.kittens .kt-mesa #stage.kt-land .kt-seat.turn { background: rgba(60,52,40,.92); box-shadow: 0 0 0 3px var(--yellow); }
+.kittens .kt-mesa #stage.kt-land .kt-seat.winner { background: rgba(90,70,30,.92); box-shadow: 0 0 0 3px var(--yellow); }
+.kittens .kt-mesa #stage.kt-land .kt-seat.drop { background: rgba(228,87,46,.4); box-shadow: 0 0 0 3px var(--red); }
+.kittens .kt-mesa #stage.kt-land .kt-seat.hit { animation: kt-hitphone .5s steps(4); }
+.kittens .kt-mesa #stage.kt-land .kt-seat:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-critter { grid-column: 1; grid-row: 1 / span 2; width: 28px; height: 28px; filter: drop-shadow(2px 2px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa #stage.kt-land .kt-seat .who { grid-column: 2; grid-row: 1; margin: 0; max-width: 92px; font-size: 8px; line-height: 10px; text-shadow: 1px 1px 0 #050510; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .count { grid-column: 2; grid-row: 2; margin: 2px 0 0; gap: 0; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .count .fan { display: none; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .count b { font-family: var(--vt); font-size: 18px; line-height: 14px; min-width: 0; text-shadow: 1px 1px 0 #050510; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .count b::before { content: ''; display: inline-block; width: 7px; height: 10px; margin-right: 6px; background: #1f3a6b; box-shadow: 0 0 0 2px var(--ink); vertical-align: 0; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .count.out { font-size: 8px; line-height: 14px; }
+/* as marcas nas bordas da ficha: PRÓXIMO/3º e o relógio do cego em cima à direita, o chip em cima à esquerda, TURNOS
+ * embaixo à esquerda e PULA embaixo à direita (o olho roxo e o olhinho da espiada no canto do bichinho) */
+.kittens .kt-mesa #stage.kt-land .kt-seat .order { top: -10px; right: -4px; font-size: 8px; line-height: 8px; padding: 2px 3px; z-index: 2; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .chip { position: absolute; left: 30px; top: -10px; margin: 0; font-size: 8px; line-height: 8px; padding: 2px 3px; white-space: nowrap; z-index: 2; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-blindclock { left: auto; right: -4px; top: -10px; font-size: 8px; line-height: 8px; padding: 2px 3px; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-owed { right: auto; left: 30px; top: auto; bottom: -8px; font-size: 8px; line-height: 8px; padding: 2px 3px; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-skip { right: -4px; top: auto; bottom: -8px; font-size: 8px; line-height: 8px; padding: 2px 3px; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-cursed { left: -4px; top: -6px; width: 20px; height: 15px; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-peeked { left: -3px; top: auto; bottom: -3px; width: 16px; height: 11px; }
+/* o Tatu Latidor na frente dele: cartinha numa terceira coluna da ficha */
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-front { position: relative; grid-column: 3; grid-row: 1 / span 2; right: auto; top: auto; width: 22px; height: 30px; }
+.kittens .kt-mesa #stage.kt-land .kt-seat .kt-front .kt-card { transform: scale(.19); }
+/* a mesa: entre a galera e a legenda; monte, carta no ar e descarte lado a lado (cartas de 64 px: o slot em .57) */
+.kittens .kt-mesa #stage.kt-land #table { position: absolute; z-index: 5; left: var(--kt-l); right: var(--kt-rr); width: auto; top: 64px; bottom: calc(var(--kt-hb) + var(--hand-h) + var(--kt-cap) + 14px); height: auto; }
+.kittens .kt-mesa #stage.kt-land #table .slot { top: calc(50% - 103px); scale: .57; }
+.kittens .kt-mesa #stage.kt-land #table .slot .label { left: 50%; right: auto; transform: translateX(-50%); font-size: 26px; white-space: nowrap; }
+.kittens .kt-mesa #stage.kt-land #deck { left: calc(50% - 200px); }
+.kittens .kt-mesa #stage.kt-land #air { left: calc(50% - 70px); }
+.kittens .kt-mesa #stage.kt-land #air .empty { font-size: 30px; }
+.kittens .kt-mesa #stage.kt-land #discard { left: calc(50% + 60px); right: auto; }
+.kittens .kt-mesa #stage.kt-land #eye { left: calc(50% + 178px); right: auto; top: calc(50% - 52px); width: 44px; padding: 6px 0 5px; }
+.kittens .kt-mesa #stage.kt-land #eye svg { width: 28px; height: 19px; }
+.kittens .kt-mesa #stage.kt-land #bar { top: calc(50% + 42px); gap: 5px; }
+.kittens .kt-mesa #stage.kt-land #bar i { width: 14px; height: 9px; }
+/* as espiadas: uma fileira de miniaturas à esquerda do monte (com mais de 3, elas se encavalam no espaço das 3) */
+.kittens .kt-mesa #stage.kt-land #future { left: auto; right: calc(50% + 178px); top: calc(50% - 56px); width: 102px; flex-direction: row; flex-wrap: wrap; gap: 0; }
+.kittens .kt-mesa #stage.kt-land #future .kt-ftag { width: 100%; font-size: 8px; margin-bottom: 4px; text-align: right; }
+.kittens .kt-mesa #stage.kt-land #future .kt-card { transform: scale(.28); margin-bottom: calc(44px - 156px); margin-right: calc(68px / var(--fut-gaps, 2) - 112px); }
+/* faixas da sua vez (turnos do Ataque, cego, vez pulada): uma fita presa na borda de cima da mesa, como em pé */
+.kittens .kt-mesa #stage.kt-land #banners { display: flex; position: absolute; left: 0; right: 0; top: -10px; z-index: 6; flex-wrap: nowrap; justify-content: center; gap: 10px; pointer-events: none; }
+.kittens .kt-mesa #stage.kt-land #banners:empty { display: none; }
+.kittens .kt-mesa #stage.kt-land #banners .kt-owedtag, .kittens .kt-mesa #stage.kt-land #banners .kt-blindtag, .kittens .kt-mesa #stage.kt-land #banners .kt-skiptag { position: relative; left: auto; top: auto; bottom: auto; transform: none; height: 24px; padding: 0 10px; gap: 6px; }
+.kittens .kt-mesa #stage.kt-land #banners .kt-owedtag b, .kittens .kt-mesa #stage.kt-land #banners .kt-blindtag b { font-size: 8px; }
+.kittens .kt-mesa #stage.kt-land #banners .kt-owedtag span, .kittens .kt-mesa #stage.kt-land #banners .kt-blindtag span { display: none; }
+.kittens .kt-mesa #stage.kt-land #banners .kt-blindtag svg { width: 22px; height: 16px; }
+.kittens .kt-mesa #stage.kt-land #banners .kt-skiptag b, .kittens .kt-mesa #stage.kt-land #banners .kt-skiptag span { display: none; }
+.kittens .kt-mesa #stage.kt-land #banners .kt-skiptag em { display: block; }
+.kittens .kt-mesa #stage.kt-land #banners .kt-skiptag svg { width: 26px; height: 16px; }
+/* legenda em quadrinho: entre a mesa e a mão, altura fixa de 2 linhas (o texto comprido encolhe: kt-long, kt-longer) */
+.kittens .kt-mesa #stage.kt-land #caption { left: calc(var(--kt-l) + (100% - var(--kt-l) - var(--kt-rr)) / 2); top: auto; bottom: calc(var(--kt-hb) + var(--hand-h) + 7px); transform: translateX(-50%); width: max-content; min-width: 0; max-width: calc(100% - var(--kt-l) - var(--kt-rr));
+  height: var(--kt-cap); padding: 2px 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 18px; line-height: 16px; z-index: 6;
+  box-shadow: 0 -3px 0 var(--ink), 0 3px 0 var(--ink), -3px 0 0 var(--ink), 3px 0 0 var(--ink), 4px 5px 0 rgba(0,0,0,.35); }
+.kittens .kt-mesa #stage.kt-land #caption:empty { display: none; }
+.kittens .kt-mesa #stage.kt-land #caption.kt-long { font-size: 15px; line-height: 14px; }
+.kittens .kt-mesa #stage.kt-land #caption.kt-longer { font-size: 13px; line-height: 12px; }
+.kittens .kt-mesa #stage.kt-land #caption .timer { margin-left: 6px; }
+/* a mão: uma fileira só, de cartas de 66 px (a de 112 encolhida), que rola pro lado; a escolhida sobe 14 px */
+.kittens .kt-mesa #stage.kt-land #hand { left: var(--kt-l); right: var(--kt-rr); width: auto; bottom: var(--kt-hb); height: var(--hand-h); overflow-x: auto; overflow-y: hidden; touch-action: pan-x; scrollbar-width: none; z-index: 6;
+  background: rgba(5,5,16,.35); box-shadow: 0 0 0 3px rgba(44,58,102,.8); }
+.kittens .kt-mesa #stage.kt-land #hand::-webkit-scrollbar { display: none; }
+.kittens .kt-mesa #stage.kt-land #hand .kt-card { bottom: 6px; transform: scale(.5893); transform-origin: left bottom; touch-action: pan-x; -webkit-touch-callout: none; }
+.kittens .kt-mesa #stage.kt-land #hand .kt-card.sel { bottom: 20px; }
+.kittens .kt-mesa #stage.kt-land #hand .kt-card.lifted { bottom: 16px; z-index: 30 !important; box-shadow: 0 -4px 0 var(--cream), 0 4px 0 var(--cream), -4px 0 0 var(--cream), 4px 0 0 var(--cream), 6px 10px 0 rgba(0,0,0,.4); }
+.kittens .kt-mesa #stage.kt-land #hand.defusing .kt-card.cafune { bottom: 16px; }
+/* na carta pequena a frase não se lê: fica só o nome (a explicação é tocar e segurar) */
+.kittens .kt-mesa #stage.kt-land #hand .kt-card .kt-name { font-size: 10px; line-height: 1.3; margin-bottom: 8px; }
+.kittens .kt-mesa #stage.kt-land #hand .kt-card .kt-hint { display: none; }
+.kittens .kt-mesa #stage.kt-land #hand .kt-handpad { position: absolute; bottom: 0; width: 10px; height: 1px; }
+.kittens .kt-mesa #stage.kt-land #hand.myturn::before { top: 3px; font-size: 8px; }
+.kittens .kt-mesa #stage.kt-land #hand .dead { bottom: 44px; font-size: 8px; white-space: nowrap; }
+/* as cartas na sua frente (Tatu Latidor): no começo da fileira da mão, separadas (a mão anda pro lado) */
+.kittens .kt-mesa #stage.kt-land #front { left: var(--kt-l); bottom: var(--kt-hb); width: 72px; height: var(--hand-h); z-index: 7; background: rgba(5,5,16,.35); box-shadow: 0 0 0 3px rgba(44,58,102,.8); }
+.kittens .kt-mesa #stage.kt-land #front:not(:empty) ~ #hand { left: calc(var(--kt-l) + 80px); }
+.kittens .kt-mesa #stage.kt-land #front .kt-ftag { left: 4px; right: 4px; top: 6px; white-space: normal; text-align: center; line-height: 10px; }
+.kittens .kt-mesa #stage.kt-land #front .kt-card { top: auto; bottom: 6px; margin-left: 8px; transform: scale(.5); transform-origin: left bottom; }
+/* coluna da direita, embaixo: a dica em cima, os botões um embaixo do outro (o rótulo comprido quebra a linha) */
+.kittens .kt-mesa #stage.kt-land #actions { right: var(--kt-cr); bottom: var(--kt-hb); width: var(--kt-col); max-height: calc(100% - 130px); flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 8px; z-index: 7; }
+.kittens .kt-mesa #stage.kt-land #actions .kt-btn { width: 100%; min-width: 0; height: auto; min-height: 44px; }
+.kittens .kt-mesa #stage.kt-land #actions .kt-btn > span { height: auto; padding: 6px 10px; font-size: 8px; line-height: 12px; white-space: normal; text-align: center; }
+.kittens .kt-mesa #stage.kt-land #actions .kt-hint { order: -1; font-size: 17px; line-height: 16px; }
+.kittens .kt-mesa #stage.kt-land #nope.kt-btn { height: auto; min-height: 56px; }
+.kittens .kt-mesa #stage.kt-land #nope.kt-btn > span { font-size: 8px; }
+.kittens .kt-mesa #stage.kt-land #sapo.kt-btn { min-height: 48px; }
+/* a setinha do diário, na borda direita no meio da altura */
+.kittens .kt-mesa #stage.kt-land #logtab { display: flex; align-items: center; justify-content: center; position: absolute; right: var(--kt-r); top: 50%; translate: 0 -50%; width: 26px; height: 64px; padding: 0; border: none;
+  background: rgba(20,31,66,.95); box-shadow: 0 0 0 3px #2c3a66; color: var(--yellow); font-family: var(--px); font-size: 12px; cursor: pointer; z-index: 8; }
+/* o diário: gaveta encostada na direita, por cima da mesa (a mesa segue rodando por baixo, com o fundo pouco escuro) */
+.kittens .kt-mesa #stage.kt-land #log { display: flex; flex-direction: column; justify-content: flex-start; position: absolute; top: 0; right: 0; bottom: 0; left: auto; width: min(300px, 80%); height: auto; z-index: 58; overflow: hidden;
+  padding: 12px calc(12px + var(--kt-r)) calc(12px + env(safe-area-inset-bottom, 0px)) 38px; background: rgba(12,18,40,.97); box-shadow: -3px 0 0 #2c3a66;
+  translate: 100% 0; visibility: hidden; transition: translate .18s steps(4), visibility 0s linear .18s; }
+.kittens .kt-mesa #stage.kt-land.kt-logopen #log { translate: 0 0; visibility: visible; transition: translate .18s steps(4); }
+.kittens .kt-mesa #stage.kt-land #log:focus { outline: none; }
+.kittens .kt-mesa #stage.kt-land #log .kt-logclose { position: absolute; left: 0; top: 50%; translate: 0 -50%; width: 26px; height: 64px; padding: 0; border: none; display: flex; align-items: center; justify-content: center;
+  background: #2c3a66; color: var(--yellow); font-family: var(--px); font-size: 12px; cursor: pointer; }
+.kittens .kt-mesa #stage.kt-land #log .kt-logbody { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--yellow) transparent; }
+.kittens .kt-mesa #stage.kt-land #log .h { font-size: 9px; margin-bottom: 8px; }
+.kittens .kt-mesa #stage.kt-land #log p { font-size: 19px; margin-bottom: 5px; }
+/* folhas: fundo escuro (mais claro com a gaveta do diário) e, por cima, painéis, zoom, descarte, galeria e fim */
+.kittens .kt-mesa #stage.kt-land.kt-dim #scrim { display: block; position: absolute; inset: 0; z-index: 54; background: rgba(5,5,16,.74); }
+.kittens .kt-mesa #stage.kt-land.kt-logopen #scrim { background: rgba(5,5,16,.35); }
+.kittens .kt-mesa #stage.kt-land #panel { left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 0; width: max-content; max-width: calc(100% - 24px); max-height: calc(100% - 20px); overflow-y: auto; padding: 12px 16px 14px; z-index: 56; }
+.kittens .kt-mesa #stage.kt-land #panel h2 { font-size: 12px; line-height: 1.5; }
+.kittens .kt-mesa #stage.kt-land #panel p { font-size: 20px; margin-bottom: 8px; }
+.kittens .kt-mesa #stage.kt-land #panel .kt-btn { height: 40px; }
+.kittens .kt-mesa #stage.kt-land #panel .kt-btn > span { font-size: 8px; padding: 0 10px; }
+.kittens .kt-mesa #stage.kt-land #panel .cards { justify-content: center; gap: 10px; margin: 8px 0 6px; }
+.kittens .kt-mesa #stage.kt-land #panel .cards .kt-card { zoom: .75; }
+.kittens .kt-mesa #stage.kt-land #panel .cards .kt-slotlabel { font-size: 8px; }
+.kittens .kt-mesa #stage.kt-land #panel input[type=range] { height: 30px; margin: 4px 0 8px; }
+.kittens .kt-mesa #stage.kt-land #board > #viewer { pointer-events: auto; }
+.kittens .kt-mesa #stage.kt-land #viewer { left: 0; top: 0; right: 0; bottom: 0; transform: none; flex-direction: row; justify-content: center; align-items: center; gap: 22px; z-index: 57; cursor: pointer;
+  padding: 12px calc(20px + env(safe-area-inset-right, 0px)) 28px calc(20px + env(safe-area-inset-left, 0px)); }
+.kittens .kt-mesa #stage.kt-land #viewer:focus { outline: none; }
+.kittens .kt-mesa #stage.kt-land #viewer .vcard { flex: none; width: 202px; height: 281px; }
+.kittens .kt-mesa #stage.kt-land #viewer .vcard .kt-card { transform: scale(1.8); }
+.kittens .kt-mesa #stage.kt-land #viewer .vtext { width: auto; flex: 0 1 440px; min-width: 0; max-height: 100%; overflow-y: auto; padding: 12px 16px; }
+.kittens .kt-mesa #stage.kt-land #viewer .vtext h3 { font-size: 12px; }
+.kittens .kt-mesa #stage.kt-land #viewer .vtext p { font-size: 20px; }
+.kittens .kt-mesa #stage.kt-land #viewer .kt-vseat img { width: 96px; height: 96px; filter: drop-shadow(4px 4px 0 rgba(5,5,16,.6)); }
+.kittens .kt-mesa #stage.kt-land #viewer .kt-vclose { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font-family: var(--px); font-size: 8px; color: var(--dim); padding: 4px 8px; background: rgba(14,14,28,.9); }
+.kittens .kt-mesa #stage.kt-land #toast { bottom: auto; top: 40%; z-index: 70; max-width: calc(100% - 32px); text-align: center; line-height: 1.5; }
+.kittens .kt-mesa #stage.kt-land #pile .box { width: calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); height: calc(100% - 16px); max-height: none; padding: 10px 14px; }
+.kittens .kt-mesa #stage.kt-land #pile h2 { font-size: 12px; line-height: 1.5; }
+.kittens .kt-mesa #stage.kt-land #pile .psub { font-size: 18px; }
+.kittens .kt-mesa #stage.kt-land #pile .pbody { gap: 12px; margin: 4px 0 6px; }
+.kittens .kt-mesa #stage.kt-land #pile .grid { gap: 12px 10px; padding: 10px 4px; min-height: 0; }
+.kittens .kt-mesa #stage.kt-land #pile .grid .kt-card { zoom: .6; }
+.kittens .kt-mesa #stage.kt-land #pile .grid .kt-card:hover { transform: none; }
+.kittens .kt-mesa #stage.kt-land #pile .pinfo { width: 240px; padding: 10px 12px; }
+.kittens .kt-mesa #stage.kt-land #pile .pinfo h3 { font-size: 12px; }
+.kittens .kt-mesa #stage.kt-land #pile .pinfo p { font-size: 19px; }
+.kittens .kt-mesa #stage.kt-land #pile .kt-seen { gap: 16px; margin-bottom: 4px; }
+.kittens .kt-mesa #stage.kt-land #pile .kt-seen b { font-size: 8px; }
+.kittens .kt-mesa #stage.kt-land #pile .kt-seen .kt-card { zoom: .5; }
+.kittens .kt-mesa #stage.kt-land #pile .foot .note { font-size: 17px; }
+.kittens .kt-mesa #stage.kt-land #pile .foot .kt-btn { height: 40px; }
+.kittens .kt-mesa #stage.kt-land #gallery { gap: 8px; padding: 10px calc(14px + env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) calc(14px + env(safe-area-inset-left, 0px)); }
+.kittens .kt-mesa #stage.kt-land #gallery h2 { font-size: 12px; }
+.kittens .kt-mesa #stage.kt-land #gallery .kt-how { flex: none; margin: 0; padding: 6px 10px; background: #1a2a50; font-size: 17px; line-height: 1.05; color: var(--cream); }
+.kittens .kt-mesa #stage.kt-land #gallery .kt-how b { font-family: var(--px); font-size: 8px; font-weight: normal; color: var(--yellow); margin-right: 4px; }
+.kittens .kt-mesa #stage.kt-land #gallery .grid { grid-template-columns: repeat(2, 1fr); gap: 12px 18px; padding: 6px 4px; }
+.kittens .kt-mesa #stage.kt-land #gallery .item { gap: 12px; }
+.kittens .kt-mesa #stage.kt-land #gallery .item .kt-card { zoom: .6; }
+.kittens .kt-mesa #stage.kt-land #gallery .item b { font-size: 8px; margin-bottom: 4px; }
+.kittens .kt-mesa #stage.kt-land #gallery .item p { font-size: 18px; }
+.kittens .kt-mesa #stage.kt-land #gallery .foot { gap: 12px; align-items: flex-end; }
+.kittens .kt-mesa #stage.kt-land #gallery .foot p { font-size: 15px; line-height: 1.05; max-height: 48px; overflow-y: auto; }
+.kittens .kt-mesa #stage.kt-land #gallery .foot .kt-btn { flex: none; height: 40px; }
+/* fim: o nome e os botões no meio, menores */
+.kittens .kt-mesa #stage.kt-land #over { padding: 10px 20px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+.kittens .kt-mesa #stage.kt-land #over.dim { background: rgba(5,5,16,.8); }
+.kittens .kt-mesa #stage.kt-land #over .biglogo { font-size: 24px !important; line-height: 1.4; text-align: center; margin-bottom: 0; }
+.kittens .kt-mesa #stage.kt-land #over .sub { font-size: 12px; line-height: 1.5; text-align: center; }
+.kittens .kt-mesa #stage.kt-land #over .kt-btn { min-width: 240px; height: 46px; }
+.kittens .kt-mesa #stage.kt-land #over .kt-btn > span { font-size: 12px; }
+/* efeitos no tamanho da mesa deitada (a carta grande do meio cabe na altura da mesa: --kt-big, veja bigAt) */
+.kittens .kt-mesa #stage.kt-land .bigcard { transform: translate(-50%, -50%) scale(var(--kt-big, 1)); }
+.kittens .kt-mesa #stage.kt-land .soldier { width: calc(95px * var(--kt-big, 1)); }
+.kittens .kt-mesa #stage.kt-land .stamp { font-size: 18px; }
+
+/* tela deitada bem baixa (até 370 de altura, como 740×360): mão, legenda e mesa um pouco menores */
+@media (max-height: 370px) {
+  .kittens .kt-mesa #stage.kt-land { --hand-h: 106px; --kt-cap: 32px; }
+  .kittens .kt-mesa #stage.kt-land #table .slot { top: calc(50% - 100px); scale: .5; }
+  .kittens .kt-mesa #stage.kt-land #bar { top: calc(50% + 36px); }
+  .kittens .kt-mesa #stage.kt-land #hand .kt-card { bottom: 4px; }
+  .kittens .kt-mesa #stage.kt-land #hand .kt-card.sel { bottom: 14px; }
+  .kittens .kt-mesa #stage.kt-land #hand .kt-card.lifted, .kittens .kt-mesa #stage.kt-land #hand.defusing .kt-card.cafune { bottom: 12px; }
+  .kittens .kt-mesa #stage.kt-land #caption { font-size: 16px; line-height: 14px; }
+}
+
+/* Lobby com a tela deitada e baixa (celular deitado): menos respiro, pra caber mais sem rolar */
+@media (orientation: landscape) and (max-height: 500px) {
+  .kt-lobby { justify-content: flex-start; gap: 12px; padding: 12px calc(16px + env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px)); }
+  .kt-lobby .kt-logo { font-size: 32px; }
+  .kt-lobby .kt-sub { margin: -4px 0 0; font-size: 8px; }
+  .kt-lobby .kt-panel { padding: 14px 18px; }
+  .kt-lobby .kt-panel p { font-size: 20px; }
+  .kt-lobby .kt-people { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+  .kt-lobby .kt-people img { width: 44px; height: 44px; }
+}
+
 /* Lobby no celular: coluna, botões grandes */
 @media (max-width: 640px) {
   .kittens .kt-bg { object-fit: cover; }
