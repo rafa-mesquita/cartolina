@@ -97,6 +97,21 @@ describe('sons do Mandacaru', () => {
     expect(made.osc + made.noise).toBeGreaterThan(0);
   });
 
+  it('o pio do Carcará: três gritos com tremido (cada um com o oscilador do tremido) e um chiado', () => {
+    const made = fakeAudio();
+    gesto();
+    playMandacaruSound('carcara');
+    expect(made.osc).toBe(6);
+    expect(made.noise).toBe(3);
+  });
+
+  it('o chamado da vez: três notas de pífano (corpo, brilho e tremido em cada)', () => {
+    const made = fakeAudio();
+    gesto();
+    playMandacaruSound('turn');
+    expect(made.osc).toBe(9);
+  });
+
   it('sem Web Audio, segue em silêncio', () => {
     vi.stubGlobal('AudioContext', undefined);
     gesto();

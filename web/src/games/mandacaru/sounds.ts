@@ -113,6 +113,89 @@ function noise(c: AudioContext, out: AudioNode, t: number, dur: number, { freq =
   src.stop(at + dur + 0.02);
 }
 
+interface CryOpts {
+  vol?: number;
+  /** Tremido da voz: quantas vezes por segundo e quantos Hz pra cima e pra baixo. */
+  rate?: number;
+  depth?: number;
+}
+
+/**
+ * Um grito de ave de rapina: dente-de-serra áspera passando por um filtro (tira o zumbido) que acompanha a nota,
+ * descendo de `freq` até `to`, com um tremido rápido (vibrato) e um chiado de ar por cima.
+ */
+function cry(c: AudioContext, out: AudioNode, t: number, freq: number, to: number, dur: number, { vol = 0.2, rate = 32, depth = 70 }: CryOpts = {}): void {
+  const at = c.currentTime + 0.01 + t;
+  const o = c.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(freq, at);
+  o.frequency.exponentialRampToValueAtTime(to, at + dur);
+  const lfo = c.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(rate, at);
+  const wobble = c.createGain();
+  wobble.gain.setValueAtTime(depth, at);
+  lfo.connect(wobble).connect(o.frequency);
+  const f = c.createBiquadFilter();
+  f.type = 'bandpass';
+  f.frequency.setValueAtTime(freq * 1.4, at);
+  f.frequency.exponentialRampToValueAtTime(to * 1.4, at + dur);
+  f.Q.value = 3;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.015);
+  g.gain.exponentialRampToValueAtTime(vol * 0.6, at + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(f).connect(g).connect(out);
+  o.start(at);
+  lfo.start(at);
+  o.stop(at + dur + 0.02);
+  lfo.stop(at + dur + 0.02);
+  noise(c, out, t, dur * 0.7, { freq: freq * 2, q: 2, vol: vol * 0.35, to: to * 2 });
+}
+
+/**
+ * Uma nota de pífano: triângulo (o corpo) com uma quadrada baixinha uma oitava acima (o brilho de palheta, de sanfoninha),
+ * passando por um passa-baixa, com um vibrato leve e um sopro de ar no ataque.
+ */
+function fife(c: AudioContext, out: AudioNode, t: number, freq: number, dur: number, vol: number): void {
+  const at = c.currentTime + 0.01 + t;
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.025);
+  g.gain.exponentialRampToValueAtTime(vol * 0.7, at + dur * 0.5);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  const f = c.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(freq * 4, at);
+  f.Q.value = 0.7;
+  f.connect(g).connect(out);
+  const lfo = c.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.setValueAtTime(6, at);
+  const wobble = c.createGain();
+  wobble.gain.setValueAtTime(freq * 0.008, at);
+  lfo.connect(wobble);
+  const voices: [OscillatorType, number, number][] = [
+    ['triangle', 1, 1],
+    ['square', 2, 0.12],
+  ];
+  for (const [type, mult, level] of voices) {
+    const o = c.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(freq * mult, at);
+    wobble.connect(o.frequency);
+    const lv = c.createGain();
+    lv.gain.setValueAtTime(level, at);
+    o.connect(lv).connect(f);
+    o.start(at);
+    o.stop(at + dur + 0.02);
+  }
+  lfo.start(at);
+  lfo.stop(at + dur + 0.02);
+  noise(c, out, t, 0.04, { freq: freq * 3, q: 1.5, vol: vol * 0.25 });
+}
+
 const SYNTH: Record<MandacaruSound, (c: AudioContext, out: AudioNode) => void> = {
   /** Dados chacoalhando no copo e caindo na mesa. */
   dice: (c, o) => {
@@ -129,15 +212,17 @@ const SYNTH: Record<MandacaruSound, (c: AudioContext, out: AudioNode) => void> =
   },
   /** Papel do cordel deslizando. */
   card: (c, o) => noise(c, o, 0, 0.14, { freq: 1800, to: 4200, q: 0.8, vol: 0.28 }),
-  /** O grito do carcará: dois "kreee" descendo. */
+  /** O Carcará pousou: um "kreee" rouco e dois "ki" curtos, cada um mais grave, todos com tremido. */
   carcara: (c, o) => {
-    tone(c, o, 0, 1500, 0.2, { type: 'triangle', vol: 0.22, to: 950 });
-    tone(c, o, 0.24, 1650, 0.26, { type: 'triangle', vol: 0.2, to: 900 });
+    cry(c, o, 0, 2300, 1350, 0.32, { vol: 0.2, rate: 34, depth: 90 });
+    cry(c, o, 0.4, 2100, 1500, 0.12, { vol: 0.17, rate: 40, depth: 60 });
+    cry(c, o, 0.58, 1900, 1300, 0.14, { vol: 0.14, rate: 40, depth: 60 });
   },
-  /** Sua vez: duas notas de sininho. */
+  /** É com você: chamado de pífano, três notas subindo (sol, si, ré), a última mais comprida; um tiquinho acima dos outros. */
   turn: (c, o) => {
-    tone(c, o, 0, 660, 0.25, { vol: 0.35 });
-    tone(c, o, 0.13, 990, 0.4, { vol: 0.3 });
+    fife(c, o, 0, 784, 0.13, 0.55);
+    fife(c, o, 0.12, 988, 0.13, 0.55);
+    fife(c, o, 0.24, 1175, 0.42, 0.6);
   },
   /** Vitória: arpejo de sanfona em triângulo. */
   win: (c, o) => {

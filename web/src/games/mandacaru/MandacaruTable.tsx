@@ -5,13 +5,15 @@ import { useStageFit } from '../dixit/useStageFit';
 import { useToast } from '../dixit/useToast';
 import { FUNDO_STYLE, preloadMandacaruArt } from './assets';
 import { Actions, hintFor, type Panel, type SimpleAction } from './Actions';
-import { Board, spotAction, spotsOf, type BuildMode } from './Board';
+import { Board, spotAction, spotsOf, type BuildMode, type HexFlash } from './Board';
+import { CardZoom, type ZoomCard } from './CardZoom';
+import { CenterDice } from './CenterDice';
 import { CordelChoice } from './CordelChoice';
 import { DiscardPanel } from './DiscardPanel';
 import { EndPanel } from './EndPanel';
 import { FeiraPanel } from './FeiraPanel';
 import { Flights } from './Flights';
-import { motionOk, rollFlights, type Flight } from './rollFlights';
+import { motionOk, rollFlights, rollHexes, type Flight } from './rollFlights';
 import { useTurnClock } from './clock';
 import { Diary, freshEntries } from './Diary';
 import { Hand, type PlayableCordel } from './Hand';
@@ -23,7 +25,7 @@ import { installMandacaruAudioUnlock, playMandacaruSound } from './sounds';
 import { nameFrom, resList } from './texts';
 import { TopBar } from './TopBar';
 import { TradePanel, tradeSeed, type TradeTerms } from './TradePanel';
-import { useMandacaruSounds } from './useMandacaruSounds';
+import { callOf, useMandacaruSounds } from './useMandacaruSounds';
 import './mandacaru.css';
 
 const TOAST_MS = 2600;
@@ -31,19 +33,32 @@ const TOAST_MS = 2600;
 const UNLOCK_MS = 4000;
 /** Mínimo que a trava segura depois de mandar, mesmo com visão nova chegando (ms). */
 const HOLD_MS = 400;
-/** Quanto tempo a soma dos dados fica grande no meio do tabuleiro. */
-const SUM_MS = 1000;
+/** Quanto tempo a soma (e os dados grandes do centro) fica no meio do tabuleiro depois que os dados param (ms). */
+export const SUM_MS = 1200;
 /** Quanto tempo os dados rolam antes de pousar no resultado (ms). */
 export const TUMBLE_MS = 700;
+/** Quanto tempo os terrenos do número piscam depois que os dados param (3 piscadas de 0,5 s). */
+export const FLASH_MS = 1500;
+/** Sem animação, o realce fixo dos terrenos dura isto (ms). */
+export const STILL_FLASH_MS = 900;
 
-/** A rolagem que está passando na tela: os dados rolando, depois a soma (e as cartas voando), depois nada. */
+/**
+ * A rolagem que está passando na tela: os dados rolando (no topo e no centro), depois a soma (e as cartas voando), depois
+ * nada. Os terrenos do número piscam a partir de quando os dados param, num prazo próprio (`flash`).
+ */
 interface RollFx {
   id: number;
   sum: number;
+  dice: [number, number];
   /** Com animação (falso com movimento reduzido ou aba escondida). */
   motion: boolean;
   flights: Flight[];
   stage: 'roll' | 'sum' | 'off';
+  /** Terrenos com o número (menos o do Carcará) e o do Carcará, se tiver o número. */
+  lit: number[];
+  dark: number | null;
+  /** O piscar dos terrenos ainda vale (desliga sozinho depois de `FLASH_MS`). */
+  flash: boolean;
 }
 
 /** Cordéis que pedem escolha abrem a janela deles; Vaqueiro e Mutirão se jogam direto. */
@@ -192,7 +207,19 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
     if (roll && roll.t === 'roll') {
       const motion = motionOk();
       const flights = motion ? rollFlights(roll, g.layout, g.buildings, g.carcara, g.players) : [];
-      setRollFx((r) => ({ id: (r?.id ?? 0) + 1, sum: roll.dice[0] + roll.dice[1], motion, flights, stage: motion ? 'roll' : 'sum' }));
+      const sum = roll.dice[0] + roll.dice[1];
+      const { lit, dark } = rollHexes(sum, g.layout, g.carcara);
+      setRollFx((r) => ({
+        id: (r?.id ?? 0) + 1,
+        sum,
+        dice: roll.dice,
+        motion,
+        flights,
+        stage: motion ? 'roll' : 'sum',
+        lit,
+        dark,
+        flash: lit.length > 0 || dark !== null,
+      }));
     }
     const steal = fresh.find((e) => e.t === 'steal');
     if (steal && steal.t === 'steal' && g.stolen && me !== null && (steal.player === me || steal.from === me)) {
@@ -219,6 +246,20 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
     return () => clearTimeout(t);
   }, [fxId, fxStage]);
   const sumOn = fxStage === 'sum';
+  // Os terrenos piscam quando os dados param e se apagam por um prazo próprio (passa da soma: 1,5 s contra 1,2 s).
+  const flashOn = rollFx !== null && rollFx.flash && rollFx.stage !== 'roll';
+  const flashStill = rollFx !== null && !rollFx.motion;
+  useEffect(() => {
+    if (!flashOn) return undefined;
+    const t = setTimeout(() => setRollFx((r) => (r && r.id === fxId ? { ...r, flash: false } : r)), flashStill ? STILL_FLASH_MS : FLASH_MS);
+    return () => clearTimeout(t);
+  }, [fxId, flashOn, flashStill]);
+  const fxLit = rollFx?.lit;
+  const fxDark = rollFx?.dark ?? null;
+  const flash = useMemo<HexFlash | null>(
+    () => (flashOn && fxLit ? { id: fxId, lit: fxLit, dark: fxDark, still: flashStill } : null),
+    [flashOn, fxId, fxLit, fxDark, flashStill],
+  );
 
   const spots = useMemo(() => spotsOf(g, mode), [g, mode]);
   const onSpot = useCallback(
@@ -268,35 +309,70 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
   const onRules = useCallback(() => setRulesOpen((o) => !o), []);
   const onRestart = useCallback(() => send({ type: 'restart' }), [send]);
 
-  // Esc fecha a folha de regras; sem ela, larga a peça escolhida e fecha a janela.
-  const hasUi = mode !== null || panel !== null;
+  // O descarte manda sobre as outras janelas; o cartão da oferta só aparece sem janela aberta.
+  const discarding = g.phase === 'discard' && g.can.discard > 0 && g.myRes !== null;
+
+  // Carta da mão aberta grande: só sem janela nenhuma por cima (descarte, troca, feira, cordel, regras, fim). Abriu uma
+  // janela com ela aberta, ela some; o cordel que você não tem mais (jogou o último) também.
+  const [zoomState, setZoom] = useState<ZoomCard | null>(null);
+  const zoomOk = !discarding && panel === null && !rulesOpen && g.phase !== 'over' && g.myRes !== null;
+  const zoom =
+    zoomOk && zoomState !== null && (zoomState.type === 'res' || g.myCordeis.some((c) => c.kind === zoomState.kind)) ? zoomState : null;
+  const zoomGone = zoomState !== null && zoom === null;
+  useEffect(() => {
+    if (zoomGone) setZoom(null); // não volta sozinha quando a janela fecha
+  }, [zoomGone]);
+  const onOpenCard = useCallback((card: ZoomCard) => setZoom(card), []);
+  const closeZoom = useCallback(() => setZoom(null), []);
+  const onPlayZoom = useCallback(
+    (k: PlayableCordel) => {
+      setZoom(null);
+      onPlay(k);
+    },
+    [onPlay],
+  );
+
+  // Esc fecha a folha de regras; sem ela, a carta aberta; sem as duas, larga a peça escolhida e fecha a janela.
+  const hasUi = mode !== null || panel !== null || zoom !== null;
+  const zoomOn = zoom !== null;
   useEffect(() => {
     if (!hasUi && !rulesOpen) return undefined;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (rulesOpen) setRulesOpen(false);
+      else if (zoomOn) setZoom(null);
       else setUi((u) => ({ ...u, mode: null, panel: null, seed: null }));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [hasUi, rulesOpen]);
+  }, [hasUi, rulesOpen, zoomOn]);
 
   const hint = hintFor(g, mode);
   const left = g.phase === 'discard' ? discardLeft : turnLeft;
   const stage = { width, transform: `translate(-50%, -50%) scale(${scale})` } as CSSProperties;
   const sum = rollFx?.sum ?? 0;
-  // O descarte manda sobre as outras janelas; o cartão da oferta só aparece sem janela aberta.
-  const discarding = g.phase === 'discard' && g.can.discard > 0 && g.myRes !== null;
   const offerCard =
     !discarding && panel === null && me !== null && g.phase === 'main' && g.turn !== me && g.offer !== null && ui.hiddenOffer !== g.offer.id && g.myRes !== null;
   return (
     <div className="mandacaru" style={FUNDO_STYLE}>
       <div className="mc-app" style={stage}>
-        <TopBar game={g} nameOf={nameOf} left={left} rollId={fxId} rolling={fxStage === 'roll'} onRules={onRules} rulesOpen={rulesOpen} />
+        <TopBar
+          game={g}
+          nameOf={nameOf}
+          left={left}
+          rollId={fxId}
+          rolling={fxStage === 'roll'}
+          onRules={onRules}
+          rulesOpen={rulesOpen}
+          call={callOf(g, view.you)}
+        />
         <Seats game={g} roomSeats={view.seats} you={view.you} nameOf={nameOf} turnLeft={turnLeft} />
         <main className="mc-mesa">
-          <Board game={g} spots={spots} onSpot={onSpot} />
+          <Board game={g} spots={spots} onSpot={onSpot} flash={flash} />
           {hint && <div className="mc-dica">{hint}</div>}
+          {rollFx && rollFx.stage !== 'off' && (
+            <CenterDice key={rollFx.id} dice={rollFx.dice} rolling={rollFx.stage === 'roll'} motion={rollFx.motion} />
+          )}
           <div className={`mc-soma${sumOn ? ' on' : ''}${sum === 7 ? ' sete' : ''}`} aria-hidden="true">
             {sum === 7 ? (
               <>
@@ -323,7 +399,8 @@ export function MandacaruTable({ view, conn, serverOffset, status, fromPhase }: 
           <Actions game={g} me={me} nameOf={nameOf} mode={mode} onMode={onMode} onAction={onAction} panel={panel} onPanel={onPanel} />
           <Diary log={g.log} nameOf={nameOf} layout={g.layout} />
         </aside>
-        <Hand game={g} onPlay={onPlay} />
+        <Hand game={g} onPlay={onPlay} onOpen={zoomOk ? onOpenCard : undefined} />
+        {zoom && <CardZoom key={zoom.type === 'res' ? zoom.res : zoom.kind} card={zoom} game={g} onPlay={onPlayZoom} onClose={closeZoom} />}
         {rollFx && rollFx.motion && rollFx.stage !== 'roll' && rollFx.flights.length > 0 && (
           <Flights key={rollFx.id} flights={rollFx.flights} me={me} />
         )}

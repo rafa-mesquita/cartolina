@@ -1,6 +1,7 @@
 import { TERRAIN_RESOURCE, mandacaruGeometry, type BoardLayout, type Building, type MandacaruView } from '@cartolina/shared';
 import { memo, type KeyboardEvent, type ReactNode } from 'react';
-import { BoardDefs, Border, Carcara, City, Hex, House, INNER, NumberToken, PLAYER_TINTS, Port, ResBadge, Road, at, corners, hexPath, portPlacement } from './art';
+import { BoardDefs, Border, Carcara, City, Hex, House, INNER, NumberToken, PLAYER_TINTS, Port, RED, ResBadge, Road, at, corners, hexPath, portPlacement } from './art';
+import type { RollHexes } from './rollFlights';
 
 /** Peça escolhida pra construir na fase principal (os lugares dela pulsam). */
 export type BuildMode = 'road' | 'house' | 'city';
@@ -21,6 +22,13 @@ export type SpotAction =
   | { type: 'build_road'; edge: number }
   | { type: 'build_city'; vertex: number }
   | { type: 'move_carcara'; hex: number };
+
+/** Os terrenos do número que saiu, acesos por um tempo depois que os dados param (`id` muda a cada rolagem). */
+export interface HexFlash extends RollHexes {
+  id: number;
+  /** Sem animação (movimento reduzido ou aba escondida): realce fixo. */
+  still: boolean;
+}
 
 const NONE: Spots = { v: [], e: [], c: [], h: [] };
 
@@ -109,13 +117,40 @@ interface Props {
   game: MandacaruView;
   spots: Spots;
   onSpot: (kind: 'v' | 'e' | 'c' | 'h', n: number) => void;
+  /** Terrenos piscando agora (a rolagem nova); `null` = nenhum. */
+  flash?: HexFlash | null;
+}
+
+/**
+ * Realce dos terrenos do número que saiu: um aro claro grosso com um véu leve, piscando 3 vezes (CSS). O do Carcará pisca
+ * escuro com o aro vermelho (não rendeu). Fica embaixo das estradas e casas e não pega clique.
+ */
+function Flash({ flash }: { flash: HexFlash }) {
+  const geo = mandacaruGeometry();
+  const ring = (h: number, dark: boolean) => {
+    const c = at(geo.hexes[h]!);
+    const pts = corners(c.x, c.y);
+    const data = dark ? { 'data-sem-renda': h } : { 'data-acende': h };
+    return (
+      <g key={h} className={dark ? 'mc-acende-hex escuro' : 'mc-acende-hex'} {...data}>
+        <path d={hexPath(pts, INNER, c.x, c.y - 1)} fill={dark ? '#1c120c' : '#fff6e6'} opacity={dark ? 0.42 : 0.3} />
+        <path d={hexPath(pts, 0.89, c.x, c.y)} fill="none" stroke={dark ? RED : '#fff6e6'} strokeWidth="9" strokeLinejoin="round" />
+      </g>
+    );
+  };
+  return (
+    <g className={`mc-acende${flash.still ? ' parado' : ''}`} pointerEvents="none" aria-hidden="true">
+      {flash.lit.map((h) => ring(h, false))}
+      {flash.dark !== null && ring(flash.dark, true)}
+    </g>
+  );
 }
 
 /**
  * O tabuleiro em SVG (estilo D): terra rachada, terrenos, feiras, fichas, estradas, casas/vilas (cor pelo índice do
  * jogador em `players`), o Carcará (com o terreno dele escurecido) e, por cima, os lugares que pulsam.
  */
-export const Board = memo(function Board({ game: g, spots, onSpot }: Props) {
+export const Board = memo(function Board({ game: g, spots, onSpot, flash = null }: Props) {
   const geo = mandacaruGeometry();
   const tint = (owner: string) => PLAYER_TINTS[g.players.indexOf(owner)] ?? PLAYER_TINTS[3];
   let carcara: ReactNode = null;
@@ -134,6 +169,7 @@ export const Board = memo(function Board({ game: g, spots, onSpot }: Props) {
     <svg className="mc-board" viewBox={VIEWBOX} preserveAspectRatio="xMidYMid meet" aria-label="tabuleiro">
       <BoardDefs />
       <StaticBoard layout={g.layout} />
+      {g.layout && flash && <Flash key={`f${flash.id}`} flash={flash} />}
       {g.layout && (
         <g>
           {g.roads.map((o, e) => {

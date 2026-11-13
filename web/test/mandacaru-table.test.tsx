@@ -2,7 +2,7 @@ import { act as rtlAct, fireEvent, render, screen } from '@testing-library/react
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { mandacaruGeometry, mandacaruHouseSpots, mandacaruStateOf, type MandacaruRoomView, type MandacaruState, type Room } from '@cartolina/shared';
 import { freshEntries } from '../src/games/mandacaru/Diary';
-import { MandacaruTable, TUMBLE_MS } from '../src/games/mandacaru/MandacaruTable';
+import { FLASH_MS, MandacaruTable, STILL_FLASH_MS, SUM_MS, TUMBLE_MS } from '../src/games/mandacaru/MandacaruTable';
 import { playMandacaruSound } from '../src/games/mandacaru/sounds';
 import type { ConnStatus, GameConn } from '../src/net/connection';
 import { T0, afterSetup, mandacaruRoom, step, viewOf, withGame } from './mandacaru-fixtures';
@@ -254,6 +254,8 @@ describe('Mesa do Mandacaru: turno', () => {
     expect(container.querySelector('[data-cordel="point"]')!.textContent).toContain('Igrejinha');
     fireEvent.click(screen.getByRole('button', { name: 'jogar Vaqueiro' }));
     expect(c.sendAction).toHaveBeenCalledWith({ type: 'play_vaqueiro' });
+    // o "jogar" da mão joga direto: não abre a carta grande
+    expect(screen.queryByRole('dialog', { name: /^carta/ })).toBeNull();
   });
 
   it('trocar e feira: apagados antes dos dados, acesos na fase principal', () => {
@@ -430,9 +432,113 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
     // a mesa liga os sons: dados rolados tocam
     expect(playMandacaruSound).toHaveBeenCalledWith('dice');
     rtlAct(() => {
-      vi.advanceTimersByTime(1100);
+      vi.advanceTimersByTime(SUM_MS + 100);
     });
     expect(container.querySelector('.mc-soma.on')).toBeNull();
+  });
+
+  it('dados grandes no centro: rolam junto com os do topo, param no resultado com a soma e somem', () => {
+    const room = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(room);
+    const c = conn();
+    const { container, rerender } = mesa(viewOf(room, turn), c);
+    // primeira visão: nada no centro
+    expect(container.querySelector('.mc-dados-centro')).toBeNull();
+    const rolled = step(room, turn, { type: 'roll' });
+    rerender(<MandacaruTable view={viewOf(rolled, turn)} conn={c} serverOffset={0} status="joined" />);
+    const dice = mandacaruStateOf(rolled)!.dice!;
+    const centro = () => container.querySelector('.mc-mesa .mc-dados-centro');
+    expect(centro()!.classList.contains('rolando')).toBe(true);
+    expect(centro()!.querySelectorAll('.mc-dado-g')).toHaveLength(2);
+    // camada só de enfeite: fora do leitor de tela (e o CSS tira o clique)
+    expect(centro()!.getAttribute('aria-hidden')).toBe('true');
+    rtlAct(() => {
+      vi.advanceTimersByTime(TUMBLE_MS);
+    });
+    expect(centro()!.classList.contains('parou')).toBe(true);
+    const faces = [...centro()!.querySelectorAll('.mc-dado-g')];
+    expect(faces.map((d) => Number(d.getAttribute('data-face')))).toEqual(dice);
+    // cada face com as bolinhas certas
+    expect(faces.map((d) => d.querySelectorAll('circle').length)).toEqual(dice);
+    expect(container.querySelector('.mc-soma.on')!.textContent).toContain(String(dice[0] + dice[1]));
+    rtlAct(() => {
+      vi.advanceTimersByTime(SUM_MS + 10);
+    });
+    expect(centro()).toBeNull();
+  });
+
+  it('terrenos do número piscam quando os dados param; o do Carcará pisca diferente (não rendeu)', () => {
+    const base = afterSetup(mandacaruRoom(3, 1));
+    const s0 = mandacaruStateOf(base)!;
+    // um número com dois terrenos: o Carcará vai pra um deles
+    const byNumber = new Map<number, number[]>();
+    s0.layout!.hexes.forEach((t, h) => {
+      if (t.number !== null) byNumber.set(t.number, [...(byNumber.get(t.number) ?? []), h]);
+    });
+    const [n, hexes] = [...byNumber.entries()].find(([, hs]) => hs.length >= 2)!;
+    const crow = hexes[0]!;
+    const dice: [number, number] = [Math.min(6, n - 1), n - Math.min(6, n - 1)];
+    const before = withGame(base, (s) => ({ ...s, carcara: crow }));
+    const rolled = withGame(before, (s) => ({ ...s, dice, log: [...s.log, { t: 'roll', player: s.turn!, dice, gains: {}, short: [] }] }));
+    const c = conn();
+    const { container, rerender } = mesa(viewOf(before, 'p0'), c);
+    rerender(<MandacaruTable view={viewOf(rolled, 'p0')} conn={c} serverOffset={0} status="joined" />);
+    // enquanto os dados rolam, nada pisca
+    expect(container.querySelector('.mc-acende')).toBeNull();
+    rtlAct(() => {
+      vi.advanceTimersByTime(TUMBLE_MS);
+    });
+    const lit = [...container.querySelectorAll('[data-acende]')].map((e) => Number(e.getAttribute('data-acende')));
+    expect(lit.sort((a, b) => a - b)).toEqual(hexes.slice(1));
+    expect(container.querySelector('[data-sem-renda]')!.getAttribute('data-sem-renda')).toBe(String(crow));
+    expect(container.querySelector('.mc-acende')!.classList.contains('parado')).toBe(false);
+    // não pega clique
+    expect(container.querySelector('.mc-acende')!.getAttribute('pointer-events')).toBe('none');
+    // passa da soma e apaga no prazo próprio
+    rtlAct(() => {
+      vi.advanceTimersByTime(SUM_MS + 50);
+    });
+    expect(container.querySelector('.mc-acende')).toBeTruthy();
+    rtlAct(() => {
+      vi.advanceTimersByTime(FLASH_MS - SUM_MS);
+    });
+    expect(container.querySelector('.mc-acende')).toBeNull();
+  });
+
+  it('saiu 7: nenhum terreno pisca (os dados do centro rolam igual)', () => {
+    const base = afterSetup(mandacaruRoom(3, 1));
+    const dice: [number, number] = [3, 4];
+    const rolled = withGame(base, (s) => ({ ...s, dice, log: [...s.log, { t: 'roll', player: s.turn!, dice, gains: {}, short: [] }] }));
+    const c = conn();
+    const { container, rerender } = mesa(viewOf(base, 'p0'), c);
+    rerender(<MandacaruTable view={viewOf(rolled, 'p0')} conn={c} serverOffset={0} status="joined" />);
+    expect(container.querySelector('.mc-dados-centro')).toBeTruthy();
+    rtlAct(() => {
+      vi.advanceTimersByTime(TUMBLE_MS);
+    });
+    expect(container.querySelector('.mc-acende')).toBeNull();
+  });
+
+  it('passou a ser sua vez: o nome da vez e o relógio piscam e param sozinhos', () => {
+    const room = afterSetup(mandacaruRoom(3, 1));
+    const turn = turnOf(room);
+    const c = conn();
+    // primeira visão já na sua vez: não pisca
+    const first = mesa(viewOf(room, turn), c);
+    expect(first.container.querySelector('.mc-vez.chama')).toBeNull();
+    first.unmount();
+    const rolled = withGame(step(room, turn, { type: 'roll' }), (s) => ({ ...s, phase: 'main', discards: {} }));
+    const passed = step(rolled, turn, { type: 'end_turn' });
+    const next = mandacaruStateOf(passed)!.turn!;
+    const { container, rerender } = mesa(viewOf(rolled, next), c);
+    expect(container.querySelector('.mc-vez.chama')).toBeNull();
+    rerender(<MandacaruTable view={viewOf(passed, next)} conn={c} serverOffset={0} status="joined" />);
+    expect(container.querySelector('.mc-vez.chama')).toBeTruthy();
+    expect(container.querySelector('.mc-relogio.chama')).toBeTruthy();
+    rtlAct(() => {
+      vi.advanceTimersByTime(1300);
+    });
+    expect(container.querySelector('.mc-vez.chama')).toBeNull();
   });
 
   it('cartas voando: rolagem nova com ganho cria as cartinhas (pra mão e pro assento); a primeira visão não', () => {
@@ -487,6 +593,16 @@ describe('Mesa do Mandacaru: avisos, relógio, jogadores e diário', () => {
       expect(container.querySelectorAll('.mc-dado.rolando')).toHaveLength(0);
       expect(container.querySelector('.mc-soma.on')).toBeTruthy();
       expect(container.querySelector('.mc-voos')).toBeNull();
+      // os dados do centro já aparecem parados, e os terrenos (se o número não for 7) ganham um realce fixo curto
+      expect(container.querySelector('.mc-dados-centro.parado')).toBeTruthy();
+      const flash = container.querySelector('.mc-acende');
+      if (flash) {
+        expect(flash.classList.contains('parado')).toBe(true);
+        rtlAct(() => {
+          vi.advanceTimersByTime(STILL_FLASH_MS + 10);
+        });
+        expect(container.querySelector('.mc-acende')).toBeNull();
+      }
     } finally {
       vi.unstubAllGlobals();
     }

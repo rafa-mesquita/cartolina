@@ -1,6 +1,6 @@
 import { mandacaruGeometry, noResources, type BoardLayout, type Building, type HexTile, type MandacaruLogEntry, type Resources } from '@cartolina/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { arcPoint, motionOk, rollFlights } from '../src/games/mandacaru/rollFlights';
+import { arcPoint, motionOk, rollFlights, rollHexes } from '../src/games/mandacaru/rollFlights';
 
 const geo = mandacaruGeometry();
 type Roll = Extract<MandacaruLogEntry, { t: 'roll' }>;
@@ -92,5 +92,21 @@ describe('arcPoint e motionOk', () => {
     expect(motionOk()).toBe(true);
     vi.stubGlobal('matchMedia', (q: string) => ({ matches: q === '(prefers-reduced-motion: reduce)' }));
     expect(motionOk()).toBe(false);
+  });
+});
+
+describe('rollHexes: terrenos que piscam na rolagem', () => {
+  it('todos com o número; o do Carcará à parte', () => {
+    const lay = layout({ [A]: { terrain: 'forest', number: 6 }, [B]: { terrain: 'fields', number: 6 }, 5: { terrain: 'hills', number: 8 } });
+    expect(rollHexes(6, lay, -1)).toEqual({ lit: [A, B].sort((a, b) => a - b), dark: null });
+    expect(rollHexes(6, lay, B)).toEqual({ lit: [A], dark: B });
+    // Carcará num terreno de outro número: não aparece
+    expect(rollHexes(8, lay, A)).toEqual({ lit: [5], dark: null });
+  });
+
+  it('7 ou sem tabuleiro: nenhum', () => {
+    const lay = layout({ [A]: { terrain: 'forest', number: 7 } });
+    expect(rollHexes(7, lay, -1)).toEqual({ lit: [], dark: null });
+    expect(rollHexes(6, null, -1)).toEqual({ lit: [], dark: null });
   });
 });

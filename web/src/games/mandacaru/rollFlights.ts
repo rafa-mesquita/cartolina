@@ -69,6 +69,19 @@ export function rollFlights(
   return out;
 }
 
+/** Terrenos que piscam numa rolagem: os que têm o número (`lit`) e o do Carcará, se tiver o número (`dark`: não rendeu). */
+export interface RollHexes {
+  lit: number[];
+  dark: number | null;
+}
+
+/** Quais terrenos têm o número que saiu (`sum`), separando o do Carcará. Com 7 (ou sem tabuleiro), nenhum. */
+export function rollHexes(sum: number, layout: BoardLayout | null, carcara: number): RollHexes {
+  if (!layout || sum === 7) return { lit: [], dark: null };
+  const all = layout.hexes.flatMap((t, h) => (t.number === sum ? [h] : []));
+  return { lit: all.filter((h) => h !== carcara), dark: all.includes(carcara) ? carcara : null };
+}
+
 function rank(players: string[], p: string): number {
   const i = players.indexOf(p);
   return i < 0 ? players.length : i;
