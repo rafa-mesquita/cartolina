@@ -14,9 +14,21 @@ interface Seen {
   built: number;
   /** Cartas na sua mão (recursos + cordéis); `null` = quem assiste, ou sem base. */
   hand: number | null;
-  carcara: number;
-  myTurn: boolean;
+  /** A vez de agir que é sua agora (`callOf`); `null` = não é com você. */
+  call: string | null;
   over: boolean;
+}
+
+/**
+ * Quando é com você, uma chave que muda a cada vez nova de agir: `vez` no seu turno (na preparação, uma por casa+estrada,
+ * pelo `setup.index`, porque a ordem em cobra dá duas vezes seguidas pra mesma pessoa) e `descarte` quando saiu 7 na vez
+ * de outro e você precisa descartar. `null` = não é com você (ou você só assiste). Os sons e a piscada do topo usam isto.
+ */
+export function callOf(g: MandacaruView, you: string | null): string | null {
+  if (you === null || !g.players.includes(you) || g.phase === 'over' || g.phase === 'lobby') return null;
+  if (g.turn === you) return g.phase === 'setup' ? `vez:prep${g.setup?.index ?? 0}` : 'vez';
+  if (g.phase === 'discard' && g.can.discard > 0) return 'descarte';
+  return null;
 }
 
 function seenOf(g: MandacaruView, you: string | null): Seen {
@@ -24,16 +36,7 @@ function seenOf(g: MandacaruView, you: string | null): Seen {
   for (const r of g.roads) if (r !== null) built++;
   for (const b of g.buildings) if (b) built += b.kind === 'city' ? 2 : 1;
   const hand = g.myRes ? Object.values(g.myRes).reduce((a, b) => a + b, 0) + g.myCordeis.length : null;
-  const playing = you !== null && g.players.includes(you);
-  return {
-    match: g.match,
-    log: g.log,
-    built,
-    hand,
-    carcara: g.carcara,
-    myTurn: playing && g.turn === you && g.phase !== 'over' && g.phase !== 'lobby',
-    over: g.phase === 'over',
-  };
+  return { match: g.match, log: g.log, built, hand, call: callOf(g, you), over: g.phase === 'over' };
 }
 
 /**
@@ -44,14 +47,14 @@ function seenOf(g: MandacaruView, you: string | null): Seen {
  * - `dice`: linha nova de dados no diário;
  * - `build`: estrada, casa ou vila nova (de qualquer um);
  * - `card`: a sua mão ganhou carta (recurso ou cordel);
- * - `carcara`: o Carcará mudou de terreno;
+ * - `carcara`: linha nova do Carcará pousando no diário (o pio);
  * - `win`: a partida acabou;
- * - `turn`: a vez passou a ser sua.
+ * - `turn`: passou a ser com você (`callOf`): cada turno seu, cada vez sua na preparação e o descarte do 7 na vez de outro.
  *
  * Quem assiste não ouve `card` nem `turn`. Nada toca na primeira visão (só vira a base), nem na primeira visão depois
  * de uma reconexão (o que aconteceu na queda não toca atrasado). Partida nova (`match` mudou) também só vira base,
  * fora o `turn` se a primeira vez for sua. A exceção da primeira visão: vindo do lobby (`fromPhase === 'lobby'`, a mesa
- * monta já na primeira visão da partida), toca `turn` se a vez já é sua.
+ * monta já na primeira visão da partida), toca `turn` se já é com você.
  */
 export function useMandacaruSounds(view: MandacaruRoomView, status: ConnStatus, fromPhase?: MandacaruPhase): void {
   const seen = useRef<Seen | null>(null);
@@ -73,21 +76,22 @@ export function useMandacaruSounds(view: MandacaruRoomView, status: ConnStatus, 
     const prev = seen.current;
     seen.current = now;
     if (prev === null) {
-      if (from.current === 'lobby' && now.myTurn) playMandacaruSound('turn');
+      if (from.current === 'lobby' && now.call !== null) playMandacaruSound('turn');
       return;
     }
     if (rebase.current) {
       rebase.current = false;
       return;
     }
-    const before: Seen = prev.match === game.match ? prev : { ...now, myTurn: false };
+    const before: Seen = prev.match === game.match ? prev : { ...now, call: null };
+    const fresh = freshEntries(before.log, game.log);
     const names: MandacaruSound[] = [];
-    if (freshEntries(before.log, game.log).some((e) => e.t === 'roll')) names.push('dice');
+    if (fresh.some((e) => e.t === 'roll')) names.push('dice');
     if (now.built > before.built) names.push('build');
     if (now.hand !== null && before.hand !== null && now.hand > before.hand) names.push('card');
-    if (now.carcara !== before.carcara) names.push('carcara');
+    if (fresh.some((e) => e.t === 'carcara')) names.push('carcara');
     if (now.over && !before.over) names.push('win');
-    if (now.myTurn && !before.myTurn) names.push('turn');
+    if (now.call !== null && now.call !== before.call) names.push('turn');
 
     names.forEach((name, i) => {
       if (i === 0) {
